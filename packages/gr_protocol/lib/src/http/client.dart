@@ -1,0 +1,1139 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import '../trace.dart';
+import 'changes.dart';
+import 'errors.dart';
+import 'json.dart';
+import 'liveview.dart';
+import 'mjpeg.dart';
+import 'models.dart';
+import 'request.dart';
+import 'sha256.dart';
+
+/// Per-route deadlines. Defaults follow connection-lifecycle.md §9 (connect
+/// 3 s, read 10 s, downloads by idle timeout) and the apps' longer per-route
+/// values where they exist (docs/protocol/http-api.md §1,
+/// connection-imagesync.md §2.1).
+final class GrHttpTimeouts {
+  const GrHttpTimeouts({
+    this.connect = const Duration(seconds: 3),
+    this.request = const Duration(seconds: 10),
+    this.photoList = const Duration(seconds: 300),
+    this.photoInfo = const Duration(seconds: 15),
+    this.photoInfoList = const Duration(seconds: 120),
+    this.imageControl = const Duration(seconds: 5),
+    this.downloadIdle = const Duration(seconds: 30),
+    this.firmwarePrepare = const Duration(seconds: 60),
+    this.firmwareUpload = const Duration(seconds: 180),
+    this.endScreen = const Duration(seconds: 60),
+  });
+
+  /// TCP connect (or reuse of a kept-alive connection).
+  final Duration connect;
+
+  /// Request sent through complete response body, for ordinary routes.
+  final Duration request;
+
+  /// Image Sync's `/v1/photos` read timeout (300 s).
+  final Duration photoList;
+
+  /// GR WORLD's per-photo info timeout (15 s).
+  final Duration photoInfo;
+
+  /// GR WORLD's native `/v1/photos/infos` timeout (120 s).
+  final Duration photoInfoList;
+
+  /// GR WORLD's `/imgctrl` timeout (5 s).
+  final Duration imageControl;
+
+  /// Longest silence while streaming an image.
+  final Duration downloadIdle;
+  final Duration firmwarePrepare;
+  final Duration firmwareUpload;
+  final Duration endScreen;
+}
+
+/// How `PUT /v1/photos/<dir>/<file>/transfer` is encoded.
+enum GrTransferMarkStyle {
+  /// GR WORLD (supports GR IV): `Content-Type: application/json`, body
+  /// `storage=<s>` or empty; success is HTTP 200 (http-api.md §1 row 8).
+  grWorld,
+
+  /// Image Sync (GR III family): `text/plain`, body
+  /// `status=transferred[&storage=<s>]`; success is `errCode == 200`
+  /// (connection-imagesync.md §4).
+  imageSync,
+}
+
+/// A response returned as text because its format is [unknown].
+final class GrTextResponse {
+  const GrTextResponse(this.httpStatus, this.contentType, this.text, this.json);
+
+  final int httpStatus;
+  final String? contentType;
+  final String text;
+
+  /// The body parsed as camera JSON (check [CameraJson.issue]).
+  final CameraJson json;
+}
+
+/// GR WORLD pages photo listings at 3000 files (http-api.md §2.1 step 6,
+/// [inferred]).
+const grWorldPhotoPageSize = 3000;
+
+/// Client for the camera's Wi-Fi HTTP API (`http://<host>/v1/...`).
+///
+/// One keep-alive `HttpClient` serves every request, as recommended in
+/// connection-lifecycle.md §9. Pass [httpClient] to supply one whose
+/// `connectionFactory` binds sockets to the camera network; it is then not
+/// closed by [close]. [socketConnector] does the same for live view, which
+/// uses a raw socket.
+///
+/// Every exchange emits [TraceEvent]s on [TraceChannel.http] when a sink is
+/// given; request/response bodies are attached up to [traceBodyLimit] bytes.
+final class GrHttpClient {
+  GrHttpClient(
+    this.host, {
+    this.port = 80,
+    HttpClient? httpClient,
+    this._trace,
+    this.timeouts = const GrHttpTimeouts(),
+    this.traceBodyLimit = 64 * 1024,
+    this._socketConnector = defaultSocketConnector,
+  }) : _http =
+           httpClient ?? (HttpClient()..connectionTimeout = timeouts.connect),
+       _ownsHttp = httpClient == null;
+
+  final String host;
+  final int port;
+  final GrHttpTimeouts timeouts;
+  final int traceBodyLimit;
+  final HttpClient _http;
+  final bool _ownsHttp;
+  final TraceSink? _trace;
+  final GrSocketConnector _socketConnector;
+
+  /// The underlying client (for WebSockets sharing its connection settings).
+  HttpClient get httpClient => _http;
+
+  // ---------------------------------------------------------------- identity
+
+  /// `GET /v1/props` (http-api.md §1 row 1, remote-shooting.md §4.1).
+  /// Image Sync uses 7 s connect / 10 s read, its liveness checker 1 s / 10 s.
+  Future<GrProps> props({Duration? connectTimeout, Duration? timeout}) async =>
+      GrProps(
+        await _json(
+          'GET',
+          _uri(['props']),
+          connectTimeout: connectTimeout,
+          timeout: timeout,
+        ),
+      );
+
+  /// `GET /v1/ping`: registered by GR III/IV firmware; it reads the camera
+  /// datetime (firmware-protocol-inventory.md "Additional-route
+  /// verification"). Not used by either app on III/IV.
+  Future<GrPing> ping({Duration? connectTimeout, Duration? timeout}) async =>
+      GrPing(
+        await _json(
+          'GET',
+          _uri(['ping']),
+          connectTimeout: connectTimeout,
+          timeout: timeout,
+        ),
+      );
+
+  /// `GET /v1/status/device` (http-api.md §1 row 2). GR WORLD uses it on GR
+  /// II; it may not exist on GR III/IV (no route literal in their webapid,
+  /// connection-lifecycle.md §9).
+  Future<GrDeviceStatus> deviceStatus() async =>
+      GrDeviceStatus(await _json('GET', _uri(['status', 'device'])));
+
+  // ------------------------------------------------------------------ photos
+
+  /// One `GET /v1/photos[?storage=][&limit=][&after=dir/file]` page
+  /// (http-api.md §2.1; `limit` is Image Sync's, connection-imagesync.md §4).
+  Future<GrPhotoList> photos({
+    String? storage,
+    int? limit,
+    GrPhotoPath? after,
+  }) async {
+    if (limit != null && limit < 1) {
+      throw ArgumentError.value(limit, 'limit', 'must be ≥ 1');
+    }
+    return GrPhotoList(
+      await _json(
+        'GET',
+        _uri(
+          ['photos'],
+          {
+            if (storage != null) 'storage': GrStorageId.validate(storage),
+            if (limit != null) 'limit': '$limit',
+            if (after != null) 'after': '$after',
+          },
+        ),
+        timeout: timeouts.photoList,
+      ),
+    );
+  }
+
+  /// Every page, following the `after=<last dir/file>` cursor. With [limit]
+  /// the Image Sync rule applies (stop when a page holds fewer than [limit]
+  /// files); without it GR WORLD's (stop below [grWorldPhotoPageSize]). Also
+  /// stops when the cursor does not advance.
+  Stream<GrPhotoList> photoPages({String? storage, int? limit}) async* {
+    final pageSize = limit ?? grWorldPhotoPageSize;
+    GrPhotoPath? after;
+    while (true) {
+      final page = await photos(storage: storage, limit: limit, after: after);
+      yield page;
+      final last = page.last;
+      if (page.fileCount < pageSize || last == null || last == after) return;
+      after = last;
+    }
+  }
+
+  /// `GET /v1/photos/<dir>/<file>/info[?storage=]` (http-api.md §2.2).
+  Future<GrPhotoInfo> photoInfo(GrPhotoPath path, {String? storage}) async =>
+      GrPhotoInfo(
+        await _json(
+          'GET',
+          _uri(['photos', path.dir, path.file, 'info'], _storage(storage)),
+          timeout: timeouts.photoInfo,
+        ),
+      );
+
+  /// `GET /v1/photos/latest/info`: Image Sync's fallback when no WebSocket
+  /// `filepath` was seen. GR III/IV webapid has no `/latest` route; a GR IV
+  /// HDF (fw 1.20) answers errCode 400 under HTTP 200, raised here as
+  /// [GrApiException] (hardware-validation.md §4). On those models use the
+  /// last entry of [photoPages] with [photoInfo].
+  Future<GrPhotoInfo> latestPhotoInfo() async => GrPhotoInfo(
+    await _json(
+      'GET',
+      _uri(['photos', 'latest', 'info']),
+      timeout: timeouts.photoInfo,
+    ),
+  );
+
+  /// `GET /v1/photos/infos?storage=<s>[&after=]`: implemented natively in GR
+  /// WORLD but never invoked from Dart; the response shape is [unknown], so
+  /// the envelope is returned raw (http-api.md §1 row 6, §3).
+  Future<GrEnvelope> photoInfoList({
+    required String storage,
+    GrPhotoPath? after,
+  }) async => GrEnvelope(
+    await _json(
+      'GET',
+      _uri(
+        ['photos', 'infos'],
+        {
+          'storage': GrStorageId.validate(storage),
+          if (after != null) 'after': '$after',
+        },
+      ),
+      timeout: timeouts.photoInfoList,
+    ),
+  );
+
+  /// URL of an image: `/v1/photos/<dir>/<file>?size=<s>[&storage=<s>]`, the
+  /// order GR WORLD's download builder uses (http-api.md §2.4). `size: null`
+  /// omits the parameter, Image Sync's full-size form.
+  Uri photoUri(GrPhotoPath path, {GrImageSize? size, String? storage}) => _uri(
+    ['photos', path.dir, path.file],
+    {if (size != null) 'size': size.name, ..._storage(storage)},
+  );
+
+  /// Streams an image into [sink] (not closed here).
+  ///
+  /// Like both apps: one GET, no `Range`/resume; a body starting with `{` is
+  /// a JSON error even under HTTP 200 (http-api.md §2.4 step 4,
+  /// connection-imagesync.md §4) and raises [GrApiException]. A body shorter
+  /// than its `Content-Length` raises [GrMalformedResponseException]. A
+  /// silence longer than [GrHttpTimeouts.downloadIdle] raises
+  /// [TimeoutException].
+  Future<GrDownloadResult> download(
+    GrPhotoPath path,
+    StreamSink<List<int>> sink, {
+    GrImageSize? size = GrImageSize.full,
+    String? storage,
+    void Function(int received, int? total)? onProgress,
+  }) async {
+    final uri = photoUri(path, size: size, storage: storage);
+    final route = 'GET ${uri.path}';
+    final watch = Stopwatch()..start();
+    _traceRequest('GET', uri, null, null, null);
+    final request = await _open('GET', uri, timeouts.connect);
+    request.done.ignore();
+    try {
+      final response = await request.close().timeout(timeouts.request);
+      final total = response.contentLength >= 0 ? response.contentLength : null;
+      if (response.statusCode != 200) {
+        final body = await _readBody(response, route, limit: 64 * 1024);
+        _traceResponse(uri, response, body, watch.elapsed);
+        _throwForError(route, response.statusCode, body);
+        throw GrHttpStatusException(
+          route: route,
+          httpStatus: response.statusCode,
+        );
+      }
+      var received = 0;
+      BytesBuilder? jsonBody;
+      var first = true;
+      await for (final chunk in response.timeout(timeouts.downloadIdle)) {
+        if (chunk.isEmpty) continue;
+        if (first) {
+          first = false;
+          if (chunk[0] == 0x7B) jsonBody = BytesBuilder();
+        }
+        if (jsonBody != null) {
+          if (jsonBody.length < 64 * 1024) jsonBody.add(chunk);
+          continue;
+        }
+        sink.add(chunk);
+        received += chunk.length;
+        onProgress?.call(received, total);
+      }
+      if (jsonBody != null) {
+        final body = jsonBody.takeBytes();
+        _traceResponse(uri, response, body, watch.elapsed);
+        _throwForError(route, response.statusCode, body);
+        throw GrMalformedResponseException(
+          route: route,
+          httpStatus: response.statusCode,
+          issue: 'JSON body instead of image data',
+          bodyText: utf8.decode(body, allowMalformed: true),
+        );
+      }
+      _trace?.call(
+        TraceEvent(
+          channel: TraceChannel.http,
+          direction: TraceDirection.inbound,
+          kind: 'response',
+          fields: {
+            'method': 'GET',
+            'url': uri.toString(),
+            'status': response.statusCode,
+            'contentType': response.headers.contentType?.toString(),
+            'contentLength': total,
+            'bodyLength': received,
+            'elapsedMs': watch.elapsedMilliseconds,
+          },
+        ),
+      );
+      if (total != null && received != total) {
+        throw GrMalformedResponseException(
+          route: route,
+          httpStatus: response.statusCode,
+          issue: 'body ended after $received of $total bytes',
+        );
+      }
+      return GrDownloadResult(
+        path: path,
+        size: size,
+        bytes: received,
+        contentLength: total,
+        contentType: response.headers.contentType?.toString(),
+        elapsed: watch.elapsed,
+      );
+    } catch (e) {
+      request.abort(e);
+      _traceError(uri, e);
+      rethrow;
+    }
+  }
+
+  /// [download] into [file] via `<file>.part`, renamed on success and deleted
+  /// on failure.
+  Future<GrDownloadResult> downloadToFile(
+    GrPhotoPath path,
+    File file, {
+    GrImageSize? size = GrImageSize.full,
+    String? storage,
+    void Function(int received, int? total)? onProgress,
+  }) async {
+    final part = File('${file.path}.part');
+    final sink = part.openWrite();
+    try {
+      final result = await download(
+        path,
+        sink,
+        size: size,
+        storage: storage,
+        onProgress: onProgress,
+      );
+      await sink.flush();
+      await sink.close();
+      await part.rename(file.path);
+      return result;
+    } catch (_) {
+      await sink.close().catchError((Object _) {});
+      if (part.existsSync()) await part.delete();
+      rethrow;
+    }
+  }
+
+  /// `GET /v1/photos/<dir>/<file>/imgctrl[?storage=]`: the raw Image Control
+  /// BLOB (http-api.md §4.3). Its layout is shared with the BLE Image Control
+  /// characteristics (ble.md § Image Control blob).
+  Future<Uint8List> imageControl(GrPhotoPath path, {String? storage}) async {
+    final uri = _uri([
+      'photos',
+      path.dir,
+      path.file,
+      'imgctrl',
+    ], _storage(storage));
+    final reply = await _send('GET', uri, timeout: timeouts.imageControl);
+    _throwForError(reply.route, reply.status, reply.body);
+    if (reply.status != 200) {
+      throw GrHttpStatusException(
+        route: reply.route,
+        httpStatus: reply.status,
+        bodyText: utf8.decode(reply.body, allowMalformed: true),
+      );
+    }
+    // A valid BLOB starts with version 1, 2 or 4, never `{`.
+    if (reply.body.isNotEmpty && reply.body[0] == 0x7B) {
+      throw GrMalformedResponseException(
+        route: reply.route,
+        httpStatus: reply.status,
+        issue: 'JSON body instead of an Image Control BLOB',
+        bodyText: utf8.decode(reply.body, allowMalformed: true),
+      );
+    }
+    return reply.body;
+  }
+
+  // --------------------------------------------------------------- transfers
+
+  /// `GET /v1/transfers?status=untransferred[&limit=][&storage=][&after=]`
+  /// (http-api.md §2.5; `limit`/`after=<index>` from Image Sync,
+  /// connection-imagesync.md §4).
+  Future<GrTransferList> transfers({
+    String? storage,
+    int? limit,
+    int? after,
+  }) async => GrTransferList(
+    await _json(
+      'GET',
+      _uri(
+        ['transfers'],
+        {
+          'status': 'untransferred',
+          if (limit != null) 'limit': '$limit',
+          if (storage != null) 'storage': GrStorageId.validate(storage),
+          if (after != null) 'after': '$after',
+        },
+      ),
+    ),
+  );
+
+  /// `PUT /v1/photos/<dir>/<file>/transfer`: marks a reserved transfer done.
+  /// Returns the response envelope when the camera sent one.
+  Future<GrEnvelope?> markTransferred(
+    GrPhotoPath path, {
+    String? storage,
+    GrTransferMarkStyle style = GrTransferMarkStyle.grWorld,
+  }) async {
+    final s = storage == null ? null : GrStorageId.validate(storage);
+    final uri = _uri(['photos', path.dir, path.file, 'transfer']);
+    switch (style) {
+      case GrTransferMarkStyle.grWorld:
+        return _statusOrEnvelope(
+          'PUT',
+          uri,
+          body: encodeKeyValueBodyBytes({'storage': ?s}),
+          contentType: GrContentType.jsonLabelled,
+        );
+      case GrTransferMarkStyle.imageSync:
+        return GrEnvelope(
+          await _json(
+            'PUT',
+            uri,
+            body: encodeKeyValueBodyBytes({
+              'status': 'transferred',
+              'storage': ?s,
+            }),
+            contentType: GrContentType.textPlain,
+          ),
+        );
+    }
+  }
+
+  // ------------------------------------------------------------------ params
+
+  /// `PUT /v1/params/camera` with `key=value&…` (remote-shooting.md §4.2).
+  /// The response is props-shaped. Only values in the camera's `<key>List`
+  /// are valid; see [GrProps.offers]. An empty map would be the green
+  /// button, so it is rejected; use [pressGreenButton].
+  Future<GrProps> setCameraParams(Map<String, String> params) async {
+    if (params.isEmpty) {
+      throw ArgumentError(
+        'empty params is the green button; use pressGreenButton',
+      );
+    }
+    return GrProps(await _put(['params', 'camera'], params));
+  }
+
+  /// Empty-body `PUT /v1/params/camera`: Image Sync's "green button"
+  /// (remote-shooting.md §2.1).
+  Future<GrProps> pressGreenButton() async => GrProps(
+    await _json(
+      'PUT',
+      _uri(['params', 'camera']),
+      body: const [],
+      contentType: GrContentType.textPlain,
+    ),
+  );
+
+  /// `PUT /v1/params/lens`, e.g. `focusSetting=<v>` (remote-shooting.md
+  /// §3.3). Response shape [unknown]; parsed as props-shaped.
+  Future<GrProps> setLensParams(Map<String, String> params) async {
+    if (params.isEmpty) throw ArgumentError('no lens params');
+    return GrProps(await _put(['params', 'lens'], params));
+  }
+
+  /// `PUT /v1/params/device` as Image Sync sends it (`text/plain`), e.g.
+  /// `stillFormat=rawdng` or `datetime=…` (remote-shooting.md §4.2–4.3).
+  /// Response shape [unknown]; parsed as props-shaped. Credential, channel,
+  /// BLE-enable and name keys change persistent camera state.
+  Future<GrProps> setDeviceParams(Map<String, String> params) async {
+    if (params.isEmpty) throw ArgumentError('no device params');
+    return GrProps(await _put(['params', 'device'], params));
+  }
+
+  /// GR II Wi-Fi settings exactly as GR WORLD writes them: `PUT
+  /// /v1/params/device`, `Content-Type: application/json`, body
+  /// `channel=<c>&ssid=<ssid>&key=<password>` unescaped; success is HTTP 200
+  /// (http-api.md §1 row 12, §4.2). GR WORLD always sends `channel=0`.
+  Future<GrEnvelope?> setGr2WifiSettings({
+    required String ssid,
+    required String key,
+    int channel = 0,
+  }) => _statusOrEnvelope(
+    'PUT',
+    _uri(['params', 'device']),
+    body: encodeKeyValueBodyBytes({
+      'channel': '$channel',
+      'ssid': ssid,
+      'key': key,
+    }),
+    contentType: GrContentType.jsonLabelled,
+  );
+
+  // ---------------------------------------------------------------- shooting
+
+  /// `POST /v1/camera/shoot` (remote-shooting.md §2.1): body `""` (Image Sync
+  /// "no AF" while live view runs), `af=on`, or `af=on&pos=X,Y`. On GR III/IV
+  /// the same POST also stops movie/bulb/time and continuous/interval capture.
+  Future<GrShootResult> shoot({GrShootAf? af, GrFocusPoint? pos}) async =>
+      GrShootResult(
+        await _json(
+          'POST',
+          _uri(['camera', 'shoot']),
+          body: utf8.encode(shootBody(af: af, pos: pos)),
+          contentType: GrContentType.textPlain,
+        ),
+      );
+
+  /// `POST /v1/camera/shoot/start`: GR II / SDK-default movie start. Absent
+  /// from GR III/IV webapid (remote-shooting.md §6).
+  Future<GrShootResult> shootStart({GrShootAf? af}) async => GrShootResult(
+    await _json(
+      'POST',
+      _uri(['camera', 'shoot', 'start']),
+      body: utf8.encode(shootBody(af: af)),
+      contentType: GrContentType.textPlain,
+    ),
+  );
+
+  /// `POST /v1/camera/shoot/finish`: GR II / SDK-default stop. Absent from
+  /// GR III/IV webapid.
+  Future<GrShootResult> shootFinish() async => GrShootResult(
+    await _json(
+      'POST',
+      _uri(['camera', 'shoot', 'finish']),
+      body: const [],
+      contentType: GrContentType.textPlain,
+    ),
+  );
+
+  /// `POST /v1/camera/shoot/compose`: ends interval-composite capture
+  /// (remote-shooting.md §2.1; firmware `Compose`).
+  Future<GrShootResult> composeShoot() async => GrShootResult(
+    await _json(
+      'POST',
+      _uri(['camera', 'shoot', 'compose']),
+      body: const [],
+      contentType: GrContentType.textPlain,
+    ),
+  );
+
+  /// `POST /v1/camera/shoot/cancel`: cancels a self-timer countdown
+  /// (firmware `CancelTimer`, remote-shooting.md §2.1).
+  Future<GrShootResult> cancelShootTimer() async => GrShootResult(
+    await _json(
+      'POST',
+      _uri(['camera', 'shoot', 'cancel']),
+      body: const [],
+      contentType: GrContentType.textPlain,
+    ),
+  );
+
+  /// `POST /v1/lens/focus` with `pos=X,Y` or `""` (remote-shooting.md §3.1).
+  /// A non-empty [GrFocusResult.captureId] means the result follows as a
+  /// WebSocket `lens` event (Image Sync waits up to 40 s).
+  Future<GrFocusResult> focus({GrFocusPoint? pos}) async => GrFocusResult(
+    await _json(
+      'POST',
+      _uri(['lens', 'focus']),
+      body: encodeKeyValueBodyBytes({'pos': ?pos?.wire}),
+      contentType: GrContentType.textPlain,
+    ),
+  );
+
+  /// `POST /v1/lens/focus/lock` with `pos=X,Y`: GR II only; absent from GR
+  /// III/IV firmware (remote-shooting.md §3.1).
+  Future<GrFocusResult> focusLockGr2(GrFocusPoint pos) async => GrFocusResult(
+    await _json(
+      'POST',
+      _uri(['lens', 'focus', 'lock']),
+      body: encodeKeyValueBodyBytes({'pos': pos.wire}),
+      contentType: GrContentType.textPlain,
+    ),
+  );
+
+  /// Opens `GET /v1/liveview` (remote-shooting.md §1). See
+  /// [LiveViewStream.open].
+  Future<LiveViewStream> openLiveView({
+    int? maxFps,
+    String? reso,
+    Duration connectTimeout = const Duration(seconds: 10),
+    Duration? idleTimeout = const Duration(seconds: 10),
+    int maxFrameBytes = MjpegSplitter.defaultMaxFrameBytes,
+  }) => LiveViewStream.open(
+    host,
+    port: port,
+    maxFps: maxFps,
+    reso: reso,
+    connectTimeout: connectTimeout,
+    idleTimeout: idleTimeout,
+    maxFrameBytes: maxFrameBytes,
+    trace: _trace,
+    connector: _socketConnector,
+  );
+
+  /// A `ws://<host>/v1/changes` client sharing this client's `HttpClient`.
+  GrChangesSocket changesSocket({
+    Duration connectTimeout = const Duration(seconds: 7),
+    GrReconnectPolicy reconnect = const GrBackoffReconnect(),
+  }) => GrChangesSocket(
+    host,
+    port: port,
+    httpClient: _http,
+    connectTimeout: connectTimeout,
+    reconnect: reconnect,
+    trace: _trace,
+  );
+
+  // ------------------------------------------------------------ device power
+
+  /// `POST /v1/device/finish`: powers the camera off. Sent as GR WORLD sends
+  /// it: empty body, no Content-Type, success is HTTP 200
+  /// (http-api.md §1 row 3, §4.5). An explicit JSON errCode ≠ 200 still
+  /// raises [GrApiException].
+  Future<GrEnvelope?> powerOff() =>
+      _statusOrEnvelope('POST', _uri(['device', 'finish']), body: const []);
+
+  /// `POST /v1/device/wlan/finish`: turns the camera's WLAN off
+  /// (`ChangeWlanMode(0)`), ending this connection
+  /// (remote-shooting.md §2.1, §6).
+  Future<GrEnvelope?> finishWlan() => _statusOrEnvelope(
+    'POST',
+    _uri(['device', 'wlan', 'finish']),
+    body: const [],
+    contentType: GrContentType.textPlain,
+  );
+
+  // ------------------------------------------------------------ diagnostics
+
+  /// `GET /v1/debug/revisions`: firmware runs `cat /etc/revisions/*` and
+  /// returns its output or `failed to get revisions.`
+  /// (firmware-protocol-inventory.md). Diagnostic route; response framing
+  /// [unknown], so the text is returned.
+  Future<GrTextResponse> debugRevisions() async {
+    final reply = await _send('GET', _uri(['debug', 'revisions']));
+    _throwForError(reply.route, reply.status, reply.body);
+    if (reply.status != 200) {
+      throw GrHttpStatusException(
+        route: reply.route,
+        httpStatus: reply.status,
+        bodyText: utf8.decode(reply.body, allowMalformed: true),
+      );
+    }
+    final json = decodeCameraJsonBytes(reply.body);
+    return GrTextResponse(
+      reply.status,
+      reply.contentType,
+      utf8.decode(reply.body, allowMalformed: true),
+      json,
+    );
+  }
+
+  /// `GET /v1/logs/camera?type=monthly_capture&date=YYYY-MM`
+  /// (http-api.md §6).
+  Future<GrCameraLog> cameraLog({required int year, required int month}) async {
+    if (year < 1000 || year > 9999) {
+      throw RangeError.range(year, 1000, 9999, 'year');
+    }
+    if (month < 1 || month > 12) throw RangeError.range(month, 1, 12, 'month');
+    return GrCameraLog(
+      await _json(
+        'GET',
+        _uri(
+          ['logs', 'camera'],
+          {
+            'type': 'monthly_capture',
+            'date': '$year-${month.toString().padLeft(2, '0')}',
+          },
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------- firmware
+
+  /// `POST /v1/configs/firmware/prepare`, form body `filesize=<bytes>`
+  /// (http-api.md §7 step 2). Rejections carry
+  /// [GrApiException.firmwareRejection].
+  Future<GrEnvelope> prepareFirmware(int fileSize) async {
+    if (fileSize <= 0) throw ArgumentError.value(fileSize, 'fileSize', '> 0');
+    return GrEnvelope(
+      await _json(
+        'POST',
+        _uri(['configs', 'firmware', 'prepare']),
+        body: ascii.encode('filesize=$fileSize'),
+        contentType: GrContentType.formUrlEncoded,
+        timeout: timeouts.firmwarePrepare,
+      ),
+    );
+  }
+
+  /// `PUT /v1/configs/firmware?storage=in&reboot=true` with the whole file as
+  /// one `application/octet-stream` body (http-api.md §7 step 3). The camera
+  /// reboots by itself when [reboot] is true.
+  Future<GrEnvelope> uploadFirmware(
+    File firmware, {
+    String storage = GrStorageId.internal,
+    bool reboot = true,
+    void Function(int sent, int total)? onProgress,
+  }) async {
+    final length = await firmware.length();
+    return GrEnvelope(
+      await _json(
+        'PUT',
+        _uri(
+          ['configs', 'firmware'],
+          {'storage': GrStorageId.validate(storage), 'reboot': '$reboot'},
+        ),
+        bodyFile: firmware,
+        bodyFileLength: length,
+        onSendProgress: onProgress,
+        contentType: GrContentType.octetStream,
+        timeout: timeouts.firmwareUpload,
+      ),
+    );
+  }
+
+  /// `POST /v1/configs/firmware/cancel`, no headers, no body
+  /// (http-api.md §7 step 5).
+  Future<GrEnvelope?> cancelFirmware() => _statusOrEnvelope(
+    'POST',
+    _uri(['configs', 'firmware', 'cancel']),
+    body: const [],
+  );
+
+  /// `PUT /v1/device/image/endscreen?index=<n>[&sha256=<hex>]`,
+  /// `Content-Type: image/jpeg` (http-api.md §4.4). With [jpeg]: GR WORLD's
+  /// variant A (body plus lowercase SHA-256 when [includeSha256]). Without:
+  /// variant B (no body, no hash), [inferred] to reset slot [index].
+  Future<GrEnvelope> uploadEndScreen(
+    int index, {
+    Uint8List? jpeg,
+    bool includeSha256 = true,
+  }) async {
+    if (index < 0) throw RangeError.value(index, 'index', 'must be ≥ 0');
+    return GrEnvelope(
+      await _json(
+        'PUT',
+        _uri(
+          ['device', 'image', 'endscreen'],
+          {
+            'index': '$index',
+            if (jpeg != null && includeSha256) 'sha256': hexLower(sha256(jpeg)),
+          },
+        ),
+        body: jpeg ?? const [],
+        contentType: GrContentType.imageJpeg,
+        timeout: timeouts.endScreen,
+      ),
+    );
+  }
+
+  /// Closes the owned `HttpClient`; an injected one is left open.
+  void close({bool force = false}) {
+    if (_ownsHttp) _http.close(force: force);
+  }
+
+  // ---------------------------------------------------------------- plumbing
+
+  Uri _uri(List<String> segments, [Map<String, String>? query]) => Uri(
+    scheme: 'http',
+    host: host,
+    port: port,
+    pathSegments: ['v1', ...segments],
+    query: query == null ? null : encodeQuery(query),
+  );
+
+  Map<String, String> _storage(String? storage) => {
+    if (storage != null) 'storage': GrStorageId.validate(storage),
+  };
+
+  Future<Map<String, Object?>> _put(
+    List<String> segments,
+    Map<String, String> params,
+  ) => _json(
+    'PUT',
+    _uri(segments),
+    body: encodeKeyValueBodyBytes(params),
+    contentType: GrContentType.textPlain,
+  );
+
+  /// Sends a request whose success is decided by the JSON `errCode`.
+  Future<Map<String, Object?>> _json(
+    String method,
+    Uri uri, {
+    List<int>? body,
+    File? bodyFile,
+    int? bodyFileLength,
+    void Function(int sent, int total)? onSendProgress,
+    GrContentType? contentType,
+    Duration? connectTimeout,
+    Duration? timeout,
+  }) async {
+    final reply = await _send(
+      method,
+      uri,
+      body: body,
+      bodyFile: bodyFile,
+      bodyFileLength: bodyFileLength,
+      onSendProgress: onSendProgress,
+      contentType: contentType,
+      connectTimeout: connectTimeout,
+      timeout: timeout,
+    );
+    _throwForError(reply.route, reply.status, reply.body);
+    final json = decodeCameraJsonBytes(reply.body);
+    final map = json.object;
+    if (reply.status != 200 &&
+        (map == null || GrEnvelope(map).errCode == null)) {
+      throw GrHttpStatusException(
+        route: reply.route,
+        httpStatus: reply.status,
+        bodyText: json.text,
+      );
+    }
+    if (map == null) {
+      throw GrMalformedResponseException(
+        route: reply.route,
+        httpStatus: reply.status,
+        issue: json.issue ?? 'not a JSON object',
+        bodyText: json.text,
+      );
+    }
+    return map;
+  }
+
+  /// Sends a request whose success is HTTP 200 (GR WORLD's native calls),
+  /// still honouring an explicit JSON errCode. Returns the envelope if the
+  /// body was a JSON object.
+  Future<GrEnvelope?> _statusOrEnvelope(
+    String method,
+    Uri uri, {
+    List<int>? body,
+    GrContentType? contentType,
+  }) async {
+    final reply = await _send(
+      method,
+      uri,
+      body: body,
+      contentType: contentType,
+    );
+    _throwForError(reply.route, reply.status, reply.body);
+    final map = decodeCameraJsonBytes(reply.body).object;
+    if (reply.status != 200) {
+      throw GrHttpStatusException(
+        route: reply.route,
+        httpStatus: reply.status,
+        bodyText: utf8.decode(reply.body, allowMalformed: true),
+      );
+    }
+    return map == null ? null : GrEnvelope(map);
+  }
+
+  /// Throws [GrApiException] when [body] is a JSON envelope with
+  /// `errCode != 200`.
+  void _throwForError(String route, int status, List<int> body) {
+    if (body.isEmpty || body.first != 0x7B) return;
+    final map = decodeCameraJsonBytes(body).object;
+    if (map == null) return;
+    final env = GrEnvelope(map);
+    final code = env.errCode;
+    if (code != null && code != 200) {
+      throw GrApiException(
+        errCode: code,
+        errMsg: env.errMsg,
+        reason: env.reason,
+        route: route,
+        httpStatus: status,
+        body: map,
+      );
+    }
+  }
+
+  /// Opens a request with a per-call connect deadline. `HttpClient` cannot
+  /// cancel a pending connect, so a late connection is aborted when it
+  /// arrives.
+  Future<HttpClientRequest> _open(
+    String method,
+    Uri uri,
+    Duration connectTimeout,
+  ) async {
+    final pending = _http.openUrl(method, uri);
+    try {
+      return await pending.timeout(connectTimeout);
+    } on TimeoutException {
+      unawaited(
+        pending.then<void>((r) {
+          r.done.ignore();
+          r.abort();
+        }, onError: (Object _) {}),
+      );
+      final e = TimeoutException(
+        '$method ${uri.path}: no connection within $connectTimeout',
+        connectTimeout,
+      );
+      _traceError(uri, e);
+      throw e;
+    } catch (e) {
+      _traceError(uri, e);
+      rethrow;
+    }
+  }
+
+  Future<_Reply> _send(
+    String method,
+    Uri uri, {
+    List<int>? body,
+    File? bodyFile,
+    int? bodyFileLength,
+    void Function(int sent, int total)? onSendProgress,
+    GrContentType? contentType,
+    Duration? connectTimeout,
+    Duration? timeout,
+  }) async {
+    final route = '$method ${uri.path}';
+    final watch = Stopwatch()..start();
+    _traceRequest(method, uri, contentType, body, bodyFileLength);
+    final request = await _open(
+      method,
+      uri,
+      connectTimeout ?? timeouts.connect,
+    );
+    request.done.ignore();
+    final deadline = timeout ?? timeouts.request;
+    try {
+      final reply = await _exchange(
+        request,
+        route,
+        body: body,
+        bodyFile: bodyFile,
+        bodyFileLength: bodyFileLength,
+        onSendProgress: onSendProgress,
+        contentType: contentType,
+      ).timeout(deadline);
+      _trace?.call(
+        TraceEvent(
+          channel: TraceChannel.http,
+          direction: TraceDirection.inbound,
+          kind: 'response',
+          fields: {
+            'method': method,
+            'url': uri.toString(),
+            'status': reply.status,
+            'contentType': reply.contentType,
+            'bodyLength': reply.body.length,
+            'elapsedMs': watch.elapsedMilliseconds,
+            ..._textField(reply.contentType, reply.body),
+          },
+          bytes: _cap(reply.body),
+        ),
+      );
+      return reply;
+    } on TimeoutException {
+      request.abort();
+      final e = TimeoutException(
+        '$route: no complete response within $deadline',
+        deadline,
+      );
+      _traceError(uri, e);
+      throw e;
+    } catch (e) {
+      request.abort(e);
+      _traceError(uri, e);
+      rethrow;
+    }
+  }
+
+  Future<_Reply> _exchange(
+    HttpClientRequest request,
+    String route, {
+    List<int>? body,
+    File? bodyFile,
+    int? bodyFileLength,
+    void Function(int sent, int total)? onSendProgress,
+    GrContentType? contentType,
+  }) async {
+    if (contentType != null) {
+      request.headers.set(HttpHeaders.contentTypeHeader, contentType.header);
+    }
+    if (bodyFile != null) {
+      final total = bodyFileLength ?? await bodyFile.length();
+      request.contentLength = total;
+      var sent = 0;
+      await request.addStream(
+        bodyFile.openRead().map((chunk) {
+          sent += chunk.length;
+          onSendProgress?.call(sent, total);
+          return chunk;
+        }),
+      );
+    } else if (body != null) {
+      request.contentLength = body.length;
+      if (body.isNotEmpty) request.add(body);
+    }
+    final response = await request.close();
+    final bytes = await _readBody(response, route);
+    return _Reply(
+      route,
+      response.statusCode,
+      response.headers.contentType?.toString(),
+      bytes,
+    );
+  }
+
+  Future<Uint8List> _readBody(
+    HttpClientResponse response,
+    String route, {
+    int limit = 32 * 1024 * 1024,
+  }) async {
+    final builder = BytesBuilder(copy: false);
+    await for (final chunk in response) {
+      if (builder.length + chunk.length > limit) {
+        throw GrMalformedResponseException(
+          route: route,
+          httpStatus: response.statusCode,
+          issue: 'response body exceeds $limit bytes',
+        );
+      }
+      builder.add(chunk);
+    }
+    return builder.takeBytes();
+  }
+
+  void _traceRequest(
+    String method,
+    Uri uri,
+    GrContentType? contentType,
+    List<int>? body,
+    int? fileLength,
+  ) {
+    _trace?.call(
+      TraceEvent(
+        channel: TraceChannel.http,
+        direction: TraceDirection.outbound,
+        kind: 'request',
+        fields: {
+          'method': method,
+          'url': uri.toString(),
+          'contentType': contentType?.header,
+          'bodyLength': body?.length ?? fileLength,
+          if (body != null) ..._textField(contentType?.header, body),
+        },
+        bytes: body == null ? null : _cap(body),
+      ),
+    );
+  }
+
+  /// Response previews for traces: JSON-ish/text bodies as text.
+  Map<String, Object?> _textField(String? contentType, List<int> body) {
+    if (body.isEmpty || body.length > traceBodyLimit) return const {};
+    final type = contentType ?? '';
+    final looksText =
+        type.startsWith('text/') ||
+        type.contains('json') ||
+        type.contains('x-www-form-urlencoded') ||
+        (type.isEmpty && body.first == 0x7B);
+    if (!looksText) return const {};
+    return {'text': utf8.decode(body, allowMalformed: true)};
+  }
+
+  Uint8List? _cap(List<int> body) {
+    if (body.isEmpty) return null;
+    final n = body.length > traceBodyLimit ? traceBodyLimit : body.length;
+    return Uint8List.fromList(body.sublist(0, n));
+  }
+
+  void _traceError(Uri uri, Object error) => _trace?.call(
+    TraceEvent(
+      channel: TraceChannel.http,
+      direction: TraceDirection.internal,
+      kind: 'error',
+      fields: {'url': uri.toString(), 'error': '$error'},
+    ),
+  );
+
+  void _traceResponse(
+    Uri uri,
+    HttpClientResponse response,
+    List<int> body,
+    Duration elapsed,
+  ) => _trace?.call(
+    TraceEvent(
+      channel: TraceChannel.http,
+      direction: TraceDirection.inbound,
+      kind: 'response',
+      fields: {
+        'method': 'GET',
+        'url': uri.toString(),
+        'status': response.statusCode,
+        'contentType': response.headers.contentType?.toString(),
+        'bodyLength': body.length,
+        'elapsedMs': elapsed.inMilliseconds,
+        ..._textField(response.headers.contentType?.toString(), body),
+      },
+      bytes: _cap(body),
+    ),
+  );
+}
+
+final class _Reply {
+  const _Reply(this.route, this.status, this.contentType, this.body);
+  final String route;
+  final int status;
+  final String? contentType;
+  final Uint8List body;
+}

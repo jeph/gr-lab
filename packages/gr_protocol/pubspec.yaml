@@ -1,0 +1,12 @@
+name: gr_protocol
+description: Ricoh GR camera protocol (BLE GATT, Wi-Fi HTTP API, change WebSocket, live view) in pure Dart.
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+resolution: workspace
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.30.0

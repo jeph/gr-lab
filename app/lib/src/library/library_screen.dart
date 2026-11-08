@@ -1,0 +1,9 @@
+// PLACEHOLDER (library slice replaces this file).
+import 'package:flutter/widgets.dart';
+
+class LibraryScreen extends StatelessWidget {
+  const LibraryScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) => throw UnimplementedError();
+}

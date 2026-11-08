@@ -1,0 +1,1192 @@
+import 'aggregate.dart';
+import 'codecs.dart';
+import 'enums.dart';
+import 'records.dart';
+import 'tables.dart';
+import 'transport.dart';
+
+/// Which reverse-engineered app documents (and uses) an attribute.
+enum GrBleApp {
+  /// GR WORLD 2.0.0 (docs/protocol/ble.md), the GR IV-capable app.
+  grWorld,
+
+  /// Image Sync 2.1.32 (docs/protocol/ble-imagesync.md), GR III only.
+  imageSync,
+}
+
+/// A GATT service of the camera.
+final class GrBleService {
+  const GrBleService({
+    required this.key,
+    required this.uuid,
+    required this.name,
+    this.imageSyncName,
+    this.onGr3,
+    this.onGr4,
+  });
+
+  final String key;
+
+  /// Canonical UUID (see [canonicalUuid]).
+  final String uuid;
+
+  /// Name used in docs/protocol/ble.md.
+  final String name;
+
+  /// Name in Image Sync's `def_ble.yaml`, when it differs.
+  final String? imageSyncName;
+
+  /// Whether the UUID bytes occur in the analyzed GR III / GR IV `bled`
+  /// binary (docs/firmware-protocol-inventory.md; null = not established).
+  /// Byte presence does not prove runtime registration.
+  final bool? onGr3;
+  final bool? onGr4;
+
+  Map<String, Object?> toJson() => {
+    'key': key,
+    'uuid': uuid,
+    'name': name,
+    'imageSyncName': imageSyncName,
+    'firmware': {'gr3': onGr3, 'gr4': onGr4},
+  };
+}
+
+/// One characteristic with its typed codec and provenance.
+final class GrBleCharacteristic<T extends Object> {
+  const GrBleCharacteristic({
+    required this.key,
+    required this.name,
+    required this.uuid,
+    required this.service,
+    required this.properties,
+    required this.apps,
+    required this.onGr3,
+    required this.onGr4,
+    required this.codec,
+    this.guarded = false,
+    this.notes,
+  });
+
+  /// Stable kebab-case name used by the CLI.
+  final String key;
+  final String name;
+
+  /// Canonical UUID.
+  final String uuid;
+  final GrBleService service;
+
+  /// Union of the properties both apps document (GR WORLD "Ops", Image
+  /// Sync `property`). Discovery reports what the camera declares.
+  final Set<BleCharacteristicProperty> properties;
+  final Set<GrBleApp> apps;
+
+  /// UUID byte presence in GR III / GR IV `bled` (ble-imagesync.md §1 diff;
+  /// firmware-protocol-inventory.md). Null = not established.
+  final bool? onGr3;
+  final bool? onGr4;
+
+  /// Writing can power the camera off, change Wi-Fi credentials or pairing
+  /// behaviour, or touch firmware; front ends must require confirmation.
+  final bool guarded;
+  final BleCodec<T> codec;
+
+  /// Layout differences or unknowns worth showing to a user.
+  final String? notes;
+
+  bool get readable => properties.contains(BleCharacteristicProperty.read);
+  bool get writable =>
+      properties.contains(BleCharacteristicProperty.write) ||
+      properties.contains(BleCharacteristicProperty.writeWithoutResponse);
+  bool get notifies =>
+      properties.contains(BleCharacteristicProperty.notify) ||
+      properties.contains(BleCharacteristicProperty.indicate);
+
+  Map<String, Object?> toJson() => {
+    'key': key,
+    'name': name,
+    'uuid': uuid,
+    'service': service.key,
+    'properties': [for (final p in properties) p.name],
+    'apps': [for (final a in apps) a.name],
+    'firmware': {'gr3': onGr3, 'gr4': onGr4},
+    'guarded': guarded,
+    'syntax': codec.syntax,
+    'notes': ?notes,
+  };
+}
+
+const _r = {BleCharacteristicProperty.read};
+const _w = {BleCharacteristicProperty.write};
+const _rw = {BleCharacteristicProperty.read, BleCharacteristicProperty.write};
+const _rn = {BleCharacteristicProperty.read, BleCharacteristicProperty.notify};
+const _rwn = {
+  BleCharacteristicProperty.read,
+  BleCharacteristicProperty.write,
+  BleCharacteristicProperty.notify,
+};
+
+const _both = {GrBleApp.grWorld, GrBleApp.imageSync};
+const _gw = {GrBleApp.grWorld};
+const _is = {GrBleApp.imageSync};
+
+/// The camera's GATT services (ble.md §Services; ble-imagesync.md §1).
+abstract final class GrBleServices {
+  static const deviceInformation = GrBleService(
+    key: 'device-information',
+    uuid: '0000180A-0000-1000-8000-00805F9B34FB',
+    name: 'Device Information',
+  );
+  static const cameraInformation = GrBleService(
+    key: 'camera-information',
+    uuid: '9A5ED1C5-74CC-4C50-B5B6-66A48E7CCFF1',
+    name: 'Camera Information',
+    imageSyncName: 'Camera Information Service',
+    onGr3: true,
+    onGr4: true,
+  );
+  static const cameraControl = GrBleService(
+    key: 'camera-control',
+    uuid: '9F00F387-8345-4BBC-8B92-B87B52E3091A',
+    name: 'Camera Control',
+    imageSyncName: 'Shooting Service',
+    onGr3: true,
+    onGr4: true,
+  );
+  static const cameraState = GrBleService(
+    key: 'camera-state',
+    uuid: '4B445988-CAA0-4DD3-941D-37B4F52ACA86',
+    name: 'Camera State',
+    imageSyncName: 'Camera Service',
+    onGr3: true,
+    onGr4: true,
+  );
+  static const wlanControl = GrBleService(
+    key: 'wlan-control',
+    uuid: 'F37F568F-9071-445D-A938-5441F2E82399',
+    name: 'WLAN Control',
+    imageSyncName: 'WLAN Control Command',
+    onGr3: true,
+    onGr4: true,
+  );
+  static const gps = GrBleService(
+    key: 'gps',
+    uuid: '84A0DD62-E8AA-4D0F-91DB-819B6724C69E',
+    name: 'GPS',
+    imageSyncName: 'GPS Control Command',
+    onGr3: true,
+    onGr4: true,
+  );
+  static const clientRegistration = GrBleService(
+    key: 'client-registration',
+    uuid: '0F291746-0C80-4726-87A7-3C501FD3B4B6',
+    name: 'Client Registration',
+    imageSyncName: 'Bluetooth Control Command',
+    onGr3: true,
+    onGr4: true,
+  );
+
+  static const all = [
+    deviceInformation,
+    cameraInformation,
+    cameraControl,
+    cameraState,
+    wlanControl,
+    gps,
+    clientRegistration,
+  ];
+
+  static GrBleService? byUuid(String uuid) {
+    final u = canonicalUuid(uuid);
+    for (final s in all) {
+      if (s.uuid == u) return s;
+    }
+    return null;
+  }
+}
+
+/// Every characteristic documented by GR WORLD 2.0.0 and Image Sync 2.1.32.
+abstract final class GrBleCatalog {
+  // Device Information 180A (standard; bled has no DIS implementation, so
+  // firmware presence is not established).
+
+  static const disManufacturerName = GrBleCharacteristic(
+    key: 'dis-manufacturer-name',
+    name: 'Manufacturer Name (DIS)',
+    uuid: '00002A29-0000-1000-8000-00805F9B34FB',
+    service: GrBleServices.deviceInformation,
+    properties: _r,
+    apps: _both,
+    onGr3: null,
+    onGr4: null,
+    codec: BleUtf8Codec(),
+  );
+  static const disModelNumber = GrBleCharacteristic(
+    key: 'dis-model-number',
+    name: 'Model Number (DIS)',
+    uuid: '00002A24-0000-1000-8000-00805F9B34FB',
+    service: GrBleServices.deviceInformation,
+    properties: _r,
+    apps: _both,
+    onGr3: null,
+    onGr4: null,
+    codec: BleUtf8Codec(),
+    notes:
+        'GR WORLD gates firmware on exact "GR IV"/"GR IIIx"/"GR III"/"GR II"',
+  );
+  static const disSerialNumber = GrBleCharacteristic(
+    key: 'dis-serial-number',
+    name: 'Serial Number (DIS)',
+    uuid: '00002A25-0000-1000-8000-00805F9B34FB',
+    service: GrBleServices.deviceInformation,
+    properties: _r,
+    apps: _both,
+    onGr3: null,
+    onGr4: null,
+    codec: BleUtf8Codec(),
+  );
+  static const disFirmwareRevision = GrBleCharacteristic(
+    key: 'dis-firmware-revision',
+    name: 'Firmware Revision (DIS)',
+    uuid: '00002A26-0000-1000-8000-00805F9B34FB',
+    service: GrBleServices.deviceInformation,
+    properties: _r,
+    apps: _both,
+    onGr3: null,
+    onGr4: null,
+    codec: BleUtf8Codec(),
+  );
+  static const disSoftwareRevision = GrBleCharacteristic(
+    key: 'dis-software-revision',
+    name: 'Software Revision (DIS)',
+    uuid: '00002A28-0000-1000-8000-00805F9B34FB',
+    service: GrBleServices.deviceInformation,
+    properties: _r,
+    apps: _both,
+    onGr3: null,
+    onGr4: null,
+    codec: BleUtf8Codec(),
+  );
+
+  // Camera Information 9A5ED1C5 (ble.md §Camera Information).
+
+  static const manufacturerName = GrBleCharacteristic(
+    key: 'manufacturer-name',
+    name: 'Manufacturer Name String',
+    uuid: 'F5666A48-6A74-40AE-A817-3C9B3EFB59A6',
+    service: GrBleServices.cameraInformation,
+    properties: _r,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleUtf8Codec(),
+  );
+  static const modelName = GrBleCharacteristic(
+    key: 'model-name',
+    name: 'Model Number String',
+    uuid: '35FE6272-6AA5-44D9-88E1-F09427F51A71',
+    service: GrBleServices.cameraInformation,
+    properties: _r,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleUtf8Codec(),
+    notes:
+        'firmware model property, e.g. "RICOH GR IV HDF" (camera-models §4.2)',
+  );
+  static const serialNumber = GrBleCharacteristic(
+    key: 'serial-number',
+    name: 'Serial Number String',
+    uuid: '0D2FC4D5-5CB3-4CDE-B519-445E599957D8',
+    service: GrBleServices.cameraInformation,
+    properties: _r,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleUtf8Codec(),
+  );
+  static const firmwareRevision = GrBleCharacteristic(
+    key: 'firmware-revision',
+    name: 'Firmware Revision String',
+    uuid: 'B4EB8905-7411-40A6-A367-2834C2157EA7',
+    service: GrBleServices.cameraInformation,
+    properties: _r,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleUtf8Codec(),
+  );
+  static const bluetoothDeviceName = GrBleCharacteristic(
+    key: 'bluetooth-device-name',
+    name: 'Bluetooth Device Name',
+    uuid: '6FE9D605-3122-4FCE-A0AE-FD9BC08FF879',
+    service: GrBleServices.cameraInformation,
+    properties: _r,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleUtf8Codec(),
+  );
+  static const bluetoothMacAddress = GrBleCharacteristic(
+    key: 'bluetooth-mac-address',
+    name: 'Bluetooth MAC Address String',
+    uuid: '97E34DA2-2E1A-405B-B80D-F8F0AA9CC51C',
+    service: GrBleServices.cameraInformation,
+    properties: _r,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleUtf8Codec(),
+    notes: 'string format (separators, case) unknown',
+  );
+
+  // Camera Control / Shooting Service 9F00F387.
+
+  static const shootingNotification = GrBleCharacteristic(
+    key: 'shooting-notification',
+    name: 'Shooting Service Notification',
+    uuid: '671466A5-5535-412E-AC4F-8B2F06AF2237',
+    service: GrBleServices.cameraControl,
+    properties: _rn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleAggregateNotificationCodec(),
+    notes: 'aggregate; embedded UUID byte order unconfirmed',
+  );
+  static const highFrequencyShootingNotification = GrBleCharacteristic(
+    key: 'high-frequency-shooting-notification',
+    name: 'High Frequency Shooting Service Notification',
+    uuid: '2AC97991-A78B-4CD4-9AE8-6E030E1D9EDB',
+    service: GrBleServices.cameraControl,
+    properties: _rn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleAggregateNotificationCodec(),
+    notes: 'aggregate; embedded UUID byte order unconfirmed',
+  );
+  static const shutterSpeed = GrBleCharacteristic(
+    key: 'shutter-speed',
+    name: 'Shutter Speed',
+    uuid: 'D3CE2AED-10FA-4648-833D-CD74C6F35905',
+    service: GrBleServices.cameraControl,
+    properties: _rwn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleIndexedCodec(BleIntFormat.uint8, bleShutterSpeedLabels),
+  );
+  static const aperture = GrBleCharacteristic(
+    key: 'aperture',
+    name: 'Aperture',
+    uuid: '3911F22D-9771-479D-B2B9-F729D9BAF9DC',
+    service: GrBleServices.cameraControl,
+    properties: _rwn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleIndexedCodec(BleIntFormat.sint8, bleApertureLabels),
+  );
+  static const iso = GrBleCharacteristic(
+    key: 'iso',
+    name: 'ISO Sensitivity',
+    uuid: '206BD02C-78B2-42C4-820A-CF30E0963909',
+    service: GrBleServices.cameraControl,
+    properties: _rwn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    // Image Sync masks sint32 writes with 0x00FFFFFF (ble-imagesync.md §4.1).
+    codec: BleIndexedCodec(
+      BleIntFormat.sint32,
+      bleIsoLabels,
+      encodeMin: 0,
+      encodeMax: 0x00FFFFFF,
+    ),
+  );
+  static const exposureCompensation = GrBleCharacteristic(
+    key: 'exposure-compensation',
+    name: 'Exposure Compensation',
+    uuid: '30BCC8EB-725D-4048-A832-E76AE26A57E9',
+    service: GrBleServices.cameraControl,
+    properties: _rwn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleIndexedCodec(BleIntFormat.sint8, bleExposureCompensationLabels),
+  );
+  static const whiteBalance = GrBleCharacteristic(
+    key: 'white-balance',
+    name: 'White Balance',
+    uuid: '2361F4FF-2C7E-4FC5-876B-F9B0EFBC06FD',
+    service: GrBleServices.cameraControl,
+    properties: _rwn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleEnumCodec(BleWhiteBalance.values),
+  );
+  static const driveMode = GrBleCharacteristic(
+    key: 'drive-mode',
+    name: 'Drive Mode',
+    uuid: 'B29E6DE3-1AEC-48C1-9D05-02CEA57CE664',
+    service: GrBleServices.cameraControl,
+    properties: _rwn,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleEnumCodec(BleDriveMode.values, BleIntFormat.uint8),
+  );
+  static const shootingMode = GrBleCharacteristic(
+    key: 'shooting-mode',
+    name: 'Shooting Mode',
+    uuid: 'A3C51525-DE3E-4777-A1C2-699E28736FCF',
+    service: GrBleServices.cameraControl,
+    properties: _rwn,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleShootingModeCodec(),
+    notes:
+        'GR WORLD reads 2 bytes, Image Sync declares 3; GR WORLD never writes',
+  );
+  static const meteringMode = GrBleCharacteristic(
+    key: 'metering-mode',
+    name: 'Metering mode',
+    uuid: 'ED58217E-1839-43B2-BCD7-DC48C36AC0DE',
+    service: GrBleServices.cameraControl,
+    properties: _rwn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleEnumCodec(BleMeteringMode.values),
+  );
+  static const captureMode = GrBleCharacteristic(
+    key: 'capture-mode',
+    name: 'Capture Mode',
+    uuid: '78009238-AC3D-4370-9B6F-C9CE2F4E3CA8',
+    service: GrBleServices.cameraControl,
+    properties: _rwn,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleEnumCodec(BleCaptureMode.values),
+    notes: 'Image Sync writes it; GR WORLD only reads',
+  );
+  static const fileType = GrBleCharacteristic(
+    key: 'file-type',
+    name: 'File Type',
+    uuid: '95BFA8CA-4680-424D-B27C-AAC20D86E48B',
+    service: GrBleServices.cameraControl,
+    properties: _rwn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleFileTypeCodec(),
+  );
+  static const jpegSize = GrBleCharacteristic(
+    key: 'jpeg-size',
+    name: 'JPEG Size',
+    uuid: '9838BB04-4ABB-4C12-AE22-626D02E3704B',
+    service: GrBleServices.cameraControl,
+    properties: _rwn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleEnumCodec(BleJpegSize.values),
+  );
+  static const movieConfiguration = GrBleCharacteristic(
+    key: 'movie-configuration',
+    name: 'Movie Configuration',
+    uuid: '404F6626-1294-407F-AB3D-DDC6B805B6BC',
+    service: GrBleServices.cameraControl,
+    properties: _rwn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleEnumCodec(BleMovieConfiguration.values),
+  );
+  static const operationRequest = GrBleCharacteristic(
+    key: 'operation-request',
+    name: 'Operation Request (shutter)',
+    uuid: '559644B8-E0BC-4011-929B-5CF9199851E7',
+    service: GrBleServices.cameraControl,
+    properties: _w,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleOperationRequestCodec(),
+  );
+  static const shutterSpeedList = GrBleCharacteristic(
+    key: 'shutter-speed-list',
+    name: 'Shutter Speed List',
+    uuid: 'B355330D-4ADC-4434-A222-7B91404B4788',
+    service: GrBleServices.cameraControl,
+    properties: _rn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleListCodec(
+      BleIndexedCodec(BleIntFormat.uint8, bleShutterSpeedLabels),
+      1,
+    ),
+  );
+  static const apertureList = GrBleCharacteristic(
+    key: 'aperture-list',
+    name: 'Aperture List',
+    uuid: '4866F4A9-2C83-457B-B393-B9535E1447E5',
+    service: GrBleServices.cameraControl,
+    properties: _rn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleListCodec(
+      BleIndexedCodec(BleIntFormat.sint8, bleApertureLabels),
+      1,
+    ),
+  );
+  static const isoList = GrBleCharacteristic(
+    key: 'iso-list',
+    name: 'ISO Sensitivity List',
+    uuid: '9C83DF56-FD93-4639-8CA7-857BB7B3CA3D',
+    service: GrBleServices.cameraControl,
+    properties: _rn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleListCodec(BleIndexedCodec(BleIntFormat.sint32, bleIsoLabels), 4),
+  );
+  static const exposureCompensationList = GrBleCharacteristic(
+    key: 'exposure-compensation-list',
+    name: 'Exposure Compensation List',
+    uuid: '01879798-28EE-4D97-92C9-FD249C88BBCC',
+    service: GrBleServices.cameraControl,
+    properties: _rn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleListCodec(
+      BleIndexedCodec(BleIntFormat.sint8, bleExposureCompensationLabels),
+      1,
+    ),
+  );
+  static const whiteBalanceList = GrBleCharacteristic(
+    key: 'white-balance-list',
+    name: 'White Balance List',
+    uuid: 'FB673486-2A76-41B8-88F7-F88552FE5745',
+    service: GrBleServices.cameraControl,
+    properties: _rn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleListCodec(BleEnumCodec(BleWhiteBalance.values), 1),
+  );
+  static const driveModeList = GrBleCharacteristic(
+    key: 'drive-mode-list',
+    name: 'Drive Mode List',
+    uuid: 'F4B6C78C-7873-43F0-9748-F4406185224D',
+    service: GrBleServices.cameraControl,
+    properties: _rn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    // Elements are declared sint8, unlike the uint8 Drive Mode itself.
+    codec: BleListCodec(BleEnumCodec(BleDriveMode.values), 1),
+  );
+  static const fileTypeList = GrBleCharacteristic(
+    key: 'file-type-list',
+    name: 'File Type List',
+    uuid: 'F3BFB222-C62B-4AAA-BB61-EF6486626CC8',
+    service: GrBleServices.cameraControl,
+    properties: _r,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleListCodec(BleEnumCodec(BleStillFileType.values), 1),
+  );
+  static const focusMode = GrBleCharacteristic(
+    key: 'focus-mode',
+    name: 'Focus Mode',
+    uuid: '89458F80-50A1-42C1-B031-1BC6082179C0',
+    service: GrBleServices.cameraControl,
+    properties: _rn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleFocusCodec(),
+  );
+  static const afStatus = GrBleCharacteristic(
+    key: 'af-status',
+    name: 'Auto Focus Status',
+    uuid: 'CDFC734E-EA21-427D-A69F-C1A0F7F1E9A3',
+    service: GrBleServices.cameraControl,
+    properties: _rn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleAfStatusCodec(),
+  );
+  static const captureStatus = GrBleCharacteristic(
+    key: 'capture-status',
+    name: 'Capture Status',
+    uuid: 'B5589C08-B5FD-46F5-BE7D-AB1B8C074CAA',
+    service: GrBleServices.cameraControl,
+    properties: _rn,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleCaptureStatusCodec(),
+    notes: 'GR WORLD reads 2 bytes, Image Sync declares 8',
+  );
+  static const shotCount = GrBleCharacteristic(
+    key: 'shot-count',
+    name: 'Shot Count',
+    uuid: '12D262BA-D8BF-44B0-8E85-C414A40230A9',
+    service: GrBleServices.cameraControl,
+    properties: _rn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleShotCountCodec(),
+  );
+  static const selfTimer = GrBleCharacteristic(
+    key: 'self-timer',
+    name: 'Self Timer (countdown cancel)',
+    uuid: '009A8E70-B306-4451-B943-7F54392EB971',
+    service: GrBleServices.cameraControl,
+    properties: _w,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleSelfTimerCodec(),
+    notes: 'GR WORLD writes 1 byte 01, Image Sync 2 bytes 01 01',
+  );
+  static const shootingModeList = GrBleCharacteristic(
+    key: 'shooting-mode-list',
+    name: 'Shooting Mode List',
+    uuid: 'F662DCD8-AC6E-4E02-A4B2-CE92CD44C7C3',
+    service: GrBleServices.cameraControl,
+    properties: _rn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleListCodec(BleEnumCodec(BleExposureMode.values), 1),
+  );
+  static const focusSettingList = GrBleCharacteristic(
+    key: 'focus-setting-list',
+    name: 'Focus Setting List',
+    uuid: '31B28DAB-BD3C-4C27-AA08-F379BF737C1E',
+    service: GrBleServices.cameraControl,
+    properties: _rn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleListCodec(BleEnumCodec(BleFocusSetting.values), 1),
+  );
+  static const imageControl1Name = GrBleCharacteristic(
+    key: 'image-control-1-name',
+    name: 'Image Control Custom 1 name',
+    uuid: '30ADB439-1BC0-4B8E-9C8B-2BD1892AD6B0',
+    service: GrBleServices.cameraControl,
+    properties: _rw,
+    apps: _gw,
+    onGr3: false,
+    onGr4: true,
+    codec: BleUtf8Codec(),
+    notes: '"name" meaning inferred',
+  );
+  static const imageControl2Name = GrBleCharacteristic(
+    key: 'image-control-2-name',
+    name: 'Image Control Custom 2 name',
+    uuid: 'E799198F-CF3F-4650-9373-B15DDA1B618C',
+    service: GrBleServices.cameraControl,
+    properties: _rw,
+    apps: _gw,
+    onGr3: false,
+    onGr4: true,
+    codec: BleUtf8Codec(),
+    notes: '"name" meaning inferred',
+  );
+  static const imageControl3Name = GrBleCharacteristic(
+    key: 'image-control-3-name',
+    name: 'Image Control Custom 3 name',
+    uuid: 'DF77DD09-0A48-44AA-9664-2116D03B6FD7',
+    service: GrBleServices.cameraControl,
+    properties: _rw,
+    apps: _gw,
+    onGr3: false,
+    onGr4: true,
+    codec: BleUtf8Codec(),
+    notes: '"name" meaning inferred',
+  );
+  static const imageControl1Data = GrBleCharacteristic(
+    key: 'image-control-1-data',
+    name: 'Image Control Custom 1 data',
+    uuid: '3E0673E0-1C7B-4F97-8CA6-5C2C8BC56680',
+    service: GrBleServices.cameraControl,
+    properties: _rw,
+    apps: _gw,
+    onGr3: false,
+    onGr4: true,
+    codec: BleImageControlCodec(),
+  );
+  static const imageControl2Data = GrBleCharacteristic(
+    key: 'image-control-2-data',
+    name: 'Image Control Custom 2 data',
+    uuid: '0936B04C-7269-4CEF-9F34-07217D40CC55',
+    service: GrBleServices.cameraControl,
+    properties: _rw,
+    apps: _gw,
+    onGr3: false,
+    onGr4: true,
+    codec: BleImageControlCodec(),
+  );
+  static const imageControl3Data = GrBleCharacteristic(
+    key: 'image-control-3-data',
+    name: 'Image Control Custom 3 data',
+    uuid: 'CD879E7A-AB9F-4C58-90ED-689BAE67EF8E',
+    service: GrBleServices.cameraControl,
+    properties: _rw,
+    apps: _gw,
+    onGr3: false,
+    onGr4: true,
+    codec: BleImageControlCodec(),
+  );
+
+  // Camera State / Camera Service 4B445988.
+
+  static const cameraServiceNotification = GrBleCharacteristic(
+    key: 'camera-service-notification',
+    name: 'Camera Service Notification',
+    uuid: 'FAA0AEAF-1654-4842-A139-F4E1C1E722AC',
+    service: GrBleServices.cameraState,
+    properties: _rn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    codec: BleAggregateNotificationCodec(),
+    notes: 'aggregate; embedded UUID byte order unconfirmed',
+  );
+  static const cameraPower = GrBleCharacteristic(
+    key: 'camera-power',
+    name: 'Camera Power',
+    uuid: 'B58CE84C-0666-4DE9-BEC8-2D27B27B3211',
+    service: GrBleServices.cameraState,
+    properties: _rwn,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    guarded: true,
+    codec: BleEnumCodec(BleCameraPower.values),
+    notes: 'both apps only ever write 00 (power off)',
+  );
+  static const batteryLevel = GrBleCharacteristic(
+    key: 'battery',
+    name: 'Battery Level',
+    uuid: '875FC41D-4980-434C-A653-FD4A4D4410C4',
+    service: GrBleServices.cameraState,
+    properties: _rn,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleBatteryLevelCodec(),
+    notes: 'byte1: power source (Image Sync) or long-form flag (GR WORLD)',
+  );
+  static const dateTime = GrBleCharacteristic(
+    key: 'date-time',
+    name: 'Date Time',
+    uuid: 'FA46BBDD-8A8F-4796-8CF3-AA58949B130A',
+    service: GrBleServices.cameraState,
+    properties: _rw,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleDateTimeCodec(),
+  );
+  static const operationModeList = GrBleCharacteristic(
+    key: 'operation-mode-list',
+    name: 'Operation Mode List',
+    uuid: '430B80A3-CC2E-4EC2-AACD-08610281FF38',
+    service: GrBleServices.cameraState,
+    properties: _rn,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleListCodec(BleEnumCodec(BleOperationMode.values), 1),
+    notes: 'list per Image Sync; GR WORLD reads only byte0',
+  );
+  static const operationMode = GrBleCharacteristic(
+    key: 'operation-mode',
+    name: 'Operation Mode',
+    uuid: '1452335A-EC7F-4877-B8AB-0F72E18BB295',
+    service: GrBleServices.cameraState,
+    properties: _rwn,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleEnumCodec(BleOperationMode.values),
+    notes: 'neither app is known to write it',
+  );
+  static const geoTag = GrBleCharacteristic(
+    key: 'geotag',
+    name: 'GEO Tag',
+    uuid: 'A36AFDCF-6B67-4046-9BE7-28FB67DBC071',
+    service: GrBleServices.cameraState,
+    properties: _rwn,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleBoolCodec(),
+  );
+  static const storageInformation = GrBleCharacteristic(
+    key: 'storage',
+    name: 'Storage Information',
+    uuid: 'A0C10148-8865-4470-9631-8F36D79A41A5',
+    service: GrBleServices.cameraState,
+    properties: _rn,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleStorageInformationCodec(),
+    notes: '14-byte (GR WORLD, GR III) or 15-byte (Image Sync) entries',
+  );
+  static const fileTransferList = GrBleCharacteristic(
+    key: 'file-transfer-list',
+    name: 'File Transfer List',
+    uuid: 'D9AE1C06-447D-4DEA-8B7D-FC8B19C2CDAE',
+    service: GrBleServices.cameraState,
+    properties: _rn,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleFileTransferListCodec(),
+  );
+  static const powerOffDuringTransfer = GrBleCharacteristic(
+    key: 'power-off-during-transfer',
+    name: 'Power Off During File Transfer',
+    uuid: 'BD6725FC-5D16-496A-A48A-F784594C8ECB',
+    service: GrBleServices.cameraState,
+    properties: _rwn,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BlePowerOffDuringTransferCodec(),
+  );
+  static const gradNd = GrBleCharacteristic(
+    key: 'grad-nd',
+    name: 'Grad ND',
+    uuid: '209F9869-8540-460E-97A6-5C3AC08F2C73',
+    service: GrBleServices.cameraState,
+    properties: _rn,
+    apps: _is,
+    onGr3: false,
+    onGr4: false,
+    codec: BleEnumCodec(BleGradNd.values),
+    notes: 'PENTAX K-3 III characteristic; absent from both GR bled builds',
+  );
+  static const cameraName = GrBleCharacteristic(
+    key: 'camera-name',
+    name: 'Camera Name',
+    uuid: 'EF437870-180A-44AE-AFFD-99DBD85ADE43',
+    service: GrBleServices.cameraState,
+    properties: _rw,
+    apps: _gw,
+    onGr3: false,
+    onGr4: true,
+    codec: BleUtf8Codec(),
+  );
+  static const firmwareUpdateAvailable = GrBleCharacteristic(
+    key: 'firmware-update-available',
+    name: 'Firmware Update Available',
+    uuid: 'E450ED9B-DD61-43F2-BDFB-6AF500C910C3',
+    service: GrBleServices.cameraState,
+    properties: _w,
+    apps: _gw,
+    onGr3: false,
+    onGr4: true,
+    guarded: true,
+    codec: BleBoolCodec(),
+    notes: 'name inferred from getter order; no GR WORLD caller found',
+  );
+  static const firmwareUpdateStart = GrBleCharacteristic(
+    key: 'firmware-update-start',
+    name: 'Firmware Update Start',
+    uuid: '5F0A7BA9-AE46-4645-ABAC-58AB2A1F4FE4',
+    service: GrBleServices.cameraState,
+    properties: _w,
+    apps: _gw,
+    onGr3: false,
+    onGr4: true,
+    guarded: true,
+    codec: BleBoolCodec(),
+    notes: 'name inferred; GR WORLD writes 01 after uploading firmware',
+  );
+  static const firmwareUpdateResult = GrBleCharacteristic(
+    key: 'firmware-update-result',
+    name: 'Firmware Update Result',
+    uuid: '39879AAC-0AF6-44B5-AFBB-CA50053FA575',
+    service: GrBleServices.cameraState,
+    properties: _rn,
+    apps: _gw,
+    onGr3: false,
+    onGr4: true,
+    guarded: true,
+    codec: BleEnumCodec(BleFirmwareUpdateResult.values),
+  );
+  static const endScreenData = GrBleCharacteristic(
+    key: 'end-screen-data',
+    name: 'End-screen data',
+    uuid: 'F759F4DD-5FAF-4CAC-82F4-5A3FE11737E7',
+    service: GrBleServices.cameraState,
+    properties: _r,
+    apps: _gw,
+    onGr3: false,
+    onGr4: true,
+    codec: BleBytesCodec(),
+    notes: 'layout unknown',
+  );
+
+  // WLAN Control F37F568F.
+
+  static const networkType = GrBleCharacteristic(
+    key: 'wlan',
+    name: 'Network Type (WLAN on/off)',
+    uuid: '9111CDD0-9F01-45C4-A2D4-E09E8FB0424D',
+    service: GrBleServices.wlanControl,
+    properties: _rwn,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleEnumCodec(BleNetworkType.values),
+  );
+  static const ssid = GrBleCharacteristic(
+    key: 'ssid',
+    name: 'SSID',
+    uuid: '90638E5A-E77D-409D-B550-78F7E1CA5AB4',
+    service: GrBleServices.wlanControl,
+    properties: _rw,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    guarded: true,
+    codec: BleUtf8Codec(),
+  );
+  static const passphrase = GrBleCharacteristic(
+    key: 'passphrase',
+    name: 'Passphrase',
+    uuid: '0F38279C-FE9E-461B-8596-81287E8C9A81',
+    service: GrBleServices.wlanControl,
+    properties: _rw,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    guarded: true,
+    codec: BleUtf8Codec(),
+  );
+  static const wlanChannel = GrBleCharacteristic(
+    key: 'wlan-channel',
+    name: 'Channel',
+    uuid: '51DE6EBC-0F22-4357-87E4-B1FA1D385AB8',
+    service: GrBleServices.wlanControl,
+    properties: _rw,
+    apps: _is,
+    onGr3: true,
+    onGr4: false,
+    guarded: true,
+    codec: BleEnumCodec(BleWlanChannel.values),
+    notes: 'GR III only; GR IV has wlan-frequency instead',
+  );
+  static const wlanFrequency = GrBleCharacteristic(
+    key: 'wlan-frequency',
+    name: 'wlanFreq',
+    uuid: 'C4B7DFC0-80FD-4223-B132-B7D25A59CF85',
+    service: GrBleServices.wlanControl,
+    properties: _rw,
+    apps: _gw,
+    onGr3: false,
+    onGr4: true,
+    guarded: true,
+    codec: BleEnumCodec(BleWlanFrequency.values),
+  );
+  static const wlanSecurity = GrBleCharacteristic(
+    key: 'wlan-security',
+    name: 'security',
+    uuid: '63BC8463-228F-4698-B30D-FAF8E3D7BD88',
+    service: GrBleServices.wlanControl,
+    properties: _rw,
+    apps: _gw,
+    onGr3: false,
+    onGr4: true,
+    guarded: true,
+    codec: BleEnumCodec(BleWlanSecurity.values),
+  );
+  static const available5GHz = GrBleCharacteristic(
+    key: 'available-5ghz',
+    name: 'available5GHz',
+    uuid: '460828AC-94EB-4EDF-9BB0-D31E75F2B165',
+    service: GrBleServices.wlanControl,
+    properties: _r,
+    apps: _gw,
+    onGr3: false,
+    onGr4: true,
+    codec: BleBoolCodec(),
+  );
+
+  // GPS 84A0DD62.
+
+  static const gpsInformation = GrBleCharacteristic(
+    key: 'gps',
+    name: 'GPS Information',
+    uuid: '28F59D60-8B8E-4FCD-A81F-61BDB46595A9',
+    service: GrBleServices.gps,
+    properties: _rw,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    codec: BleGpsInformationCodec(),
+    notes: 'fix time UTC in Image Sync; GR WORLD basis unknown',
+  );
+
+  // Client Registration / Bluetooth Control Command 0F291746.
+
+  static const bleEnableCondition = GrBleCharacteristic(
+    key: 'ble-enable-condition',
+    name: 'BLE Enable Condition',
+    uuid: 'D8676C92-DC4E-4D9E-ACCE-B9E251DDCC0C',
+    service: GrBleServices.clientRegistration,
+    properties: _rwn,
+    apps: _is,
+    onGr3: true,
+    onGr4: true,
+    guarded: true,
+    codec: BleEnumCodec(BleEnableCondition.values),
+    notes: 'wake from off presumably needs enableAnytime',
+  );
+  static const pairedDeviceName = GrBleCharacteristic(
+    key: 'paired-device-name',
+    name: 'Paired Device Name',
+    uuid: 'FE3A32F8-A189-42DE-A391-BC81AE4DAA76',
+    service: GrBleServices.clientRegistration,
+    properties: _w,
+    apps: _both,
+    onGr3: true,
+    onGr4: true,
+    guarded: true,
+    codec: BleUtf8Codec(),
+  );
+
+  static const List<GrBleCharacteristic<Object>> all = [
+    disManufacturerName,
+    disModelNumber,
+    disSerialNumber,
+    disFirmwareRevision,
+    disSoftwareRevision,
+    manufacturerName,
+    modelName,
+    serialNumber,
+    firmwareRevision,
+    bluetoothDeviceName,
+    bluetoothMacAddress,
+    shootingNotification,
+    highFrequencyShootingNotification,
+    shutterSpeed,
+    aperture,
+    iso,
+    exposureCompensation,
+    whiteBalance,
+    driveMode,
+    shootingMode,
+    meteringMode,
+    captureMode,
+    fileType,
+    jpegSize,
+    movieConfiguration,
+    operationRequest,
+    shutterSpeedList,
+    apertureList,
+    isoList,
+    exposureCompensationList,
+    whiteBalanceList,
+    driveModeList,
+    fileTypeList,
+    focusMode,
+    afStatus,
+    captureStatus,
+    shotCount,
+    selfTimer,
+    shootingModeList,
+    focusSettingList,
+    imageControl1Name,
+    imageControl2Name,
+    imageControl3Name,
+    imageControl1Data,
+    imageControl2Data,
+    imageControl3Data,
+    cameraServiceNotification,
+    cameraPower,
+    batteryLevel,
+    dateTime,
+    operationModeList,
+    operationMode,
+    geoTag,
+    storageInformation,
+    fileTransferList,
+    powerOffDuringTransfer,
+    gradNd,
+    cameraName,
+    firmwareUpdateAvailable,
+    firmwareUpdateStart,
+    firmwareUpdateResult,
+    endScreenData,
+    networkType,
+    ssid,
+    passphrase,
+    wlanChannel,
+    wlanFrequency,
+    wlanSecurity,
+    available5GHz,
+    gpsInformation,
+    bleEnableCondition,
+    pairedDeviceName,
+  ];
+
+  /// Camera Information characteristics in GR WORLD's read-all order.
+  static const List<GrBleCharacteristic<String>> identity = [
+    manufacturerName,
+    modelName,
+    serialNumber,
+    firmwareRevision,
+    bluetoothDeviceName,
+    bluetoothMacAddress,
+  ];
+
+  /// Image Control custom slots 1–3: (name, data).
+  static const imageControlSlots = [
+    (name: imageControl1Name, data: imageControl1Data),
+    (name: imageControl2Name, data: imageControl2Data),
+    (name: imageControl3Name, data: imageControl3Data),
+  ];
+
+  static final Map<String, GrBleCharacteristic<Object>> _byUuid = {
+    for (final c in all) c.uuid: c,
+  };
+  static final Map<String, GrBleCharacteristic<Object>> _byKey = {
+    for (final c in all) c.key: c,
+  };
+
+  /// Lookup by UUID in any accepted form; null when unknown or malformed.
+  static GrBleCharacteristic<Object>? byUuid(String uuid) {
+    try {
+      return _byUuid[canonicalUuid(uuid)];
+    } on FormatException {
+      return null;
+    }
+  }
+
+  static GrBleCharacteristic<Object>? byKey(String key) =>
+      _byKey[key.toLowerCase()];
+
+  /// Lookup by CLI key or UUID.
+  static GrBleCharacteristic<Object>? lookup(String keyOrUuid) =>
+      byKey(keyOrUuid) ?? byUuid(keyOrUuid);
+}

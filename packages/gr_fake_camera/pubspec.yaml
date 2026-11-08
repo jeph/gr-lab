@@ -1,0 +1,16 @@
+name: gr_fake_camera
+description: Simulated Ricoh GR camera (BLE GATT, Wi-Fi join, HTTP API) for tests and the app's demo mode.
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+resolution: workspace
+
+dependencies:
+  gr_protocol:
+    path: ../gr_protocol
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.30.0

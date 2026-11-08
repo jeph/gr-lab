@@ -1,0 +1,71 @@
+import 'dart:io';
+
+import 'package:gr_protocol/gr_protocol.dart';
+
+/// Saves downloaded camera files into the device photo library.
+abstract interface class MediaSaver {
+  /// Saves the files of one shot. [files] holds a JPEG, a DNG, both halves
+  /// of a RAW+JPEG pair (same base name), or one movie. iOS stores a pair as
+  /// one Photos asset (JPEG primary, DNG alternate); Android writes one
+  /// MediaStore entry per file under `Pictures/<album>` or
+  /// `Movies/<album>`. Throws [MediaSaveException].
+  Future<void> saveShot(List<File> files, {required String album});
+}
+
+final class MediaSaveException implements Exception {
+  const MediaSaveException(this.code, this.message);
+
+  /// `permissionDenied`, `unsupported` or `failed`.
+  final String code;
+  final String message;
+
+  bool get permissionDenied => code == 'permissionDenied';
+
+  @override
+  String toString() => 'MediaSaveException($code): $message';
+}
+
+/// Everything that differs between the real device and the demo camera,
+/// built once at start-up and reached through `AppScope.of(context).services`.
+final class AppServices {
+  AppServices({
+    required this.ble,
+    required this.wifi,
+    required this.media,
+    required this.clientName,
+    required this.dataDir,
+    required this.cacheDir,
+    required this.ensureBluetoothPermission,
+    this.cameraHost = '192.168.0.1',
+    this.httpFactory,
+    this.sessionOptions = const GrSessionOptions(),
+    this.isDemo = false,
+  });
+
+  final BleTransport ble;
+  final WifiNetworkControl wifi;
+  final MediaSaver media;
+
+  /// Asks for Bluetooth scan/connect permission where the OS requires it
+  /// (Android 12+). Returns false when the user denied it.
+  final Future<bool> Function() ensureBluetoothPermission;
+
+  /// Written to the camera's Paired Devices list during pairing.
+  final String clientName;
+
+  /// Persistent app data (paired cameras, settings, download records).
+  final Directory dataDir;
+
+  /// Disposable data (thumbnails, partial downloads).
+  final Directory cacheDir;
+
+  final String cameraHost;
+
+  /// Overrides the HTTP client the session builds (the demo camera serves
+  /// on a loopback port).
+  final GrHttpClient Function(String host, TraceSink? trace)? httpFactory;
+  final GrSessionOptions sessionOptions;
+
+  /// Running against the simulated camera.
+  final bool isDemo;
+}

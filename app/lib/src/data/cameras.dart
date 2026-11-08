@@ -1,0 +1,106 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+import 'package:gr_protocol/gr_protocol.dart';
+
+import 'json_file.dart';
+
+/// A paired camera as the app keeps it.
+@immutable
+final class SavedCamera {
+  const SavedCamera({
+    required this.paired,
+    required this.name,
+    required this.pairedAt,
+  });
+
+  factory SavedCamera.fromJson(Map<String, Object?> json) => SavedCamera(
+    paired: GrPairedCamera.fromJson(json['paired']! as Map<String, Object?>),
+    name: json['name']! as String,
+    pairedAt: DateTime.parse(json['pairedAt']! as String),
+  );
+
+  final GrPairedCamera paired;
+
+  /// Shown in the camera pill; defaults to the model without "RICOH".
+  final String name;
+  final DateTime pairedAt;
+
+  String get serial => paired.serialNumber;
+
+  /// Default display name for a newly paired camera.
+  static String defaultName(GrPairedCamera paired) =>
+      stripRicohPrefix(paired.modelName)?.nonEmpty ?? 'GR camera';
+
+  SavedCamera copyWith({String? name}) =>
+      SavedCamera(paired: paired, name: name ?? this.name, pairedAt: pairedAt);
+
+  Map<String, Object?> toJson() => {
+    'paired': paired.toJson(),
+    'name': name,
+    'pairedAt': pairedAt.toUtc().toIso8601String(),
+  };
+}
+
+extension on String {
+  String? get nonEmpty => isEmpty ? null : this;
+}
+
+/// Paired cameras, most recently paired first, persisted as `cameras.json`.
+/// The first one is the camera the app connects to.
+final class CameraStore extends ChangeNotifier {
+  CameraStore._(this._file);
+
+  static Future<CameraStore> load(Directory dataDir) async {
+    final s = CameraStore._(JsonFile(File('${dataDir.path}/cameras.json')));
+    final json = await s._file.read();
+    final list = json?['cameras'];
+    if (list is List<Object?>) {
+      for (final e in list) {
+        if (e is! Map<String, Object?>) continue;
+        try {
+          s._cameras.add(SavedCamera.fromJson(e));
+        } on Object {
+          // Skip entries written by an incompatible build.
+        }
+      }
+    }
+    return s;
+  }
+
+  final JsonFile _file;
+  final List<SavedCamera> _cameras = [];
+  Future<void> _pending = Future.value();
+
+  List<SavedCamera> get cameras => List.unmodifiable(_cameras);
+  SavedCamera? get current => _cameras.isEmpty ? null : _cameras.first;
+
+  /// Adds [camera], replacing any entry with the same serial number (a
+  /// re-pairing gives the camera a new bond and possibly a new device id).
+  Future<void> add(SavedCamera camera) {
+    _cameras
+      ..removeWhere((c) => c.serial == camera.serial)
+      ..insert(0, camera);
+    return _save();
+  }
+
+  Future<void> rename(String serial, String name) {
+    final i = _cameras.indexWhere((c) => c.serial == serial);
+    if (i < 0) return Future.value();
+    _cameras[i] = _cameras[i].copyWith(name: name);
+    return _save();
+  }
+
+  Future<void> remove(String serial) {
+    _cameras.removeWhere((c) => c.serial == serial);
+    return _save();
+  }
+
+  Future<void> _save() {
+    notifyListeners();
+    final snapshot = {
+      'cameras': [for (final c in _cameras) c.toJson()],
+    };
+    return _pending = _pending.then((_) => _file.write(snapshot));
+  }
+}
