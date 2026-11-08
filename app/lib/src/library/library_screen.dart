@@ -3,11 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../app_scope.dart';
-import '../connection/camera_pill.dart';
+import '../camera/camera_top_bar.dart';
+import '../connection/connect_failure_view.dart';
+import '../connection/connect_steps.dart';
 import '../connection/connection_controller.dart';
 import '../downloads/download_bar.dart';
 import '../downloads/download_engine.dart';
-import '../settings/settings_screen.dart';
 import '../theme/tokens.dart';
 import '../widgets/group.dart';
 import 'format.dart';
@@ -160,6 +161,13 @@ class _LibraryViewState extends State<_LibraryView> {
           if (_selected.contains(s.key)) s,
     ];
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    // Without the camera's Wi-Fi the failure replaces the (cached) photos;
+    // its Try again joins again.
+    final failure = _app.connection.failure;
+    final wifiFailure = !model.connected && failure?.step == ConnectStep.wifi
+        ? failure
+        : null;
+    final camera = _app.connection.camera;
 
     return PopScope(
       canPop: !_selecting,
@@ -177,38 +185,41 @@ class _LibraryViewState extends State<_LibraryView> {
                 slivers: [
                   SliverSafeArea(
                     bottom: false,
-                    sliver: SliverToBoxAdapter(
-                      child: _Header(
-                        onSettings: () => unawaited(
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => const SettingsScreen(),
-                            ),
-                          ),
+                    sliver: SliverToBoxAdapter(child: const _Header()),
+                  ),
+                  if (wifiFailure != null && camera != null)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                        child: ConnectFailureView(
+                          camera: camera,
+                          failure: wifiFailure,
+                          connection: _app.connection,
                         ),
                       ),
-                    ),
-                  ),
-                  SliverToBoxAdapter(child: _StatusLine(model: model)),
-                  if (filtered != null && all!.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: _Chips(
-                        filter: _filter,
-                        counts: filtered.counts,
-                        onSelect: (f) => setState(() => _filter = f),
-                      ),
-                    ),
-                  if (shots == null || shots.isEmpty || serial == null)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: _EmptyState(
-                        model: model,
-                        connection: _app.connection,
-                        filter: _filter,
-                      ),
                     )
-                  else
-                    ..._grid(context, serial, shots),
+                  else ...[
+                    SliverToBoxAdapter(child: _StatusLine(model: model)),
+                    if (filtered != null && all!.isNotEmpty)
+                      SliverToBoxAdapter(
+                        child: _Chips(
+                          filter: _filter,
+                          counts: filtered.counts,
+                          onSelect: (f) => setState(() => _filter = f),
+                        ),
+                      ),
+                    if (shots == null || shots.isEmpty || serial == null)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _EmptyState(
+                          model: model,
+                          connection: _app.connection,
+                          filter: _filter,
+                        ),
+                      )
+                    else
+                      ..._grid(context, serial, shots),
+                  ],
                   SliverToBoxAdapter(child: SizedBox(height: 96 + bottomInset)),
                 ],
               ),
@@ -323,63 +334,13 @@ Future<void> showPermissionGuidance(BuildContext context) {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.onSettings});
-
-  final VoidCallback onSettings;
+  const _Header();
 
   @override
   Widget build(BuildContext context) {
-    final c = GrColors.of(context);
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
-          child: Row(
-            children: [
-              const Expanded(
-                child: Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: CameraPill(),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Tooltip(
-                message: 'Settings',
-                child: Material(
-                  color: c.s2,
-                  shape: CircleBorder(side: BorderSide(color: c.line)),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: onSettings,
-                    child: SizedBox(
-                      width: 36,
-                      height: 36,
-                      child: Icon(
-                        Icons.settings_outlined,
-                        size: 18,
-                        color: c.t1,
-                        semanticLabel: 'Settings',
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 14, 20, 4),
-          child: Text(
-            'Library',
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -.8,
-            ),
-          ),
-        ),
-      ],
+      children: [CameraTopBar(), PageTitle('Library')],
     );
   }
 }
@@ -555,6 +516,22 @@ class _EmptyState extends StatelessWidget {
         onPressed: () => unawaited(model.refresh()),
         child: const Text('Try again'),
       );
+    } else if (!model.connected) {
+      return Padding(
+        key: const Key('library-joining'),
+        padding: const EdgeInsets.fromLTRB(32, 40, 32, 40),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Photos come over $name\'s Wi-Fi',
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 18),
+            ConnectSteps(connection: connection),
+          ],
+        ),
+      );
     } else {
       return Center(
         child: Column(
@@ -562,12 +539,7 @@ class _EmptyState extends StatelessWidget {
           children: [
             const CircularProgressIndicator(),
             const SizedBox(height: 16),
-            Text(
-              model.connected
-                  ? "Reading the camera's photos…"
-                  : 'Connecting to $name…',
-              style: TextStyle(color: c.t2),
-            ),
+            Text("Reading the camera's photos…", style: TextStyle(color: c.t2)),
           ],
         ),
       );

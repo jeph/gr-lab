@@ -43,7 +43,7 @@ Future<TestApp> _start(
 }
 
 Future<void> _connect(WidgetTester tester, TestApp app) async {
-  unawaited(app.models.connection.openLibrary());
+  unawaited(app.models.connection.openCamera(CameraTab.library));
   await pumpUntil(
     tester,
     () => app.models.connection.status == ConnectionStatus.connected,
@@ -82,7 +82,7 @@ void main() {
     expect(find.text('Connecting…'), findsOneWidget);
     await pumpUntilFound(tester, find.text('Bluetooth'));
 
-    unawaited(connection.openLibrary());
+    unawaited(connection.openCamera(CameraTab.library));
     await pumpUntilFound(tester, find.byKey(const Key('camera-pill-battery')));
     expect(find.text('Wi-Fi'), findsOneWidget);
     expect(find.text('82%'), findsOneWidget);

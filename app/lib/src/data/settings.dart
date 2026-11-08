@@ -20,6 +20,15 @@ enum AutoDisconnect {
   final String label;
 }
 
+/// The Shoot tab's two modes (mock `b-remote`, `b-shoot`).
+enum ShootMode {
+  /// Shutter, self-timer and drive over Bluetooth alone.
+  remote,
+
+  /// The camera's picture over its Wi-Fi.
+  liveView,
+}
+
 /// User settings, persisted as `settings.json` in the app data directory.
 final class SettingsController extends ChangeNotifier {
   SettingsController._(this._file);
@@ -35,6 +44,8 @@ final class SettingsController extends ChangeNotifier {
       c._autoDisconnect =
           AutoDisconnect.values.asNameMap()[json['autoDisconnect']] ??
           c._autoDisconnect;
+      c._shootMode =
+          ShootMode.values.asNameMap()[json['shootMode']] ?? c._shootMode;
     }
     return c;
   }
@@ -44,14 +55,20 @@ final class SettingsController extends ChangeNotifier {
 
   ThemeMode _themeMode = ThemeMode.system;
   AutoDisconnect _autoDisconnect = AutoDisconnect.fiveMinutes;
+  ShootMode _shootMode = ShootMode.remote;
 
   ThemeMode get themeMode => _themeMode;
 
   /// Leave the camera's Wi-Fi after this long without use.
   AutoDisconnect get autoDisconnect => _autoDisconnect;
 
+  /// Shoot opens in the mode used last; the first time in Remote, which
+  /// needs no Wi-Fi.
+  ShootMode get shootMode => _shootMode;
+
   set themeMode(ThemeMode v) => _update(() => _themeMode = v);
   set autoDisconnect(AutoDisconnect v) => _update(() => _autoDisconnect = v);
+  set shootMode(ShootMode v) => _update(() => _shootMode = v);
 
   void _update(void Function() change) {
     change();
@@ -59,6 +76,7 @@ final class SettingsController extends ChangeNotifier {
     final snapshot = {
       'themeMode': _themeMode.name,
       'autoDisconnect': _autoDisconnect.name,
+      'shootMode': _shootMode.name,
     };
     _pending = _pending.then((_) => _file.write(snapshot));
   }

@@ -159,6 +159,75 @@ void main() {
       expect(camera.wifiJoined, isTrue);
     });
 
+    test('leaving with powerOffIfWoken turns a camera the start woke back off; '
+        'the link drop that follows is expected', () async {
+      camera = await startCamera(fastConfig(poweredOn: false, bonded: true));
+      final events = <GrSessionEvent>[];
+      final s = session = sessionFor(camera);
+      s.events.listen(events.add);
+      await s.connectBluetooth(deviceId: camera.config.deviceId);
+      await s.startWifi();
+      expect(s.wokeCamera, isTrue);
+
+      final restored = s.events.firstWhere((e) => e.kind == 'ble.restored');
+      await s.stopWifi(powerOffIfWoken: true);
+      expect(s.wokeCamera, isFalse);
+      expect(s.phase, GrSessionPhase.bluetooth);
+      await restored.timeout(const Duration(seconds: 5));
+      expect(camera.poweredOn, isFalse);
+      expect(s.cameraOff, isTrue);
+      final drop = events.lastWhere((e) => e.kind == 'ble.lost');
+      expect(drop.fields['afterPowerOff'], isTrue);
+      expect(events.map((e) => e.kind), contains('power.off'));
+      expect(events.map((e) => e.kind), isNot(contains('wlan.off')));
+    });
+
+    test('a camera that was on is left on: leaving only turns its Wi-Fi '
+        'off', () async {
+      camera = await startCamera(fastConfig(bonded: true));
+      final s = await linkBluetooth([]);
+      await s.startWifi();
+      expect(s.wokeCamera, isFalse);
+      await s.stopWifi(powerOffIfWoken: true);
+      expect(camera.poweredOn, isTrue);
+      expect(camera.wlanOn, isFalse);
+    });
+
+    test('switched off while its Wi-Fi is in use, the camera is turned on '
+        'again over Bluetooth and rejoined', () async {
+      camera = await startCamera(fastConfig(bonded: true));
+      final kinds = <String>[];
+      final s = await linkBluetooth(kinds);
+      await s.startWifi();
+      expect(s.wokeCamera, isFalse);
+
+      final recovered = s.events.firstWhere((e) => e.kind == 'recovery.done');
+      camera.poweredOn = false;
+      await recovered.timeout(const Duration(seconds: 5));
+      expect(s.phase, GrSessionPhase.connected);
+      expect(camera.poweredOn, isTrue);
+      expect(camera.wifiJoined, isTrue);
+      expect(s.wokeCamera, isTrue);
+      expect(
+        kinds,
+        containsAllInOrder(['wifi.lost', 'recovery.start', 'power.on']),
+      );
+    });
+
+    test('switched off with its Bluetooth too, recovery gives up once the '
+        'link has not come back', () async {
+      camera = await startCamera(fastConfig(bonded: true));
+      final s = await linkBluetooth([]);
+      await s.startWifi();
+
+      final gaveUp = s.events.firstWhere((e) => e.kind == 'recovery.gaveUp');
+      camera.powerOffFully();
+      final e = await gaveUp.timeout(const Duration(seconds: 5));
+      expect(e.fields['noBle'], isTrue);
+      expect(s.phase, GrSessionPhase.lost);
+      expect(camera.poweredOn, isFalse);
+    });
+
     test('stopping Wi-Fi during the join ends the attempt and leaves the '
         'phone off the camera network', () async {
       camera = await startCamera(fastConfig(bonded: true, joinDelay: ms(500)));
@@ -174,6 +243,103 @@ void main() {
       expect(s.http, isNull);
       expect(await camera.wifi.currentSsid(), isNull);
       expect(camera.wlanOn, isFalse);
+    });
+
+    group('wake for remote shooting', () {
+      test('an off camera is woken in capture mode; the link drops while it '
+          'boots and is linked again, and the shutter works', () async {
+        camera = await startCamera(fastConfig(poweredOn: false, bonded: true));
+        final kinds = <String>[];
+        final s = await linkBluetooth(kinds);
+
+        await s.wake(BleOperationMode.capture);
+        await Future<void>.delayed(Duration.zero);
+        expect(s.phase, GrSessionPhase.bluetooth);
+        expect(s.cameraOff, isFalse);
+        expect(s.wokeCamera, isTrue);
+        expect(camera.poweredOn, isTrue);
+        expect(camera.operationMode, BleOperationMode.capture);
+        expect(
+          kinds,
+          containsAllInOrder([
+            'power.on',
+            'power.relink',
+            'ble.ready',
+            'wake.done',
+          ]),
+        );
+        expect(kinds, isNot(contains('ble.lost')));
+        expect(kinds, isNot(contains('mode.set')));
+
+        final before = camera.photos.length;
+        await s.ble!.shutter();
+        await until(() => camera.photos.length == before + 1);
+      });
+
+      test('a camera that keeps the link: power.onLinked, no relink', () async {
+        camera = await startCamera(
+          fastConfig(poweredOn: false, bonded: true, wakeKeepsLink: true),
+        );
+        final kinds = <String>[];
+        final s = await linkBluetooth(kinds);
+        await s.wake(BleOperationMode.capture);
+        await Future<void>.delayed(Duration.zero);
+        expect(camera.operationMode, BleOperationMode.capture);
+        expect(kinds, containsAllInOrder(['power.on', 'power.onLinked']));
+        expect(kinds, isNot(contains('power.relink')));
+        expect(kinds.where((k) => k == 'ble.ready'), hasLength(1));
+      });
+
+      test('a camera that is on in playback is switched to capture, and is '
+          'not counted as woken', () async {
+        camera = await startCamera(fastConfig(bonded: true));
+        final kinds = <String>[];
+        final s = await linkBluetooth(kinds);
+        expect(camera.operationMode, BleOperationMode.playback);
+        await s.wake(BleOperationMode.capture);
+        await Future<void>.delayed(Duration.zero);
+        expect(camera.operationMode, BleOperationMode.capture);
+        expect(kinds, contains('mode.set'));
+        expect(s.wokeCamera, isFalse);
+        await s.powerOffIfWoken();
+        expect(camera.poweredOn, isTrue);
+      });
+
+      test('powerOffIfWoken turns a woken camera off; the drop that follows '
+          'is expected', () async {
+        camera = await startCamera(fastConfig(poweredOn: false, bonded: true));
+        final events = <GrSessionEvent>[];
+        final s = session = sessionFor(camera);
+        s.events.listen(events.add);
+        await s.connectBluetooth(deviceId: camera.config.deviceId);
+        await s.wake(BleOperationMode.capture);
+
+        final restored = s.events.firstWhere((e) => e.kind == 'ble.restored');
+        await s.powerOffIfWoken();
+        await restored.timeout(const Duration(seconds: 5));
+        expect(camera.poweredOn, isFalse);
+        expect(s.cameraOff, isTrue);
+        expect(s.wokeCamera, isFalse);
+        final drop = events.lastWhere((e) => e.kind == 'ble.lost');
+        expect(drop.fields['afterPowerOff'], isTrue);
+      });
+
+      test('a camera the Wi-Fi start woke stays woken after stopWifi, and '
+          'remote shooting can turn it off later', () async {
+        camera = await startCamera(fastConfig(poweredOn: false, bonded: true));
+        final s = await linkBluetooth([]);
+        await s.startWifi();
+        await s.stopWifi();
+        expect(s.wokeCamera, isTrue);
+        expect(camera.poweredOn, isTrue);
+        expect(camera.wlanOn, isFalse);
+
+        await s.wake(BleOperationMode.capture);
+        expect(camera.operationMode, BleOperationMode.capture);
+        await s.powerOffIfWoken();
+        expect(s.wokeCamera, isFalse);
+        await until(() => !camera.poweredOn);
+      });
     });
   });
 

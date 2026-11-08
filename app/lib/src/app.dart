@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'app_scope.dart';
+import 'camera/camera_pages.dart';
 import 'cameras/cameras_screen.dart';
 import 'connection/connection_controller.dart';
 import 'connection/idle_disconnect.dart';
 import 'connection/wifi_consent_dialog.dart';
-import 'library/library_screen.dart';
 import 'theme/tokens.dart';
 
 class GrLabApp extends StatelessWidget {
@@ -35,9 +35,11 @@ class GrLabApp extends StatelessWidget {
   );
 }
 
-/// The Library while a camera is connected over Wi-Fi, the
-/// Cameras screen otherwise; leaving a session returns there, closing
-/// whatever was open over the Library. Also tells the connection whether
+/// The Cameras screen, with the camera's pages (Library and Shoot) pushed
+/// over it while [ConnectionController.tab] is set and the camera is
+/// linked. Going back from them closes them
+/// ([ConnectionController.closeCamera]); the session ending pops back to
+/// the Cameras screen, closing whatever was open over them. Also tells the connection whether
 /// the app is in front, and asks before the first join of a camera's
 /// Wi-Fi when the platform needs it.
 class RootScreen extends StatefulWidget {
@@ -50,7 +52,6 @@ class RootScreen extends StatefulWidget {
 class _RootScreenState extends State<RootScreen> {
   late final AppModels _models = AppScope.of(context);
   late final AppLifecycleListener _lifecycle;
-  bool _inSession = false;
 
   /// The Cameras screen connects to the camera used last when it sees it
   /// nearby, only until the first connection attempt of this launch,
@@ -61,10 +62,12 @@ class _RootScreenState extends State<RootScreen> {
   /// The route showing [_shownConsent], while it is open.
   DialogRoute<bool>? _consentRoute;
 
+  /// The camera's pages, while they are pushed.
+  Route<void>? _cameraRoute;
+
   @override
   void initState() {
     super.initState();
-    _inSession = _models.connection.inSession;
     _models.connection.addListener(_onConnection);
     // `inactive` covers system sheets drawn over the app, including
     // Android's own Wi-Fi approval screen; only leaving the app counts.
@@ -84,14 +87,25 @@ class _RootScreenState extends State<RootScreen> {
   }
 
   void _onConnection() {
-    final inSession = _models.connection.inSession;
-    if (_models.connection.status != ConnectionStatus.offline) {
+    final connection = _models.connection;
+    if (connection.status != ConnectionStatus.offline) {
       _autoConnect = false;
     }
-    if (_inSession && !inSession) {
+    final pages =
+        connection.tab != null &&
+        _models.cameras.current != null &&
+        switch (connection.status) {
+          ConnectionStatus.connecting ||
+          ConnectionStatus.bluetooth ||
+          ConnectionStatus.connected => true,
+          ConnectionStatus.offline || ConnectionStatus.failed => false,
+        };
+    if (pages && _cameraRoute == null) {
+      _openCamera();
+    } else if (!pages && _cameraRoute != null) {
+      _cameraRoute = null;
       Navigator.of(context).popUntil((route) => route.isFirst);
     }
-    _inSession = inSession;
     final request = _models.connection.wifiConsent;
     if (identical(request, _shownConsent)) return;
     // Withdrawn or replaced: close that question only, and only while it
@@ -101,6 +115,20 @@ class _RootScreenState extends State<RootScreen> {
     if (open != null && open.isActive) open.navigator!.removeRoute(open);
     _shownConsent = request;
     if (request != null) unawaited(_askWifi(request));
+  }
+
+  void _openCamera() {
+    final route = _cameraRoute = MaterialPageRoute<void>(
+      builder: (_) => const CameraPages(),
+    );
+    unawaited(
+      Navigator.of(context).push(route).then((_) {
+        if (!identical(_cameraRoute, route)) return;
+        // Popped by the user (back), not by the session ending.
+        _cameraRoute = null;
+        unawaited(_models.connection.closeCamera());
+      }),
+    );
   }
 
   Future<void> _askWifi(WifiConsentRequest request) async {
@@ -122,10 +150,7 @@ class _RootScreenState extends State<RootScreen> {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([_models.cameras, _models.connection]),
-    builder: (context, _) =>
-        _models.cameras.current != null && _models.connection.inSession
-        ? const LibraryScreen()
-        : CamerasScreen(autoConnect: _autoConnect),
+    listenable: _models.connection,
+    builder: (context, _) => CamerasScreen(autoConnect: _autoConnect),
   );
 }

@@ -39,6 +39,18 @@ extension on FakeGrCamera {
           when WebSocketTransformer.isUpgradeRequest(request)) {
         return await _upgrade(request);
       }
+      switch ((request.method, route)) {
+        case ('POST', ['camera', 'shoot']):
+          return await _shoot(request);
+        case ('POST', ['camera', 'shoot', 'cancel']):
+          return await _cancelShoot(request);
+        case ('POST', ['lens', 'focus']):
+          return await _focus(request);
+        case ('PUT', ['params', 'camera']):
+          return await _putCameraParams(request);
+        case ('GET', ['liveview']):
+          return await _liveView(request);
+      }
       if (request.method != 'GET') {
         return await _error(request, 405, 'Method Not Allowed');
       }
@@ -111,7 +123,7 @@ extension on FakeGrCamera {
     'macAddress': FakeGrCamera._wifiMac,
     'hot': false,
     'battery': _battery,
-    'operationModeList': ['capture'],
+    'operationModeList': ['capture', 'playback'],
     'stillFormatList': ['jpeg', 'dng', 'rawdng'],
     'storages': [
       for (final name in _storages)
@@ -121,8 +133,10 @@ extension on FakeGrCamera {
           'available': true,
           'writable': true,
           'format': 'rawdng',
-          'remain': name == GrStorageId.sd ? 10000 : 500,
-          'recordableTime': name == GrStorageId.sd ? 72000 : 3600,
+          'remain': _remainOn(name),
+          'recordableTime': name == GrStorageId.sd
+              ? _sdRecordableTime
+              : _internalRecordableTime,
           'numOfPhotos': _photos
               .where((p) => p.storage == name && !p.isVideo)
               .length,
@@ -142,15 +156,215 @@ extension on FakeGrCamera {
     'key': _passphrase,
     'captureModeList': ['still', 'movie'],
     'captureMode': 'still',
-    'exposureMode': 'AV',
-    'av': '2.8',
-    'tv': '1.250',
-    'sv': '200',
-    'xv': '0.0',
-    'capturing': false,
-    'stateStill': 'idle',
+    'exposureModeList': _exposureModes,
+    'exposureMode': _exposureModeText,
+    for (final key in _settingLists.keys) ...{
+      key: key == 'shootMode' ? _shootModes[_driveMode] : _settings[key],
+      '${key}List': _listFor(key),
+    },
+    'focusMode': 'af',
+    'focusEffectiveArea': _focusEffectiveArea,
+    // Image Sync's `state` key; its values are [unknown].
+    'state': _releaseBusy ? 'busy' : 'idle',
+    'capturing': _capturing,
+    'countDown': _countDownText,
+    'stateStill': _capturing ? 'busy' : 'idle',
     'stateMovie': 'idle',
   };
+
+  Future<String> _body(HttpRequest request) =>
+      utf8.decoder.bind(request).join();
+
+  /// `POST /v1/camera/shoot`, body `""`, `af=on` or `af=on&pos=X,Y`
+  /// (remote-shooting.md §2.1): a release as over BLE. The picture follows
+  /// as change events; `captured` false says it is not on the card yet
+  /// [design].
+  Future<void> _shoot(HttpRequest request) async {
+    final params = _keyValues(await _body(request));
+    final pos = params?['pos'];
+    if (params == null || (pos != null && _focusPos(pos) == null)) {
+      return _error(request, 400, 'Bad Request');
+    }
+    if (_releaseRefusal() case (final code, final why)?) {
+      return _error(request, code, why);
+    }
+    final id = _release();
+    return _send(request, {
+      'errCode': 200,
+      'errMsg': 'OK',
+      'captureId': id,
+      'captured': false,
+      'focused': true,
+    });
+  }
+
+  /// `POST /v1/camera/shoot/cancel` (firmware `CancelShootTimer`): ends a
+  /// self-timer countdown; OK without one too [design].
+  Future<void> _cancelShoot(HttpRequest request) async {
+    await _body(request);
+    _cancelSelfTimer();
+    return _send(request, {'errCode': 200, 'errMsg': 'OK'});
+  }
+
+  /// `POST /v1/lens/focus`, body `""` or `pos=X,Y` (remote-shooting.md
+  /// §3.1), on the point (the centre without one). Answered as the GR IV
+  /// does, with a `ShootResponse`: `errCode`, `errMsg` and `captureId`
+  /// only (`Capture::Focus`; a GR IV HDF answered without `focused` or
+  /// `focusRunning`, 2026-11-08). The result follows as a `lens` change
+  /// with that `captureId` after [FakeCameraConfig.focusTime]. A focus
+  /// sent while one runs is answered once that one ends, as the GR IV's
+  /// answers came later and later in a quick series of taps. Refused
+  /// outside capture mode [design].
+  Future<void> _focus(HttpRequest request) async {
+    final params = _keyValues(await _body(request));
+    final posText = params?['pos'];
+    final pos = posText == null ? (50, 50) : _focusPos(posText);
+    if (params == null || pos == null) {
+      return _error(request, 400, 'Bad Request');
+    }
+    if (_mode != BleOperationMode.capture.wire) {
+      return _error(request, 400, 'not in capture mode');
+    }
+    final previous = _focusEnd;
+    final end = Completer<void>();
+    _focusEnd = end.future;
+    await previous;
+    final id = '${++_captureIds}';
+    _focusPoints.add(pos);
+    void lens() {
+      _push({
+        'errCode': 200,
+        'changed': 'lens',
+        'captureId': id,
+        'focused': true,
+      });
+      end.complete();
+    }
+
+    final answer = {'errCode': 200, 'errMsg': 'OK', 'captureId': id};
+    if (config.lensBeforeFocusAnswer) {
+      await Future<void>.delayed(config.focusTime);
+      if (_closed) return;
+      lens();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      return _send(request, answer);
+    }
+    await _send(request, answer);
+    _after(config.focusTime, lens);
+  }
+
+  /// `PUT /v1/params/camera` with `key=value[&…]` (remote-shooting.md
+  /// §4.2): every value must be in its `<key>List`, else nothing changes
+  /// and errCode 400 answers. Replies with the props without the lists
+  /// the GR IV builds in `CameraConstants` ([_constantLists]). An empty
+  /// body is the green button, which changes nothing here [design].
+  Future<void> _putCameraParams(HttpRequest request) async {
+    final params = _keyValues(await _body(request));
+    if (params == null) return _error(request, 400, 'Bad Request');
+    final refused = _applyCameraParams(params);
+    if (refused != null) return _error(request, 400, 'Bad Request: $refused');
+    return _send(
+      request,
+      _props()..removeWhere((k, _) => _constantLists.contains(k)),
+    );
+  }
+
+  /// Lists the GR IV's `/v1/props` takes from `CameraConstants::Fetch`
+  /// (`*::GetSupportedValues`), which its `PUT /v1/params/camera` answer
+  /// (`ParamsCameraResponse::Fetch`: `CameraStatus` + `CameraParams`)
+  /// leaves out (webapid 0x9c290, 0x74a78).
+  static const _constantLists = {
+    'captureModeList',
+    'effectList',
+    'exposureModeList',
+    'meteringModeList',
+    'movieSizeList',
+    'resoList',
+    'shootModeList',
+    'stillSizeList',
+    'WBModeList',
+  };
+
+  /// `GET /v1/liveview[?maxfps=N]` as the firmware sends it
+  /// (remote-shooting.md §1.2-1.3): the header block declaring
+  /// `boundary=--boundary`, then `--boundary` parts without Content-Length
+  /// until the client hangs up or the access point goes down. Frames are
+  /// the views of the newest stills on the card, in turn. A non-digit
+  /// `maxfps` is a BadRequest; 1–90 lowers the rate, anything else is
+  /// clamped (to the default).
+  Future<void> _liveView(HttpRequest request) async {
+    var fps = _liveViewFps;
+    final maxFps = request.uri.queryParameters['maxfps'];
+    if (maxFps != null) {
+      if (!RegExp(r'^\d+$').hasMatch(maxFps)) {
+        return _error(request, 400, 'Bad Request');
+      }
+      final n = int.parse(maxFps);
+      if (n >= 1 && n < fps) fps = n;
+    }
+    final frames = await _liveViewFrames();
+    if (!_httpReachable) return _hangUp(request);
+    final socket = await request.response.detachSocket(writeHeaders: false);
+    socket.done.ignore();
+    _liveViews.add(socket);
+    var open = true;
+    socket.listen(
+      (_) {},
+      onDone: () => open = false,
+      onError: (Object _) => open = false,
+      cancelOnError: true,
+    );
+    final interval = Duration(
+      microseconds: Duration.microsecondsPerSecond ~/ fps,
+    );
+    try {
+      socket.add(
+        latin1.encode(
+          'HTTP/1.1 200 OK\r\n'
+          'Cache-Control: no-store, no-cache, must-revalidate, max-age=0\r\n'
+          'Expires: 0\r\n'
+          'Pragma: no-cache\r\n'
+          'Content-Type: multipart/x-mixed-replace; boundary=--boundary\r\n'
+          '\r\n',
+        ),
+      );
+      for (var i = 0; open && _httpReachable; i++) {
+        socket
+          ..add(latin1.encode('--boundary\r\nContent-Type: image/jpeg\r\n\r\n'))
+          ..add(frames[i % frames.length])
+          ..add(const [0x0D, 0x0A]);
+        await socket.flush();
+        await Future<void>.delayed(interval);
+      }
+    } on Object {
+      // The client hung up mid-frame.
+    } finally {
+      _liveViews.remove(socket);
+      socket.destroy();
+    }
+  }
+
+  /// Views of up to four of the newest stills; a plain JPEG when the card
+  /// has none or the media source fails.
+  Future<List<Uint8List>> _liveViewFrames() async {
+    final frames = <Uint8List>[];
+    for (final photo in _photos.reversed.where((p) => !p.isVideo).take(4)) {
+      try {
+        frames.add(await _media(photo, GrImageSize.view));
+      } on Object {
+        // Skipped; another still or the fallback stands in.
+      }
+    }
+    if (frames.isEmpty) {
+      frames.add(
+        await syntheticMedia()(
+          FakePhoto('100RICOH', 'R0000001.JPG', DateTime(2000)),
+          GrImageSize.view,
+        ),
+      );
+    }
+    return frames;
+  }
 
   /// Listing order: by directory, then shot, JPEG before its DNG, as a GR
   /// IV lists RAW+JPEG pairs.
@@ -218,7 +432,7 @@ extension on FakeGrCamera {
   Future<int> _fullSize(FakePhoto photo) async =>
       photo.size ??
       _fullSizes[photo] ??
-      (_fullSizes[photo] = (await media(photo, GrImageSize.full)).length);
+      (_fullSizes[photo] = (await _media(photo, GrImageSize.full)).length);
 
   Future<void> _info(HttpRequest request, String dir, String file) async {
     final photo = _requested(request, dir, file);
@@ -287,7 +501,7 @@ extension on FakeGrCamera {
     }
     final Uint8List bytes;
     try {
-      bytes = await media(photo, size);
+      bytes = await _media(photo, size);
     } on Object {
       return _error(request, 500, 'Internal Server Error');
     }

@@ -31,6 +31,11 @@ Future<TestApp> _inLibrary(WidgetTester tester) async {
   await app.pumpApp(tester);
   await tapWhenReady(tester, find.byKey(const Key('camera-card-library')));
   await pumpUntilFound(tester, find.byType(LibraryScreen));
+  await pumpUntil(
+    tester,
+    () => app.models.connection.status == ConnectionStatus.connected,
+    reason: 'Wi-Fi joined',
+  );
   return app;
 }
 

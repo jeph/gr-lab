@@ -28,6 +28,15 @@ enum ConnectionStatus {
 /// The two links of a connection, in the order they come up.
 enum ConnectStep { bluetooth, wifi }
 
+/// The tabs of the camera's pages, opened over the Cameras screen.
+enum CameraTab {
+  /// Photos on the camera; needs its Wi-Fi.
+  library,
+
+  /// Remote over Bluetooth, or live view over Wi-Fi.
+  shoot,
+}
+
 enum ConnectFailureKind {
   bluetoothOff,
   bluetoothDenied,
@@ -96,12 +105,19 @@ final class WifiConsentRequest {
 
 /// One [GrSession] for the current camera, in two stages. Bluetooth
 /// ([connect]) is meant to run by itself whenever a camera is current; the
-/// camera's Wi-Fi ([openLibrary]) is joined only when the user opens the
-/// Library, and [closeLibrary] leaves it again while Bluetooth stays.
+/// camera's Wi-Fi ([joinWifi]) is joined only when the user opens the
+/// Library or live view. [openCamera] opens the camera's pages ([tab]) over
+/// the Cameras screen, and [closeCamera] leaves them, and the Wi-Fi, while
+/// Bluetooth stays.
 ///
 /// The session's BLE reconnect runs underneath and shows as
-/// [reconnecting]. When the camera's Wi-Fi is lost the app goes back to
-/// the Cameras screen; it never rejoins by itself, except that a join that
+/// [reconnecting]. When the camera's Wi-Fi is lost, the session gets it
+/// back (turning the camera on again when it was switched off) while the
+/// pages stay, also shown as [reconnecting]. When that fails with
+/// Bluetooth still there, the pages stay and the Library says the Wi-Fi
+/// was lost; without Bluetooth the session ends, the app goes back to the
+/// Cameras screen and it says the connection was lost. Leaving the camera's
+/// pages turns a camera the app turned on back off. A join that
 /// failed because the app was in the background is tried again on return
 /// ([AppServices.redialDelays]), since the OS only joins camera networks
 /// for the app in front.
@@ -129,7 +145,7 @@ final class ConnectionController extends ChangeNotifier {
   /// dropped.
   int _generation = 0;
 
-  /// Bumped for every Wi-Fi start and [closeLibrary].
+  /// Bumped for every Wi-Fi start and [closeCamera].
   int _wifiRun = 0;
   final _connected = StreamController<GrHttpClient>.broadcast();
   Future<void> _closing = Future.value();
@@ -142,8 +158,13 @@ final class ConnectionController extends ChangeNotifier {
 
   WifiConsentRequest? _consent;
   Completer<bool>? _consentAnswer;
+  CameraTab? _tab;
 
   ConnectionStatus get status => _status;
+
+  /// The tab of the camera's pages, while they are open over the Cameras
+  /// screen; null otherwise. Cleared when the session fails or ends.
+  CameraTab? get tab => _tab;
 
   /// The link being set up while [status] is connecting.
   ConnectStep? get step => _step;
@@ -157,20 +178,23 @@ final class ConnectionController extends ChangeNotifier {
   /// Wi-Fi failed.
   ConnectFailure? get failure => _failure;
 
-  /// Set when [closeLibrary] left the camera's Wi-Fi because the app was
+  /// Set when [closeCamera] left the camera's Wi-Fi because the app was
   /// not used for this long (see `IdleDisconnect`); cleared by the next
   /// Wi-Fi start or [disconnect]. The Cameras screen notes it while
   /// Bluetooth stays linked.
   Duration? get idleClosedAfter => _idleClosedAfter;
   Duration? _idleClosedAfter;
 
-  /// Wi-Fi is up: the app shows the camera's Library rather than the
-  /// Cameras screen.
+  /// Wi-Fi is up, or being got back after a loss ([reconnecting]): the
+  /// Library and live view can use [http].
   bool get inSession => _status == ConnectionStatus.connected;
 
+  /// The camera is off (BT-only), or reported turning off.
+  bool get cameraOff => _session?.cameraOff ?? false;
+
   /// A Library request failed: asks the camera once whether its Wi-Fi
-  /// still works; when it does not, the app returns to the Cameras screen
-  /// (through the session's `wifi.lost`). True while the camera answers.
+  /// still works; when it does not, the session counts the link as lost
+  /// and gets it back ([reconnecting]). True while the camera answers.
   Future<bool> checkWifi() async {
     final session = _session;
     if (session == null || _status != ConnectionStatus.connected) {
@@ -237,10 +261,33 @@ final class ConnectionController extends ChangeNotifier {
     return connect();
   }
 
-  /// Joins the camera's Wi-Fi so the Library can open, linking Bluetooth
-  /// first when needed. Does nothing while Wi-Fi is up or being joined,
-  /// except that it cuts short the wait before a quiet rejoin.
-  Future<void> openLibrary() async {
+  /// Opens the camera's pages on [tab] (the camera card's buttons). The
+  /// Library joins the camera's Wi-Fi ([joinWifi]); Shoot links Bluetooth,
+  /// and its Remote needs nothing more.
+  Future<void> openCamera(CameraTab tab) {
+    _tab = tab;
+    notifyListeners();
+    return tab == CameraTab.library ? joinWifi() : connect();
+  }
+
+  /// Switches the open camera pages to [tab]. The Library joins the
+  /// camera's Wi-Fi unless it is up or the last join failed; that failure
+  /// is shown with Try again instead.
+  void selectTab(CameraTab tab) {
+    if (_tab == null || _tab == tab) return;
+    _tab = tab;
+    notifyListeners();
+    if (tab == CameraTab.library &&
+        _status == ConnectionStatus.bluetooth &&
+        _failure == null) {
+      unawaited(joinWifi());
+    }
+  }
+
+  /// Joins the camera's Wi-Fi for the Library or live view, linking
+  /// Bluetooth first when needed. Does nothing while Wi-Fi is up or being
+  /// joined, except that it cuts short the wait before a quiet rejoin.
+  Future<void> joinWifi() async {
     final waitingToRedial = _redialTimer != null || _redialOnResume;
     if (_status == ConnectionStatus.connected ||
         (_status == ConnectionStatus.connecting &&
@@ -262,15 +309,43 @@ final class ConnectionController extends ChangeNotifier {
     return _startWifi(quiet: false);
   }
 
-  /// Leaves the camera's Wi-Fi, or stops joining it, and keeps Bluetooth;
-  /// the app returns to the Cameras screen. [idleFor] is set when the app
-  /// leaves because it was not used ([idleClosedAfter]).
-  Future<void> closeLibrary({Duration? idleFor}) async {
+  /// Closes the camera's pages and leaves the camera's Wi-Fi, or stops
+  /// joining it, keeping Bluetooth; the app returns to the Cameras screen.
+  /// A camera the app turned on (for the Library or Shoot) is turned back
+  /// off. A Wi-Fi failure shown in the pages is cleared. [idleFor] is set
+  /// when the app leaves because it was not used ([idleClosedAfter]).
+  Future<void> closeCamera({Duration? idleFor}) {
+    final hadTab = _tab != null;
+    _tab = null;
+    return _leaveWifi(powerOff: true, idleFor: idleFor, changed: hadTab);
+  }
+
+  /// Leaves the camera's Wi-Fi, or stops joining it, keeping the camera's
+  /// pages open over Bluetooth (live view was switched back to Remote). The
+  /// camera stays on. A Wi-Fi failure is cleared.
+  Future<void> leaveWifi() => _leaveWifi(powerOff: false);
+
+  Future<void> _leaveWifi({
+    required bool powerOff,
+    Duration? idleFor,
+    bool changed = false,
+  }) async {
     final session = _session;
     final onWifi =
         _status == ConnectionStatus.connected ||
         (_status == ConnectionStatus.connecting && _step == ConnectStep.wifi);
-    if (session == null || !onWifi) return;
+    if (session == null || !onWifi) {
+      final wifiFailure = _failure?.step == ConnectStep.wifi;
+      if (wifiFailure) _failure = null;
+      if (changed || wifiFailure) notifyListeners();
+      if (powerOff &&
+          session != null &&
+          _status == ConnectionStatus.bluetooth) {
+        await _stoppingWifi;
+        if (identical(session, _session)) await session.powerOffIfWoken();
+      }
+      return;
+    }
     _wifiRun++;
     _cancelRedial();
     _declineConsent();
@@ -280,7 +355,9 @@ final class ConnectionController extends ChangeNotifier {
     _failure = null;
     _idleClosedAfter = idleFor;
     notifyListeners();
-    final stopping = _stoppingWifi = session.stopWifi();
+    final stopping = _stoppingWifi = session.stopWifi(
+      powerOffIfWoken: powerOff,
+    );
     await stopping;
     if (_bleGaveUp && identical(session, _session)) await _relinkLater();
   }
@@ -440,6 +517,7 @@ final class ConnectionController extends ChangeNotifier {
     _generation++;
     _wifiRun++;
     _cancelRedial();
+    _tab = null;
     _status = ConnectionStatus.offline;
     _step = null;
     _reconnecting = false;
@@ -492,7 +570,8 @@ final class ConnectionController extends ChangeNotifier {
     if (generation != _generation) return;
     switch (e.kind) {
       case 'ble.lost' when _status == ConnectionStatus.bluetooth:
-        _reconnecting = true;
+        // The drop after the app turned the camera off is expected.
+        _reconnecting = e.fields['afterPowerOff'] != true;
       case 'ble.restored' when _status == ConnectionStatus.bluetooth:
         _reconnecting = false;
       case 'ble.gaveUp' || 'ble.needsPairing':
@@ -512,25 +591,52 @@ final class ConnectionController extends ChangeNotifier {
             )._asLost(),
           );
         }
-      case 'wifi.lost':
-        return _wifiDropped();
+      case 'wifi.lost' when _status == ConnectionStatus.connected:
+        _reconnecting = true;
+      case 'recovery.done' when _status == ConnectionStatus.connected:
+        _reconnecting = false;
+        notifyListeners();
+        final http = _session?.http;
+        if (http != null) _connected.add(http);
+        return;
+      case 'recovery.gaveUp':
+        return _wifiGaveUp(
+          noBle: e.fields['noBle'] == true,
+          declined: e.fields['declined'] == true,
+        );
     }
     notifyListeners();
   }
 
-  /// The camera's Wi-Fi is gone (the phone left it, or the camera turned
-  /// it off or went out of range): back to the Cameras screen on
-  /// Bluetooth with a note. Joining again is the user's call, through the
-  /// card's Library button.
-  void _wifiDropped() {
+  /// The session could not get the camera's Wi-Fi back. Without Bluetooth
+  /// either ([noBle]) the camera is gone (switched off with its Bluetooth,
+  /// or out of range): the session ends and the Cameras screen says the
+  /// connection was lost. Otherwise the camera's pages stay on Bluetooth,
+  /// the Library says the Wi-Fi was lost (or declined), and the camera's
+  /// Wi-Fi is left as [closeCamera] does.
+  void _wifiGaveUp({required bool noBle, required bool declined}) {
     final session = _session;
     if (session == null || _status != ConnectionStatus.connected) return;
     _wifiRun++;
-    _status = ConnectionStatus.bluetooth;
     _step = null;
     _reconnecting = false;
-    _failure = session.cameraOff
-        ? null
+    if (noBle || _bleGaveUp) {
+      _failure = const ConnectFailure(
+        ConnectFailureKind.unreachable,
+        'Lost the connection to the camera',
+        step: ConnectStep.bluetooth,
+        lost: true,
+      );
+      unawaited(_relinkLater());
+      return;
+    }
+    _status = ConnectionStatus.bluetooth;
+    _failure = declined
+        ? const ConnectFailure(
+            ConnectFailureKind.wifiDeclined,
+            "Not joining the camera's Wi-Fi now",
+            step: ConnectStep.wifi,
+          )
         : const ConnectFailure(
             ConnectFailureKind.wifi,
             "Lost the camera's Wi-Fi",
@@ -538,14 +644,9 @@ final class ConnectionController extends ChangeNotifier {
             lost: true,
           );
     notifyListeners();
-    final stopping = _stoppingWifi = session.stopWifi();
-    if (_bleGaveUp) {
-      unawaited(
-        stopping.then((_) {
-          if (identical(session, _session)) return _relinkLater();
-        }),
-      );
-    }
+    // The pages stay, so a camera the app turned on stays on for Shoot;
+    // [closeCamera] turns it off.
+    _stoppingWifi = session.stopWifi();
   }
 
   ConnectFailure _failureFor(GrSessionException e, ConnectStep step) {
@@ -583,6 +684,7 @@ final class ConnectionController extends ChangeNotifier {
   /// camera can be linked again.
   Future<void> _relinkLater() async {
     _generation++;
+    _tab = null;
     _status = ConnectionStatus.failed;
     _failure ??= const ConnectFailure(
       ConnectFailureKind.unreachable,
@@ -628,6 +730,7 @@ final class ConnectionController extends ChangeNotifier {
 
   void _fail(int generation, ConnectFailure failure) {
     if (generation != _generation) return;
+    _tab = null;
     _status = ConnectionStatus.failed;
     _failure = failure;
     _step = null;
@@ -643,7 +746,9 @@ final class ConnectionController extends ChangeNotifier {
     _events = null;
     if (session != null) {
       try {
-        await session.close();
+        // Leaving a camera the app turned on turns it back off, including
+        // one whose wake is still in flight.
+        await session.close(powerOffIfWoken: true);
       } on Object {
         // Closing a half-open session is best effort.
       }

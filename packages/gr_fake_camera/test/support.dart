@@ -1,7 +1,17 @@
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart';
+import 'package:test/test.dart';
 
 Duration ms(int v) => Duration(milliseconds: v);
+
+/// Polls [condition] until it holds; fails after 5 s.
+Future<void> until(bool Function() condition) async {
+  final watch = Stopwatch()..start();
+  while (!condition()) {
+    if (watch.elapsed > const Duration(seconds: 5)) fail('timed out');
+    await Future<void>.delayed(ms(2));
+  }
+}
 
 /// Camera timings shrunk so whole sessions run in well under a second.
 FakeCameraConfig fastConfig({
@@ -20,7 +30,13 @@ FakeCameraConfig fastConfig({
   Duration? joinDelay,
   bool reportsWifiLoss = true,
   bool wakeKeepsLink = false,
+  int remainingPictures = 1234,
+  double selfTimerScale = 0.01,
 }) => FakeCameraConfig(
+  remainingPictures: remainingPictures,
+  selfTimerScale: selfTimerScale,
+  captureDelay: ms(20),
+  focusTime: ms(150),
   poweredOn: poweredOn,
   wakeKeepsLink: wakeKeepsLink,
   executePairingOpen: executePairingOpen,
@@ -61,6 +77,7 @@ const fastSessionOptions = GrSessionOptions(
   maxWifiRecoveryAttempts: 4,
   bleReconnectDelays: [Duration(milliseconds: 20)],
   maxBleReconnectAttempts: 3,
+  bleLostAfter: Duration(milliseconds: 500),
 );
 
 /// A started camera; closed by the caller.

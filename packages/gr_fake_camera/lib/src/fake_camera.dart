@@ -7,9 +7,11 @@ import 'dart:typed_data';
 import 'package:gr_protocol/gr_protocol.dart';
 
 import 'config.dart';
+import 'media.dart';
 
 part 'ble_side.dart';
 part 'http_side.dart';
+part 'shoot_side.dart';
 part 'wifi_side.dart';
 
 /// Thrown by [FakeGrCamera.wifi] when a join fails.
@@ -35,7 +37,11 @@ final class FakeWifiException implements Exception {
 ///   wakes it, and the link stops answering and drops after
 ///   [FakeCameraConfig.wakeDelay] while it restarts;
 /// * Wi-Fi can be joined only after WLAN-on over BLE, once the access
-///   point is up, with the SSID and passphrase the camera reports.
+///   point is up, with the SSID and passphrase the camera reports;
+/// * in capture mode it takes pictures on a BLE Operation Request or an
+///   HTTP shoot, after the drive mode's self-timer, streams live view and
+///   takes exposure settings from the lists `/v1/props` offers
+///   (remote-shooting.md).
 ///
 /// The HTTP server stands in for the camera's network: it answers while
 /// the camera is on and its access point has not gone down, so HTTP-only
@@ -54,6 +60,8 @@ final class FakeGrCamera {
       _apGone = !config.poweredOn,
       _bonded = config.bonded,
       _battery = config.battery,
+      _exposureMode = config.exposureMode,
+      _remaining = config.remainingPictures,
       _photos = List.of(config.photos ?? FakePhoto.defaultCard()) {
     _initValues();
   }
@@ -92,6 +100,37 @@ final class FakeGrCamera {
   final Set<StreamController<BleAdvertisement>> _scans = {};
   Completer<bool>? _pairing;
   bool _closed = false;
+  bool _bluetoothOff = false;
+
+  // Remote shooting (shoot_side.dart).
+  int _driveMode = BleDriveMode.single.wire;
+  BleExposureMode _exposureMode;
+  BleUserMode _userMode = BleUserMode.none;
+  int _remaining;
+  bool _capturing = false;
+  BleCountdown _countdown = BleCountdown.none;
+  Timer? _releaseTimer;
+  int _captureIds = 0;
+
+  /// Ends when the running focus does (see `_focus`).
+  Future<void> _focusEnd = Future.value();
+  final _focusPoints = <(int, int)>[];
+
+  /// Current values of the writable `/v1/props` settings.
+  final Map<String, String> _settings = {
+    'av': '2.8',
+    'tv': '1.250',
+    'sv': '200',
+    'xv': '0.0',
+    'meteringMode': 'multi',
+    'effect': 'off',
+  };
+
+  /// Captured photos and the card photo whose bytes they serve.
+  final Map<FakePhoto, FakePhoto> _captureSources = Map.identity();
+
+  /// Open live-view streams, ended with the access point.
+  final Set<Socket> _liveViews = {};
 
   // Access point state. [_apGone] is what the HTTP server checks: set when
   // the AP shuts down (power off, WLAN off, drop), cleared when it is up.
@@ -117,9 +156,25 @@ final class FakeGrCamera {
 
   /// On (main firmware) or off (BT-only: still advertises and accepts a
   /// bonded link). Turning it off drops every link and the access point;
-  /// turning it on starts in capture mode with Wi-Fi off.
+  /// turning it on starts in capture mode with Wi-Fi off, and with
+  /// Bluetooth back after [powerOffFully].
   bool get poweredOn => _poweredOn;
-  set poweredOn(bool on) => _setPower(on, mode: BleOperationMode.capture.wire);
+  set poweredOn(bool on) {
+    if (on) _bluetoothOff = false;
+    _setPower(on, mode: BleOperationMode.capture.wire);
+  }
+
+  /// Switched off with Bluetooth off as well (the camera's Bluetooth is not
+  /// kept on while it is off): links drop, and it neither advertises nor
+  /// accepts a link until [poweredOn] turns it on again.
+  void powerOffFully() {
+    _bluetoothOff = true;
+    _setPower(false, mode: _mode);
+    // Already off, [_setPower] keeps the BT-only firmware's links.
+    for (final link in _links.toList()) {
+      link._drop('camera powered off');
+    }
+  }
 
   /// Operation Mode as BLE reports it.
   BleOperationMode get operationMode => _poweredOn
@@ -152,8 +207,41 @@ final class FakeGrCamera {
     _push({'errCode': 200, 'changed': 'battery'});
   }
 
+  /// BLE Drive Mode, also `/v1/props` `shootMode`.
+  BleDriveMode get driveMode =>
+      BleDriveMode.values.firstWhere((m) => m.wire == _driveMode);
+
+  /// Mode-dial position (BLE Shooting Mode byte 0).
+  BleExposureMode get exposureMode => _exposureMode;
+
+  /// Pictures the active storage still has room for.
+  int get remainingPictures => _remaining;
+
+  /// The user turns the mode dial: BLE Shooting Mode notifies and
+  /// `/v1/props` `exposureMode` follows, with a `camera` change.
+  void setExposureMode(
+    BleExposureMode mode, {
+    BleUserMode userMode = BleUserMode.none,
+  }) {
+    _exposureMode = mode;
+    _userMode = userMode;
+    _notify(GrBleCatalog.shootingMode, [mode.wire, userMode.wire]);
+    if (config.announcesDialChanges) {
+      _push({'errCode': 200, 'changed': 'camera'});
+    }
+  }
+
+  /// The camera changes an exposure setting itself, as the shutter speed
+  /// it picks in Av. No change is pushed: a GR IV HDF sent none for mode
+  /// dial changes either (2026-11-08); whether it pushes one for its own
+  /// exposure is [unknown].
+  void cameraSets(String key, String value) => _settings[key] = value;
+
   /// The card, in insertion order.
   List<FakePhoto> get photos => List.unmodifiable(_photos);
+
+  /// The `pos` of every focus the camera ran, in percent, in order.
+  List<(int, int)> get focusPoints => List.unmodifiable(_focusPoints);
 
   /// The user turns the camera on and opens MENU → Wireless Connection →
   /// Pairing → Execute Pairing.
@@ -254,6 +342,7 @@ final class FakeGrCamera {
       unawaited(ws.close(WebSocketStatus.goingAway));
     }
     _sockets.clear();
+    _endLiveViews();
     unawaited(_wifiLost.close());
     await _server?.close(force: true);
   }
@@ -325,6 +414,7 @@ final class FakeGrCamera {
     } else {
       executePairingOpen = false;
       rejectPairing();
+      _abortRelease();
       _apDown();
     }
     _notify(GrBleCatalog.cameraPower, [
@@ -369,6 +459,7 @@ final class FakeGrCamera {
       unawaited(ws.close(WebSocketStatus.goingAway));
     }
     _sockets.clear();
+    _endLiveViews();
     if (wasOn) _notify(GrBleCatalog.networkType, [BleNetworkType.off.wire]);
   }
 
@@ -379,14 +470,27 @@ final class FakeGrCamera {
     return null;
   }
 
-  void _pushStorage(String action, FakePhoto photo) => _push({
-    'errCode': 200,
-    'changed': 'storage',
-    'action': action,
-    'filepath': '${photo.dir}/${photo.file}',
-    'storage': photo.storage,
-    'captureId': '0',
-  });
+  void _pushStorage(String action, FakePhoto photo, {String captureId = '0'}) =>
+      _push({
+        'errCode': 200,
+        'changed': 'storage',
+        'action': action,
+        'filepath': '${photo.dir}/${photo.file}',
+        'storage': photo.storage,
+        'captureId': captureId,
+      });
+
+  /// What [media] serves for [photo]; a captured photo serves the bytes of
+  /// the card photo it was made from.
+  Future<Uint8List> _media(FakePhoto photo, GrImageSize size) =>
+      media(_captureSources[photo] ?? photo, size);
+
+  void _endLiveViews() {
+    for (final socket in _liveViews) {
+      socket.destroy();
+    }
+    _liveViews.clear();
+  }
 
   void _push(Map<String, Object?> message) {
     final text = jsonEncode(message);

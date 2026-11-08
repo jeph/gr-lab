@@ -199,6 +199,7 @@ extension on FakeGrCamera {
     void advertise() {
       if (_closed ||
           config.unreachable ||
+          _bluetoothOff ||
           adapterState != BleAdapterState.poweredOn) {
         return;
       }
@@ -250,7 +251,10 @@ extension on FakeGrCamera {
         'Bluetooth is ${adapterState.name}',
       );
     }
-    if (_closed || config.unreachable || deviceId != config.deviceId) {
+    if (_closed ||
+        config.unreachable ||
+        _bluetoothOff ||
+        deviceId != config.deviceId) {
       await Future<void>.delayed(
         timeout < _unreachableGiveUp ? timeout : _unreachableGiveUp,
       );
@@ -315,9 +319,18 @@ extension on FakeGrCamera {
       GrBleCatalog.batteryLevel => _battery & 0xff,
       GrBleCatalog.networkType =>
         _wlanEnabled ? BleNetworkType.ap.wire : BleNetworkType.off.wire,
+      GrBleCatalog.driveMode => _driveMode,
       _ => null,
     };
     if (live != null) return Uint8List.fromList([live]);
+    final List<int>? record = switch (c) {
+      // GR WORLD's 2-byte forms (ble.md, Shooting mode / Capture status).
+      GrBleCatalog.shootingMode => [_exposureMode.wire, _userMode.wire],
+      GrBleCatalog.captureStatus => _captureStatus,
+      GrBleCatalog.storageInformation => _storageInformation(),
+      _ => null,
+    };
+    if (record != null) return Uint8List.fromList(record);
     return Uint8List.fromList(_values[c.uuid] ?? const [0]);
   }
 
@@ -329,6 +342,14 @@ extension on FakeGrCamera {
             first == BleOperationMode.capture.wire ||
             first == BleOperationMode.playback.wire;
         if (_poweredOn) {
+          // A running camera switches between capture and playback; other
+          // values are refused [design].
+          if (!wakes) {
+            throw BleException(
+              BleErrorCode.gatt,
+              '${c.key}: $first not settable',
+            );
+          }
           _mode = first;
           _notify(c, v);
         } else if (wakes && config.wakeKeepsLink) {
@@ -360,6 +381,27 @@ extension on FakeGrCamera {
         }
       case GrBleCatalog.pairedDeviceName:
         registeredClientName = utf8.decode(v, allowMalformed: true);
+      // Remote shutter `01 01` / `01 00` (ble.md §Remote shooting). Focus
+      // only and the green button (`00 ..`) are accepted and do nothing.
+      case GrBleCatalog.operationRequest:
+        if (v.length != 2) {
+          throw BleException(BleErrorCode.gatt, '${c.key}: expected 2 bytes');
+        }
+        if (first == BleOperationCode.start.wire) {
+          if (_releaseRefusal() case (_, final why)?) {
+            throw BleException(BleErrorCode.gatt, '${c.key}: $why');
+          }
+          _release();
+        }
+      // `01` (GR WORLD) or `01 01` (Image Sync) cancels a countdown.
+      case GrBleCatalog.selfTimer:
+        if (first == BleCountdownCancel.cancel.wire) _cancelSelfTimer();
+      case GrBleCatalog.driveMode:
+        if (v.length != 1 ||
+            first > BleDriveMode.intervalCompositeSelfTimer2s.wire) {
+          throw BleException(BleErrorCode.gatt, '${c.key}: invalid value');
+        }
+        _setDriveMode(first);
       default:
         _values[c.uuid] = v;
     }

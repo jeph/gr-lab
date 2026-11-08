@@ -140,6 +140,11 @@ void main() {
 
     await _tap(tester, const Key('camera-card-library'));
     await pumpUntilFound(tester, find.byType(LibraryScreen));
+    await pumpUntil(
+      tester,
+      () => app.models.connection.status == ConnectionStatus.connected,
+      reason: 'Wi-Fi joined',
+    );
     expect(app.ble.connects, 1);
 
     await _tap(tester, const Key('camera-pill'));
@@ -193,12 +198,12 @@ void main() {
       await _untilStatus(tester, app, ConnectionStatus.failed);
       await pumpUntilFound(
         tester,
-        find.byKey(const Key('camera-card-failed-unreachable')),
+        find.byKey(const Key('connect-failed-unreachable')),
       );
       expect(find.text("Can't reach GR IV"), findsOneWidget);
       expect(find.text('Action Mode is On'), findsOneWidget);
 
-      await _tap(tester, const Key('camera-card-retry'));
+      await _tap(tester, const Key('connect-retry'));
       expect(app.models.connection.status, ConnectionStatus.connecting);
       expect(find.byKey(const Key('camera-card-connecting')), findsOneWidget);
       await _untilStatus(tester, app, ConnectionStatus.failed);
@@ -218,11 +223,11 @@ void main() {
     );
     await pumpUntilFound(
       tester,
-      find.byKey(const Key('camera-card-failed-needsPairing')),
+      find.byKey(const Key('connect-failed-needsPairing')),
     );
     expect(find.text('Pair GR IV again'), findsOneWidget);
 
-    await _tap(tester, const Key('camera-card-pair-again'));
+    await _tap(tester, const Key('connect-pair-again'));
     await pumpUntilFound(tester, find.byKey(const Key('pairing-find')));
     await _tap(tester, const Key('pairing-close'));
     await pumpUntil(tester, () => find.byType(PairingFlow).evaluate().isEmpty);
@@ -233,9 +238,8 @@ void main() {
     await app.dispose();
   });
 
-  testWidgets('a connection lost for good returns to Cameras with a note', (
-    tester,
-  ) async {
+  testWidgets("Wi-Fi lost for good keeps the Library on Bluetooth, saying "
+      'so', (tester) async {
     final app = await _start(
       tester,
       sessionOptions: const GrSessionOptions(
@@ -247,14 +251,47 @@ void main() {
     await pumpUntilFound(tester, find.byKey(const Key('camera-card-library')));
     await _tap(tester, const Key('camera-card-library'));
     await pumpUntilFound(tester, find.byType(LibraryScreen));
+    await pumpUntil(
+      tester,
+      () => app.models.connection.status == ConnectionStatus.connected,
+      reason: 'Wi-Fi joined',
+    );
 
     app.camera.dropWifi(recoverable: false);
-    await pumpUntilFound(tester, find.byKey(const Key('cameras-lost')));
-    expect(find.byType(LibraryScreen), findsNothing);
-    // Bluetooth is kept: the note says what happened; the card offers the
-    // Library again.
+    await pumpUntilFound(
+      tester,
+      find.byKey(const Key('connect-failed-wifi')).hitTestable(),
+    );
+    expect(find.byType(LibraryScreen), findsOneWidget);
     expect(app.models.connection.status, ConnectionStatus.bluetooth);
-    expect(find.byKey(const Key('camera-card-library')), findsOneWidget);
+
+    await app.dispose();
+  });
+
+  testWidgets('back from the Library returns to Cameras and leaves the '
+      "camera's Wi-Fi, keeping Bluetooth", (tester) async {
+    final app = await _start(tester);
+    await pumpUntilFound(tester, find.byKey(const Key('camera-card-library')));
+    await _tap(tester, const Key('camera-card-library'));
+    await pumpUntilFound(tester, find.byType(LibraryScreen));
+    await pumpUntil(
+      tester,
+      () => app.models.connection.status == ConnectionStatus.connected,
+      reason: 'Wi-Fi joined',
+    );
+
+    await _tap(tester, const Key('camera-back'));
+    await pumpUntil(
+      tester,
+      () => find.byType(LibraryScreen).evaluate().isEmpty,
+    );
+    await pumpUntilFound(tester, find.byKey(const Key('camera-card-library')));
+    await pumpUntil(
+      tester,
+      () => app.models.connection.status == ConnectionStatus.bluetooth,
+    );
+    expect(await app.camera.wifi.currentSsid(), isNull);
+    expect(find.byKey(const Key('cameras-lost')), findsNothing);
 
     await app.dispose();
   });

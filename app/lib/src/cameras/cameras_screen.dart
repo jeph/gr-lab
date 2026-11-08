@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../app_scope.dart';
+import '../connection/connect_failure_view.dart';
 import '../connection/connect_steps.dart';
 import '../connection/connection_controller.dart';
 import '../data/cameras.dart';
@@ -442,32 +443,11 @@ class _CameraList extends StatelessWidget {
   }
 }
 
-/// Small pill buttons of the Cameras card and rows (mock `.btn.sm`).
-const _smallSize = Size(0, 34);
-const _smallPadding = EdgeInsets.symmetric(horizontal: 14);
-const _smallText = TextStyle(
-  fontFamily: GrFonts.ui,
-  fontSize: 13,
-  fontWeight: FontWeight.w600,
-);
-final _smallFilled = FilledButton.styleFrom(
-  minimumSize: _smallSize,
-  padding: _smallPadding,
-  textStyle: _smallText,
-  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-);
-final _smallOutlined = OutlinedButton.styleFrom(
-  minimumSize: _smallSize,
-  padding: _smallPadding,
-  textStyle: _smallText,
-  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-);
-
 // ----------------------------------------------------------------- card
 
-/// The camera used last (mock `.ccard`): thumbnails and Connect, the
-/// steps while connecting, the Bluetooth link with Library, or why the
-/// last attempt failed.
+/// The camera used last (mock `.ccard`): thumbnails, the link, buttons
+/// to the camera's Library and Shoot pages, and Connect while it is not
+/// linked; or the steps while connecting, or why the last attempt failed.
 class _CameraCard extends StatelessWidget {
   const _CameraCard({
     required this.camera,
@@ -553,18 +533,22 @@ class _CameraCard extends StatelessWidget {
             const SizedBox(height: 14),
             OutlinedButton(
               key: const Key('camera-card-cancel'),
-              style: _smallOutlined,
+              style: smallOutlinedStyle,
               // Cancelling the join keeps Bluetooth; cancelling the link
               // ends the attempt.
               onPressed: () => unawaited(
                 connection.step == ConnectStep.wifi
-                    ? connection.closeLibrary()
+                    ? connection.closeCamera()
                     : connection.disconnect(),
               ),
               child: const Text('Cancel'),
             ),
           ] else if (failure != null)
-            _Failure(camera: camera, failure: failure, connection: connection)
+            ConnectFailureView(
+              camera: camera,
+              failure: failure,
+              connection: connection,
+            )
           else ...[
             _Thumbs(serial: camera.serial),
             const SizedBox(height: 14),
@@ -580,20 +564,32 @@ class _CameraCard extends StatelessWidget {
                         ),
                 ),
                 const SizedBox(width: 10),
-                if (linked)
-                  FilledButton(
-                    key: const Key('camera-card-library'),
-                    style: _smallFilled,
-                    onPressed: () => unawaited(connection.openLibrary()),
-                    child: const Text('Library'),
-                  )
-                else
+                GrIconButton(
+                  key: const Key('camera-card-library'),
+                  icon: Icons.grid_view_rounded,
+                  tooltip: 'Library',
+                  size: 34,
+                  onPressed: () =>
+                      unawaited(connection.openCamera(CameraTab.library)),
+                ),
+                const SizedBox(width: 8),
+                GrIconButton(
+                  key: const Key('camera-card-shoot'),
+                  icon: Icons.camera_outlined,
+                  tooltip: 'Shoot',
+                  size: 34,
+                  onPressed: () =>
+                      unawaited(connection.openCamera(CameraTab.shoot)),
+                ),
+                if (!linked) ...[
+                  const SizedBox(width: 10),
                   FilledButton(
                     key: const Key('camera-card-connect'),
-                    style: _smallFilled,
+                    style: smallFilledStyle,
                     onPressed: onConnect,
                     child: const Text('Connect'),
                   ),
+                ],
               ],
             ),
           ],
@@ -623,168 +619,6 @@ class _LinkedLabel extends StatelessWidget {
             style: TextStyle(fontSize: 12.5, color: c.t2),
           ),
         ),
-      ],
-    );
-  }
-}
-
-/// Why connecting failed, with the checks that fix it (mock
-/// `b-home-fail`). It stays until Try again or another camera is chosen;
-/// pairing is never retried by itself.
-class _Failure extends StatelessWidget {
-  const _Failure({
-    required this.camera,
-    required this.failure,
-    required this.connection,
-  });
-
-  final SavedCamera camera;
-  final ConnectFailure failure;
-  final ConnectionController connection;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = GrColors.of(context);
-    final kind = failure.kind;
-    final name = camera.name;
-    final (title, body) = switch (kind) {
-      ConnectFailureKind.bluetoothOff => (
-        'Bluetooth is off',
-        'Turn on Bluetooth on this phone, then try again.',
-      ),
-      ConnectFailureKind.bluetoothDenied => (
-        "GR Lab can't use Bluetooth",
-        'Allow Bluetooth (on Android: Nearby devices) for GR Lab in the '
-            "phone's settings, then try again.",
-      ),
-      ConnectFailureKind.unreachable => (
-        "Can't reach $name",
-        "The camera didn't answer over Bluetooth.",
-      ),
-      ConnectFailureKind.needsPairing => (
-        'Pair $name again',
-        "The camera no longer accepts this phone's pairing, so trying again "
-            "won't help. To pair again:",
-      ),
-      ConnectFailureKind.wifi => (
-        "Couldn't join $name's Wi-Fi",
-        "Bluetooth works, but the phone couldn't join or keep the camera's "
-            'Wi-Fi.',
-      ),
-      ConnectFailureKind.wifiDeclined => (
-        "Not on $name's Wi-Fi",
-        "Photos come over the camera's own Wi-Fi. Join it to browse and "
-            'download them.',
-      ),
-    };
-    void pairAgain() => unawaited(PairingFlow.push(context));
-    final checks = switch (kind) {
-      ConnectFailureKind.unreachable => [
-        const GroupRow(
-          icon: Icons.battery_std_rounded,
-          title: "The camera is close and its battery isn't empty",
-        ),
-        const GroupRow(
-          icon: Icons.bluetooth_rounded,
-          title: 'Action Mode is On',
-          subtitle: 'MENU → E6 → Wireless Communication',
-        ),
-        GroupRow(
-          icon: Icons.info_outline_rounded,
-          title: 'Camera forgot this phone?',
-          subtitle: "If its Paired Devices list doesn't show this phone",
-          trailing: TrailingFit(
-            child: TextButton(
-              key: const Key('camera-card-pair-again'),
-              onPressed: pairAgain,
-              child: const Text('Pair again'),
-            ),
-          ),
-        ),
-      ],
-      ConnectFailureKind.needsPairing => const [
-        GroupRow(
-          leading: NumberTile(1),
-          title: "Delete this phone from the camera's Paired Devices",
-        ),
-        GroupRow(
-          leading: NumberTile(2),
-          title: "Delete the camera from this phone's Bluetooth settings",
-        ),
-        GroupRow(
-          leading: NumberTile(3),
-          title: 'Open Execute Pairing on the camera and pair',
-        ),
-      ],
-      ConnectFailureKind.wifi => const [
-        GroupRow(
-          icon: Icons.wifi_rounded,
-          title: 'The phone stays close to the camera',
-        ),
-        GroupRow(
-          icon: Icons.check_circle_outline_rounded,
-          title: "If the phone asks to join the camera's network, allow it",
-        ),
-      ],
-      ConnectFailureKind.bluetoothOff ||
-      ConnectFailureKind.bluetoothDenied ||
-      ConnectFailureKind.wifiDeclined => const <Widget>[],
-    };
-    final retryLabel = Text(
-      kind == ConnectFailureKind.wifiDeclined ? 'Join Wi-Fi' : 'Try again',
-    );
-    // Wi-Fi failures keep the Bluetooth link; only Wi-Fi is tried again.
-    final wifiStep = failure.step == ConnectStep.wifi;
-    void retry() =>
-        unawaited(wifiStep ? connection.openLibrary() : connection.connect());
-    return Column(
-      key: Key('camera-card-failed-${kind.name}'),
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SizedBox(height: 14),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: c.t1,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(body, style: TextStyle(fontSize: 13.5, height: 1.45, color: c.t2)),
-        if (checks.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          GroupBox(margin: EdgeInsets.zero, color: c.s2, children: checks),
-        ],
-        if (kind != ConnectFailureKind.wifiDeclined) ...[
-          const SizedBox(height: 10),
-          Text(
-            failure.message,
-            style: GrFonts.monoStyle(context, size: 11, color: c.t3),
-          ),
-        ],
-        const SizedBox(height: 14),
-        if (kind == ConnectFailureKind.needsPairing) ...[
-          FilledButton(
-            key: const Key('camera-card-pair-again'),
-            style: _smallFilled,
-            onPressed: pairAgain,
-            child: const Text('Pair again'),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton(
-            key: const Key('camera-card-retry'),
-            style: _smallOutlined,
-            onPressed: retry,
-            child: retryLabel,
-          ),
-        ] else
-          FilledButton(
-            key: const Key('camera-card-retry'),
-            style: _smallFilled,
-            onPressed: retry,
-            child: retryLabel,
-          ),
       ],
     );
   }
@@ -1024,7 +858,7 @@ class _OtherCameraRow extends StatelessWidget {
             const SizedBox(width: 10),
             OutlinedButton(
               key: Key('camera-row-connect-${camera.serial}'),
-              style: _smallOutlined,
+              style: smallOutlinedStyle,
               onPressed: onConnect,
               child: const Text('Connect'),
             ),

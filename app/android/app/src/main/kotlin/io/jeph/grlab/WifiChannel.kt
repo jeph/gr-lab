@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkInfo
 import android.net.NetworkRequest
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
@@ -47,10 +48,16 @@ import io.flutter.plugin.common.MethodChannel
  * after WLAN-on. So the request is repeated every [RESCAN_MS], each time
  * starting a scan, until Android starts connecting. That start is seen in
  * the primary Wi-Fi state broadcasts, which fire whether the phone was on
- * another Wi-Fi network or on mobile data; any change after a request
- * keeps that request. Phones that join the camera on a second, concurrent
- * Wi-Fi interface get no such broadcast, so there the request is never
- * repeated. Neither is it while Android's approval screen is up.
+ * another Wi-Fi network or on mobile data: while the state moves, no new
+ * request is made. The broadcasts do not say which network moved (that
+ * needs location access), and right after leaving a camera the phone
+ * rejoins its usual network: so when the phone ends up connected and the
+ * request is still open [OTHER_NETWORK_MS] later, the connection was to
+ * another network and the requests go on (seen 2026-11-08: an 18 s wait
+ * while the phone rejoined home Wi-Fi). Phones that join the camera on a
+ * second, concurrent Wi-Fi interface get no such broadcast, so there the
+ * request is never repeated. Neither is it while Android's approval
+ * screen is up.
  */
 class WifiChannel(private val context: Context, messenger: BinaryMessenger) :
     MethodChannel.MethodCallHandler {
@@ -234,23 +241,11 @@ class WifiChannel(private val context: Context, messenger: BinaryMessenger) :
         return true
     }
 
-    /** Repeats the request every [RESCAN_MS] until Wi-Fi state moves. */
+    /**
+     * Repeats the request every [RESCAN_MS], holding off while the Wi-Fi
+     * state moves (see the class comment).
+     */
     private fun startRescans() {
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(c: Context, intent: Intent) {
-                // Registering delivers the last (sticky) state at once; only
-                // changes after the request count.
-                if (isInitialStickyBroadcast) return
-                Log.i(TAG, "Wi-Fi state changed after request $requests; keeping it")
-                stopRescans()
-            }
-        }
-        stateReceiver = receiver
-        context.registerReceiver(
-            receiver,
-            IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION),
-            Context.RECEIVER_NOT_EXPORTED,
-        )
         val tick = object : Runnable {
             override fun run() {
                 if (rescan !== this || pending == null || !resumed) return
@@ -259,6 +254,37 @@ class WifiChannel(private val context: Context, messenger: BinaryMessenger) :
                 main.postDelayed(this, RESCAN_MS)
             }
         }
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context, intent: Intent) {
+                // Registering delivers the last (sticky) state at once; only
+                // changes after the request count.
+                if (isInitialStickyBroadcast || rescan !== tick) return
+                main.removeCallbacks(tick)
+                // NetworkInfo is deprecated, but it is the documented payload
+                // of NETWORK_STATE_CHANGED_ACTION; the typed getter needs API 33.
+                @Suppress("DEPRECATION")
+                val state = intent.getParcelableExtra<NetworkInfo>(
+                    WifiManager.EXTRA_NETWORK_INFO,
+                )?.detailedState
+                @Suppress("DEPRECATION")
+                when (state) {
+                    NetworkInfo.DetailedState.CONNECTED -> {
+                        Log.i(TAG, "Wi-Fi connected after request $requests; is it the camera?")
+                        main.postDelayed(tick, OTHER_NETWORK_MS)
+                    }
+                    // Settled off any network: nothing is joining, unless a
+                    // later broadcast says otherwise.
+                    NetworkInfo.DetailedState.DISCONNECTED -> main.postDelayed(tick, RESCAN_MS)
+                    else -> Log.i(TAG, "Wi-Fi state $state after request $requests; holding")
+                }
+            }
+        }
+        stateReceiver = receiver
+        context.registerReceiver(
+            receiver,
+            IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION),
+            Context.RECEIVER_NOT_EXPORTED,
+        )
         rescan = tick
         main.postDelayed(tick, RESCAN_MS)
     }
@@ -337,6 +363,9 @@ class WifiChannel(private val context: Context, messenger: BinaryMessenger) :
         requestedSsid = null
     }
 }
+
+/** Longer than the camera network takes to reach [WifiChannel] once connected (~20 ms seen). */
+private const val OTHER_NETWORK_MS = 2_500L
 
 private const val TAG = "GrLabWifi"
 

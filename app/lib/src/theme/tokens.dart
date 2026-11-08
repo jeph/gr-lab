@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 /// Colours from the mock-ups (`design/mockups/index.html` in the research
@@ -156,6 +157,13 @@ ThemeData grTheme(Brightness brightness) {
     splashFactory: InkSparkle.splashFactory,
   );
   return base.copyWith(
+    // Pages slide in over the one they open from, on every platform.
+    pageTransitionsTheme: PageTransitionsTheme(
+      builders: {
+        for (final platform in TargetPlatform.values)
+          platform: const CupertinoPageTransitionsBuilder(),
+      },
+    ),
     textTheme: base.textTheme.apply(bodyColor: c.t1, displayColor: c.t1),
     appBarTheme: AppBarTheme(
       backgroundColor: c.bg,

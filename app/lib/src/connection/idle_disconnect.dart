@@ -7,7 +7,7 @@ import 'package:flutter/widgets.dart';
 import '../data/settings.dart';
 import 'connection_controller.dart';
 
-/// Leaves the camera's Wi-Fi ([ConnectionController.closeLibrary]) after
+/// Leaves the camera's Wi-Fi ([ConnectionController.closeCamera]) after
 /// [SettingsController.autoDisconnect] without use, returning to the
 /// Cameras screen with Bluetooth still linked.
 ///
@@ -79,7 +79,7 @@ final class IdleDisconnect {
       _schedule();
       return;
     }
-    unawaited(connection.closeLibrary(idleFor: after));
+    unawaited(connection.closeCamera(idleFor: after));
   }
 
   void dispose() {

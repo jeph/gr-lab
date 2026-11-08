@@ -135,6 +135,15 @@ final class PillLinkState {
           PillLinkKind.connected,
           'Bluetooth',
         ),
+        // Switched off with the Library open: red while it is woken and
+        // its Wi-Fi joined again.
+        ConnectionStatus.connected when connection.reconnecting =>
+          connection.cameraOff
+              ? const PillLinkState._(PillLinkKind.failed, 'Camera off')
+              : const PillLinkState._(
+                  PillLinkKind.reconnecting,
+                  'Reconnecting…',
+                ),
         ConnectionStatus.connected => PillLinkState._(
           PillLinkKind.connected,
           'Wi-Fi',

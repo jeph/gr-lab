@@ -198,6 +198,13 @@ final class FakeCameraConfig {
     this.cutDownloadsAfterBytes,
     this.previewFailures = 0,
     this.brokenPreviews = 0,
+    this.remainingPictures = 1234,
+    this.exposureMode = BleExposureMode.av,
+    this.captureDelay = const Duration(milliseconds: 300),
+    this.focusTime = const Duration(milliseconds: 300),
+    this.lensBeforeFocusAnswer = false,
+    this.announcesDialChanges = true,
+    this.selfTimerScale = 1.0,
   });
 
   /// `/v1/props` `model` and the Camera Information model name; must be a
@@ -302,4 +309,35 @@ final class FakeCameraConfig {
   /// After [previewFailures], this many more of those requests answer 200
   /// with a JPEG start and nothing else, which no decoder can show.
   final int brokenPreviews;
+
+  /// Pictures the active storage still has room for: `/v1/props`
+  /// `storages[].remain` and the BLE Storage Information entry's
+  /// remainingPictures. Each capture takes one; at 0 releases are refused.
+  final int remainingPictures;
+
+  /// Initial position of the mode dial (BLE Shooting Mode, `/v1/props`
+  /// `exposureMode`); [FakeGrCamera.setExposureMode] turns it.
+  final BleExposureMode exposureMode;
+
+  /// From the release (or the end of a self-timer countdown) until the
+  /// picture is on the card.
+  final Duration captureDelay;
+
+  /// From a `POST /v1/lens/focus` answer until its `lens` change. On a GR
+  /// IV HDF (2026-11-08) live view stalled 0.9-2 s per focus.
+  final Duration focusTime;
+
+  /// The `lens` change of a focus is sent before the answer to its
+  /// `POST /v1/lens/focus` (50 ms before). They travel on different
+  /// connections, so a client cannot rely on their order.
+  final bool lensBeforeFocusAnswer;
+
+  /// Turning the mode dial pushes a `camera` change over the WebSocket as
+  /// well as the BLE Shooting Mode notification. Whether the GR IV pushes
+  /// it is [unknown]; false leaves the BLE notification alone.
+  final bool announcesDialChanges;
+
+  /// Scales the 2 s and 10 s self-timer countdowns; tests pass small
+  /// values.
+  final double selfTimerScale;
 }

@@ -174,7 +174,7 @@ class CameraSheet extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
         child: OutlinedButton(
           key: const Key('camera-sheet-disconnect'),
-          onPressed: () => unawaited(connection.closeLibrary()),
+          onPressed: () => unawaited(connection.closeCamera()),
           child: const Text('Disconnect Wi-Fi'),
         ),
       ),

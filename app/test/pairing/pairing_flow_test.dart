@@ -213,6 +213,11 @@ void main() {
 
     await tapWhenReady(tester, find.byKey(const Key('camera-card-library')));
     await pumpUntilFound(tester, find.byType(LibraryScreen));
+    await pumpUntil(
+      tester,
+      () => app.models.connection.status == ConnectionStatus.connected,
+      reason: 'Wi-Fi joined',
+    );
 
     await app.dispose();
   });

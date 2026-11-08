@@ -57,16 +57,17 @@ void main() {
     final app = await _asked(tester);
     await _answer(tester, const Key('wifi-consent-join'));
 
-    expect(find.byKey(_cameras), findsOneWidget);
-    await pumpUntilFound(tester, find.byType(LibraryScreen));
-    expect(app.models.connection.status, ConnectionStatus.connected);
+    expect(find.byType(LibraryScreen), findsOneWidget);
+    await pumpUntil(
+      tester,
+      () => app.models.connection.status == ConnectionStatus.connected,
+      reason: 'joined',
+    );
     expect(app.models.cameras.current?.wifiApproved, isTrue);
     await app.dispose();
   });
 
-  testWidgets('Not now leaves the camera card showing the decline', (
-    tester,
-  ) async {
+  testWidgets('Not now leaves the Library showing the decline', (tester) async {
     final app = await _asked(tester);
     await _answer(tester, const Key('wifi-consent-later'));
 
@@ -82,21 +83,24 @@ void main() {
     );
     await pumpUntilFound(
       tester,
-      find.byKey(const Key('camera-card-failed-wifiDeclined')),
+      find.byKey(const Key('connect-failed-wifiDeclined')).hitTestable(),
     );
-    expect(find.byKey(_cameras), findsOneWidget);
+    expect(find.byType(LibraryScreen), findsOneWidget);
     await app.dispose();
   });
 
   testWidgets('Join Wi-Fi after Not now asks again', (tester) async {
     final app = await _asked(tester);
     await _answer(tester, const Key('wifi-consent-later'));
-    await tapWhenReady(tester, find.byKey(const Key('camera-card-retry')));
+    await tapWhenReady(tester, find.byKey(const Key('connect-retry')));
     await pumpUntilFound(tester, find.byKey(_dialog));
     await _answer(tester, const Key('wifi-consent-join'));
 
-    await pumpUntilFound(tester, find.byType(LibraryScreen));
-    expect(app.models.connection.status, ConnectionStatus.connected);
+    await pumpUntil(
+      tester,
+      () => app.models.connection.status == ConnectionStatus.connected,
+      reason: 'joined',
+    );
     await app.dispose();
   });
 
