@@ -432,38 +432,121 @@ class GrStepList extends StatelessWidget {
     );
   }
 
-  static Widget _marker(GrColors c, GrStepState state) => switch (state) {
-    GrStepState.done => Container(
+  static Widget _marker(GrColors c, GrStepState state) => AnimatedSwitcher(
+    duration: const Duration(milliseconds: 250),
+    transitionBuilder: (child, animation) => FadeTransition(
+      opacity: animation,
+      child: ScaleTransition(scale: animation, child: child),
+    ),
+    child: switch (state) {
+      GrStepState.done => Container(
+        key: const ValueKey(GrStepState.done),
+        width: 22,
+        height: 22,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: c.ok),
+        child: const Icon(
+          Icons.check_rounded,
+          size: 14,
+          color: Color(0xFF0A0A0B),
+        ),
+      ),
+      GrStepState.now => const _PulsingMarker(key: ValueKey(GrStepState.now)),
+      GrStepState.todo => Container(
+        key: const ValueKey(GrStepState.todo),
+        width: 22,
+        height: 22,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: c.t3, width: 1.5),
+        ),
+      ),
+    },
+  );
+}
+
+/// The current step's marker: a dot whose ring keeps expanding and fading
+/// while the step runs. Still when the platform asks for less motion.
+class _PulsingMarker extends StatefulWidget {
+  const _PulsingMarker({super.key});
+
+  @override
+  State<_PulsingMarker> createState() => _PulsingMarkerState();
+}
+
+class _PulsingMarkerState extends State<_PulsingMarker>
+    with SingleTickerProviderStateMixin {
+  late final _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _pulse.value = 0;
+      _pulse.stop();
+    } else if (!_pulse.isAnimating) {
+      _pulse.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = GrColors.of(context);
+    return SizedBox(
       width: 22,
       height: 22,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: c.ok),
-      child: const Icon(
-        Icons.check_rounded,
-        size: 14,
-        color: Color(0xFF0A0A0B),
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          AnimatedBuilder(
+            animation: _pulse,
+            builder: (context, _) {
+              final t = Curves.easeOut.transform(_pulse.value);
+              // Grows from the marker's outline to twice its size.
+              return Transform.scale(
+                scale: 1 + t,
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: c.accent.withValues(alpha: 0.6 * (1 - t)),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          Container(
+            width: 22,
+            height: 22,
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: c.accent, width: 1.5),
+            ),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: c.accent,
+              ),
+            ),
+          ),
+        ],
       ),
-    ),
-    GrStepState.now => Container(
-      width: 22,
-      height: 22,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: c.accent, width: 1.5),
-      ),
-      child: DecoratedBox(
-        decoration: BoxDecoration(shape: BoxShape.circle, color: c.accent),
-      ),
-    ),
-    GrStepState.todo => Container(
-      width: 22,
-      height: 22,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: c.t3, width: 1.5),
-      ),
-    ),
-  };
+    );
+  }
 }
 
 /// Full-width primary button pinned under a page's content.

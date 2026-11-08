@@ -170,9 +170,8 @@ Future<void> _pushFlow(WidgetTester tester, TestApp app) async {
 }
 
 void main() {
-  testWidgets('pairs a nearby camera and hands over to the Library', (
-    tester,
-  ) async {
+  testWidgets('pairs a nearby camera and hands over to the Cameras screen, '
+      'linked over Bluetooth', (tester) async {
     final app = await _start(tester);
 
     expect(find.byKey(_find), findsOneWidget);
@@ -201,31 +200,23 @@ void main() {
     await tapWhenReady(tester, find.byKey(const Key('pairing-done-power-on')));
     expect(app.models.settings.powerOnWhenConnecting, isFalse);
 
-    // The pairing link was released, so the session connects on its own.
+    // The pairing link was released, so the session links on its own,
+    // over Bluetooth only.
     await pumpUntil(
       tester,
-      () => app.models.connection.status == ConnectionStatus.connected,
-      reason: 'connected after pairing',
+      () => app.models.connection.status == ConnectionStatus.bluetooth,
+      reason: 'linked after pairing',
     );
 
     await tapWhenReady(tester, find.byKey(const Key('pairing-done-button')));
     await pumpUntil(tester, () => find.byKey(_done).evaluate().isEmpty);
     expect(find.byType(PairingFlow), findsNothing);
-    expect(find.byType(LibraryScreen), findsOneWidget);
-
-    // The camera is still nearby, but the app connects by itself only
-    // when it opens: Disconnect stays on the Cameras screen.
-    final connects = app.ble.connects;
-    await tapWhenReady(tester, find.byKey(const Key('camera-pill')));
-    await tapWhenReady(
-      tester,
-      find.byKey(const Key('camera-sheet-disconnect')),
-    );
-    await pumpUntilFound(tester, find.byKey(const Key('cameras')));
-    await pumpRounds(tester, 50);
-    expect(app.models.connection.status, ConnectionStatus.offline);
-    expect(app.ble.connects, connects);
     expect(find.byKey(const Key('cameras')), findsOneWidget);
+    expect(find.byType(LibraryScreen), findsNothing);
+    expect(app.camera.wlanOn, isFalse);
+
+    await tapWhenReady(tester, find.byKey(const Key('camera-card-library')));
+    await pumpUntilFound(tester, find.byType(LibraryScreen));
 
     await app.dispose();
   });

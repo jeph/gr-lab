@@ -43,7 +43,16 @@ void main() {
       find.byKey(const Key('pairing-done-button')),
       timeout: const Duration(seconds: 30),
     );
-    // Connecting starts with pairing; Android asks before the first join.
+    await tester.tap(find.byKey(const Key('pairing-done-button')));
+    // Pairing links Bluetooth; the camera's Wi-Fi joins only for the
+    // Library, and Android asks before the first join.
+    final library = find.byKey(const Key('camera-card-library')).hitTestable();
+    await _pumpUntilFound(
+      tester,
+      library,
+      timeout: const Duration(seconds: 30),
+    );
+    await tester.tap(library);
     if (Platform.isAndroid) {
       await _pumpUntilFound(
         tester,
@@ -53,7 +62,6 @@ void main() {
       await tester.tap(find.byKey(const Key('wifi-consent-join')));
       await tester.pump();
     }
-    await tester.tap(find.byKey(const Key('pairing-done-button')));
 
     final pillState = find.byKey(const Key('camera-pill-state'));
     await _pumpUntil(
@@ -71,7 +79,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(cells.at(1));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('selection-download')));
+    // The newest shots are a JPEG and a DNG: each kind has its own action.
+    await tester.tap(find.byKey(const ValueKey('selection-download:jpeg')));
+    await tester.pumpAndSettle();
+    await tester.longPress(cells.at(1));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('selection-download:raw')));
 
     await _pumpUntil(
       tester,

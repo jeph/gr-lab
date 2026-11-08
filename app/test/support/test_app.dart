@@ -230,6 +230,9 @@ final class CountingTransport implements BleTransport {
 
   final BleTransport _inner;
   int scans = 0;
+
+  /// Scans listened to and not yet cancelled or done.
+  int scanning = 0;
   int connects = 0;
 
   /// Device ids passed to [connect], in order.
@@ -241,7 +244,25 @@ final class CountingTransport implements BleTransport {
   @override
   Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) {
     scans++;
-    return _inner.scan(serviceUuids: serviceUuids);
+    StreamSubscription<BleAdvertisement>? sub;
+    late final StreamController<BleAdvertisement> controller;
+    controller = StreamController<BleAdvertisement>(
+      onListen: () {
+        scanning++;
+        sub = _inner
+            .scan(serviceUuids: serviceUuids)
+            .listen(
+              controller.add,
+              onError: controller.addError,
+              onDone: controller.close,
+            );
+      },
+      onCancel: () {
+        scanning--;
+        return sub?.cancel();
+      },
+    );
+    return controller.stream;
   }
 
   @override

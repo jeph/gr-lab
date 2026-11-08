@@ -1,8 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:gr_protocol/gr_protocol.dart';
-
 import '../library/camera_images.dart';
 import '../library/image_orientation.dart';
 import '../library/library_model.dart';
@@ -12,9 +10,9 @@ import '../library/shot.dart';
 /// that shows it upright.
 typedef RecentThumb = ({Uint8List bytes, int orientation});
 
-/// Up to [count] thumbnails of [serial]'s newest shots that the Library
-/// has on disk, newest first. Shots whose thumbnail was never loaded are
-/// skipped; nothing is fetched.
+/// Up to [count] images of [serial]'s newest shots that the Library grid
+/// has on disk ([Shot.gridSize]), newest first. Shots whose image was
+/// never loaded are skipped; nothing is fetched.
 Future<List<RecentThumb>> loadRecentThumbs(
   Directory cacheDir,
   String serial, {
@@ -32,7 +30,7 @@ Future<List<RecentThumb>> loadRecentThumbs(
         cacheDir,
         serial,
         file,
-        GrImageSize.thumb,
+        shot.gridSize,
       ).readAsBytes();
     } on FileSystemException {
       continue;

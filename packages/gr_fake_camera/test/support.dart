@@ -17,6 +17,8 @@ FakeCameraConfig fastConfig({
   int? downloadBytesPerSecond,
   List<FakePhoto>? photos,
   bool sdCard = true,
+  Duration? joinDelay,
+  bool reportsWifiLoss = true,
 }) => FakeCameraConfig(
   poweredOn: poweredOn,
   executePairingOpen: executePairingOpen,
@@ -26,6 +28,7 @@ FakeCameraConfig fastConfig({
   refusePairing: refusePairing,
   dropWifiAfter: dropWifiAfter,
   unreachable: unreachable,
+  reportsWifiLoss: reportsWifiLoss,
   cutDownloadsAfterBytes: cutDownloadsAfterBytes,
   downloadBytesPerSecond: downloadBytesPerSecond,
   photos: photos,
@@ -35,7 +38,7 @@ FakeCameraConfig fastConfig({
   bleLatency: Duration.zero,
   wakeDelay: ms(60),
   wlanOnDelay: ms(40),
-  joinDelay: ms(10),
+  joinDelay: joinDelay ?? ms(10),
   httpLatency: Duration.zero,
 );
 
@@ -67,9 +70,12 @@ Future<FakeGrCamera> startCamera(
   return camera;
 }
 
-GrSession sessionFor(FakeGrCamera camera) => GrSession(
+GrSession sessionFor(
+  FakeGrCamera camera, {
+  GrSessionOptions options = fastSessionOptions,
+}) => GrSession(
   transport: camera.transport,
   wifi: camera.wifi,
-  options: fastSessionOptions,
+  options: options,
   httpFactory: camera.httpClient,
 );

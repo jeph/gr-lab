@@ -43,7 +43,7 @@ Future<TestApp> _start(
 }
 
 Future<void> _connect(WidgetTester tester, TestApp app) async {
-  unawaited(app.models.connection.connect());
+  unawaited(app.models.connection.openLibrary());
   await pumpUntil(
     tester,
     () => app.models.connection.status == ConnectionStatus.connected,
@@ -60,9 +60,8 @@ Future<void> _tap(WidgetTester tester, Key key) =>
     tapWhenReady(tester, find.byKey(key));
 
 void main() {
-  testWidgets('the pill follows waking and joining to Wi-Fi with battery', (
-    tester,
-  ) async {
+  testWidgets('the pill shows the Bluetooth link, then joining Wi-Fi and '
+      'the battery', (tester) async {
     final app = await _start(
       tester,
       config: const FakeCameraConfig(bonded: true, poweredOn: false),
@@ -81,29 +80,20 @@ void main() {
     unawaited(connection.connect());
     await tester.pump();
     expect(find.text('Connecting…'), findsOneWidget);
+    await pumpUntilFound(tester, find.text('Bluetooth'));
 
-    await pumpUntilFound(tester, find.text('Waking…'));
+    unawaited(connection.openLibrary());
     await pumpUntilFound(tester, find.byKey(const Key('camera-pill-battery')));
     expect(find.text('Wi-Fi'), findsOneWidget);
     expect(find.text('82%'), findsOneWidget);
-    expect(
-      seen,
-      containsAllInOrder([
-        'Connecting…',
-        'Waking…',
-        'Wi-Fi on…',
-        'Joining Wi-Fi…',
-        'Wi-Fi',
-      ]),
-    );
+    expect(seen, ['Connecting…', 'Bluetooth', 'Connecting to Wi-Fi…', 'Wi-Fi']);
     connection.removeListener(record);
 
     await app.dispose();
   });
 
-  testWidgets('the connected sheet shows the camera; Disconnect ends it', (
-    tester,
-  ) async {
+  testWidgets('the connected sheet shows the camera; Disconnect Wi-Fi keeps '
+      'Bluetooth', (tester) async {
     final app = await _start(tester);
     await _connect(tester, app);
     await _openSheet(tester);
@@ -121,7 +111,11 @@ void main() {
     expect(find.text('No. 1234567 · fw 1.20'), findsOneWidget);
 
     await _tap(tester, const Key('camera-sheet-disconnect'));
-    expect(app.models.connection.status, ConnectionStatus.offline);
+    await pumpUntil(
+      tester,
+      () => app.models.connection.status == ConnectionStatus.bluetooth,
+      reason: 'back on Bluetooth',
+    );
 
     await app.dispose();
   });

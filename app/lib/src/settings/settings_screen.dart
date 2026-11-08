@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../app_scope.dart';
-import '../data/settings.dart';
 import '../theme/tokens.dart';
 import '../widgets/group.dart';
 
-/// App settings (subset of mock `b-settings`): appearance, which halves of
-/// RAW+JPEG pairs to download, powering the camera on when connecting, and
-/// licenses.
+/// App settings (subset of mock `b-settings`): appearance, powering the
+/// camera on when connecting, and licenses.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -27,19 +25,6 @@ class SettingsScreen extends StatelessWidget {
             _ThemeGroup(
               mode: settings.themeMode,
               onChanged: (m) => settings.themeMode = m,
-            ),
-            const SectionLabel('Downloads'),
-            GroupBox(
-              children: [
-                GroupRow(
-                  icon: Icons.copy_rounded,
-                  title: 'RAW+JPEG photos',
-                  trailing: _RawJpegSegments(
-                    value: settings.rawJpeg,
-                    onChanged: (v) => settings.rawJpeg = v,
-                  ),
-                ),
-              ],
             ),
             const SectionLabel('Camera'),
             GroupBox(
@@ -272,67 +257,4 @@ class _MiniLibrary extends StatelessWidget {
       ),
     ),
   );
-}
-
-/// JPEG / RAW / Both segmented control (mock `.mseg`).
-class _RawJpegSegments extends StatelessWidget {
-  const _RawJpegSegments({required this.value, required this.onChanged});
-
-  final RawJpegChoice value;
-  final ValueChanged<RawJpegChoice> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = GrColors.of(context);
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: c.s2,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: c.line),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final (v, label) in const [
-            (RawJpegChoice.jpeg, 'JPEG'),
-            (RawJpegChoice.raw, 'RAW'),
-            (RawJpegChoice.both, 'Both'),
-          ])
-            Semantics(
-              button: true,
-              selected: v == value,
-              child: GestureDetector(
-                key: ValueKey('raw-jpeg:${v.name}'),
-                onTap: () => onChanged(v),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: v == value ? c.s1 : Colors.transparent,
-                    borderRadius: BorderRadius.circular(7),
-                    border: v == value
-                        ? Border.all(color: c.line2)
-                        : Border.all(color: Colors.transparent),
-                  ),
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: v == value
-                          ? FontWeight.w600
-                          : FontWeight.w500,
-                      color: v == value ? c.t1 : c.t2,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 }

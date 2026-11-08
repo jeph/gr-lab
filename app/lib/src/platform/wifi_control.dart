@@ -24,18 +24,27 @@ final class WifiJoinException implements Exception {
 /// Android requests the camera AP with a `WifiNetworkSpecifier` and binds
 /// the whole process to it, so dart:io HTTP and WebSocket traffic reaches
 /// 192.168.0.1 instead of mobile data. When that network is lost the native
-/// side unbinds and drops the request; [currentSsid] then reports null and
-/// the next [join] issues a fresh request, which is what GrSession's
-/// recovery does after its liveness probe fails.
+/// side unbinds, drops the request and reports it ([lost]), so the session
+/// ends the Wi-Fi link at once instead of waiting for its liveness probe.
 ///
 /// iOS applies a persistent `NEHotspotConfiguration`; the OS picks WPA2 or
 /// WPA3 itself, so [WifiSecurity] only matters on Android.
 final class PlatformWifiControl implements WifiNetworkControl {
   PlatformWifiControl({
     this._channel = const MethodChannel('io.jeph.grlab/wifi'),
-  });
+  }) {
+    // Android calls `lost` when the joined camera network goes away; iOS
+    // has no such callback, so there the stream never emits.
+    _channel.setMethodCallHandler((call) async {
+      if (call.method == 'lost') _lost.add(null);
+    });
+  }
 
   final MethodChannel _channel;
+  final _lost = StreamController<void>.broadcast();
+
+  @override
+  Stream<void> get lost => _lost.stream;
 
   @override
   Future<void> join({

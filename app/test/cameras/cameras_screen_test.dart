@@ -94,19 +94,51 @@ void main() {
     await app.dispose();
   });
 
-  testWidgets('connects to the nearby camera by itself once; Disconnect '
-      'returns to Cameras, where another camera can be chosen', (tester) async {
+  testWidgets('scans only while the app is visible', (tester) async {
+    final app = await _start(tester, config: _unreachable);
+    await pumpUntil(tester, () => app.ble.scanning == 1, reason: 'scanning');
+
+    for (final state in [
+      AppLifecycleState.inactive,
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+    }
+    await pumpUntil(tester, () => app.ble.scanning == 0, reason: 'stopped');
+
+    for (final state in [
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed,
+    ]) {
+      tester.binding.handleAppLifecycleStateChanged(state);
+    }
+    await pumpUntil(tester, () => app.ble.scanning == 1, reason: 'resumed');
+
+    await app.dispose();
+  });
+
+  testWidgets('links the nearby camera over Bluetooth by itself; Wi-Fi '
+      'only for the Library, and leaving it keeps Bluetooth', (tester) async {
     final app = await _start(
       tester,
       sessionOptions: _failFast,
       withOther: true,
     );
 
-    // The card lists the steps while it connects, then the Library opens.
+    // The card lists the steps while it links, then offers the Library.
     await pumpUntilFound(
       tester,
       find.byKey(const Key('camera-card-connecting')),
     );
+    await pumpUntilFound(tester, find.byKey(const Key('camera-card-linked')));
+    expect(app.models.connection.status, ConnectionStatus.bluetooth);
+    await pumpRounds(tester, 30);
+    expect(app.camera.wlanOn, isFalse);
+    expect(find.byType(LibraryScreen), findsNothing);
+
+    await _tap(tester, const Key('camera-card-library'));
     await pumpUntilFound(tester, find.byType(LibraryScreen));
     expect(app.ble.connects, 1);
 
@@ -118,12 +150,11 @@ void main() {
       () => find.byKey(const Key('camera-sheet')).evaluate().isEmpty,
       reason: 'sheet closed',
     );
-    // The camera is still nearby, but the app connects by itself only
-    // when it opens.
     await pumpRounds(tester, 50);
-    expect(app.models.connection.status, ConnectionStatus.offline);
+    expect(app.models.connection.status, ConnectionStatus.bluetooth);
+    expect(app.camera.wlanOn, isFalse);
     expect(app.ble.connects, 1);
-    expect(find.byKey(const Key('camera-card-connect')), findsOneWidget);
+    expect(find.byKey(const Key('camera-card-library')), findsOneWidget);
 
     await _tap(tester, const Key('camera-row-connect-1111111'));
     await pumpUntil(
@@ -213,14 +244,17 @@ void main() {
         maxWifiRecoveryAttempts: 0,
       ),
     );
+    await pumpUntilFound(tester, find.byKey(const Key('camera-card-library')));
+    await _tap(tester, const Key('camera-card-library'));
     await pumpUntilFound(tester, find.byType(LibraryScreen));
 
     app.camera.dropWifi(recoverable: false);
-    await _untilStatus(tester, app, ConnectionStatus.failed);
     await pumpUntilFound(tester, find.byKey(const Key('cameras-lost')));
     expect(find.byType(LibraryScreen), findsNothing);
-    // The note says what happened; the card offers Connect.
-    expect(find.byKey(const Key('camera-card-connect')), findsOneWidget);
+    // Bluetooth is kept: the note says what happened; the card offers the
+    // Library again.
+    expect(app.models.connection.status, ConnectionStatus.bluetooth);
+    expect(find.byKey(const Key('camera-card-library')), findsOneWidget);
 
     await app.dispose();
   });

@@ -40,8 +40,18 @@ class _CamerasScreenState extends State<CamerasScreen> with RouteAware {
 
   /// Another route (pairing, details, settings) is on top.
   bool _covered = false;
+
+  /// The app is visible: `inactive` still draws it (a system sheet over
+  /// it), so only hiding it stops the scan.
+  bool _visible = _isVisible(WidgetsBinding.instance.lifecycleState);
+  late final AppLifecycleListener _lifecycle;
   bool? _permission;
   bool _autoConnected = false;
+
+  static bool _isVisible(AppLifecycleState? state) =>
+      state == null ||
+      state == AppLifecycleState.resumed ||
+      state == AppLifecycleState.inactive;
 
   @override
   void initState() {
@@ -49,6 +59,14 @@ class _CamerasScreenState extends State<CamerasScreen> with RouteAware {
     _models.cameras.addListener(_update);
     _models.connection.addListener(_update);
     _presence.addListener(_onPresence);
+    _lifecycle = AppLifecycleListener(
+      onStateChange: (state) {
+        final visible = _isVisible(state);
+        if (visible == _visible) return;
+        _visible = visible;
+        _update();
+      },
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) => _update());
   }
 
@@ -65,6 +83,7 @@ class _CamerasScreenState extends State<CamerasScreen> with RouteAware {
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     _models.routes.unsubscribe(this);
     _models.cameras.removeListener(_update);
     _models.connection.removeListener(_update);
@@ -86,11 +105,12 @@ class _CamerasScreenState extends State<CamerasScreen> with RouteAware {
     _update();
   }
 
-  /// Scans while the screen is in front, a camera is paired and no
-  /// connection attempt needs Bluetooth for itself.
+  /// Scans while the screen is in front and the app visible, a camera is
+  /// paired and no connection attempt needs Bluetooth for itself.
   void _update() {
     if (!mounted) return;
     final want =
+        _visible &&
         !_covered &&
         _models.cameras.cameras.isNotEmpty &&
         _models.connection.status != ConnectionStatus.connecting;
@@ -317,9 +337,12 @@ class _CameraList extends StatelessWidget {
     final current = cameras.first;
     final others = cameras.skip(1).toList();
     final connecting = connection.status == ConnectionStatus.connecting;
-    final failure = connection.status == ConnectionStatus.failed
-        ? connection.failure
-        : null;
+    // Bluetooth failures end the link; Wi-Fi ones are kept next to it.
+    final failure = switch (connection.status) {
+      ConnectionStatus.failed ||
+      ConnectionStatus.bluetooth => connection.failure,
+      _ => null,
+    };
     final lost =
         failure != null &&
         failure.lost &&
@@ -421,7 +444,8 @@ final _smallOutlined = OutlinedButton.styleFrom(
 // ----------------------------------------------------------------- card
 
 /// The camera used last (mock `.ccard`): thumbnails and Connect, the
-/// steps while connecting, or why the last attempt failed.
+/// steps while connecting, the Bluetooth link with Library, or why the
+/// last attempt failed.
 class _CameraCard extends StatelessWidget {
   const _CameraCard({
     required this.camera,
@@ -440,7 +464,9 @@ class _CameraCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    final connecting = connection.status == ConnectionStatus.connecting;
+    final status = connection.status;
+    final connecting = status == ConnectionStatus.connecting;
+    final linked = status == ConnectionStatus.bluetooth;
     final failure = this.failure;
     return Container(
       key: const Key('camera-card'),
@@ -506,7 +532,13 @@ class _CameraCard extends StatelessWidget {
             OutlinedButton(
               key: const Key('camera-card-cancel'),
               style: _smallOutlined,
-              onPressed: () => unawaited(connection.disconnect()),
+              // Cancelling the join keeps Bluetooth; cancelling the link
+              // ends the attempt.
+              onPressed: () => unawaited(
+                connection.step == ConnectStep.wifi
+                    ? connection.closeLibrary()
+                    : connection.disconnect(),
+              ),
               child: const Text('Cancel'),
             ),
           ] else if (failure != null)
@@ -517,24 +549,59 @@ class _CameraCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _NearLabel(
-                    presence: presence,
-                    camera: camera,
-                    withModel: false,
-                  ),
+                  child: linked
+                      ? const _LinkedLabel()
+                      : _NearLabel(
+                          presence: presence,
+                          camera: camera,
+                          withModel: false,
+                        ),
                 ),
                 const SizedBox(width: 10),
-                FilledButton(
-                  key: const Key('camera-card-connect'),
-                  style: _smallFilled,
-                  onPressed: onConnect,
-                  child: const Text('Connect'),
-                ),
+                if (linked)
+                  FilledButton(
+                    key: const Key('camera-card-library'),
+                    style: _smallFilled,
+                    onPressed: () => unawaited(connection.openLibrary()),
+                    child: const Text('Library'),
+                  )
+                else
+                  FilledButton(
+                    key: const Key('camera-card-connect'),
+                    style: _smallFilled,
+                    onPressed: onConnect,
+                    child: const Text('Connect'),
+                  ),
               ],
             ),
           ],
         ],
       ),
+    );
+  }
+}
+
+/// The card's link line while connected over Bluetooth.
+class _LinkedLabel extends StatelessWidget {
+  const _LinkedLabel();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = GrColors.of(context);
+    return Row(
+      key: const Key('camera-card-linked'),
+      children: [
+        Icon(Icons.bluetooth_connected_rounded, size: 16, color: c.ok),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(
+            'Connected via Bluetooth',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 12.5, color: c.t2),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -576,6 +643,11 @@ class _Failure extends StatelessWidget {
         'Pair $name again',
         "The camera no longer accepts this phone's pairing, so trying again "
             "won't help. To pair again:",
+      ),
+      ConnectFailureKind.cameraOff => (
+        '$name is off',
+        'Turn the camera on, or switch on "Turn on when connecting" in '
+            'Settings, then try again.',
       ),
       ConnectFailureKind.wifi => (
         "Couldn't join $name's Wi-Fi",
@@ -639,12 +711,16 @@ class _Failure extends StatelessWidget {
       ],
       ConnectFailureKind.bluetoothOff ||
       ConnectFailureKind.bluetoothDenied ||
+      ConnectFailureKind.cameraOff ||
       ConnectFailureKind.wifiDeclined => const <Widget>[],
     };
     final retryLabel = Text(
       kind == ConnectFailureKind.wifiDeclined ? 'Join Wi-Fi' : 'Try again',
     );
-    void retry() => unawaited(connection.connect());
+    // Wi-Fi failures keep the Bluetooth link; only Wi-Fi is tried again.
+    final wifiStep = failure.step == ConnectStep.wifi;
+    void retry() =>
+        unawaited(wifiStep ? connection.openLibrary() : connection.connect());
     return Column(
       key: Key('camera-card-failed-${kind.name}'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -698,8 +774,8 @@ class _Failure extends StatelessWidget {
   }
 }
 
-/// The connection was lost and every quiet reconnect failed (mock
-/// `b-home-lost`). Shown once: the next attempt clears it.
+/// The camera's link was lost (mock `b-home-lost`). Shown once: the next
+/// attempt clears it.
 class _LostBanner extends StatelessWidget {
   const _LostBanner({required this.camera, required this.failure});
 
@@ -709,12 +785,9 @@ class _LostBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    final tries = AppScope.of(context).services.redialDelays.length;
     final body = failure.kind == ConnectFailureKind.wifi
-        ? "The phone left the camera's Wi-Fi and ${_count(tries)} tries to "
-              'rejoin it failed.'
-        : 'The camera stopped answering and ${_count(tries)} tries to '
-              'reconnect failed.';
+        ? "The phone left the camera's Wi-Fi."
+        : 'The camera stopped answering over Bluetooth.';
     return Container(
       key: const Key('cameras-lost'),
       margin: const EdgeInsets.fromLTRB(18, 4, 18, 6),
@@ -754,15 +827,6 @@ class _LostBanner extends StatelessWidget {
       ),
     );
   }
-
-  static String _count(int n) => switch (n) {
-    1 => 'one',
-    2 => 'two',
-    3 => 'three',
-    4 => 'four',
-    5 => 'five',
-    _ => '$n',
-  };
 }
 
 /// Thumbnails of the newest shots kept from the camera's last visit;

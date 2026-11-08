@@ -8,52 +8,108 @@ import '../theme/tokens.dart';
 import 'camera_images.dart';
 import 'format.dart';
 import 'image_orientation.dart';
+import 'library_model.dart';
 import 'library_scope.dart';
+import 'request_queue.dart';
 import 'shot.dart';
 
 /// Badge in a cell's top-right corner.
 enum CellMark { none, downloaded, queued, selected, unselected }
 
 /// A camera image that loads through [CameraImages] while it is on screen
-/// and drops its pending request when it scrolls away. It shows the image
-/// upright using the shot's `/info` orientation, which it fetches when the
-/// image does not carry its own (see [orientationToApply]).
+/// and drops its pending requests when it goes away.
+///
+/// It appears only once it can be shown upright: a GR's thumbnails and
+/// previews are stored unrotated, so the shot's `/info` orientation (kept
+/// in the library's cache) is fetched alongside the image, unless the
+/// image carries a tag the decoder applies (see [orientationToApply]).
+/// Failed requests are retried after a short pause while the widget is
+/// mounted; after repeated failures it shows a retry button.
+///
+/// With [sharper], an image that would be enlarged on screen, or any image
+/// while [wantSharper], is followed by that size, loaded behind other
+/// camera requests and drawn over it once ready.
 class CameraImage extends StatefulWidget {
   const CameraImage({
     super.key,
     required this.serial,
     required this.file,
     required this.size,
+    this.sharper,
+    this.wantSharper = false,
     this.fit = BoxFit.cover,
-    this.cacheWidth,
+    this.zoomHeadroom = 1,
     this.placeholder,
-    this.onLoaded,
+    this.showProgress = false,
   });
 
   final String serial;
   final CameraFile file;
   final GrImageSize size;
+  final GrImageSize? sharper;
+  final bool wantSharper;
   final BoxFit fit;
 
-  /// Decode width in physical pixels of the shown (upright) image;
-  /// thumbnails need far less than the file holds.
-  final int? cacheWidth;
+  /// Images are decoded at most at the box's physical size times this, so
+  /// a zoomable view keeps detail when zoomed in.
+  final double zoomHeadroom;
   final Widget? placeholder;
-  final VoidCallback? onLoaded;
+
+  /// Shows a spinner over [placeholder] while loading.
+  final bool showProgress;
 
   @override
   State<CameraImage> createState() => _CameraImageState();
 }
 
-class _CameraImageState extends State<CameraImage> {
-  late final LibraryContext _library = LibraryScope.of(context);
-  Uint8List? _bytes;
-  JpegLayout? _layout;
+final class _Loaded {
+  _Loaded(this.bytes, this.size) : layout = readJpegLayout(bytes);
 
-  /// The file's `/info` orientation as last built.
-  int? _orientation;
-  ImageRequest? _request;
+  final Uint8List bytes;
+  final GrImageSize size;
+  final JpegLayout? layout;
+}
+
+class _CameraImageState extends State<CameraImage> {
+  /// Pauses before each retry; one more failure shows the retry button.
+  static const _retryDelays = [
+    Duration(seconds: 1),
+    Duration(seconds: 2),
+    Duration(seconds: 4),
+  ];
+
+  /// Lets a cell scrolled past, or a page swiped past, go before its
+  /// sharper copy is asked for.
+  static const _sharperDelay = Duration(milliseconds: 400);
+
+  /// Enlargement above which the image looks soft.
+  static const _blurry = 1.25;
+
+  late final LibraryContext _library = LibraryScope.of(context);
   bool _listening = false;
+
+  _Loaded? _base;
+  _Loaded? _sharp;
+  ImageRequest? _image;
+  RequestTicket<FileInfo>? _info;
+  ImageRequest? _sharpRequest;
+  Timer? _sharpTimer;
+  bool _sharpTried = false;
+  bool _sharpCheckScheduled = false;
+  int _failures = 0;
+  Timer? _retry;
+  bool _failed = false;
+
+  /// The file's `/info`, as last built.
+  bool _infoKnown = false;
+  int? _orientation;
+
+  /// The library holds this camera's info, so the orientation can be
+  /// known; for another camera's file the image shows as stored.
+  bool _infoAvailable = false;
+
+  /// The box in physical pixels, as last laid out.
+  Size _box = Size.zero;
 
   @override
   void didChangeDependencies() {
@@ -62,8 +118,8 @@ class _CameraImageState extends State<CameraImage> {
       _listening = true;
       _library.link.addListener(_onLink);
       _library.model.addListener(_onModel);
-      _orientation = _infoOrientation();
-      _load();
+      _readInfo();
+      _start();
     }
   }
 
@@ -72,12 +128,18 @@ class _CameraImageState extends State<CameraImage> {
     super.didUpdateWidget(old);
     if (old.serial != widget.serial ||
         old.file != widget.file ||
-        old.size != widget.size) {
-      _request?.cancel();
-      _bytes = null;
-      _layout = null;
-      _orientation = _infoOrientation();
-      _load();
+        old.size != widget.size ||
+        old.sharper != widget.sharper) {
+      _stop();
+      _base = null;
+      _sharp = null;
+      _sharpTried = false;
+      _failures = 0;
+      _failed = false;
+      _readInfo();
+      _start();
+    } else if (widget.wantSharper && !old.wantSharper) {
+      _considerSharper();
     }
   }
 
@@ -85,87 +147,324 @@ class _CameraImageState extends State<CameraImage> {
   void dispose() {
     _library.link.removeListener(_onLink);
     _library.model.removeListener(_onModel);
-    _request?.cancel();
+    _stop();
     super.dispose();
   }
 
-  void _onLink() {
-    if (_library.link.value?.serial != widget.serial) return;
-    if (_bytes == null) {
-      setState(_load);
-    } else {
-      widget.onLoaded?.call();
-    }
+  void _stop() {
+    _image?.cancel();
+    _image = null;
+    _info?.cancel();
+    _info = null;
+    _sharpRequest?.cancel();
+    _sharpRequest = null;
+    _sharpTimer?.cancel();
+    _sharpTimer = null;
+    _retry?.cancel();
+    _retry = null;
   }
 
-  /// The `/info` orientation, once the library knows it for this camera.
-  int? _infoOrientation() {
+  bool get _ready {
+    final shown = _sharp ?? _base;
+    return shown != null &&
+        (_infoKnown || !_infoAvailable || shown.layout?.decoderOrients == true);
+  }
+
+  /// Reads the file's info from the library; true when it changed.
+  bool _readInfo() {
     final model = _library.model;
-    if (model.serial != widget.serial) return null;
-    return model.info(widget.file)?.orientation;
+    final available = model.serial == widget.serial;
+    final info = available ? model.info(widget.file) : null;
+    final known = info != null;
+    final orientation = info?.orientation;
+    if (available == _infoAvailable &&
+        known == _infoKnown &&
+        orientation == _orientation) {
+      return false;
+    }
+    _infoAvailable = available;
+    _infoKnown = known;
+    _orientation = orientation;
+    return true;
+  }
+
+  void _start() {
+    _failed = false;
+    if (_base == null) _loadImage();
+    if (!_infoKnown) _loadInfo();
+  }
+
+  void _loadImage() {
+    _image?.cancel();
+    _image = null;
+    final images = _library.images;
+    final sharper = widget.sharper;
+    if (sharper != null && _sharp == null) {
+      // Scrolling back to a cell whose sharper copy is still in memory.
+      final hit = images.cached(widget.serial, widget.file, sharper);
+      if (hit != null) {
+        _sharp = _Loaded(hit, sharper);
+        _sharpTried = true;
+      }
+    }
+    final hit = images.cached(widget.serial, widget.file, widget.size);
+    if (hit != null) {
+      _base = _Loaded(hit, widget.size);
+      _progressed();
+      return;
+    }
+    final request = images.load(widget.serial, widget.file, widget.size);
+    _image = request;
+    request.future.then(
+      (bytes) {
+        if (!mounted || !identical(_image, request)) return;
+        _image = null;
+        // Null: not connected; the link listener starts again.
+        if (bytes == null) return;
+        setState(() => _base = _Loaded(bytes, widget.size));
+        _progressed();
+      },
+      onError: (Object _) {
+        if (!mounted || !identical(_image, request)) return;
+        _image = null;
+        _failure();
+      },
+    );
+  }
+
+  void _loadInfo() {
+    if (_info != null || _infoKnown || !_infoAvailable) return;
+    final ticket = _library.model.requestInfo(widget.file);
+    if (ticket == null) return;
+    _info = ticket;
+    ticket.future.then(
+      (_) {
+        if (!mounted || !identical(_info, ticket)) return;
+        _info = null;
+        _onModel();
+      },
+      onError: (Object _) {
+        if (!mounted || !identical(_info, ticket)) return;
+        _info = null;
+        if (!_ready) _failure();
+      },
+    );
+  }
+
+  /// Something arrived; once the image can show, a sharper copy may help.
+  /// Failures start over only when a frame decodes (see [_decoded]): bytes
+  /// that start like a JPEG may still be unreadable.
+  void _progressed() {
+    if (!_ready) return;
+    _scheduleSharperCheck();
+  }
+
+  void _decoded(_Loaded loaded) {
+    if (identical(loaded, _base)) _failures = 0;
+  }
+
+  void _failure() {
+    if (_retry != null || _failed) return;
+    if (_failures >= _retryDelays.length) {
+      setState(() => _failed = true);
+      return;
+    }
+    _retry = Timer(_retryDelays[_failures++], () {
+      _retry = null;
+      if (mounted) _start();
+    });
+  }
+
+  void _retryNow() {
+    _retry?.cancel();
+    _retry = null;
+    _failures = 0;
+    setState(_start);
+  }
+
+  void _onLink() {
+    final link = _library.link.value;
+    if (link == null || link.serial != widget.serial) return;
+    // Requests made on the previous connection may never answer.
+    if (!_ready) {
+      _retry?.cancel();
+      _retry = null;
+      _failures = 0;
+      _info?.cancel();
+      _info = null;
+      setState(_start);
+    }
+    _considerSharper();
   }
 
   void _onModel() {
-    final orientation = _infoOrientation();
-    if (orientation != _orientation) {
-      setState(() => _orientation = orientation);
-    }
+    if (!_readInfo()) return;
+    setState(() {});
+    // The library switched to this camera after the widget started.
+    if (!_infoKnown) _loadInfo();
+    _progressed();
   }
 
-  void _show(Uint8List bytes) {
-    _bytes = bytes;
-    _layout = readJpegLayout(bytes);
-    // Only `/info` says how a shot in stored layout was held.
-    final model = _library.model;
-    if (_layout?.decoderOrients != true &&
-        model.serial == widget.serial &&
-        model.info(widget.file) == null) {
-      unawaited(model.ensureInfo(widget.file));
-    }
+  void _scheduleSharperCheck() {
+    if (widget.sharper == null || _sharpCheckScheduled) return;
+    _sharpCheckScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _sharpCheckScheduled = false;
+      if (mounted) _considerSharper();
+    });
   }
 
-  void _load() {
-    final images = _library.images;
-    final hit = images.cached(widget.serial, widget.file, widget.size);
-    if (hit != null) {
-      _show(hit);
-      widget.onLoaded?.call();
+  /// Asks for [CameraImage.sharper] when the image shown would be enlarged
+  /// (or is wanted sharper), from disk at once or from the camera after a
+  /// pause.
+  void _considerSharper() {
+    final sharper = widget.sharper;
+    final base = _base;
+    if (sharper == null ||
+        base == null ||
+        _sharp != null ||
+        _sharpTried ||
+        _sharpRequest != null ||
+        _sharpTimer != null ||
+        !_ready) {
       return;
     }
-    _request?.cancel();
-    final request = images.load(widget.serial, widget.file, widget.size);
-    _request = request;
-    request.future.then((bytes) {
-      if (!mounted || !identical(_request, request)) return;
-      _request = null;
-      if (bytes == null) return;
-      setState(() => _show(bytes));
-      widget.onLoaded?.call();
-    }, onError: (Object _) {});
+    final orientation = orientationToApply(base.layout, _orientation);
+    final soft =
+        enlargement(base.layout, orientation, _box, widget.fit) > _blurry;
+    if (!soft && !widget.wantSharper) return;
+    if (_library.images.isLocal(widget.serial, widget.file, sharper)) {
+      _loadSharper();
+      return;
+    }
+    final link = _library.link.value;
+    if (link == null || link.serial != widget.serial) return;
+    _sharpTimer = Timer(_sharperDelay, () {
+      _sharpTimer = null;
+      if (mounted) _loadSharper();
+    });
+  }
+
+  void _loadSharper() {
+    final sharper = widget.sharper;
+    if (sharper == null) return;
+    _sharpTried = true;
+    final request = _library.images.load(
+      widget.serial,
+      widget.file,
+      sharper,
+      background: true,
+    );
+    _sharpRequest = request;
+    request.future.then(
+      (bytes) {
+        if (!mounted || !identical(_sharpRequest, request)) return;
+        _sharpRequest = null;
+        if (bytes == null) {
+          // Not connected; tried again when the camera is back.
+          _sharpTried = false;
+          return;
+        }
+        setState(() => _sharp = _Loaded(bytes, sharper));
+      },
+      // The image already shown stays; the next visit tries again.
+      onError: (Object _) {
+        if (mounted && identical(_sharpRequest, request)) _sharpRequest = null;
+      },
+    );
+  }
+
+  /// The decoder refused [loaded]: drop the copy so the camera is asked
+  /// again (the base image) or the base image shows alone (the sharper).
+  void _decodeFailed(_Loaded loaded) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _library.images.evict(widget.serial, widget.file, loaded.size);
+      if (identical(loaded, _sharp)) {
+        setState(() => _sharp = null);
+      } else if (identical(loaded, _base)) {
+        setState(() => _base = null);
+        _failure();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final bytes = _bytes;
-    if (bytes == null) {
-      return widget.placeholder ?? const SizedBox.expand();
-    }
-    final orientation = orientationToApply(_layout, _orientation);
-    // Decode sizes count stored pixels: after a quarter turn the shown
-    // width is the stored height.
-    final turned = orientationSwapsAxes(orientation);
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final box = Size(
+          constraints.maxWidth * dpr,
+          constraints.maxHeight * dpr,
+        );
+        if (box != _box) {
+          _box = box;
+          _scheduleSharperCheck();
+        }
+        if (!_ready) return _placeholder(context);
+        // The sharper copy covers the first once decoded; until then the
+        // first one shows through.
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            if (_base case final base?) _picture(base),
+            if (_sharp case final sharp?) _picture(sharp),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _picture(_Loaded loaded) {
+    final orientation = orientationToApply(loaded.layout, _orientation);
     return Image.memory(
-      bytes,
-      key: ValueKey('image:${widget.size.name}:${widget.file.key}'),
+      loaded.bytes,
+      key: ValueKey('image:${loaded.size.name}:${widget.file.key}'),
       fit: widget.fit,
-      cacheWidth: turned ? null : widget.cacheWidth,
-      cacheHeight: turned ? widget.cacheWidth : null,
+      cacheWidth: decodeWidth(
+        loaded.layout,
+        orientation,
+        _box * widget.zoomHeadroom,
+        widget.fit,
+      ),
       gaplessPlayback: true,
       // Turns the decoded image only, never the error placeholder.
-      frameBuilder: (context, child, _, _) =>
-          ExifOrientation(orientation: orientation, child: child),
-      errorBuilder: (context, _, _) =>
-          widget.placeholder ?? const SizedBox.expand(),
+      frameBuilder: (context, child, frame, _) {
+        if (frame != null) _decoded(loaded);
+        return ExifOrientation(orientation: orientation, child: child);
+      },
+      errorBuilder: (context, _, _) {
+        _decodeFailed(loaded);
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  Widget _placeholder(BuildContext context) {
+    final placeholder = widget.placeholder ?? const SizedBox.expand();
+    final Widget? overlay;
+    if (_failed) {
+      final c = GrColors.of(context);
+      overlay = IconButton(
+        key: ValueKey('image-retry:${widget.size.name}:${widget.file.key}'),
+        tooltip: "Couldn't load the image. Retry",
+        onPressed: _retryNow,
+        style: IconButton.styleFrom(backgroundColor: c.s3),
+        icon: Icon(Icons.refresh_rounded, color: c.t1, size: 20),
+      );
+    } else if (widget.showProgress) {
+      overlay = const CircularProgressIndicator();
+    } else {
+      overlay = null;
+    }
+    if (overlay == null) return placeholder;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        placeholder,
+        Center(child: overlay),
+      ],
     );
   }
 }
@@ -180,7 +479,6 @@ class ShotCell extends StatelessWidget {
     required this.onTap,
     required this.onLongPress,
     this.duration,
-    this.onVisible,
   });
 
   final String serial;
@@ -190,14 +488,9 @@ class ShotCell extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
-  /// Called once the thumbnail is shown, to fetch the shot's info.
-  final VoidCallback? onVisible;
-
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    final dpr = MediaQuery.devicePixelRatioOf(context);
-    final width = MediaQuery.sizeOf(context).width / 3;
     final selected = mark == CellMark.selected;
     return Semantics(
       label: '${formatLabel(shot.format)} ${shot.primary.name}',
@@ -214,9 +507,7 @@ class ShotCell extends StatelessWidget {
               child: CameraImage(
                 serial: serial,
                 file: shot.primary,
-                size: GrImageSize.thumb,
-                cacheWidth: (width * dpr).round(),
-                onLoaded: onVisible,
+                size: shot.gridSize,
                 placeholder: Center(
                   child: Icon(
                     shot.isVideo

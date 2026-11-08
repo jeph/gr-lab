@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 
 import '../data/json_file.dart';
-import '../data/settings.dart';
 import '../library/camera_link.dart';
 import '../library/shot.dart';
 import '../services.dart';
@@ -41,8 +40,8 @@ final class DownloadJob {
   /// Why the job failed.
   String? error;
 
-  /// The files this job saves (a pair's halves per the setting, minus any
-  /// half already downloaded).
+  /// The files this job saves: the kinds asked for, for a pair one or
+  /// both halves.
   List<CameraFile> get files => List.unmodifiable(_files);
 
   bool get active => state != DownloadState.failed;
@@ -234,9 +233,11 @@ final class DownloadEngine extends ChangeNotifier {
   bool isFileDownloaded(String serial, CameraFile f) =>
       _downloaded[serial]?.contains(f.key) ?? false;
 
-  /// Every file [choice] selects for [shot] is on the phone.
-  bool isShotDownloaded(String serial, Shot shot, RawJpegChoice choice) =>
-      shot.filesFor(choice).every((f) => isFileDownloaded(serial, f));
+  /// Some file of [shot] was saved to the phone. The app cannot see whether
+  /// it is still in the photo library, so this is a hint only: it never
+  /// stops a download.
+  bool isShotDownloaded(String serial, Shot shot) =>
+      shot.files.any((f) => isFileDownloaded(serial, f));
 
   /// Files of [serial]'s camera in a queued or running job.
   bool isFileQueued(String serial, CameraFile f) =>
@@ -250,36 +251,36 @@ final class DownloadEngine extends ChangeNotifier {
     return null;
   }
 
-  /// What downloading [shot] with [choice] would fetch: the selected files
-  /// that are neither on the phone nor already queued.
-  List<CameraFile> filesToDownload(
-    String serial,
-    Shot shot,
-    RawJpegChoice choice,
-  ) => [
-    for (final f in shot.filesFor(choice))
-      if (!isFileDownloaded(serial, f) && !isFileQueued(serial, f)) f,
+  /// What downloading [shot]'s files of [kind] would fetch: those not
+  /// already waiting in the queue. Files saved before come again.
+  List<CameraFile> filesToDownload(String serial, Shot shot, FileKind kind) => [
+    for (final f in shot.filesOf(kind))
+      if (!isFileQueued(serial, f)) f,
   ];
 
-  /// Queues [shots] of [serial]'s camera: pairs bring the halves [choice]
-  /// selects, single files always come, and files already downloaded or
-  /// queued are skipped. Returns the number of files added.
+  /// Queues the files of [kinds] (every file by default) of [shots] of
+  /// [serial]'s camera, skipping files already queued. Files downloaded
+  /// before are downloaded again: the user may have deleted them from the
+  /// phone. Returns the number of files added.
   Future<int> enqueue(
     String serial,
-    Iterable<Shot> shots,
-    RawJpegChoice choice,
-  ) async {
+    Iterable<Shot> shots, {
+    Set<FileKind> kinds = const {FileKind.jpeg, FileKind.raw, FileKind.movie},
+  }) async {
     await _ready;
     var added = 0;
     for (final shot in shots) {
-      added += _add(serial, shot, shot.filesFor(choice));
+      added += _add(serial, shot, [
+        for (final f in shot.files)
+          if (kinds.contains(fileKind(f.extension))) f,
+      ]);
     }
     if (added > 0) _changed();
     return added;
   }
 
-  /// Queues specific files of one shot (the viewer's JPEG / RAW / Both
-  /// choice). Returns the number of files added.
+  /// Queues specific files of one shot (the viewer's JPEG or RAW of a
+  /// pair). Returns the number of files added.
   Future<int> enqueueFiles(
     String serial,
     Shot shot,
@@ -297,7 +298,7 @@ final class DownloadEngine extends ChangeNotifier {
   int _add(String serial, Shot shot, List<CameraFile> wanted) {
     final files = [
       for (final f in wanted)
-        if (!isFileDownloaded(serial, f) && !isFileQueued(serial, f)) f,
+        if (!isFileQueued(serial, f)) f,
     ];
     if (files.isEmpty) return 0;
     // A waiting or failed job for the same shot takes the files, so one
@@ -459,18 +460,14 @@ final class DownloadEngine extends ChangeNotifier {
     _setProgress(const DownloadProgress());
     _notify();
     try {
-      // Another job may have saved a half since this one was queued.
-      final files = [
-        for (final f in job._files)
-          if (!isFileDownloaded(job.serial, f)) f,
-      ];
-      if (files.isNotEmpty) {
-        final local = await _transfer(job, files, current);
-        await media.saveShot(local, album: album);
-        _downloaded.putIfAbsent(job.serial, () => {}).addAll([
-          for (final f in files) f.key,
-        ]);
-      }
+      // Every file comes, even one saved before: the user asked again,
+      // perhaps after deleting it from the phone.
+      final files = List.of(job._files);
+      final local = await _transfer(job, files, current);
+      await media.saveShot(local, album: album);
+      _downloaded.putIfAbsent(job.serial, () => {}).addAll([
+        for (final f in files) f.key,
+      ]);
       if (_stop == _Stop.cancel) throw const _StopSignal(_Stop.cancel);
       _jobs.remove(job);
       _batchDone++;

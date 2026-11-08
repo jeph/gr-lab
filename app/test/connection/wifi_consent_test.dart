@@ -9,8 +9,9 @@ import '../support/test_app.dart';
 const _cameras = Key('cameras');
 const _dialog = Key('wifi-consent');
 
-/// The whole app with a paired camera nearby: the Cameras screen connects
-/// to it and asks before the first join of its Wi-Fi.
+/// The whole app with a paired camera nearby: the Cameras screen links it
+/// over Bluetooth, and opening the Library asks before the first join of
+/// its Wi-Fi.
 Future<TestApp> _asked(WidgetTester tester) async {
   tester.view
     ..physicalSize = const Size(1170, 2532)
@@ -24,6 +25,7 @@ Future<TestApp> _asked(WidgetTester tester) async {
     ),
   ))!;
   await app.pumpApp(tester);
+  await tapWhenReady(tester, find.byKey(const Key('camera-card-library')));
   await pumpUntilFound(tester, find.byKey(_dialog));
   return app;
 }
@@ -70,9 +72,10 @@ void main() {
 
     await pumpUntil(
       tester,
-      () => app.models.connection.status == ConnectionStatus.failed,
-      reason: 'failed',
+      () => app.models.connection.failure != null,
+      reason: 'declined',
     );
+    expect(app.models.connection.status, ConnectionStatus.bluetooth);
     expect(
       app.models.connection.failure?.kind,
       ConnectFailureKind.wifiDeclined,

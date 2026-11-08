@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../app_scope.dart';
 import '../connection/camera_pill.dart';
 import '../connection/connection_controller.dart';
-import '../data/settings.dart';
 import '../downloads/download_bar.dart';
 import '../downloads/download_engine.dart';
 import '../settings/settings_screen.dart';
@@ -116,9 +115,9 @@ class _LibraryViewState extends State<_LibraryView> {
     _selected.clear();
   });
 
-  Future<void> _download(String serial, List<Shot> shots) async {
+  Future<void> _download(String serial, List<Shot> shots, FileKind kind) async {
     _endSelecting();
-    await _library.engine.enqueue(serial, shots, _app.settings.rawJpeg);
+    await _library.engine.enqueue(serial, shots, kinds: {kind});
   }
 
   void _open(List<Shot> shots, int index) {
@@ -139,7 +138,6 @@ class _LibraryViewState extends State<_LibraryView> {
     listenable: Listenable.merge([
       _library.model,
       _library.engine,
-      _app.settings,
       _app.connection,
     ]),
     builder: (context, _) => _build(context),
@@ -149,10 +147,9 @@ class _LibraryViewState extends State<_LibraryView> {
     final model = _library.model;
     final engine = _library.engine;
     final serial = model.serial;
-    final choice = _app.settings.rawJpeg;
     final all = model.shots;
     bool downloaded(Shot s) =>
-        serial != null && engine.isShotDownloaded(serial, s, choice);
+        serial != null && engine.isShotDownloaded(serial, s);
     final filtered = all == null
         ? null
         : FilteredShots.of(all, _filter, downloaded);
@@ -211,7 +208,7 @@ class _LibraryViewState extends State<_LibraryView> {
                       ),
                     )
                   else
-                    ..._grid(context, serial, shots, choice),
+                    ..._grid(context, serial, shots),
                   SliverToBoxAdapter(child: SizedBox(height: 96 + bottomInset)),
                 ],
               ),
@@ -224,8 +221,8 @@ class _LibraryViewState extends State<_LibraryView> {
                   ? _SelectionBar(
                       serial: serial,
                       shots: selectedShots,
-                      choice: choice,
-                      onDownload: () => _download(serial, selectedShots),
+                      onDownload: (kind) =>
+                          _download(serial, selectedShots, kind),
                       onClose: _endSelecting,
                     )
                   : const DownloadBar(),
@@ -236,12 +233,7 @@ class _LibraryViewState extends State<_LibraryView> {
     );
   }
 
-  List<Widget> _grid(
-    BuildContext context,
-    String serial,
-    List<Shot> shots,
-    RawJpegChoice choice,
-  ) {
+  List<Widget> _grid(BuildContext context, String serial, List<Shot> shots) {
     final model = _library.model;
     final engine = _library.engine;
     final columns = MediaQuery.sizeOf(context).width >= 600 ? 5 : 3;
@@ -277,9 +269,8 @@ class _LibraryViewState extends State<_LibraryView> {
               key: ValueKey(shot.key),
               serial: serial,
               shot: shot,
-              mark: _markFor(engine, serial, shot, choice),
+              mark: _markFor(engine, serial, shot),
               duration: model.info(shot.primary)?.duration,
-              onVisible: () => unawaited(model.ensureInfo(shot.primary)),
               onTap: () => _selecting ? _toggle(shot) : _open(shots, start + i),
               onLongPress: () =>
                   _selecting ? _toggle(shot) : _startSelecting(shot),
@@ -291,23 +282,17 @@ class _LibraryViewState extends State<_LibraryView> {
     return slivers;
   }
 
-  CellMark _markFor(
-    DownloadEngine engine,
-    String serial,
-    Shot shot,
-    RawJpegChoice choice,
-  ) {
+  CellMark _markFor(DownloadEngine engine, String serial, Shot shot) {
     if (_selecting) {
       return _selected.contains(shot.key)
           ? CellMark.selected
           : CellMark.unselected;
     }
-    if (engine.isShotDownloaded(serial, shot, choice)) {
-      return CellMark.downloaded;
-    }
+    // A shot downloaded before and queued again shows that it is coming.
     if (shot.files.any((f) => engine.isFileQueued(serial, f))) {
       return CellMark.queued;
     }
+    if (engine.isShotDownloaded(serial, shot)) return CellMark.downloaded;
     return CellMark.none;
   }
 }
@@ -399,8 +384,9 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// Connecting, updating or failed-update note under the title. The
-/// Library only shows while a camera is connected or reconnecting.
+/// Updating, or failed-update note under the title. The Library only shows
+/// while the camera's Wi-Fi is up; a failed update whose camera no longer
+/// answers returns to the Cameras screen instead (see [CameraLink]).
 class _StatusLine extends StatelessWidget {
   const _StatusLine({required this.model});
 
@@ -610,31 +596,108 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-/// 'N selected · F files · size' with Download (mock `.selbar`). Counts
-/// what would actually be fetched: the setting's halves of each pair, minus
-/// files already on the phone or queued.
+/// 'N selected' with a download action per kind of file (mock `.selbar`):
+/// JPEG and RAW, plus Video when movies are selected. A RAW+JPEG pair
+/// counts for both. Each action shows what it would fetch: the files of its
+/// kind that are not already queued, including files downloaded before
+/// (they may have been deleted from the phone).
 class _SelectionBar extends StatelessWidget {
   const _SelectionBar({
     required this.serial,
     required this.shots,
-    required this.choice,
     required this.onDownload,
     required this.onClose,
   });
 
   final String serial;
   final List<Shot> shots;
-  final RawJpegChoice choice;
-  final VoidCallback onDownload;
+  final ValueChanged<FileKind> onDownload;
   final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = GrColors.of(context);
+    final kinds = [
+      FileKind.jpeg,
+      FileKind.raw,
+      if (shots.any((s) => s.isVideo)) FileKind.movie,
+    ];
+    return Material(
+      color: c.invBg,
+      elevation: 0,
+      borderRadius: BorderRadius.circular(20),
+      shadowColor: c.shadow,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(0, 2, 0, 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  onPressed: onClose,
+                  tooltip: 'Cancel selection',
+                  icon: Icon(Icons.close_rounded, color: c.invFg),
+                ),
+                Expanded(
+                  child: Text(
+                    '${shots.length} selected',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: c.invFg,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(
+                children: [
+                  for (final (i, kind) in kinds.indexed) ...[
+                    if (i > 0) const SizedBox(width: 8),
+                    Expanded(
+                      child: _KindAction(
+                        serial: serial,
+                        shots: shots,
+                        kind: kind,
+                        onDownload: () => onDownload(kind),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Downloads the selection's files of one kind: 'JPEG', '3 files · 24 MB'.
+class _KindAction extends StatelessWidget {
+  const _KindAction({
+    required this.serial,
+    required this.shots,
+    required this.kind,
+    required this.onDownload,
+  });
+
+  final String serial;
+  final List<Shot> shots;
+  final FileKind kind;
+  final VoidCallback onDownload;
 
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
     final library = LibraryScope.of(context);
     final files = [
-      for (final s in shots)
-        ...library.engine.filesToDownload(serial, s, choice),
+      for (final s in shots) ...library.engine.filesToDownload(serial, s, kind),
     ];
     var bytes = 0;
     var sizeKnown = true;
@@ -647,73 +710,65 @@ class _SelectionBar extends StatelessWidget {
         bytes += size;
       }
     }
-    final detail = files.isEmpty
-        ? 'Already on your phone'
-        : [
-            '${files.length} ${files.length == 1 ? 'file' : 'files'}',
-            if (sizeKnown) formatBytes(bytes),
-          ].join(' · ');
-    return Material(
-      color: c.invBg,
-      elevation: 0,
-      borderRadius: BorderRadius.circular(20),
-      shadowColor: c.shadow,
-      child: SizedBox(
-        height: 60,
-        child: Row(
-          children: [
-            IconButton(
-              onPressed: onClose,
-              tooltip: 'Cancel selection',
-              icon: Icon(Icons.close_rounded, color: c.invFg),
-            ),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${shots.length} selected',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: c.invFg,
-                    ),
-                  ),
-                  Text(
-                    detail,
-                    key: const ValueKey('selection-detail'),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GrFonts.monoStyle(
-                      context,
-                      size: 11.5,
-                      color: c.invFg2,
-                      weight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: FilledButton.icon(
-                key: const ValueKey('selection-download'),
-                onPressed: files.isEmpty ? null : onDownload,
-                style: FilledButton.styleFrom(
-                  backgroundColor: c.invFg,
-                  foregroundColor: c.invBg,
-                  minimumSize: const Size(0, 44),
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                ),
-                icon: const Icon(Icons.download_rounded, size: 18),
-                label: const Text('Download'),
-              ),
-            ),
-          ],
+    final String detail;
+    if (files.isNotEmpty) {
+      detail = [
+        '${files.length} ${files.length == 1 ? 'file' : 'files'}',
+        if (sizeKnown) formatBytes(bytes),
+      ].join(' · ');
+    } else if (shots.any((s) => s.filesOf(kind).isNotEmpty)) {
+      detail = 'Queued';
+    } else {
+      detail = 'None selected';
+    }
+    return FilledButton(
+      key: ValueKey('selection-download:${kind.name}'),
+      onPressed: files.isEmpty ? null : onDownload,
+      style: FilledButton.styleFrom(
+        backgroundColor: c.invFg,
+        foregroundColor: c.invBg,
+        disabledBackgroundColor: c.invFg.withValues(alpha: .08),
+        disabledForegroundColor: c.invFg2,
+        minimumSize: const Size(0, 52),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(GrRadii.md),
         ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.download_rounded, size: 16),
+              const SizedBox(width: 4),
+              Text(
+                switch (kind) {
+                  FileKind.jpeg => 'JPEG',
+                  FileKind.raw => 'RAW',
+                  FileKind.movie => 'Video',
+                },
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          Text(
+            detail,
+            key: ValueKey('selection-detail:${kind.name}'),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            // The button's foreground, dimmed with it when disabled.
+            style: const TextStyle(
+              fontFamily: GrFonts.mono,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -31,4 +31,9 @@ abstract interface class WifiNetworkControl {
   Future<String?> currentSsid();
 
   Future<void> leave();
+
+  /// Emits when the OS reports that the joined camera network is gone.
+  /// Platforms without that signal never emit; the session's liveness
+  /// polling still notices the loss there, only later.
+  Stream<void> get lost;
 }

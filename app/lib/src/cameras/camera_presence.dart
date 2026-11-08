@@ -25,8 +25,8 @@ enum Presence {
 final class CameraPresence extends ChangeNotifier {
   CameraPresence(
     this._transport, {
-    this.forgetAfter = const Duration(seconds: 10),
-    this.settleAfter = const Duration(seconds: 4),
+    this.forgetAfter = const Duration(seconds: 15),
+    this.settleAfter = const Duration(seconds: 8),
   });
 
   final BleTransport _transport;
@@ -38,8 +38,9 @@ final class CameraPresence extends ChangeNotifier {
   /// rather than not looked for yet.
   final Duration settleAfter;
 
-  /// Last advertisement per device id and per advertised serial.
-  final Map<String, ({DateTime at, bool? powerOn})> _seen = {};
+  /// Last advertisement per device id, with the serial a Ricoh payload of
+  /// that device carried.
+  final Map<String, ({DateTime at, bool? powerOn, int? serial})> _seen = {};
   StreamSubscription<BleAdvertisement>? _scan;
   Timer? _prune;
   Timer? _settle;
@@ -55,10 +56,15 @@ final class CameraPresence extends ChangeNotifier {
   /// Why the last scan stopped (Bluetooth off, platform error).
   Object? get error => _error;
 
-  /// What the scan says about [camera]: matched by advertised serial, or
-  /// by device id for packets that carry no Ricoh data.
+  /// What the scan says about [camera]: matched by device id or by
+  /// advertised serial (compared as a number, as the session does: the
+  /// paired serial is the camera's text, the advert carries an integer).
   Presence of(SavedCamera camera) {
-    final seen = _seen[camera.serial] ?? _seen[camera.paired.deviceId];
+    final seen =
+        _seen[camera.paired.deviceId] ??
+        _seen.values
+            .where((s) => grSerialMatches(camera.serial, s.serial))
+            .firstOrNull;
     if (seen == null) return Presence.away;
     return switch (seen.powerOn) {
       true => Presence.nearbyOn,
@@ -102,19 +108,16 @@ final class CameraPresence extends ChangeNotifier {
 
   void _onAdvertisement(BleAdvertisement raw) {
     final ad = GrAdvertisement(raw);
-    final now = DateTime.now();
-    var changed = false;
-    void see(String key) {
-      final previous = _seen[key];
-      // Scan responses often lack the Ricoh payload the primary had.
-      final powerOn = ad.powerOn ?? ad.powerOnFromServices ?? previous?.powerOn;
-      _seen[key] = (at: now, powerOn: powerOn);
-      changed |= previous == null || previous.powerOn != powerOn;
+    final previous = _seen[ad.deviceId];
+    // Scan responses often lack the Ricoh payload the primary had.
+    final powerOn = ad.powerOn ?? ad.powerOnFromServices ?? previous?.powerOn;
+    final serial = ad.serialNumber ?? previous?.serial;
+    _seen[ad.deviceId] = (at: DateTime.now(), powerOn: powerOn, serial: serial);
+    if (previous == null ||
+        previous.powerOn != powerOn ||
+        previous.serial != serial) {
+      _notify();
     }
-
-    see(ad.deviceId);
-    if (ad.serialText case final serial?) see(serial);
-    if (changed) _notify();
   }
 
   void _forgetOld() {

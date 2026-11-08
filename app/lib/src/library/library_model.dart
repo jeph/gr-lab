@@ -134,7 +134,8 @@ final class LibraryModel extends ChangeNotifier {
     required this.queue,
     this.changeDebounce = const Duration(milliseconds: 800),
     this.saveDelay = const Duration(seconds: 2),
-  }) {
+    this.infoTimeout = const Duration(seconds: 10),
+  }) : _infoRequests = SharedRequests(queue) {
     link.addListener(_onLink);
   }
 
@@ -147,11 +148,15 @@ final class LibraryModel extends ChangeNotifier {
   final Duration changeDebounce;
   final Duration saveDelay;
 
+  /// Deadline of one `/info` request, so a camera that stops answering
+  /// frees its queue slot and the grid can retry.
+  final Duration infoTimeout;
+  final SharedRequests<FileInfo> _infoRequests;
+
   String? _serial;
   List<Shot>? _shots;
   List<CameraFile> _files = const [];
   final Map<String, FileInfo> _info = {};
-  final Map<String, Future<FileInfo?>> _infoInFlight = {};
   DateTime? _listedAt;
   bool _refreshing = false;
   bool _refreshAgain = false;
@@ -194,7 +199,6 @@ final class LibraryModel extends ChangeNotifier {
     _shots = null;
     _files = const [];
     _info.clear();
-    _infoInFlight.clear();
     _listedAt = null;
     _error = null;
     // A refresh or cache read for the previous camera may still be pending;
@@ -243,6 +247,11 @@ final class LibraryModel extends ChangeNotifier {
       _scheduleSave(immediately: true);
     } on Object catch (e) {
       if (generation != _generation) return;
+      // A failed listing usually means the Wi-Fi went; the app then
+      // returns to the Cameras screen, so the error is kept only while the
+      // camera still answers.
+      final answers = await current.checkWifi?.call() ?? true;
+      if (generation != _generation || !answers) return;
       _error = e;
     } finally {
       if (generation == _generation) {
@@ -285,29 +294,36 @@ final class LibraryModel extends ChangeNotifier {
   Future<FileInfo?> ensureInfo(CameraFile f) {
     final known = _info[f.key];
     if (known != null) return Future.value(known);
-    final current = link.value;
-    final serial = _serial;
-    if (current == null || current.serial != serial) return Future.value();
-    return _infoInFlight[f.key] ??= _fetchInfo(current, f);
+    final ticket = requestInfo(f);
+    if (ticket == null) return Future.value();
+    return ticket.future.then<FileInfo?>((i) => i, onError: (Object _) => null);
   }
 
-  Future<FileInfo?> _fetchInfo(CameraLink current, CameraFile f) async {
-    final generation = _generation;
-    try {
-      final request = queue.add(
-        () => current.http.photoInfo(f.path, storage: f.storage),
-      );
-      final info = FileInfo.fromPhotoInfo(await request.future);
-      if (generation != _generation) return null;
-      _info[f.key] = info;
-      _scheduleSave();
-      _notify();
-      return info;
-    } on Object {
+  /// Fetches a file's info from the camera, shared with every other caller
+  /// asking for it; cancelling the ticket drops the request if nobody else
+  /// waits. Null when offline. The ticket fails when the request did.
+  RequestTicket<FileInfo>? requestInfo(CameraFile f) {
+    final known = _info[f.key];
+    if (known != null) return RequestTicket.done(known);
+    final current = link.value;
+    final serial = _serial;
+    if (current == null || serial == null || current.serial != serial) {
       return null;
-    } finally {
-      if (generation == _generation) _infoInFlight.remove(f.key)?.ignore();
     }
+    final generation = _generation;
+    return _infoRequests.join('$serial|$generation|${f.key}', current, (
+      _,
+    ) async {
+      final info = FileInfo.fromPhotoInfo(
+        await current.http.photoInfo(f.path, storage: f.storage),
+      );
+      if (generation == _generation) {
+        _info[f.key] = info;
+        _scheduleSave();
+        _notify();
+      }
+      return info;
+    }, timeout: infoTimeout);
   }
 
   void _onLink() {

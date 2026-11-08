@@ -32,7 +32,7 @@ class GrLabApp extends StatelessWidget {
   );
 }
 
-/// The Library while a camera is connected or quietly reconnecting, the
+/// The Library while a camera is connected over Wi-Fi, the
 /// Cameras screen otherwise; leaving a session returns there, closing
 /// whatever was open over the Library. Also tells the connection whether
 /// the app is in front, and asks before the first join of a camera's

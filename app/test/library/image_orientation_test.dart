@@ -285,6 +285,52 @@ void main() {
     });
   });
 
+  group('decode size', () {
+    const cell = Size(390, 390);
+
+    test('a thumbnail smaller than its cell is enlarged and decoded as it '
+        'is', () {
+      const thumb = JpegLayout(width: 160, height: 120);
+      expect(enlargement(thumb, 1, cell, BoxFit.cover), closeTo(3.25, .01));
+      expect(decodeWidth(thumb, 1, cell, BoxFit.cover), isNull);
+    });
+
+    test('a landscape preview covering a square cell keeps the cell height '
+        'in pixels', () {
+      const view = JpegLayout(width: 1620, height: 1080);
+      expect(enlargement(view, 1, cell, BoxFit.cover), lessThan(1));
+      final width = decodeWidth(view, 1, cell, BoxFit.cover)!;
+      // Decoding to the cell width would leave 260 rows for 390.
+      expect(width, 585);
+      expect(width * 1080 / 1620, greaterThanOrEqualTo(cell.height));
+    });
+
+    test('a stored frame turned upright counts its stored width', () {
+      const view = JpegLayout(width: 1620, height: 1080);
+      // Shown 1080×1620: its shorter side, the stored height, fills 390.
+      expect(decodeWidth(view, 6, cell, BoxFit.cover), 585);
+      // Shown 1080×1620 in 540×1000: half size.
+      expect(decodeWidth(view, 6, const Size(540, 1000), BoxFit.contain), 810);
+    });
+
+    test('an image the decoder turns counts turned pixels', () {
+      const full = JpegLayout(width: 6192, height: 4128, exifOrientation: 6);
+      expect(orientationToApply(full, 6), 1);
+      // Decoded 4128×6192, fitted into 3240×6000.
+      expect(
+        decodeWidth(full, 1, const Size(3240, 6000), BoxFit.contain),
+        3240,
+      );
+    });
+
+    test('unknown sizes leave the image as it is', () {
+      const view = JpegLayout(width: 1620, height: 1080);
+      expect(decodeWidth(null, 1, cell, BoxFit.cover), isNull);
+      expect(decodeWidth(view, 1, Size.zero, BoxFit.cover), isNull);
+      expect(enlargement(view, 1, Size.infinite, BoxFit.cover), 1);
+    });
+  });
+
   group('ExifOrientation', () {
     Future<ui.Image> render(WidgetTester tester, ui.Image image, int o) async {
       final boundary = GlobalKey();

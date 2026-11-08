@@ -170,6 +170,9 @@ final class FailingWifi implements WifiNetworkControl {
 
   @override
   Future<void> leave() async {}
+
+  @override
+  Stream<void> get lost => const Stream.empty();
 }
 
 /// Records the security of every join and fails each one, the first with
@@ -198,6 +201,9 @@ final class RecordingWifi implements WifiNetworkControl {
 
   @override
   Future<void> leave() async {}
+
+  @override
+  Stream<void> get lost => const Stream.empty();
 }
 
 GrSession session(BondedCamera camera) => GrSession(
@@ -246,21 +252,27 @@ void main() {
     expect(camera.ops.where((o) => o.startsWith('write mode')), isEmpty);
   });
 
-  test('powerOn false: an off camera is left off', () async {
-    final camera = BondedCamera(operationMode: 2);
-    await expectLater(
-      session(camera).connect(deviceId: 'cam', powerOn: false),
-      throwsA(
-        isA<GrSessionException>().having(
-          (e) => e.needsPairing,
-          'needsPairing',
-          isFalse,
+  test(
+    'powerOn false: an off camera keeps its BLE link and is left off',
+    () async {
+      final camera = BondedCamera(operationMode: 2);
+      final s = session(camera);
+      await expectLater(
+        s.connect(deviceId: 'cam', powerOn: false),
+        throwsA(
+          isA<GrSessionException>()
+              .having((e) => e.cameraOff, 'cameraOff', isTrue)
+              .having((e) => e.needsPairing, 'needsPairing', isFalse),
         ),
-      ),
-    );
-    expect(camera.ops.where((o) => o.startsWith('write mode')), isEmpty);
-    expect(camera.ops.last, 'disconnect');
-  });
+      );
+      expect(camera.ops.where((o) => o.startsWith('write mode')), isEmpty);
+      expect(camera.ops.where((o) => o.startsWith('write wlan')), isEmpty);
+      expect(camera.ops, isNot(contains('disconnect')));
+      expect(s.phase, GrSessionPhase.bluetooth);
+      expect(s.cameraOff, isTrue);
+      await s.close();
+    },
+  );
 
   test('bond rejected at connect: needsPairing', () async {
     final camera = BondedCamera(

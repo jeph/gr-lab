@@ -5,19 +5,30 @@ import 'package:gr_protocol/gr_protocol.dart';
 import 'package:grlab/src/platform/ble_transport.dart';
 import 'package:universal_ble/universal_ble.dart';
 
-/// Records scan start/stop; every other platform call is unexpected.
+/// Records scan start/stop; every other platform call is unexpected. Set
+/// [stopGate] to hold `stopScan` until it completes.
 final class _FakePlatform extends UniversalBlePlatform {
   int starts = 0;
   int stops = 0;
+  final calls = <String>[];
+  Completer<void>? stopGate;
 
   @override
   Future<void> startScan({
     ScanFilter? scanFilter,
     PlatformConfig? platformConfig,
-  }) async => starts++;
+  }) async {
+    starts++;
+    calls.add('start');
+  }
 
   @override
-  Future<void> stopScan() async => stops++;
+  Future<void> stopScan() async {
+    calls.add('stop');
+    await stopGate?.future;
+    stops++;
+    calls.add('stopped');
+  }
 
   @override
   Future<bool> isScanning() async => starts > stops;
@@ -89,5 +100,28 @@ void main() {
     await subB.cancel();
     await pumpEventQueue();
     expect(platform.stops, 2, reason: 'close already stopped scan B');
+  });
+
+  test('a scan requested while the previous one is stopping starts after '
+      'the stop', () async {
+    final subA = transport.scan().listen((_) {});
+    await pumpEventQueue();
+    platform.stopGate = Completer();
+
+    // As when the Cameras screen stops its nearby scan and a connection
+    // starts its own straight away.
+    unawaited(subA.cancel());
+    final errorsB = <Object>[];
+    final subB = transport.scan().listen((_) {}, onError: errorsB.add);
+    await pumpEventQueue();
+    expect(platform.calls, ['start', 'stop'], reason: 'B waits for A');
+
+    platform.stopGate!.complete();
+    await pumpEventQueue();
+    expect(errorsB, isEmpty);
+    expect(platform.calls, ['start', 'stop', 'stopped', 'start']);
+    expect(await platform.isScanning(), isTrue);
+
+    await subB.cancel();
   });
 }

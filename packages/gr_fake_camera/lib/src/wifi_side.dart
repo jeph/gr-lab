@@ -20,6 +20,9 @@ final class _FakeWifi implements WifiNetworkControl {
   Future<void> leave() async {
     _camera._joined = false;
   }
+
+  @override
+  Stream<void> get lost => _camera._wifiLost.stream;
 }
 
 extension on FakeGrCamera {

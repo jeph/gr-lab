@@ -193,7 +193,10 @@ final class FakeCameraConfig {
     this.refusePairing = false,
     this.dropWifiAfter,
     this.unreachable = false,
+    this.reportsWifiLoss = true,
     this.cutDownloadsAfterBytes,
+    this.previewFailures = 0,
+    this.brokenPreviews = 0,
   });
 
   /// `/v1/props` `model` and the Camera Information model name; must be a
@@ -276,7 +279,21 @@ final class FakeCameraConfig {
   /// HTTP connections are dropped.
   final bool unreachable;
 
+  /// The phone side reports a joined access point going down at once
+  /// ([WifiNetworkControl.lost]), as Android does; false leaves the loss
+  /// to liveness polling, as on iOS.
+  final bool reportsWifiLoss;
+
   /// Full-size downloads stop after this many body bytes and the socket is
   /// closed, as when Wi-Fi drops mid-transfer.
   final int? cutDownloadsAfterBytes;
+
+  /// The first this many thumbnail, preview and `xs` requests for each
+  /// file and size answer HTTP 503, as a busy camera may; later ones
+  /// succeed.
+  final int previewFailures;
+
+  /// After [previewFailures], this many more of those requests answer 200
+  /// with a JPEG start and nothing else, which no decoder can show.
+  final int brokenPreviews;
 }

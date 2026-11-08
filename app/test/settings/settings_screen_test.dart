@@ -23,11 +23,6 @@ void main() {
         brightness: brightness,
       );
 
-      expect(settings.rawJpeg, RawJpegChoice.both);
-      await tester.tap(find.byKey(const ValueKey('raw-jpeg:raw')));
-      await tester.pump();
-      expect(settings.rawJpeg, RawJpegChoice.raw);
-
       await tester.tap(find.byKey(const ValueKey('theme:dark')));
       await tester.pump();
       expect(settings.themeMode, ThemeMode.dark);
@@ -47,7 +42,6 @@ void main() {
       final reloaded = (await tester.runAsync(
         () => SettingsController.load(app.models.services.dataDir),
       ))!;
-      expect(reloaded.rawJpeg, RawJpegChoice.raw);
       expect(reloaded.themeMode, ThemeMode.dark);
       expect(reloaded.powerOnWhenConnecting, !powerOn);
 

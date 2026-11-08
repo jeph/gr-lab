@@ -8,7 +8,6 @@ import '../data/cameras.dart';
 import '../pairing/pairing_widgets.dart';
 import '../theme/tokens.dart';
 import '../widgets/group.dart';
-import 'connect_steps.dart';
 import 'connection_controller.dart';
 
 /// Opens the camera sheet over the current screen.
@@ -21,9 +20,9 @@ Future<void> showCameraSheet(BuildContext context) =>
     );
 
 /// Everything about the current camera, from the camera pill (subset of
-/// mock `b-camera`): battery, storage and link while connected, the steps
-/// of a quiet reconnect, and the camera's name and power-on choice.
-/// Disconnecting returns to the Cameras screen.
+/// mock `b-camera`): battery, storage and link while connected, and the
+/// camera's name and power-on choice. Disconnecting Wi-Fi returns to the
+/// Cameras screen; Bluetooth stays.
 class CameraSheet extends StatelessWidget {
   const CameraSheet({super.key});
 
@@ -48,18 +47,15 @@ class CameraSheet extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               ...switch (connection.status) {
-                ConnectionStatus.connecting => _connecting(
-                  context,
-                  camera,
-                  connection,
-                ),
                 ConnectionStatus.connected => _connected(
                   context,
                   camera,
                   connection,
                 ),
-                // Only while the sheet closes: leaving the session returns
-                // to the Cameras screen.
+                // Only while the sheet closes: losing or leaving Wi-Fi
+                // returns to the Cameras screen.
+                ConnectionStatus.connecting ||
+                ConnectionStatus.bluetooth ||
                 ConnectionStatus.failed ||
                 ConnectionStatus.offline => _offline(context, camera),
               },
@@ -70,47 +66,6 @@ class CameraSheet extends StatelessWidget {
         );
       },
     );
-  }
-
-  // ------------------------------------------------------------ connecting
-
-  List<Widget> _connecting(
-    BuildContext context,
-    SavedCamera camera,
-    ConnectionController connection,
-  ) {
-    final waitingToRedial = connection.reconnecting && connection.step == null;
-    return [
-      _Header(
-        title: connection.reconnecting
-            ? 'Reconnecting to ${camera.name}'
-            : 'Connecting to ${camera.name}',
-        subtitle: camera.identityLine(),
-      ),
-      Padding(
-        key: const Key('camera-sheet-connecting'),
-        padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
-        child: waitingToRedial
-            ? Text(
-                "The phone lost the camera's Wi-Fi. GR Lab joins it again "
-                'by itself.',
-                style: TextStyle(
-                  fontSize: 14,
-                  height: 1.45,
-                  color: GrColors.of(context).t2,
-                ),
-              )
-            : ConnectSteps(connection: connection),
-      ),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
-        child: OutlinedButton(
-          key: const Key('camera-sheet-cancel'),
-          onPressed: () => unawaited(connection.disconnect()),
-          child: const Text('Cancel'),
-        ),
-      ),
-    ];
   }
 
   // ------------------------------------------------------------- connected
@@ -205,15 +160,11 @@ class CameraSheet extends StatelessWidget {
                     children: [
                       Icon(Icons.bluetooth_rounded, size: 18, color: c.ok),
                       const SizedBox(width: 6),
-                      Icon(
-                        Icons.wifi_rounded,
-                        size: 18,
-                        color: connection.reconnecting ? c.accent : c.ok,
-                      ),
+                      Icon(Icons.wifi_rounded, size: 18, color: c.ok),
                     ],
                   ),
                 ),
-                caption: connection.reconnecting ? 'Reconnecting…' : 'Wi-Fi',
+                caption: 'Wi-Fi',
               ),
             ),
           ],
@@ -223,8 +174,8 @@ class CameraSheet extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
         child: OutlinedButton(
           key: const Key('camera-sheet-disconnect'),
-          onPressed: () => unawaited(connection.disconnect()),
-          child: const Text('Disconnect'),
+          onPressed: () => unawaited(connection.closeLibrary()),
+          child: const Text('Disconnect Wi-Fi'),
         ),
       ),
     ];

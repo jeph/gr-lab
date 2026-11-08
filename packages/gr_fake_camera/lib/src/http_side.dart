@@ -268,6 +268,23 @@ extension on FakeGrCamera {
     if (size == null) return _error(request, 400, 'Bad Request');
     final photo = _requested(request, dir, file);
     if (photo == null) return _error(request, 404, 'Not Found');
+    if (size != GrImageSize.full) {
+      final key = '$photo|${size.name}';
+      final served = _previewRequests[key] = (_previewRequests[key] ?? 0) + 1;
+      if (served <= config.previewFailures) {
+        return _error(request, 503, 'Service Unavailable');
+      }
+      if (served <= config.previewFailures + config.brokenPreviews) {
+        final broken = [0xFF, 0xD8, 0x00, 0x00];
+        request.response
+          ..statusCode = 200
+          ..contentLength = broken.length
+          ..headers.contentType = ContentType('image', 'jpeg')
+          ..add(broken);
+        await request.response.close();
+        return;
+      }
+    }
     final Uint8List bytes;
     try {
       bytes = await media(photo, size);

@@ -9,6 +9,62 @@ import 'package:grlab/src/data/cameras.dart';
 import '../support/test_app.dart';
 
 void main() {
+  group('Bluetooth first', () {
+    test('connect links Bluetooth only; the camera Wi-Fi stays off', () async {
+      final app = await createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+      );
+      addTearDown(app.dispose);
+      final connection = app.models.connection;
+
+      await connection.connect();
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(connection.inSession, isFalse);
+      expect(connection.http, isNull);
+      expect(app.camera.wlanOn, isFalse);
+      expect(await app.camera.wifi.currentSsid(), isNull);
+    });
+
+    test('openLibrary joins Wi-Fi over the existing link; closeLibrary '
+        'leaves it and keeps Bluetooth', () async {
+      final app = await createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+      );
+      addTearDown(app.dispose);
+      final connection = app.models.connection;
+      await connection.connect();
+
+      await connection.openLibrary();
+      expect(connection.status, ConnectionStatus.connected);
+      expect(connection.inSession, isTrue);
+      expect(app.ble.connects, 1);
+
+      await connection.closeLibrary();
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(connection.inSession, isFalse);
+      expect(await app.camera.wifi.currentSsid(), isNull);
+      expect(app.camera.wlanOn, isFalse);
+
+      await connection.openLibrary();
+      expect(connection.status, ConnectionStatus.connected);
+      expect(app.ble.connects, 1);
+    });
+
+    test('openLibrary while offline links Bluetooth first', () async {
+      final app = await createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+      );
+      addTearDown(app.dispose);
+      final connection = app.models.connection;
+
+      await connection.openLibrary();
+      expect(connection.status, ConnectionStatus.connected);
+    });
+  });
+
   test('switching cameras while connected starts a new attempt', () async {
     final app = await createTestApp(
       config: const FakeCameraConfig(bonded: true),
@@ -20,7 +76,7 @@ void main() {
     addTearDown(app.dispose);
     final connection = app.models.connection;
 
-    await connection.connect();
+    await connection.openLibrary();
     expect(connection.status, ConnectionStatus.connected);
 
     // RootScreen connects in the same tick in which the camera store
@@ -45,77 +101,84 @@ void main() {
   });
 
   group('lost Wi-Fi', () {
-    // The session notices the loss quickly and gives up at once, so every
-    // loss reaches the controller.
-    const sessionOptions = GrSessionOptions(
-      livenessInterval: Duration(milliseconds: 100),
-      livenessLossAfter: Duration(milliseconds: 400),
-      maxWifiRecoveryAttempts: 0,
+    // Liveness would take far longer than any test waits, so a loss can
+    // only come from the phone's report or an explicit check.
+    const slowLiveness = GrSessionOptions(
+      livenessInterval: Duration(seconds: 30),
+      livenessLossAfter: Duration(seconds: 30),
     );
 
-    test('reconnects quietly instead of showing a failure', () async {
-      final app = await createTestApp(
-        config: const FakeCameraConfig(bonded: true),
-        saveCamera: true,
-        sessionOptions: sessionOptions,
-      );
-      addTearDown(app.dispose);
+    Future<void> expectBackOnBluetooth(TestApp app) async {
       final connection = app.models.connection;
-      await connection.connect();
-      expect(connection.status, ConnectionStatus.connected);
-      final seen = _record(connection);
-
-      app.camera.dropWifi();
-      await _until(() => app.ble.connects == 2);
-      await _until(() => connection.status == ConnectionStatus.connected);
-
-      expect(seen.map((s) => s.$1), isNot(contains(ConnectionStatus.failed)));
-      expect(seen, contains((ConnectionStatus.connecting, true)));
-      expect(connection.reconnecting, isFalse);
-    });
-
-    test('shows the failure once every quiet reconnect failed', () async {
-      final app = await createTestApp(
-        config: const FakeCameraConfig(bonded: true),
-        saveCamera: true,
-        sessionOptions: sessionOptions,
-        redialDelays: const [
-          Duration(milliseconds: 20),
-          Duration(milliseconds: 20),
-        ],
-      );
-      addTearDown(app.dispose);
-      final connection = app.models.connection;
-      await connection.connect();
-
-      app.camera.dropWifi(recoverable: false);
-      await _until(() => connection.status == ConnectionStatus.failed);
-
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(connection.inSession, isFalse);
       expect(connection.failure?.kind, ConnectFailureKind.wifi);
-      // The first connect plus one per redial.
-      expect(app.ble.connects, 3);
-    });
+      expect(connection.failure?.lost, isTrue);
+      // Nothing rejoins by itself, and the Bluetooth link is kept.
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(await app.camera.wifi.currentSsid(), isNull);
+      expect(app.ble.connects, 1);
+    }
 
-    test('waits for the app to come back before reconnecting', () async {
+    test(
+      'the phone reporting the network gone ends the Wi-Fi at once',
+      () async {
+        final app = await createTestApp(
+          config: const FakeCameraConfig(bonded: true),
+          saveCamera: true,
+          sessionOptions: slowLiveness,
+        );
+        addTearDown(app.dispose);
+        final connection = app.models.connection;
+        await connection.openLibrary();
+        expect(connection.status, ConnectionStatus.connected);
+
+        app.camera.dropWifi();
+        await _until(
+          () => connection.status == ConnectionStatus.bluetooth,
+          timeout: const Duration(seconds: 2),
+        );
+        await expectBackOnBluetooth(app);
+      },
+    );
+
+    test('without that report, liveness ends it the same way', () async {
       final app = await createTestApp(
-        config: const FakeCameraConfig(bonded: true),
+        config: const FakeCameraConfig(bonded: true, reportsWifiLoss: false),
         saveCamera: true,
-        sessionOptions: sessionOptions,
+        sessionOptions: const GrSessionOptions(
+          livenessInterval: Duration(milliseconds: 100),
+          livenessLossAfter: Duration(milliseconds: 400),
+        ),
       );
       addTearDown(app.dispose);
       final connection = app.models.connection;
-      await connection.connect();
+      await connection.openLibrary();
 
-      connection.foreground = false;
       app.camera.dropWifi();
-      await _until(() => connection.status == ConnectionStatus.connecting);
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      expect(app.ble.connects, 1);
-      expect(connection.reconnecting, isTrue);
+      await _until(() => connection.status == ConnectionStatus.bluetooth);
+      await expectBackOnBluetooth(app);
+    });
 
-      connection.foreground = true;
-      await _until(() => connection.status == ConnectionStatus.connected);
-      expect(app.ble.connects, 2);
+    test('checkWifi keeps the Wi-Fi while the camera answers and ends it '
+        'when it does not', () async {
+      final app = await createTestApp(
+        config: const FakeCameraConfig(bonded: true, reportsWifiLoss: false),
+        saveCamera: true,
+        sessionOptions: slowLiveness,
+      );
+      addTearDown(app.dispose);
+      final connection = app.models.connection;
+      await connection.openLibrary();
+
+      expect(await connection.checkWifi(), isTrue);
+      expect(connection.status, ConnectionStatus.connected);
+
+      app.camera.dropWifi();
+      expect(await connection.checkWifi(), isFalse);
+      await _until(() => connection.status == ConnectionStatus.bluetooth);
+      await expectBackOnBluetooth(app);
     });
   });
 
@@ -131,13 +194,13 @@ void main() {
       addTearDown(app.dispose);
       final connection = app.models.connection;
 
-      final attempt = connection.connect();
+      final attempt = connection.openLibrary();
       await _until(() => connection.wifiConsent != null);
       expect(connection.wifiConsent!.ssid, app.camera.config.ssid);
       connection.answerWifiConsent(false);
       await attempt;
 
-      expect(connection.status, ConnectionStatus.failed);
+      expect(connection.status, ConnectionStatus.bluetooth);
       expect(connection.failure?.kind, ConnectFailureKind.wifiDeclined);
       expect(await app.camera.wifi.currentSsid(), isNull);
       expect(app.models.cameras.current!.wifiApproved, isFalse);
@@ -148,7 +211,7 @@ void main() {
       addTearDown(app.dispose);
       final connection = app.models.connection;
 
-      final attempt = connection.connect();
+      final attempt = connection.openLibrary();
       await _until(() => connection.wifiConsent != null);
       connection.answerWifiConsent(true);
       await attempt;
@@ -159,7 +222,7 @@ void main() {
       var asked = false;
       void listener() => asked |= connection.wifiConsent != null;
       connection.addListener(listener);
-      await connection.connect();
+      await connection.openLibrary();
       connection.removeListener(listener);
 
       expect(connection.status, ConnectionStatus.connected);
@@ -171,7 +234,7 @@ void main() {
       addTearDown(app.dispose);
       final connection = app.models.connection;
 
-      unawaited(connection.connect());
+      unawaited(connection.openLibrary());
       await _until(() => connection.wifiConsent != null);
       await connection.disconnect();
 
@@ -181,15 +244,6 @@ void main() {
       expect(connection.status, ConnectionStatus.offline);
     });
   });
-}
-
-/// Every (status, reconnecting) pair the controller notifies.
-List<(ConnectionStatus, bool)> _record(ConnectionController connection) {
-  final seen = <(ConnectionStatus, bool)>[];
-  connection.addListener(
-    () => seen.add((connection.status, connection.reconnecting)),
-  );
-  return seen;
 }
 
 Future<void> _until(

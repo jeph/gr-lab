@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart';
-import 'package:grlab/src/data/settings.dart';
 import 'package:grlab/src/downloads/download_engine.dart';
 import 'package:grlab/src/library/camera_link.dart';
 import 'package:grlab/src/library/shot.dart';
@@ -142,39 +141,59 @@ void main() {
 
   tearDown(() => h.close());
 
-  group('pair rule', () {
-    for (final (choice, expected) in [
-      (RawJpegChoice.jpeg, ['R0000001.JPG']),
-      (RawJpegChoice.raw, ['R0000001.DNG']),
-      (RawJpegChoice.both, ['R0000001.JPG', 'R0000001.DNG']),
+  group('file kinds', () {
+    for (final (kind, expected) in [
+      (FileKind.jpeg, ['R0000001.JPG']),
+      (FileKind.raw, ['R0000001.DNG']),
     ]) {
-      test('a RAW+JPEG pair set to ${choice.name} saves $expected', () async {
+      test('the ${kind.name} action takes only its half of a RAW+JPEG '
+          'pair', () async {
         h = await Harness.start(
           config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
         );
         final engine = h.engine();
         final pair = h.shot('R0000001');
-        expect(await engine.enqueue(serial, [pair], choice), expected.length);
+        expect(engine.filesToDownload(serial, pair, kind), [
+          pair.filesOf(kind).single,
+        ]);
+        expect(await engine.enqueue(serial, [pair], kinds: {kind}), 1);
         await engine.whenIdle();
         expect(h.saved, [expected]);
         expect(h.media.shots.single.album, 'GR');
         expect(engine.jobs, isEmpty);
-        expect(engine.isShotDownloaded(serial, pair, choice), isTrue);
+        expect(engine.isShotDownloaded(serial, pair), isTrue);
       });
     }
 
-    test('single files download whatever the setting says', () async {
+    test('each action takes single files of its own kind only', () async {
+      h = await Harness.start(
+        config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
+      );
+      final engine = h.engine();
+      final shots = [h.shot('R0000002'), h.shot('R0000003')];
+      expect(engine.filesToDownload(serial, shots[0], FileKind.raw), isEmpty);
+      expect(engine.filesToDownload(serial, shots[1], FileKind.jpeg), isEmpty);
+      expect(await engine.enqueue(serial, shots, kinds: {FileKind.raw}), 1);
+      await engine.whenIdle();
+      expect(h.saved, [
+        ['R0000003.DNG'],
+      ]);
+    });
+
+    test('every file by default, movies included', () async {
       h = await Harness.start(
         config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
       );
       final engine = h.engine();
       await engine.enqueue(serial, [
+        h.shot('R0000001'),
         h.shot('R0000002'),
         h.shot('R0000003'),
         h.shot('R0000004'),
-      ], RawJpegChoice.raw);
+      ]);
       await engine.whenIdle();
       expect(h.saved, [
+        ['R0000001.JPG', 'R0000001.DNG'],
         ['R0000002.JPG'],
         ['R0000003.DNG'],
         ['R0000004.MOV'],
@@ -190,43 +209,38 @@ void main() {
       final engine = h.engine();
       final sd = h.shot('R0000001');
       final internal = h.shot('R0000001', storage: GrStorageId.internal);
-      await engine.enqueue(serial, [sd, internal], RawJpegChoice.jpeg);
+      await engine.enqueue(serial, [sd, internal], kinds: {FileKind.jpeg});
       await engine.whenIdle();
       expect(h.saved, [
         ['R0000001.JPG'],
         ['R0000001.JPG'],
       ]);
-      expect(
-        engine.isShotDownloaded(serial, internal, RawJpegChoice.jpeg),
-        isTrue,
-      );
+      expect(engine.isShotDownloaded(serial, internal), isTrue);
     });
   });
 
   group('duplicates', () {
-    test('a half already downloaded is not saved again', () async {
+    test('downloaded files download again when asked', () async {
       h = await Harness.start(
         config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
       );
       final engine = h.engine();
       final pair = h.shot('R0000001');
-      await engine.enqueue(serial, [pair], RawJpegChoice.jpeg);
+      await engine.enqueue(serial, [pair], kinds: {FileKind.jpeg});
       await engine.whenIdle();
-      expect(
-        engine.isShotDownloaded(serial, pair, RawJpegChoice.both),
-        isFalse,
-      );
-      expect(engine.filesToDownload(serial, pair, RawJpegChoice.both), [
-        pair.raw,
-      ]);
+      expect(engine.isShotDownloaded(serial, pair), isTrue);
+      // Whatever was saved may since have been deleted from the phone.
+      expect(engine.filesToDownload(serial, pair, FileKind.jpeg), [pair.jpeg]);
 
-      expect(await engine.enqueue(serial, [pair], RawJpegChoice.both), 1);
+      expect(await engine.enqueue(serial, [pair]), 2);
+      await engine.whenIdle();
+      expect(await engine.enqueueFiles(serial, pair, [pair.raw!]), 1);
       await engine.whenIdle();
       expect(h.saved, [
         ['R0000001.JPG'],
+        ['R0000001.JPG', 'R0000001.DNG'],
         ['R0000001.DNG'],
       ]);
-      expect(await engine.enqueue(serial, [pair], RawJpegChoice.both), 0);
       expect(engine.jobs, isEmpty);
     });
 
@@ -237,8 +251,9 @@ void main() {
       h.disconnect();
       final engine = h.engine();
       final shot = h.shot('R0000002');
-      expect(await engine.enqueue(serial, [shot], RawJpegChoice.both), 1);
-      expect(await engine.enqueue(serial, [shot], RawJpegChoice.both), 0);
+      expect(await engine.enqueue(serial, [shot]), 1);
+      expect(await engine.enqueue(serial, [shot]), 0);
+      expect(engine.filesToDownload(serial, shot, FileKind.jpeg), isEmpty);
       expect(engine.jobs, hasLength(1));
       h.connect();
       await until(() => h.saved.isNotEmpty, reason: 'save');
@@ -254,13 +269,13 @@ void main() {
       );
       final first = h.engine();
       final pair = h.shot('R0000001');
-      await first.enqueue(serial, [pair], RawJpegChoice.both);
+      await first.enqueue(serial, [pair]);
       await first.whenIdle();
       await first.flush();
 
       final second = h.engine();
       await second.ready;
-      expect(second.isShotDownloaded(serial, pair, RawJpegChoice.both), isTrue);
+      expect(second.isShotDownloaded(serial, pair), isTrue);
       expect(second.isFileDownloaded('other-camera', pair.jpeg!), isFalse);
     });
   });
@@ -275,10 +290,7 @@ void main() {
         ),
       );
       final engine = h.engine();
-      await engine.enqueue(serial, [
-        h.shot('R0000003'),
-        h.shot('R0000002'),
-      ], RawJpegChoice.both);
+      await engine.enqueue(serial, [h.shot('R0000003'), h.shot('R0000002')]);
       await until(
         () => engine.progress.value.received > 0,
         reason: 'transfer start',
@@ -310,7 +322,7 @@ void main() {
         ),
       );
       final engine = h.engine();
-      await engine.enqueue(serial, h.shots, RawJpegChoice.both);
+      await engine.enqueue(serial, h.shots);
       await until(() => engine.current != null, reason: 'transfer start');
       engine.cancelAll();
       await engine.whenIdle();
@@ -324,7 +336,7 @@ void main() {
       );
       h.disconnect();
       final engine = h.engine();
-      await engine.enqueue(serial, [h.shot('R0000002')], RawJpegChoice.both);
+      await engine.enqueue(serial, [h.shot('R0000002')]);
       expect(engine.waitingForCamera, isTrue);
       engine.cancel(engine.jobs.single);
       expect(engine.jobs, isEmpty);
@@ -342,10 +354,7 @@ void main() {
         failing: failing,
       );
       final engine = h.engine();
-      await engine.enqueue(serial, [
-        h.shot('R0000002'),
-        h.shot('R0000003'),
-      ], RawJpegChoice.both);
+      await engine.enqueue(serial, [h.shot('R0000002'), h.shot('R0000003')]);
       await engine.whenIdle();
       final failed = engine.jobs.single;
       expect(failed.state, DownloadState.failed);
@@ -373,7 +382,7 @@ void main() {
         ),
       );
       final engine = h.engine(transportGrace: const Duration(milliseconds: 50));
-      await engine.enqueue(serial, [h.shot('R0000002')], RawJpegChoice.both);
+      await engine.enqueue(serial, [h.shot('R0000002')]);
       await engine.whenIdle();
       expect(engine.jobs.single.state, DownloadState.failed);
       expect(engine.jobs.single.error, isNotNull);
@@ -391,7 +400,7 @@ void main() {
         ),
       );
       final engine = h.engine(transportGrace: const Duration(seconds: 1));
-      await engine.enqueue(serial, [h.shot('R0000002')], RawJpegChoice.both);
+      await engine.enqueue(serial, [h.shot('R0000002')]);
       await until(
         () => engine.progress.value.received >= 1000,
         reason: 'transfer cut',
@@ -415,7 +424,7 @@ void main() {
       );
       h.media.failWith = const MediaSaveException('failed', 'disk full');
       final engine = h.engine();
-      await engine.enqueue(serial, [h.shot('R0000002')], RawJpegChoice.both);
+      await engine.enqueue(serial, [h.shot('R0000002')]);
       await engine.whenIdle();
       expect(engine.jobs.single.error, 'disk full');
       expect(engine.permissionProblem, isNull);
@@ -443,7 +452,7 @@ void main() {
           h.shot('R0000002'),
           h.shot('R0000003'),
           h.shot('R0000004'),
-        ], RawJpegChoice.both);
+        ]);
         await engine.whenIdle();
         expect(engine.permissionProblem?.permissionDenied, isTrue);
         expect(engine.jobs, hasLength(3));
@@ -476,7 +485,7 @@ void main() {
       );
       final engine = h.engine();
       final shot = h.shot('R0000003');
-      await engine.enqueue(serial, [shot], RawJpegChoice.both);
+      await engine.enqueue(serial, [shot]);
       await until(
         () => engine.progress.value.received > 0,
         reason: 'transfer start',
@@ -506,9 +515,7 @@ void main() {
         config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
       );
       final engine = h.engine();
-      await engine.enqueue('another-serial', [
-        h.shot('R0000002'),
-      ], RawJpegChoice.both);
+      await engine.enqueue('another-serial', [h.shot('R0000002')]);
       await engine.whenIdle();
       expect(engine.jobs.single.state, DownloadState.queued);
       expect(h.saved, isEmpty);
@@ -523,7 +530,7 @@ void main() {
         ),
       );
       final engine = h.engine();
-      await engine.enqueue(serial, [h.shot('R0000003')], RawJpegChoice.both);
+      await engine.enqueue(serial, [h.shot('R0000003')]);
       await until(
         () => engine.progress.value.received > 0,
         reason: 'transfer start',
@@ -547,7 +554,7 @@ void main() {
       );
       h.disconnect();
       final first = h.engine();
-      await first.enqueue(serial, [h.shot('R0000001')], RawJpegChoice.both);
+      await first.enqueue(serial, [h.shot('R0000001')]);
       await first.flush();
 
       final second = h.engine();
@@ -576,14 +583,14 @@ void main() {
     final single = h.shot('R0000002');
     h.disconnect();
     final first = h.engine();
-    await first.enqueue(serial, [pair], RawJpegChoice.both);
+    await first.enqueue(serial, [pair]);
     await first.flush();
     first.dispose();
     h._engines.remove(first);
     // Records from an earlier run must also reach listeners after loading.
     final seeded = h.engine();
     h.connect();
-    await seeded.enqueue(serial, [single], RawJpegChoice.both);
+    await seeded.enqueue(serial, [single]);
     await until(() => h.saved.length == 2, reason: 'seed downloads');
     await seeded.whenIdle();
     await seeded.flush();
@@ -602,10 +609,7 @@ void main() {
     await reopened.ready;
     await Future<void>.delayed(Duration.zero);
     expect(notified, greaterThan(0));
-    expect(
-      reopened.isShotDownloaded(serial, single, RawJpegChoice.both),
-      isTrue,
-    );
+    expect(reopened.isShotDownloaded(serial, single), isTrue);
     expect(reopened.jobs, isEmpty);
   });
 
@@ -615,7 +619,7 @@ void main() {
     );
     h.disconnect();
     final first = h.engine();
-    await first.enqueue(serial, [h.shot('R0000001')], RawJpegChoice.both);
+    await first.enqueue(serial, [h.shot('R0000001')]);
     await first.flush();
     first.dispose();
     h._engines.remove(first);
@@ -641,7 +645,7 @@ void main() {
     final engine = h.engine();
     final seen = <DownloadProgress>[];
     engine.progress.addListener(() => seen.add(engine.progress.value));
-    await engine.enqueue(serial, [h.shot('R0000001')], RawJpegChoice.both);
+    await engine.enqueue(serial, [h.shot('R0000001')]);
     await until(() => h.saved.isNotEmpty, reason: 'download');
     final moving = seen.where((p) => p.received > 0).toList();
     expect(moving, isNotEmpty);

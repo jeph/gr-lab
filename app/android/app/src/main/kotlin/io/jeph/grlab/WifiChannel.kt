@@ -150,9 +150,11 @@ class WifiChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.
             override fun onLost(n: Network) {
                 if (callback !== this || n != network) return
                 // Unbind at once so sockets fail fast and the rest of the app
-                // regains the default network; GrSession's liveness probe
-                // notices and its recovery joins again with a new request.
+                // regains the default network, then tell Dart: the session
+                // ends the Wi-Fi link without waiting for its liveness probe.
+                // Runs on the main looper (requestNetwork's handler).
                 release()
+                channel.invokeMethod("lost", null)
             }
         }
 

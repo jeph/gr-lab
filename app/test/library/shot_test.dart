@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_protocol/gr_protocol.dart';
-import 'package:grlab/src/data/settings.dart';
 import 'package:grlab/src/library/camera_link.dart';
 import 'package:grlab/src/library/library_model.dart';
 import 'package:grlab/src/library/shot.dart';
@@ -95,27 +94,31 @@ void main() {
     });
   });
 
-  group('Shot.filesFor', () {
+  group('Shot.filesOf', () {
     final pair = groupShots([
       f('100RICOH/R0000001.JPG'),
       f('100RICOH/R0000001.DNG'),
     ]).single;
 
-    test('a pair follows the setting', () {
-      expect(pair.filesFor(RawJpegChoice.jpeg), [pair.jpeg]);
-      expect(pair.filesFor(RawJpegChoice.raw), [pair.raw]);
-      expect(pair.filesFor(RawJpegChoice.both), [pair.jpeg, pair.raw]);
+    test('a pair has one file of each still kind', () {
+      expect(pair.filesOf(FileKind.jpeg), [pair.jpeg]);
+      expect(pair.filesOf(FileKind.raw), [pair.raw]);
+      expect(pair.filesOf(FileKind.movie), isEmpty);
     });
 
-    test('a single file always comes', () {
-      for (final path in [
-        '100RICOH/R0000002.JPG',
-        '100RICOH/R0000003.DNG',
-        '100RICOH/R0000004.MOV',
+    test('a single file is only its own kind', () {
+      for (final (path, kind) in [
+        ('100RICOH/R0000002.JPG', FileKind.jpeg),
+        ('100RICOH/R0000003.DNG', FileKind.raw),
+        ('100RICOH/R0000004.MOV', FileKind.movie),
       ]) {
         final shot = groupShots([f(path)]).single;
-        for (final choice in RawJpegChoice.values) {
-          expect(shot.filesFor(choice), [f(path)], reason: '$path $choice');
+        for (final k in FileKind.values) {
+          expect(
+            shot.filesOf(k),
+            k == kind ? [f(path)] : isEmpty,
+            reason: '$path $k',
+          );
         }
       }
     });

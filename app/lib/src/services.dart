@@ -72,9 +72,9 @@ final class AppServices {
   final GrHttpClient Function(String host, TraceSink? trace)? httpFactory;
   final GrSessionOptions sessionOptions;
 
-  /// Pauses before each quiet reconnect after the camera's Wi-Fi was lost
-  /// for longer than the session's own recovery; its length is the number
-  /// of tries before the loss is shown as a failure.
+  /// Pauses before each quiet retry of a Wi-Fi join that failed because
+  /// the app was in the background; its length is the number of tries
+  /// before the failure is shown.
   final List<Duration> redialDelays;
 
   /// Explain the camera network before the first join of each camera.

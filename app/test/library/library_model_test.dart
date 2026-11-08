@@ -49,6 +49,11 @@ void main() {
   late RequestQueue queue;
   final models = <LibraryModel>[];
   var requests = 0;
+  // Faults for the next thumbnail requests: no answer until the test ends,
+  // or bytes that are not a JPEG.
+  var stallThumbs = 0;
+  var junkThumbs = 0;
+  var hang = Completer<void>();
 
   CameraLink connected({Stream<GrChangeEvent>? changes}) => CameraLink(
     serial: serial,
@@ -72,11 +77,22 @@ void main() {
   setUp(() async {
     HttpOverrides.global = null;
     requests = 0;
+    stallThumbs = 0;
+    junkThumbs = 0;
+    hang = Completer<void>();
     final media = syntheticMedia(jpegBytes: 4096, rawBytes: 8192);
     camera = FakeGrCamera(
       config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
-      media: (photo, size) {
+      media: (photo, size) async {
         requests++;
+        if (size == GrImageSize.thumb && stallThumbs > 0) {
+          stallThumbs--;
+          await hang.future;
+        }
+        if (size == GrImageSize.thumb && junkThumbs > 0) {
+          junkThumbs--;
+          return Uint8List.fromList(utf8.encode('<html>busy</html>'));
+        }
         return media(photo, size);
       },
     );
@@ -88,7 +104,11 @@ void main() {
   });
 
   tearDown(() async {
+    if (!hang.isCompleted) hang.complete();
     for (final m in models) {
+      // A refresh started by the last link change saves when it ends; the
+      // cache directory cannot go while it writes.
+      await until(() => !m.refreshing, reason: 'refresh to end');
       await m.flush();
       m.dispose();
     }
@@ -113,6 +133,35 @@ void main() {
     ]);
     expect(m.listedAt, isNotNull);
     expect(m.error, isNull);
+  });
+
+  test('a failed refresh asks whether the Wi-Fi still works and shows the '
+      'error only while the camera answers', () async {
+    var checks = 0;
+    var answers = false;
+    final m = model();
+    await m.setCamera(serial);
+    link.value = CameraLink(
+      serial: serial,
+      http: http,
+      checkWifi: () async {
+        checks++;
+        return answers;
+      },
+    );
+    await until(() => m.shots != null && !m.refreshing, reason: 'listing');
+    expect(checks, 0);
+
+    // The camera's HTTP server stops answering.
+    http.close(force: true);
+    await m.refresh();
+    expect(checks, 1);
+    expect(m.error, isNull, reason: 'the app leaves the Library instead');
+
+    answers = true;
+    await m.refresh();
+    expect(checks, 2);
+    expect(m.error, isNotNull);
   });
 
   test('keeps the listing per camera for offline use', () async {
@@ -266,6 +315,76 @@ void main() {
       expect(bytes, isNull);
       expect(requests, 0);
     });
+
+    test('a request the camera never answers times out and frees its queue '
+        'slot; the next load fetches the image', () async {
+      link.value = connected();
+      stallThumbs = 1;
+      final loader = CameraImages(
+        cacheDir: cache,
+        link: link,
+        queue: queue,
+        timeouts: const {
+          GrImageSize.thumb: Duration(milliseconds: 200),
+          GrImageSize.xs: Duration(milliseconds: 200),
+          GrImageSize.view: Duration(milliseconds: 200),
+          GrImageSize.full: Duration(milliseconds: 200),
+        },
+      );
+      final watch = Stopwatch()..start();
+      await expectLater(
+        loader.load(serial, file, GrImageSize.thumb).future,
+        throwsA(isA<TimeoutException>()),
+      );
+      expect(watch.elapsed, lessThan(const Duration(seconds: 2)));
+      expect(queue.running, 0);
+      final bytes = await loader.load(serial, file, GrImageSize.thumb).future;
+      expect(bytes, isNotNull);
+      expect(requests, 2);
+    });
+
+    test('a load cancelled while it waits for the queue does not fail the '
+        'next load of the same image', () async {
+      link.value = connected();
+      final busy = RequestQueue(concurrency: 1);
+      final gate = Completer<void>();
+      busy.add(() => gate.future);
+      final loader = CameraImages(cacheDir: cache, link: link, queue: busy);
+      final first = loader.load(serial, file, GrImageSize.thumb);
+      // Starts waiting on the queue in a later microtask.
+      await Future<void>.delayed(Duration.zero);
+      first.cancel();
+      final second = loader.load(serial, file, GrImageSize.thumb);
+      await Future<void>.delayed(Duration.zero);
+      gate.complete();
+      expect(await first.future, isNull);
+      expect(await second.future, isNotNull);
+    });
+
+    test('bytes that are not a JPEG fail the load and are not kept; a broken '
+        'copy on disk is fetched again', () async {
+      link.value = connected();
+      junkThumbs = 1;
+      final loader = images();
+      await expectLater(
+        loader.load(serial, file, GrImageSize.thumb).future,
+        throwsA(isA<NotAnImageException>()),
+      );
+      final onDisk = CameraImages.diskFile(
+        cache,
+        serial,
+        file,
+        GrImageSize.thumb,
+      );
+      expect(onDisk.existsSync(), isFalse);
+
+      await onDisk.parent.create(recursive: true);
+      await onDisk.writeAsString('<html>busy</html>');
+      final bytes = await images().load(serial, file, GrImageSize.thumb).future;
+      expect(bytes, isNotNull);
+      expect(isJpeg(bytes!), isTrue);
+      expect(isJpeg(await onDisk.readAsBytes()), isTrue);
+    });
   });
 
   group('MovieCache', () {
@@ -405,6 +524,72 @@ void main() {
       await first.future;
       await expectLater(second.future, throwsA(isA<RequestCancelled>()));
       expect(ran, isFalse);
+    });
+
+    test('background requests wait for every foreground one; a promoted one '
+        'runs with them', () async {
+      final q = RequestQueue(concurrency: 1);
+      final gate = Completer<void>();
+      final order = <String>[];
+      Future<void> task(String name) async => order.add(name);
+      final first = q.add(() => gate.future);
+      q.add(() => task('sharper A'), background: true);
+      final b = q.add(() => task('sharper B'), background: true);
+      q.add(() => task('thumb 1'));
+      q.add(() => task('thumb 2'));
+      b.promote();
+      gate.complete();
+      await first.future;
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(order, ['sharper B', 'thumb 2', 'thumb 1', 'sharper A']);
+    });
+  });
+
+  group('SharedRequests', () {
+    test('callers share one run; it leaves the queue when all cancel before '
+        'it starts', () async {
+      final q = RequestQueue(concurrency: 1);
+      final shared = SharedRequests<int>(q);
+      final gate = Completer<void>();
+      final blocker = q.add(() => gate.future);
+      var runs = 0;
+      Future<int> task(RequestSignal _) async => ++runs;
+      const timeout = Duration(seconds: 5);
+      final owner = Object();
+      final a = shared.join('k', owner, task, timeout: timeout);
+      final b = shared.join('k', owner, task, timeout: timeout);
+      a.cancel();
+      b.cancel();
+      expect(q.pending, 0);
+      final c = shared.join('k', owner, task, timeout: timeout);
+      final d = shared.join('k', owner, task, timeout: timeout);
+      gate.complete();
+      await blocker.future;
+      expect(await c.future, 1);
+      expect(await d.future, 1);
+      expect(runs, 1);
+      await expectLater(a.future, throwsA(isA<RequestCancelled>()));
+    });
+
+    test('a request made on an earlier connection is not joined', () async {
+      final shared = SharedRequests<int>(RequestQueue());
+      final stuck = Completer<int>();
+      const timeout = Duration(seconds: 5);
+      final old = shared.join(
+        'k',
+        Object(),
+        (_) => stuck.future,
+        timeout: timeout,
+      );
+      final fresh = shared.join(
+        'k',
+        Object(),
+        (_) async => 2,
+        timeout: timeout,
+      );
+      expect(await fresh.future, 2);
+      stuck.complete(1);
+      expect(await old.future, 1);
     });
   });
 }

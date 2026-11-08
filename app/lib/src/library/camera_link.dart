@@ -12,6 +12,7 @@ final class CameraLink {
     required this.http,
     this.storages = const [null],
     this.changes,
+    this.checkWifi,
   });
 
   final String serial;
@@ -23,6 +24,11 @@ final class CameraLink {
 
   /// `/v1/changes` events while the WebSocket is open.
   final Stream<GrChangeEvent>? changes;
+
+  /// Called when a request failed: asks the camera whether its Wi-Fi
+  /// still works, and ends the link (the app returns to the Cameras
+  /// screen) when it does not. True while the camera answers.
+  final Future<bool> Function()? checkWifi;
 }
 
 /// Which storages to list, from `/v1/props`. GR WORLD adds `storage=` only
@@ -39,9 +45,8 @@ List<String?> listedStorages(GrProps? props) {
   return names.isEmpty ? const [null] : names;
 }
 
-/// [CameraLink] of the [ConnectionController]: non-null while connected and
-/// not recovering Wi-Fi, so work pauses during a rejoin and resumes with a
-/// fresh link afterwards.
+/// [CameraLink] of the [ConnectionController]: non-null while connected,
+/// so work stops when the Wi-Fi goes.
 final class ConnectionLink extends ValueNotifier<CameraLink?> {
   ConnectionLink(this._connection) : super(null) {
     _connection.addListener(_update);
@@ -53,7 +58,7 @@ final class ConnectionLink extends ValueNotifier<CameraLink?> {
   void _update() {
     final http = _connection.http;
     final serial = _connection.camera?.serial;
-    if (http == null || serial == null || _connection.reconnecting) {
+    if (http == null || serial == null) {
       value = null;
       return;
     }
@@ -68,6 +73,7 @@ final class ConnectionLink extends ValueNotifier<CameraLink?> {
       http: http,
       storages: listedStorages(_connection.props),
       changes: _connection.session?.changes?.events,
+      checkWifi: _connection.checkWifi,
     );
   }
 

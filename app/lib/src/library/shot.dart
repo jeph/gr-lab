@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 
-import '../data/settings.dart';
-
 /// One file on the camera. [storage] is `in` or `sd1` on cameras with two
 /// storages and null on cameras that are listed without `storage=`; the
 /// same `dir/file` may exist on both storages of a GR IV.
@@ -80,21 +78,22 @@ final class Shot {
   bool get hasJpeg => jpeg != null;
   bool get hasRaw => raw != null;
 
+  /// The image a grid cell shows, and the Cameras card reuses. One size
+  /// only, so a cell never swaps pictures: a photo's `view` (a `thumb` is
+  /// smaller than a phone's cell), a movie's `thumb`.
+  GrImageSize get gridSize => isVideo ? GrImageSize.thumb : GrImageSize.view;
+
   /// Identifies the shot within one camera. Movies get their own key so a
   /// movie never merges with a still of the same base name.
   String get key =>
       '${storage ?? ''}|$dir/$base${movie != null ? '.${movie!.extension}' : ''}';
 
-  /// The files a download brings: a pair follows [choice], a single file
-  /// always comes.
-  List<CameraFile> filesFor(RawJpegChoice choice) {
-    if (!isPair) return files;
-    return switch (choice) {
-      RawJpegChoice.jpeg => [jpeg!],
-      RawJpegChoice.raw => [raw!],
-      RawJpegChoice.both => [jpeg!, raw!],
-    };
-  }
+  /// The shot's files of [kind]: a pair has one JPEG and one RAW.
+  List<CameraFile> filesOf(FileKind kind) => switch (kind) {
+    FileKind.jpeg => [?jpeg],
+    FileKind.raw => [?raw],
+    FileKind.movie => [?movie],
+  };
 
   @override
   bool operator ==(Object other) =>
@@ -110,12 +109,16 @@ final class Shot {
   String toString() => 'Shot($key ${format.name})';
 }
 
-enum _Kind { jpeg, raw, movie }
+/// What a camera file holds, by its extension; what the selection
+/// downloads per action.
+enum FileKind { jpeg, raw, movie }
 
-_Kind? _kindOf(String extension) => switch (extension) {
-  'JPG' || 'JPEG' => _Kind.jpeg,
-  'DNG' => _Kind.raw,
-  'MOV' || 'MP4' => _Kind.movie,
+/// The kind of a file with [extension]; null for files the app cannot
+/// show.
+FileKind? fileKind(String extension) => switch (extension) {
+  'JPG' || 'JPEG' => FileKind.jpeg,
+  'DNG' => FileKind.raw,
+  'MOV' || 'MP4' => FileKind.movie,
   _ => null,
 };
 
@@ -129,16 +132,16 @@ List<Shot> groupShots(Iterable<CameraFile> files) {
   final stills = <String, ({CameraFile? jpeg, CameraFile? raw})>{};
   final shots = <Shot>[];
   for (final f in files) {
-    switch (_kindOf(f.extension)) {
+    switch (fileKind(f.extension)) {
       case null:
         break;
-      case _Kind.movie:
+      case FileKind.movie:
         shots.add(Shot(movie: f));
-      case _Kind.jpeg:
+      case FileKind.jpeg:
         final key = '${f.storage ?? ''}|${f.dir}/${f.base}';
         final e = stills[key];
         stills[key] = (jpeg: e?.jpeg ?? f, raw: e?.raw);
-      case _Kind.raw:
+      case FileKind.raw:
         final key = '${f.storage ?? ''}|${f.dir}/${f.base}';
         final e = stills[key];
         stills[key] = (jpeg: e?.jpeg, raw: e?.raw ?? f);

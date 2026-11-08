@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 import 'package:video_player/video_player.dart';
 
-import '../app_scope.dart';
-import '../data/settings.dart';
 import '../downloads/download_engine.dart';
 import '../theme/tokens.dart';
 import '../widgets/group.dart';
@@ -17,9 +15,9 @@ import 'shot.dart';
 import 'shot_cell.dart';
 
 /// Full-screen viewer (mock `b-viewer`): swipe between [shots], pinch to
-/// zoom, file details, and Download. Download follows the RAW+JPEG setting;
-/// pressing and holding it offers JPEG, RAW or Both for a pair, or only the
-/// half not yet on the phone.
+/// zoom, file details, and Download. A RAW+JPEG pair offers its JPEG and
+/// its RAW separately. A photo shown larger than its preview, or zoomed,
+/// is replaced by the full JPEG once it arrives.
 class ShotViewer extends StatefulWidget {
   const ShotViewer({
     super.key,
@@ -49,16 +47,11 @@ class _ShotViewerState extends State<ShotViewer> {
 
   @override
   Widget build(BuildContext context) {
-    final app = AppScope.of(context);
     final library = LibraryScope.of(context);
     final serial = library.model.serial;
     final shot = widget.shots[_index];
     return ListenableBuilder(
-      listenable: Listenable.merge([
-        library.model,
-        library.engine,
-        app.settings,
-      ]),
+      listenable: Listenable.merge([library.model, library.engine]),
       builder: (context, _) {
         for (final f in shot.files) {
           unawaited(library.model.ensureInfo(f));
@@ -125,12 +118,7 @@ class _ShotViewerState extends State<ShotViewer> {
               ),
               _Details(shot: shot, model: library.model),
               if (serial != null)
-                _ActionBar(
-                  serial: serial,
-                  shot: shot,
-                  engine: library.engine,
-                  choice: app.settings.rawJpeg,
-                ),
+                _ActionBar(serial: serial, shot: shot, engine: library.engine),
             ],
           ),
         );
@@ -157,12 +145,15 @@ class _PhotoPage extends StatefulWidget {
 
 class _PhotoPageState extends State<_PhotoPage> {
   final _transform = TransformationController();
+  bool _zoomed = false;
 
   @override
   void initState() {
     super.initState();
     _transform.addListener(() {
-      widget.onZoom(_transform.value.getMaxScaleOnAxis() > 1.01);
+      final zoomed = _transform.value.getMaxScaleOnAxis() > 1.01;
+      widget.onZoom(zoomed);
+      if (zoomed != _zoomed) setState(() => _zoomed = zoomed);
     });
   }
 
@@ -174,28 +165,24 @@ class _PhotoPageState extends State<_PhotoPage> {
 
   @override
   Widget build(BuildContext context) {
-    final thumb = CameraImage(
-      serial: widget.serial,
-      file: widget.shot.primary,
-      size: GrImageSize.thumb,
-      fit: BoxFit.contain,
-    );
+    final shot = widget.shot;
     return InteractiveViewer(
       transformationController: _transform,
       maxScale: 6,
       child: SizedBox.expand(
         child: CameraImage(
           serial: widget.serial,
-          file: widget.shot.primary,
+          file: shot.primary,
           size: GrImageSize.view,
           fit: BoxFit.contain,
-          placeholder: Stack(
-            fit: StackFit.expand,
-            children: [
-              thumb,
-              const Center(child: CircularProgressIndicator()),
-            ],
-          ),
+          // Only a JPEG's full file decodes; a DNG stays at its preview.
+          sharper: shot.jpeg != null ? GrImageSize.full : null,
+          wantSharper: _zoomed,
+          // Detail for zooming in, without decoding all 26 megapixels.
+          zoomHeadroom: 3,
+          // The grid already loaded this `view`; no smaller stand-in that
+          // would be swapped out.
+          showProgress: true,
         ),
       ),
     );
@@ -509,39 +496,23 @@ class _Details extends StatelessWidget {
   }
 }
 
+/// Download for the shot; a RAW+JPEG pair gets one action per half. Saved
+/// files can always be downloaded again: the app cannot see whether they
+/// are still on the phone.
 class _ActionBar extends StatelessWidget {
   const _ActionBar({
     required this.serial,
     required this.shot,
     required this.engine,
-    required this.choice,
   });
 
   final String serial;
   final Shot shot;
   final DownloadEngine engine;
-  final RawJpegChoice choice;
 
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    final job = engine.jobFor(serial, shot);
-    final downloaded = engine.isShotDownloaded(serial, shot, choice);
-    final (IconData icon, String label) = switch (job?.state) {
-      DownloadState.running => (Icons.downloading_rounded, 'Downloading'),
-      DownloadState.queued => (Icons.schedule_rounded, 'Queued'),
-      DownloadState.failed => (Icons.refresh_rounded, 'Retry download'),
-      null when downloaded => (Icons.check_rounded, 'Downloaded'),
-      null => (Icons.download_rounded, 'Download'),
-    };
-    final missing = engine.filesToDownload(serial, shot, choice);
-    VoidCallback? onTap;
-    if (job?.state == DownloadState.failed) {
-      onTap = () => engine.retry(job!);
-    } else if (job == null && missing.isNotEmpty) {
-      onTap = () => unawaited(engine.enqueueFiles(serial, shot, missing));
-    }
-    final options = shot.isPair ? _pairOptions() : const <_PairOption>[];
     return DecoratedBox(
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: c.line)),
@@ -550,109 +521,138 @@ class _ActionBar extends StatelessWidget {
         top: false,
         child: SizedBox(
           height: 72,
-          child: Center(
-            child: InkWell(
-              key: const ValueKey('viewer-download'),
-              borderRadius: BorderRadius.circular(GrRadii.md),
-              onTap: onTap,
-              onLongPress: options.isEmpty
-                  ? null
-                  : () => unawaited(_choose(context, options)),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 8,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      icon,
-                      color: onTap == null && options.isEmpty ? c.t3 : c.t1,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w500,
-                        color: c.t1,
-                      ),
-                    ),
-                    if (job?.state == DownloadState.running)
-                      ValueListenableBuilder(
-                        valueListenable: engine.progress,
-                        builder: (context, p, _) => SizedBox(
-                          width: 64,
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: LinearProgressIndicator(
-                              value: p.fraction,
-                              minHeight: 2,
-                            ),
-                          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: shot.isPair
+                  ? [
+                      Flexible(
+                        child: _DownloadAction(
+                          key: const ValueKey('viewer-download:jpeg'),
+                          serial: serial,
+                          shot: shot,
+                          files: [shot.jpeg!],
+                          label: 'Download JPEG',
+                          engine: engine,
                         ),
                       ),
-                  ],
-                ),
-              ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: _DownloadAction(
+                          key: const ValueKey('viewer-download:raw'),
+                          serial: serial,
+                          shot: shot,
+                          files: [shot.raw!],
+                          label: 'Download RAW',
+                          engine: engine,
+                        ),
+                      ),
+                    ]
+                  : [
+                      Flexible(
+                        child: _DownloadAction(
+                          key: const ValueKey('viewer-download'),
+                          serial: serial,
+                          shot: shot,
+                          files: shot.files,
+                          label: 'Download',
+                          engine: engine,
+                        ),
+                      ),
+                    ],
             ),
           ),
         ),
       ),
     );
   }
+}
 
-  /// JPEG / RAW / Both, limited to halves neither on the phone nor queued:
-  /// with one half already downloaded, only the other is offered.
-  List<_PairOption> _pairOptions() {
-    bool open(CameraFile f) =>
-        !engine.isFileDownloaded(serial, f) && !engine.isFileQueued(serial, f);
-    final jpeg = shot.jpeg!, raw = shot.raw!;
-    return [
-      if (open(jpeg)) _PairOption('JPEG', [jpeg]),
-      if (open(raw)) _PairOption('RAW', [raw]),
-      if (open(jpeg) && open(raw)) _PairOption('Both', [jpeg, raw]),
+/// Downloads [files] of the shot, or shows that they are queued or
+/// downloading, or offers a retry when their job failed.
+class _DownloadAction extends StatelessWidget {
+  const _DownloadAction({
+    super.key,
+    required this.serial,
+    required this.shot,
+    required this.files,
+    required this.label,
+    required this.engine,
+  });
+
+  final String serial;
+  final Shot shot;
+  final List<CameraFile> files;
+  final String label;
+  final DownloadEngine engine;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = GrColors.of(context);
+    final jobs = [
+      for (final j in engine.jobs)
+        if (j.serial == serial && j.files.any(files.contains)) j,
     ];
-  }
-
-  Future<void> _choose(BuildContext context, List<_PairOption> options) async {
-    final picked = await showModalBottomSheet<_PairOption>(
-      context: context,
-      builder: (context) => SafeArea(
+    bool any(DownloadState s) => jobs.any((j) => j.state == s);
+    final failed = jobs
+        .where((j) => j.state == DownloadState.failed)
+        .firstOrNull;
+    final downloaded = files.every((f) => engine.isFileDownloaded(serial, f));
+    final (IconData icon, String text) = any(DownloadState.running)
+        ? (Icons.downloading_rounded, 'Downloading')
+        : any(DownloadState.queued)
+        ? (Icons.schedule_rounded, 'Queued')
+        : failed != null
+        ? (Icons.refresh_rounded, 'Retry download')
+        : downloaded
+        ? (Icons.check_rounded, '$label again')
+        : (Icons.download_rounded, label);
+    final VoidCallback? onTap;
+    if (any(DownloadState.running) || any(DownloadState.queued)) {
+      onTap = null;
+    } else if (failed != null) {
+      onTap = () => engine.retry(failed);
+    } else {
+      onTap = () => unawaited(engine.enqueueFiles(serial, shot, files));
+    }
+    return InkWell(
+      borderRadius: BorderRadius.circular(GrRadii.md),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: Text(
-                'Download this photo as',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+            Icon(icon, color: onTap == null ? c.t3 : c.t1),
+            const SizedBox(height: 4),
+            Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: c.t1,
               ),
             ),
-            for (final o in options)
-              ListTile(
-                key: ValueKey('pair-option:${o.label}'),
-                title: Text(o.label),
-                subtitle: Text(
-                  o.files.map((f) => f.name).join(' + '),
-                  style: GrFonts.monoStyle(context),
+            if (any(DownloadState.running))
+              ValueListenableBuilder(
+                valueListenable: engine.progress,
+                builder: (context, p, _) => SizedBox(
+                  width: 64,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: LinearProgressIndicator(
+                      value: p.fraction,
+                      minHeight: 2,
+                    ),
+                  ),
                 ),
-                onTap: () => Navigator.of(context).pop(o),
               ),
-            const SizedBox(height: 8),
           ],
         ),
       ),
     );
-    if (picked == null) return;
-    await engine.enqueueFiles(serial, shot, picked.files);
   }
-}
-
-final class _PairOption {
-  const _PairOption(this.label, this.files);
-  final String label;
-  final List<CameraFile> files;
 }

@@ -127,17 +127,14 @@ final class PillLinkState {
           const PillLinkState._(PillLinkKind.reconnecting, 'Reconnecting…'),
         ConnectionStatus.connecting => PillLinkState._(
           PillLinkKind.connecting,
-          switch (connection.step) {
-            ConnectStep.waking => 'Waking…',
-            ConnectStep.wifiOn => 'Wi-Fi on…',
-            ConnectStep.joining => 'Joining Wi-Fi…',
-            ConnectStep.finding ||
-            ConnectStep.bluetooth ||
-            null => 'Connecting…',
-          },
+          connection.step == ConnectStep.wifi
+              ? 'Connecting to Wi-Fi…'
+              : 'Connecting…',
         ),
-        ConnectionStatus.connected when connection.reconnecting =>
-          const PillLinkState._(PillLinkKind.reconnecting, 'Reconnecting…'),
+        ConnectionStatus.bluetooth => const PillLinkState._(
+          PillLinkKind.connected,
+          'Bluetooth',
+        ),
         ConnectionStatus.connected => PillLinkState._(
           PillLinkKind.connected,
           'Wi-Fi',

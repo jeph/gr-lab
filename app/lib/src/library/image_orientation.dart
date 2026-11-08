@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
@@ -133,6 +134,37 @@ int orientationToApply(JpegLayout? layout, int? orientation) {
   }
   return o;
 }
+
+/// How much an image with header [layout], turned by [orientation] (from
+/// [orientationToApply]), is enlarged when shown with [fit] in a box of
+/// [box] physical pixels: above 1 when it has fewer pixels than the box
+/// shows. 1 when either is unknown.
+double enlargement(JpegLayout? layout, int orientation, Size box, BoxFit fit) {
+  if (layout == null || layout.width == 0 || layout.height == 0) return 1;
+  if (!box.width.isFinite || !box.height.isFinite || box.isEmpty) return 1;
+  final (w, h) = _decoded(layout);
+  final (sw, sh) = orientationSwapsAxes(orientation) ? (h, w) : (w, h);
+  final sx = box.width / sw, sy = box.height / sh;
+  return fit == BoxFit.cover ? math.max(sx, sy) : math.min(sx, sy);
+}
+
+/// `cacheWidth` for the image [enlargement] describes: the decoded width
+/// that still backs every shown pixel. Null when the image has no more
+/// pixels than that, so it decodes as it is.
+int? decodeWidth(JpegLayout? layout, int orientation, Size box, BoxFit fit) {
+  final scale = enlargement(layout, orientation, box, fit);
+  if (layout == null || scale >= 1) return null;
+  final (w, _) = _decoded(layout);
+  return (w * scale).ceil().clamp(1, w);
+}
+
+/// Size of the decoded image: stored, or turned when the decoder applies
+/// the image's own tag ([JpegLayout.decoderOrients]); `cacheWidth` counts
+/// these pixels.
+(int, int) _decoded(JpegLayout layout) =>
+    layout.decoderOrients && orientationSwapsAxes(layout.exifOrientation!)
+    ? (layout.height, layout.width)
+    : (layout.width, layout.height);
 
 /// Shows [child], an image in stored layout, the way EXIF [orientation]
 /// (1–8) says: mirrored left to right first where the value says so, then

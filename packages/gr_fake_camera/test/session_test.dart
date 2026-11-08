@@ -80,18 +80,94 @@ void main() {
     },
   );
 
-  test('powerOn false: an off camera stays off and the connect fails '
-      'without needsPairing', () async {
+  test('powerOn false: an off camera stays off; the link stays up and '
+      'the Wi-Fi start fails without needsPairing', () async {
     camera = await startCamera(fastConfig(poweredOn: false, bonded: true));
     await expectLater(
       connect(powerOn: false),
       throwsA(
         isA<GrSessionException>()
-            .having((e) => e.phase, 'phase', GrSessionPhase.bleConnecting)
+            .having((e) => e.cameraOff, 'cameraOff', isTrue)
             .having((e) => e.needsPairing, 'needsPairing', isFalse),
       ),
     );
     expect(camera.poweredOn, isFalse);
+    expect(session!.phase, GrSessionPhase.bluetooth);
+  });
+
+  group('Bluetooth first', () {
+    Future<GrSession> linkBluetooth(List<String> kinds) async {
+      final s = session = sessionFor(camera);
+      s.events.listen((e) => kinds.add(e.kind));
+      await s.connectBluetooth(deviceId: camera.config.deviceId);
+      await Future<void>.delayed(Duration.zero);
+      return s;
+    }
+
+    test('an off camera is linked and left off until Wi-Fi starts, which '
+        'wakes it, reconnects and joins', () async {
+      camera = await startCamera(fastConfig(poweredOn: false, bonded: true));
+      final kinds = <String>[];
+      final s = await linkBluetooth(kinds);
+      expect(s.phase, GrSessionPhase.bluetooth);
+      expect(s.cameraOff, isTrue);
+      expect(camera.poweredOn, isFalse);
+      expect(camera.wlanOn, isFalse);
+
+      await s.startWifi();
+      await Future<void>.delayed(Duration.zero);
+      expect(s.phase, GrSessionPhase.connected);
+      expect(camera.poweredOn, isTrue);
+      expect(camera.wifiJoined, isTrue);
+      expect(
+        kinds,
+        containsAllInOrder([
+          'bluetooth',
+          'power.on',
+          'power.restarted',
+          'ble.ready',
+          'wlan.on',
+          'connected',
+        ]),
+      );
+      expect(kinds, isNot(contains('ble.lost')));
+    });
+
+    test('stopping Wi-Fi turns the camera Wi-Fi off and keeps Bluetooth; '
+        'it can start again', () async {
+      camera = await startCamera(fastConfig(bonded: true));
+      final s = await linkBluetooth([]);
+      await s.startWifi();
+      expect(camera.wlanOn, isTrue);
+
+      await s.stopWifi();
+      expect(s.phase, GrSessionPhase.bluetooth);
+      expect(s.http, isNull);
+      expect(s.ble, isNotNull);
+      expect(camera.wlanOn, isFalse);
+      expect(await camera.wifi.currentSsid(), isNull);
+
+      await s.startWifi();
+      expect(s.phase, GrSessionPhase.connected);
+      expect(camera.wifiJoined, isTrue);
+    });
+
+    test('stopping Wi-Fi during the join ends the attempt and leaves the '
+        'phone off the camera network', () async {
+      camera = await startCamera(fastConfig(bonded: true, joinDelay: ms(500)));
+      final s = await linkBluetooth([]);
+      final ended = expectLater(
+        s.startWifi(),
+        throwsA(isA<GrSessionException>()),
+      );
+      await Future<void>.delayed(ms(200));
+      await s.stopWifi();
+      await ended;
+      expect(s.phase, GrSessionPhase.bluetooth);
+      expect(s.http, isNull);
+      expect(await camera.wifi.currentSsid(), isNull);
+      expect(camera.wlanOn, isFalse);
+    });
   });
 
   test('camera already on: no power-on write', () async {
@@ -158,7 +234,9 @@ void main() {
 
   test('dropWifiAfter: liveness reports the loss, then WLAN-on over BLE '
       'and a rejoin recover the session', () async {
-    camera = await startCamera(fastConfig(bonded: true, dropWifiAfter: ms(80)));
+    camera = await startCamera(
+      fastConfig(bonded: true, dropWifiAfter: ms(80), reportsWifiLoss: false),
+    );
     final kinds = <String>[];
     final recovered = Completer<void>();
     final s = session = sessionFor(camera);
@@ -175,7 +253,7 @@ void main() {
       kinds,
       containsAllInOrder([
         'connected',
-        'liveness.lost',
+        'wifi.lost',
         'recovery.start',
         'recovery.wlanOn',
         'wifi.join',
@@ -185,6 +263,53 @@ void main() {
     );
     expect(s.phase, GrSessionPhase.connected);
     expect(camera.wifiJoined, isTrue);
+  });
+
+  test('the phone reporting the network gone counts as lost at once, '
+      'long before liveness would', () async {
+    camera = await startCamera(fastConfig(bonded: true));
+    final s = session = sessionFor(
+      camera,
+      options: const GrSessionOptions(
+        livenessInterval: Duration(milliseconds: 20),
+        livenessLossAfter: Duration(seconds: 30),
+        wifiRecoveryDelays: [Duration(seconds: 30)],
+      ),
+    );
+    await s.connect(deviceId: camera.config.deviceId);
+    final lost = s.events.firstWhere((e) => e.kind == 'wifi.lost');
+    camera.dropWifi();
+    final e = await lost.timeout(const Duration(seconds: 2));
+    expect(e.fields['reason'], 'network');
+    expect(s.phase, GrSessionPhase.recovering);
+  });
+
+  test('checkWifi: true while the camera answers; once it does not, the '
+      'link counts as lost', () async {
+    camera = await startCamera(
+      fastConfig(bonded: true, reportsWifiLoss: false),
+    );
+    final s = session = sessionFor(
+      camera,
+      options: const GrSessionOptions(
+        verifyProbeTimeout: Duration(seconds: 1),
+        livenessInterval: Duration(seconds: 30),
+        livenessLossAfter: Duration(seconds: 30),
+        wifiRecoveryDelays: [Duration(seconds: 30)],
+      ),
+    );
+    await s.connect(deviceId: camera.config.deviceId);
+    expect(await s.checkWifi(), isTrue);
+    expect(s.phase, GrSessionPhase.connected);
+
+    final lost = s.events.firstWhere((e) => e.kind == 'wifi.lost');
+    camera.dropWifi();
+    expect(await s.checkWifi(), isFalse);
+    expect(
+      (await lost.timeout(const Duration(seconds: 2))).fields['reason'],
+      'check',
+    );
+    expect(s.phase, GrSessionPhase.recovering);
   });
 
   test('unrecoverable Wi-Fi loss ends the session in lost', () async {

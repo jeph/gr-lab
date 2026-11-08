@@ -15,9 +15,15 @@ final class UniversalBleTransport implements BleTransport {
 
   final Map<String, _UniversalBleConnection> _connections = {};
 
-  /// The scan stream that started the platform scan. Only its cancellation
+  /// The scan stream that owns the platform scan. Only its cancellation
   /// stops the scan; a rejected concurrent scan must not.
   StreamController<BleAdvertisement>? _scanOwner;
+
+  /// The platform stop of the previous owner. A cancelled scan releases
+  /// ownership at once, so a scan asked for straight afterwards (the Cameras
+  /// screen's nearby scan ending as a connection starts its own) is accepted
+  /// and starts once this completes.
+  Future<void> _stopping = Future.value();
 
   @override
   Future<BleAdapterState> adapterState() async {
@@ -40,6 +46,7 @@ final class UniversalBleTransport implements BleTransport {
   Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) {
     late final StreamController<BleAdvertisement> controller;
     StreamSubscription<BleDevice>? sub;
+    var started = false;
     controller = StreamController<BleAdvertisement>(
       onListen: () async {
         if (_scanOwner != null) {
@@ -50,31 +57,48 @@ final class UniversalBleTransport implements BleTransport {
           return;
         }
         _scanOwner = controller;
+        await _stopping;
+        // Cancelled while the previous scan was stopping.
+        if (!identical(_scanOwner, controller)) return;
         sub = UniversalBle.scanStream.listen(
           (d) => controller.add(_advertisement(d)),
           onError: controller.addError,
         );
         try {
+          started = true;
           await _guard(
             () => UniversalBle.startScan(
               scanFilter: serviceUuids.isEmpty
                   ? null
                   : ScanFilter(withServices: serviceUuids),
+              // Android's default low-power mode listens ~0.5 s every 5 s
+              // and misses cameras; the app scans only while a screen
+              // shows the results or a connection looks for its camera.
+              platformConfig: PlatformConfig(
+                android: AndroidOptions(scanMode: AndroidScanMode.lowLatency),
+              ),
             ),
           );
         } catch (e, s) {
+          started = false;
           controller.addError(e, s);
           await sub?.cancel();
           if (identical(_scanOwner, controller)) _scanOwner = null;
           await controller.close();
         }
       },
-      onCancel: () async {
-        await sub?.cancel();
-        if (identical(_scanOwner, controller)) {
-          _scanOwner = null;
-          await _guard(UniversalBle.stopScan);
-        }
+      onCancel: () {
+        if (!identical(_scanOwner, controller)) return sub?.cancel();
+        _scanOwner = null;
+        final listening = sub;
+        final stop = started;
+        final stopping = () async {
+          await listening?.cancel();
+          if (stop) await _guard(UniversalBle.stopScan);
+        }();
+        // The next scan only waits; the error is the canceller's.
+        _stopping = stopping.catchError((Object _) {});
+        return stopping;
       },
     );
     return controller.stream;
@@ -122,6 +146,7 @@ final class UniversalBleTransport implements BleTransport {
       _scanOwner = null;
       await _guard(UniversalBle.stopScan);
     }
+    await _stopping;
     for (final c in _connections.values.toList()) {
       await c.disconnect();
     }

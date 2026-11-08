@@ -165,7 +165,6 @@ class _JobThumb extends StatelessWidget {
             serial: job.serial,
             file: job.shot.primary,
             size: GrImageSize.thumb,
-            cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).round(),
           ),
         ),
       ),

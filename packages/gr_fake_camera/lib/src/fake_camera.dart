@@ -103,10 +103,15 @@ final class FakeGrCamera {
   bool _dropArmed = false;
   int _wlanGeneration = 0;
   Completer<bool>? _apUp;
+  final _wifiLost = StreamController<void>.broadcast();
 
   HttpServer? _server;
   final Set<WebSocket> _sockets = {};
   final Map<FakePhoto, int> _fullSizes = Map.identity();
+
+  /// Thumbnail/preview requests per `<photo>|<size>`, for
+  /// [FakeCameraConfig.previewFailures].
+  final Map<String, int> _previewRequests = {};
 
   // ------------------------------------------------------------- scenario
 
@@ -249,6 +254,7 @@ final class FakeGrCamera {
       unawaited(ws.close(WebSocketStatus.goingAway));
     }
     _sockets.clear();
+    unawaited(_wifiLost.close());
     await _server?.close(force: true);
   }
 
@@ -351,6 +357,7 @@ final class FakeGrCamera {
     final wasOn = _wlanEnabled;
     _wlanEnabled = false;
     _apReady = false;
+    if (_joined && config.reportsWifiLoss) _wifiLost.add(null);
     _joined = false;
     _apGone = true;
     final waiting = _apUp;
