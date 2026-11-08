@@ -564,6 +564,11 @@ final class GrSession {
     var attempt = 0;
     var current = security;
     while (true) {
+      // close() during the hand-off must not leave the phone retrying, and
+      // possibly joining, the camera's network afterwards.
+      if (_closing) {
+        throw const GrSessionException(GrSessionPhase.joining, 'closed');
+      }
       attempt++;
       final left = deadline.difference(DateTime.now());
       try {

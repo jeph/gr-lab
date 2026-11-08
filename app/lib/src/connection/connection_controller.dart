@@ -80,6 +80,7 @@ final class ConnectionController extends ChangeNotifier {
   String? _cameraSerial;
   int _generation = 0;
   final _connected = StreamController<GrHttpClient>.broadcast();
+  Future<void> _closing = Future.value();
 
   ConnectionStatus get status => _status;
 
@@ -130,6 +131,10 @@ final class ConnectionController extends ChangeNotifier {
     _status = ConnectionStatus.connecting;
     _step = ConnectStep.bluetooth;
     notifyListeners();
+
+    // A disconnect may still be releasing the previous BLE link.
+    await _closing;
+    if (generation != _generation) return;
 
     if (!await services.ensureBluetoothPermission()) {
       return _fail(
@@ -202,13 +207,16 @@ final class ConnectionController extends ChangeNotifier {
   }
 
   /// Ends the session or cancels an attempt; the camera's Wi-Fi is left on.
-  Future<void> disconnect() async {
+  /// The state goes offline at once so a [connect] issued in the same tick
+  /// (switching cameras) starts a new attempt instead of seeing the old one.
+  Future<void> disconnect() {
     _generation++;
-    await _closeSession();
     _status = ConnectionStatus.offline;
     _step = null;
     _reconnecting = false;
+    final closing = _closing = _closeSession();
     notifyListeners();
+    return closing;
   }
 
   /// Clears a failure so the pill returns to its idle state.

@@ -30,6 +30,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/demo/
     - assets/fonts/Inter-OFL.txt
     - assets/fonts/JetBrainsMono-OFL.txt
   fonts:

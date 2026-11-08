@@ -1,0 +1,266 @@
+import 'dart:typed_data';
+
+import 'package:gr_protocol/gr_protocol.dart';
+
+/// Bytes the camera serves for [photo] at [size]: the original file for
+/// [GrImageSize.full], a JPEG for every other size.
+typedef FakeMediaSource = Future<Uint8List> Function(
+  FakePhoto photo,
+  GrImageSize size,
+);
+
+/// One file on the simulated card. A RAW+JPEG shot is two photos with the
+/// same base name (`R0000231.JPG`, `R0000231.DNG`), as the camera lists it.
+final class FakePhoto {
+  FakePhoto(
+    this.dir,
+    this.file,
+    this.dateTime, {
+    this.size,
+    this.videoLength,
+    this.storage = GrStorageId.sd,
+    this.portrait = false,
+    this.av = '2.8',
+    this.tv = '1.250',
+    this.sv = '200',
+    this.xv = '0.0',
+  }) : path = GrPhotoPath(dir, file);
+
+  final String dir;
+  final String file;
+  final GrPhotoPath path;
+
+  /// Capture time; `/info` reports it as camera-local wall time.
+  final DateTime dateTime;
+
+  /// Size `/info` reports for the full file. Null reports the length of the
+  /// bytes the [FakeMediaSource] serves for [GrImageSize.full], so listings
+  /// and downloads agree.
+  final int? size;
+
+  /// Movie length (`/info` `duration`); MOV files only.
+  final Duration? videoLength;
+
+  /// `in` (internal memory) or `sd1`.
+  final String storage;
+
+  /// Shot in portrait orientation; only changes the reported resolution.
+  final bool portrait;
+
+  /// Exposure as `/info` reports it, in the camera's own notation
+  /// (`tv` `1.250` = 1/250 s, the form `/v1/props` uses).
+  final String av;
+  final String tv;
+  final String sv;
+  final String xv;
+
+  /// Upper-case extension: `JPG`, `DNG` or `MOV`.
+  String get extension => path.extension;
+  bool get isVideo => extension == 'MOV';
+  bool get isRaw => extension == 'DNG';
+
+  /// File name without extension; equal for both halves of a RAW+JPEG pair.
+  String get baseName {
+    final dot = file.lastIndexOf('.');
+    return dot < 0 ? file : file.substring(0, dot);
+  }
+
+  /// A realistic GR card: 40 shots over six days ending on [lastDay] in
+  /// `100RICOH` and `101RICOH`, mixing JPEG-only, DNG-only and RAW+JPEG
+  /// shots (58 files), three movies (lengths from [videoLengths]) and a few
+  /// portrait frames. Deterministic for a given [lastDay].
+  static List<FakePhoto> defaultCard({
+    DateTime? lastDay,
+    List<Duration> videoLengths = const [
+      Duration(seconds: 12),
+      Duration(seconds: 31),
+      Duration(seconds: 64),
+    ],
+    String storage = GrStorageId.sd,
+  }) {
+    final end = lastDay ?? DateTime(2026, 11, 5);
+    final firstDay = DateTime(end.year, end.month, end.day - 5);
+    // P = RAW+JPEG, J = JPEG only, D = DNG only, M = movie.
+    const kinds = 'PPJPJDPPMJPPJDJPPJMPJPPDJPJPPJMDPJPPJPDJ';
+    const perDay = [7, 6, 8, 5, 7, 7];
+    const startHour = [9, 17, 12, 8, 15, 18];
+    const avs = ['2.8', '4.0', '5.6', '8.0', '3.5'];
+    const tvs = ['1.60', '1.125', '1.250', '1.500', '1.1000', '1.30'];
+    const svs = ['200', '400', '800', '1600', '3200', '100'];
+    const xvs = ['0.0', '-0.3', '-0.7', '+0.3', '0.0', '-1.0'];
+
+    final photos = <FakePhoto>[];
+    var shot = 0;
+    var movie = 0;
+    for (var day = 0; day < perDay.length; day++) {
+      var at = DateTime(
+        firstDay.year,
+        firstDay.month,
+        firstDay.day + day,
+        startHour[day],
+        4 + day * 3,
+        11,
+      );
+      for (var i = 0; i < perDay[day]; i++) {
+        final number = 231 + shot;
+        final dir = shot < 20 ? '100RICOH' : '101RICOH';
+        final base = 'R${number.toString().padLeft(7, '0')}';
+        final kind = kinds[shot];
+        FakePhoto make(String ext, {Duration? length}) => FakePhoto(
+          dir,
+          '$base.$ext',
+          at,
+          videoLength: length,
+          storage: storage,
+          portrait: kind != 'M' && shot % 5 == 3,
+          av: avs[shot % avs.length],
+          tv: tvs[shot % tvs.length],
+          sv: svs[shot % svs.length],
+          xv: xvs[shot % xvs.length],
+        );
+        switch (kind) {
+          case 'P':
+            photos
+              ..add(make('JPG'))
+              ..add(make('DNG'));
+          case 'J':
+            photos.add(make('JPG'));
+          case 'D':
+            photos.add(make('DNG'));
+          default:
+            photos.add(
+              make('MOV', length: videoLengths[movie % videoLengths.length]),
+            );
+            movie++;
+        }
+        shot++;
+        at = at.add(Duration(minutes: 3 + (shot * 7) % 23, seconds: shot * 13));
+      }
+    }
+    return photos;
+  }
+
+  @override
+  String toString() => '$storage:$dir/$file';
+}
+
+/// Identity, timing and failure injection for a [FakeGrCamera].
+///
+/// Delays default to small values so UIs show their loading states without
+/// slowing tests; tests that need speed pass [Duration.zero].
+final class FakeCameraConfig {
+  const FakeCameraConfig({
+    this.model = 'RICOH GR IV',
+    this.serial = '1234567',
+    this.firmware = '1.20',
+    this.ssid = 'GR_H0053A8',
+    this.passphrase = 'abcd1234',
+    this.bluetoothName = 'GR_H0053A9',
+    this.deviceId = '00:00:5E:00:53:A9',
+    this.poweredOn = true,
+    this.executePairingOpen = false,
+    this.bonded = false,
+    this.openExecutePairingOnScan = false,
+    this.autoConfirmPairing,
+    this.battery = 82,
+    this.sdCard = true,
+    this.photos,
+    this.pageSize = grWorldPhotoPageSize,
+    this.advertisingInterval = const Duration(milliseconds: 100),
+    this.connectDelay = const Duration(milliseconds: 100),
+    this.bleLatency = const Duration(milliseconds: 10),
+    this.wakeDelay = const Duration(seconds: 1),
+    this.wlanOnDelay = const Duration(milliseconds: 500),
+    this.joinDelay = const Duration(milliseconds: 500),
+    this.httpLatency = const Duration(milliseconds: 30),
+    this.downloadBytesPerSecond,
+    this.refusePairing = false,
+    this.dropWifiAfter,
+    this.unreachable = false,
+    this.cutDownloadsAfterBytes,
+  });
+
+  /// `/v1/props` `model` and the Camera Information model name; must be a
+  /// [GrModel] string (it selects the advertised model code and GATT set).
+  final String model;
+  final String serial;
+  final String firmware;
+  final String ssid;
+  final String passphrase;
+
+  /// Advertised name and Bluetooth Device Name characteristic (`bdName`).
+  final String bluetoothName;
+
+  /// Platform peripheral id the camera advertises under (an Android-style
+  /// MAC from the documentation range).
+  final String deviceId;
+
+  /// Initial power state; off is the BT-only state that advertises power
+  /// `00` and reads Operation Mode `02` (bleStartup).
+  final bool poweredOn;
+
+  /// Initial state of the camera's Execute Pairing screen.
+  final bool executePairingOpen;
+
+  /// The phone already holds a bond with this camera (a pairing from an
+  /// earlier run).
+  final bool bonded;
+
+  /// Demo: the simulated user turns the camera on and opens Execute
+  /// Pairing as soon as the app starts scanning, as the pairing screen asks.
+  final bool openExecutePairingOnScan;
+
+  /// When set, the simulated user presses OK on the camera this long after
+  /// the phone starts bonding. Null leaves it to [FakeGrCamera.confirmPairing]
+  /// and [FakeGrCamera.rejectPairing].
+  final Duration? autoConfirmPairing;
+
+  /// Battery percentage (`/v1/props` `battery`, BLE Battery Level).
+  final int battery;
+
+  /// An SD card is inserted: `/v1/props` lists `sd1` next to `in`, and
+  /// listings without `storage` read it.
+  final bool sdCard;
+
+  /// Card contents; null means [FakePhoto.defaultCard].
+  final List<FakePhoto>? photos;
+
+  /// Files per `/v1/photos` page when the request has no `limit`.
+  final int pageSize;
+  final Duration advertisingInterval;
+  final Duration connectDelay;
+
+  /// Added to every GATT operation.
+  final Duration bleLatency;
+
+  /// After the power-on write the camera restarts into its main firmware:
+  /// the link stops answering and drops after this delay (GR IV: ~5.5 s).
+  final Duration wakeDelay;
+
+  /// From the WLAN-on write until the access point can be joined.
+  final Duration wlanOnDelay;
+
+  /// Association time once the access point is up (GR IV on a Mac: 16 s).
+  final Duration joinDelay;
+
+  /// Added before every HTTP response.
+  final Duration httpLatency;
+
+  /// Throttles image and movie bodies; null sends them at loopback speed.
+  final int? downloadBytesPerSecond;
+
+  /// The camera rejects the pairing request even on Execute Pairing.
+  final bool refusePairing;
+
+  /// The camera's access point goes down this long after the first
+  /// successful join (once). A WLAN-on write brings it back.
+  final Duration? dropWifiAfter;
+
+  /// Out of range: no advertisements, connects time out, Wi-Fi absent and
+  /// HTTP connections are dropped.
+  final bool unreachable;
+
+  /// Full-size downloads stop after this many body bytes and the socket is
+  /// closed, as when Wi-Fi drops mid-transfer.
+  final int? cutDownloadsAfterBytes;
+}

@@ -1,0 +1,374 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:gr_fake_camera/gr_fake_camera.dart';
+import 'package:gr_protocol/gr_protocol.dart';
+import 'package:grlab/src/library/camera_images.dart';
+import 'package:grlab/src/library/camera_link.dart';
+import 'package:grlab/src/library/library_model.dart';
+import 'package:grlab/src/library/movie_cache.dart';
+import 'package:grlab/src/library/request_queue.dart';
+import 'package:grlab/src/library/shot.dart';
+
+const serial = '1234567';
+final _day1 = DateTime(2026, 11, 4, 9, 30);
+final _day2 = DateTime(2026, 11, 5, 18, 2, 7);
+
+List<FakePhoto> card() => [
+  FakePhoto('100RICOH', 'R0000001.JPG', _day1),
+  FakePhoto('100RICOH', 'R0000001.DNG', _day1),
+  FakePhoto(
+    '100RICOH',
+    'R0000002.MOV',
+    _day2,
+    videoLength: const Duration(seconds: 14),
+  ),
+  FakePhoto('100RICOH', 'R0000001.JPG', _day2, storage: GrStorageId.internal),
+];
+
+Future<void> until(
+  bool Function() condition, {
+  String reason = 'condition',
+  Duration timeout = const Duration(seconds: 10),
+}) async {
+  final watch = Stopwatch()..start();
+  while (!condition()) {
+    if (watch.elapsed > timeout) fail('Timed out waiting for $reason');
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+  }
+}
+
+void main() {
+  late FakeGrCamera camera;
+  late GrHttpClient http;
+  late Directory cache;
+  late ValueNotifier<CameraLink?> link;
+  late RequestQueue queue;
+  final models = <LibraryModel>[];
+  var requests = 0;
+
+  CameraLink connected({Stream<GrChangeEvent>? changes}) => CameraLink(
+    serial: serial,
+    http: http,
+    storages: const [GrStorageId.internal, GrStorageId.sd],
+    changes: changes,
+  );
+
+  LibraryModel model() {
+    final m = LibraryModel(
+      cacheDir: cache,
+      link: link,
+      queue: queue,
+      changeDebounce: const Duration(milliseconds: 10),
+      saveDelay: Duration.zero,
+    );
+    models.add(m);
+    return m;
+  }
+
+  setUp(() async {
+    HttpOverrides.global = null;
+    requests = 0;
+    final media = syntheticMedia(jpegBytes: 4096, rawBytes: 8192);
+    camera = FakeGrCamera(
+      config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
+      media: (photo, size) {
+        requests++;
+        return media(photo, size);
+      },
+    );
+    await camera.startHttp();
+    http = camera.httpClient('127.0.0.1', null);
+    cache = await Directory.systemTemp.createTemp('grlab_lib_');
+    link = ValueNotifier(null);
+    queue = RequestQueue();
+  });
+
+  tearDown(() async {
+    for (final m in models) {
+      await m.flush();
+      m.dispose();
+    }
+    models.clear();
+    link.dispose();
+    http.close(force: true);
+    await camera.close();
+    await cache.delete(recursive: true);
+  });
+
+  test('lists both storages when the camera connects', () async {
+    final m = model();
+    await m.setCamera(serial);
+    expect(m.shots, isNull);
+    link.value = connected();
+    await until(() => m.shots != null && !m.refreshing, reason: 'listing');
+    expect(m.connected, isTrue);
+    expect(m.shots!.map((s) => (s.storage, s.base, s.format)), [
+      (GrStorageId.sd, 'R0000002', ShotFormat.video),
+      (GrStorageId.internal, 'R0000001', ShotFormat.jpeg),
+      (GrStorageId.sd, 'R0000001', ShotFormat.rawJpeg),
+    ]);
+    expect(m.listedAt, isNotNull);
+    expect(m.error, isNull);
+  });
+
+  test('keeps the listing per camera for offline use', () async {
+    final first = model();
+    await first.setCamera(serial);
+    link.value = connected();
+    await until(() => first.shots != null && !first.refreshing);
+    final movie = first.shots!.firstWhere((s) => s.isVideo);
+    final info = await first.ensureInfo(movie.primary);
+    expect(info?.duration, const Duration(seconds: 14));
+    expect(info?.taken, _day2);
+    expect(info?.size, greaterThan(0));
+    await first.flush();
+
+    link.value = null;
+    final offline = model();
+    await offline.setCamera(serial);
+    expect(offline.connected, isFalse);
+    expect(offline.shots, first.shots);
+    expect(offline.info(movie.primary)?.duration, const Duration(seconds: 14));
+    expect(offline.listedAt, isNotNull);
+
+    await offline.setCamera('another');
+    expect(offline.shots, isNull);
+  });
+
+  test('refreshes on a storage change from /v1/changes', () async {
+    final socket = http.changesSocket();
+    await socket.connect();
+    addTearDown(socket.close);
+    final m = model();
+    await m.setCamera(serial);
+    link.value = connected(changes: socket.events);
+    await until(() => m.shots != null && !m.refreshing);
+    expect(m.shots, hasLength(3));
+
+    camera.addPhoto(FakePhoto('101RICOH', 'R0000003.JPG', _day2));
+    await until(
+      () => m.shots!.any((s) => s.base == 'R0000003'),
+      reason: 'refresh after storage event',
+    );
+    expect(m.shots!.first.dir, '101RICOH');
+  });
+
+  test('switching cameras while a listing is pending does not block later '
+      'refreshes', () async {
+    link.value = connected();
+    final m = model();
+    await m.setCamera(serial);
+    expect(m.refreshing, isTrue, reason: 'listing still in flight');
+
+    await m.setCamera('another');
+    expect(m.refreshing, isFalse);
+    expect(m.shots, isNull);
+
+    await m.setCamera(serial);
+    await until(
+      () => m.shots != null && !m.refreshing,
+      reason: 'listing after switching back',
+    );
+    expect(m.shots, hasLength(3));
+
+    // The superseded listing must not leave the model refusing refreshes.
+    camera.addPhoto(FakePhoto('101RICOH', 'R0000003.JPG', _day2));
+    await m.refresh();
+    expect(m.shots!.first.base, 'R0000003');
+  });
+
+  test('ignores a link to another camera', () async {
+    final m = model();
+    await m.setCamera('another');
+    link.value = connected();
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    expect(m.shots, isNull);
+    expect(m.connected, isFalse);
+    expect(
+      await m.ensureInfo(CameraFile(null, GrPhotoPath.parse('a/b.JPG'))),
+      isNull,
+    );
+  });
+
+  group('CameraImages', () {
+    CameraImages images() =>
+        CameraImages(cacheDir: cache, link: link, queue: queue);
+    final file = CameraFile(
+      GrStorageId.sd,
+      GrPhotoPath('100RICOH', 'R0000001.JPG'),
+    );
+
+    test(
+      'fetches a thumbnail once, then serves it from disk offline',
+      () async {
+        link.value = connected();
+        final first = images();
+        final bytes = await first.load(serial, file, GrImageSize.thumb).future;
+        expect(bytes, isNotNull);
+        expect(requests, 1);
+        expect(first.cached(serial, file, GrImageSize.thumb), bytes);
+        expect(
+          File('${cache.path}/$serial/thumbs/${file.fileStem}.jpg')
+              .existsSync(),
+          isTrue,
+        );
+
+        link.value = null;
+        final again = await images()
+            .load(serial, file, GrImageSize.thumb)
+            .future;
+        expect(again, bytes);
+        expect(requests, 1);
+      },
+    );
+
+    test('offline without a cached copy gives nothing', () async {
+      final bytes = await images().load(serial, file, GrImageSize.view).future;
+      expect(bytes, isNull);
+      expect(requests, 0);
+    });
+  });
+
+  group('MovieCache', () {
+    final movie = CameraFile(
+      GrStorageId.sd,
+      GrPhotoPath('100RICOH', 'R0000002.MOV'),
+    );
+
+    test('copies a movie once with progress, then reuses the copy', () async {
+      final movies = MovieCache(cacheDir: cache);
+      expect(movies.cached(serial, movie), isNull);
+      final download = movies.download(connected(), movie);
+      final seen = <double?>[];
+      download.progress.addListener(() => seen.add(download.progress.value));
+      final file = await download.done;
+      expect(file.path, endsWith('/$serial/movies/sd1_100RICOH_R0000002.MOV'));
+      final expected = await camera.media(
+        camera.photos.firstWhere((p) => p.file == 'R0000002.MOV'),
+        GrImageSize.full,
+      );
+      expect(await file.readAsBytes(), expected);
+      expect(seen.last, 1);
+      expect(movies.cached(serial, movie)?.path, file.path);
+    });
+
+    test('cancelling leaves nothing cached', () async {
+      await camera.close();
+      camera = FakeGrCamera(
+        config: FakeCameraConfig(
+          httpLatency: Duration.zero,
+          photos: card(),
+          downloadBytesPerSecond: 64 * 1024,
+        ),
+        media: syntheticMedia(movieBytes: 256 * 1024),
+      );
+      await camera.startHttp();
+      http.close(force: true);
+      http = camera.httpClient('127.0.0.1', null);
+      final movies = MovieCache(cacheDir: cache);
+      final download = movies.download(connected(), movie);
+      await until(
+        () => (download.progress.value ?? 0) > 0,
+        reason: 'copy started',
+      );
+      download.cancel();
+      await expectLater(download.done, throwsA(isA<MovieDownloadCancelled>()));
+      expect(movies.cached(serial, movie), isNull);
+      expect(
+        movies.fileFor(serial, movie).parent.listSync(),
+        isEmpty,
+        reason: 'no partial file left behind',
+      );
+    });
+  });
+
+  test(
+    'MovieCache: cancel then immediate retry gives an intact copy',
+    () async {
+      await camera.close();
+      camera = FakeGrCamera(
+        config: FakeCameraConfig(
+          httpLatency: Duration.zero,
+          photos: card(),
+          downloadBytesPerSecond: 256 * 1024,
+        ),
+        media: syntheticMedia(movieBytes: 192 * 1024),
+      );
+      await camera.startHttp();
+      http.close(force: true);
+      http = camera.httpClient('127.0.0.1', null);
+      final movie = CameraFile(
+        GrStorageId.sd,
+        GrPhotoPath('100RICOH', 'R0000002.MOV'),
+      );
+      final movies = MovieCache(cacheDir: cache);
+      final first = movies.download(connected(), movie);
+      await until(
+        () => (first.progress.value ?? 0) > 0,
+        reason: 'first copy started',
+      );
+      first.cancel();
+      final retry = movies.download(connected(), movie);
+      await expectLater(first.done, throwsA(isA<MovieDownloadCancelled>()));
+      final file = await retry.done;
+      final expected = await camera.media(
+        camera.photos.firstWhere((p) => p.file == 'R0000002.MOV'),
+        GrImageSize.full,
+      );
+      expect(await file.readAsBytes(), expected);
+      expect(file.parent.listSync().map((e) => e.uri.pathSegments.last), [
+        file.uri.pathSegments.last,
+      ], reason: 'no staging files left behind');
+    },
+  );
+
+  group('RequestQueue', () {
+    test('runs at most its concurrency, newest first', () async {
+      final q = RequestQueue();
+      var running = 0;
+      var peak = 0;
+      final order = <int>[];
+      final gate = Completer<void>();
+      Future<int> task(int i) async {
+        running++;
+        peak = running > peak ? running : peak;
+        order.add(i);
+        await gate.future;
+        running--;
+        return i;
+      }
+
+      final requests = [for (var i = 0; i < 6; i++) q.add(() => task(i))];
+      await Future<void>.delayed(Duration.zero);
+      expect(q.running, 3);
+      expect(order, [0, 1, 2]);
+      gate.complete();
+      expect(await Future.wait([for (final r in requests) r.future]), [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+      ]);
+      expect(peak, 3);
+      expect(order.sublist(3), [5, 4, 3]);
+    });
+
+    test('a request cancelled before it starts never runs', () async {
+      final q = RequestQueue(concurrency: 1);
+      final gate = Completer<void>();
+      var ran = false;
+      final first = q.add(() => gate.future);
+      final second = q.add(() async => ran = true);
+      second.cancel();
+      gate.complete();
+      await first.future;
+      await expectLater(second.future, throwsA(isA<RequestCancelled>()));
+      expect(ran, isFalse);
+    });
+  });
+}
