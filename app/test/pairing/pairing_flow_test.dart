@@ -23,6 +23,12 @@ const _close = Key('pairing-close');
 Finder get _addButton =>
     find.descendant(of: find.byKey(_add), matching: find.byType(FilledButton));
 
+/// [finder] inside the pairing flow, not the Cameras screen under it.
+Finder _inFlow(Finder finder) =>
+    find.descendant(of: find.byType(PairingFlow), matching: finder);
+
+Finder get _flowScrollable => _inFlow(find.byType(Scrollable)).first;
+
 /// A phone-sized screen, so the pages lay out as on a device.
 Future<TestApp> _create(
   WidgetTester tester, [
@@ -102,20 +108,28 @@ final class _TwoCamerasWithoutSerials implements BleTransport {
   }
 }
 
+/// The whole app with no camera paired yet, pairing opened from the
+/// Cameras screen's Add a camera.
 Future<TestApp> _start(
   WidgetTester tester, [
   FakeCameraConfig config = const FakeCameraConfig(),
 ]) async {
   final app = await _create(tester, config);
-  await app.pumpApp(tester);
+  await _open(tester, app);
   return app;
+}
+
+Future<void> _open(WidgetTester tester, TestApp app) async {
+  await app.pumpApp(tester);
+  await tapWhenReady(tester, find.byKey(const Key('cameras-add')));
+  await pumpUntilFound(tester, find.byKey(_find));
 }
 
 /// From the find page to the running pairing attempt.
 Future<void> _selectAndPair(WidgetTester tester, {Key add = _add}) async {
   await pumpUntilFound(tester, find.byKey(_find).hitTestable());
   // At large text the nearby list starts below the fold.
-  await tester.drag(find.byType(Scrollable).first, const Offset(0, -2000));
+  await tester.drag(_flowScrollable, const Offset(0, -2000));
   await tester.pump();
   await tapWhenReady(tester, find.byKey(add));
   expect(find.byKey(_instructions), findsOneWidget);
@@ -162,9 +176,9 @@ void main() {
     final app = await _start(tester);
 
     expect(find.byKey(_find), findsOneWidget);
-    expect(find.byKey(_close), findsNothing);
+    expect(find.byKey(_close), findsOneWidget);
     await pumpUntilFound(tester, find.byKey(_add));
-    expect(find.text('GR IV'), findsOneWidget);
+    expect(_inFlow(find.text('GR IV')), findsOneWidget);
     expect(find.textContaining('No. 1234567'), findsOneWidget);
 
     app.camera.openExecutePairing();
@@ -199,6 +213,20 @@ void main() {
     expect(find.byType(PairingFlow), findsNothing);
     expect(find.byType(LibraryScreen), findsOneWidget);
 
+    // The camera is still nearby, but the app connects by itself only
+    // when it opens: Disconnect stays on the Cameras screen.
+    final connects = app.ble.connects;
+    await tapWhenReady(tester, find.byKey(const Key('camera-pill')));
+    await tapWhenReady(
+      tester,
+      find.byKey(const Key('camera-sheet-disconnect')),
+    );
+    await pumpUntilFound(tester, find.byKey(const Key('cameras')));
+    await pumpRounds(tester, 50);
+    expect(app.models.connection.status, ConnectionStatus.offline);
+    expect(app.ble.connects, connects);
+    expect(find.byKey(const Key('cameras')), findsOneWidget);
+
     await app.dispose();
   });
 
@@ -224,7 +252,7 @@ void main() {
         await tester.scrollUntilVisible(
           find.text(text),
           200,
-          scrollable: find.byType(Scrollable).first,
+          scrollable: _flowScrollable,
         );
       }
       expect(app.ble.connects, 1);
@@ -242,7 +270,7 @@ void main() {
     });
   }
 
-  testWidgets('cancelling while confirming returns to the instructions', (
+  testWidgets('going back while confirming returns to the instructions', (
     tester,
   ) async {
     final app = await _start(
@@ -252,10 +280,10 @@ void main() {
 
     await _selectAndPair(tester);
     await _awaitCode(tester, app.camera);
-    await tapWhenReady(tester, find.byKey(const Key('pairing-cancel')));
+    await tapWhenReady(tester, find.byKey(const Key('pairing-back')));
     expect(find.byKey(_instructions), findsOneWidget);
 
-    // A late OK on the camera must not resurrect the cancelled attempt.
+    // A late OK on the camera must not resurrect the stopped attempt.
     app.camera.confirmPairing();
     await pumpRounds(tester, 50);
     expect(find.byKey(_instructions), findsOneWidget);
@@ -270,7 +298,7 @@ void main() {
   ) async {
     final app = await _create(tester);
     app.camera.adapterState = BleAdapterState.poweredOff;
-    await app.pumpApp(tester);
+    await _open(tester, app);
 
     await pumpUntilFound(
       tester,
@@ -290,7 +318,7 @@ void main() {
   testWidgets('denied Bluetooth permission is explained', (tester) async {
     final app = await _create(tester);
     app.bluetoothPermission = false;
-    await app.pumpApp(tester);
+    await _open(tester, app);
 
     await pumpUntilFound(
       tester,
@@ -405,7 +433,7 @@ void main() {
       ),
       (camera) => _TwoCamerasWithoutSerials(decoy.transport, camera, targetId),
     );
-    await app.pumpApp(tester);
+    await _open(tester, app);
 
     // Rows are keyed by device id; a scan matching any GR would find the
     // decoy first.

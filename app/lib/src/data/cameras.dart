@@ -34,6 +34,23 @@ final class SavedCamera {
 
   String get serial => paired.serialNumber;
 
+  /// Model without "RICOH", from [props] when connected.
+  String? model([GrProps? props]) =>
+      stripRicohPrefix(props?.model)?.nonEmpty ??
+      stripRicohPrefix(paired.modelName)?.nonEmpty;
+
+  /// `GR IV · No. 1234567 · fw 1.20`, leaving out the model when [name]
+  /// already says it and the firmware unless [firmware].
+  String identityLine({GrProps? props, bool firmware = true}) {
+    final model = this.model(props);
+    final version = props?.firmwareVersion ?? paired.firmwareRevision;
+    return [
+      if (model != null && model != name) model,
+      'No. $serial',
+      if (firmware && version != null) 'fw $version',
+    ].join(' · ');
+  }
+
   /// Default display name for a newly paired camera.
   static String defaultName(GrPairedCamera paired) =>
       stripRicohPrefix(paired.modelName)?.nonEmpty ?? 'GR camera';
@@ -57,7 +74,7 @@ extension on String {
   String? get nonEmpty => isEmpty ? null : this;
 }
 
-/// Paired cameras, most recently paired first, persisted as `cameras.json`.
+/// Paired cameras, the one used last first, persisted as `cameras.json`.
 /// The first one is the camera the app connects to.
 final class CameraStore extends ChangeNotifier {
   CameraStore._(this._file);
@@ -92,6 +109,14 @@ final class CameraStore extends ChangeNotifier {
     _cameras
       ..removeWhere((c) => c.serial == camera.serial)
       ..insert(0, camera);
+    return _save();
+  }
+
+  /// Makes [serial] the current camera by moving it to the front.
+  Future<void> select(String serial) {
+    final i = _cameras.indexWhere((c) => c.serial == serial);
+    if (i <= 0) return Future.value();
+    _cameras.insert(0, _cameras.removeAt(i));
     return _save();
   }
 

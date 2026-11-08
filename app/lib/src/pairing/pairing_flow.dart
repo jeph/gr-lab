@@ -22,8 +22,7 @@ enum _Bluetooth { checking, ready, off, denied, unsupported, error }
 /// nearby, have the user open Execute Pairing, pair, then hand over to
 /// [PairingDoneScreen].
 ///
-/// Used as the app's root while no camera is saved, and pushed as a route
-/// to pair another one; as a route it shows a close button and leaves
+/// Pushed over the Cameras screen; it shows a close button and leaves
 /// itself on success or cancel. Pairing never retries by itself: the
 /// camera's pairing mode is one-shot, so every attempt starts from the
 /// user reopening Execute Pairing.
@@ -76,8 +75,6 @@ class _PairingFlowState extends State<PairingFlow> {
     }
     super.dispose();
   }
-
-  bool get _isRoute => ModalRoute.of(context)?.isFirst == false;
 
   String get _cameraName => _selected?.model.shortName ?? 'The camera';
 
@@ -221,27 +218,20 @@ class _PairingFlowState extends State<PairingFlow> {
       pairedAt: DateTime.now(),
     );
     final navigator = Navigator.of(context);
-    final done = PairingDoneScreen.route(saved.serial);
-    // As the root, saving the camera swaps this flow for the Library, so
-    // the Done page goes on top of it; as a pushed route it replaces it.
-    if (_isRoute) {
-      unawaited(navigator.pushReplacement(done));
-    } else {
-      unawaited(navigator.push(done));
-    }
+    unawaited(navigator.pushReplacement(PairingDoneScreen.route(saved.serial)));
     await cameras.add(saved);
-    // Covers re-pairing the current camera, where the camera list keeps
-    // the same serial and nothing else starts a connection.
+    // Connects to the new camera, which saving made the current one; the
+    // Cameras screen shows the steps once Done is pressed.
     unawaited(_models.connection.connect());
   }
 
-  /// Stops the running attempt. As a pushed route the flow then closes;
-  /// as the root it returns to the instructions, since the next attempt
-  /// needs Execute Pairing reopened anyway.
+  /// Stops the running attempt. Leaving closes the flow; otherwise it
+  /// returns to the instructions, since the next attempt needs Execute
+  /// Pairing reopened anyway.
   Future<void> _cancelPairing({bool leave = false}) async {
     final run = _run;
     _run = null;
-    if (leave && _isRoute) {
+    if (leave) {
       Navigator.of(context).pop();
     } else {
       setState(() => _page = _Page.instructions);
@@ -259,7 +249,7 @@ class _PairingFlowState extends State<PairingFlow> {
   void _back() {
     switch (_page) {
       case _Page.find:
-        if (_isRoute) Navigator.of(context).pop();
+        Navigator.of(context).pop();
       case _Page.instructions || _Page.failed:
         unawaited(_startFinding());
       case _Page.pairing:
@@ -280,15 +270,12 @@ class _PairingFlowState extends State<PairingFlow> {
 
   @override
   Widget build(BuildContext context) {
-    final isRoute = _isRoute;
-    final close = isRoute
-        ? GrIconButton(
-            key: const Key('pairing-close'),
-            icon: Icons.close_rounded,
-            tooltip: 'Close',
-            onPressed: _close,
-          )
-        : null;
+    final close = GrIconButton(
+      key: const Key('pairing-close'),
+      icon: Icons.close_rounded,
+      tooltip: 'Close',
+      onPressed: _close,
+    );
     final back = GrIconButton(
       key: const Key('pairing-back'),
       icon: Icons.arrow_back_rounded,

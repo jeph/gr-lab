@@ -34,6 +34,10 @@ final class AppModels {
   final SettingsController settings;
   final CameraStore cameras;
   final ConnectionController connection;
+
+  /// Lets screens know when another route covers them (the Cameras screen
+  /// stops scanning then).
+  final routes = RouteObserver<ModalRoute<void>>();
 }
 
 class AppScope extends InheritedWidget {

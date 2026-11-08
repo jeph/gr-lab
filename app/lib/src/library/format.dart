@@ -48,6 +48,9 @@ String formatDay(DateTime day, DateTime now) {
   return d.year == now.year ? base : '$base ${d.year}';
 }
 
+/// `12 Oct 2026`.
+String formatDate(DateTime d) => '${d.day} ${_months[d.month - 1]} ${d.year}';
+
 /// `14:22`.
 String formatTime(DateTime t) =>
     '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';

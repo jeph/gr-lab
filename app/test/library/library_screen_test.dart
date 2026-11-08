@@ -47,7 +47,9 @@ void main() {
       ),
     ))!;
     await app.pumpApp(tester);
-    expect(find.byType(LibraryScreen), findsOneWidget);
+    // The Cameras screen connects to the nearby camera, then the Library
+    // replaces it.
+    await pumpUntilFound(tester, find.byType(LibraryScreen));
 
     await pumpUntilFound(tester, _thumbs);
     // The default card ends with a JPEG (R0000270), a DNG (R0000269) and a

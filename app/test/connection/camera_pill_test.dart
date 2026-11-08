@@ -6,7 +6,6 @@ import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 import 'package:grlab/src/connection/camera_pill.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/pairing/pairing_flow.dart';
 
 import '../support/test_app.dart';
 
@@ -102,25 +101,13 @@ void main() {
     await app.dispose();
   });
 
-  testWidgets('the sheet shows the steps, then the camera, then Connect', (
+  testWidgets('the connected sheet shows the camera; Disconnect ends it', (
     tester,
   ) async {
-    final app = await _start(
-      tester,
-      config: const FakeCameraConfig(bonded: true, poweredOn: false),
-    );
-    unawaited(app.models.connection.connect());
+    final app = await _start(tester);
+    await _connect(tester, app);
     await _openSheet(tester);
 
-    expect(find.byKey(const Key('camera-sheet-connecting')), findsOneWidget);
-    expect(find.text('Connecting to GR IV'), findsOneWidget);
-    await pumpUntilFound(tester, find.text('Waking the camera'));
-    expect(find.textContaining('The first link drops'), findsOneWidget);
-
-    await pumpUntilFound(
-      tester,
-      find.byKey(const Key('camera-sheet-connected')),
-    );
     expect(
       tester.widget<Text>(find.byKey(const Key('camera-sheet-battery'))).data,
       '82%',
@@ -135,14 +122,6 @@ void main() {
 
     await _tap(tester, const Key('camera-sheet-disconnect'));
     expect(app.models.connection.status, ConnectionStatus.offline);
-    expect(find.byKey(const Key('camera-sheet-offline')), findsOneWidget);
-
-    await _tap(tester, const Key('camera-sheet-connect'));
-    expect(app.models.connection.status, ConnectionStatus.connecting);
-    await pumpUntilFound(
-      tester,
-      find.byKey(const Key('camera-sheet-connected')),
-    );
 
     await app.dispose();
   });
@@ -170,28 +149,6 @@ void main() {
     await app.dispose();
   });
 
-  testWidgets('forgetting the camera disconnects and removes it', (
-    tester,
-  ) async {
-    final app = await _start(tester, brightness: Brightness.dark);
-    await _connect(tester, app);
-    await _openSheet(tester);
-
-    await _tap(tester, const Key('camera-sheet-forget'));
-    await pumpUntilFound(tester, find.text('Forget GR IV?'));
-    await _tap(tester, const Key('camera-forget-confirm'));
-    await pumpUntil(
-      tester,
-      () => app.models.cameras.current == null,
-      reason: 'camera removed',
-    );
-    expect(app.models.cameras.cameras, isEmpty);
-    expect(app.models.connection.status, ConnectionStatus.offline);
-    expect(find.byKey(_pill), findsNothing);
-
-    await app.dispose();
-  });
-
   testWidgets('renaming from the sheet updates the pill', (tester) async {
     final app = await _start(tester);
     await _openSheet(tester);
@@ -212,91 +169,4 @@ void main() {
 
     await app.dispose();
   });
-
-  testWidgets('a camera that dropped the pairing leads to Pair again', (
-    tester,
-  ) async {
-    final app = await _start(tester, config: const FakeCameraConfig());
-    unawaited(app.models.connection.connect());
-    await pumpUntil(
-      tester,
-      () => app.models.connection.status == ConnectionStatus.failed,
-      reason: 'failed',
-    );
-    expect(
-      app.models.connection.failure?.kind,
-      ConnectFailureKind.needsPairing,
-    );
-    expect(find.text('Not connected'), findsOneWidget);
-
-    await _openSheet(tester);
-    expect(
-      find.byKey(const Key('camera-sheet-failed-needsPairing')),
-      findsOneWidget,
-    );
-    expect(find.text('Pair GR IV again'), findsOneWidget);
-
-    await _tap(tester, const Key('camera-sheet-pair-again'));
-    await pumpUntilFound(tester, find.byKey(const Key('pairing-find')));
-    // The sheet closes before the flow opens; its exit animation ends.
-    await pumpUntil(
-      tester,
-      () => find.byKey(const Key('camera-sheet')).evaluate().isEmpty,
-      reason: 'sheet closed',
-    );
-    expect(find.byKey(const Key('pairing-close')), findsOneWidget);
-
-    await _tap(tester, const Key('pairing-close'));
-    await pumpUntil(tester, () => find.byType(PairingFlow).evaluate().isEmpty);
-    expect(find.byKey(_pill), findsOneWidget);
-
-    await app.dispose();
-  });
-
-  for (final scale in [1.0, 2.0]) {
-    testWidgets('an unreachable camera offers Try again (text ×$scale)', (
-      tester,
-    ) async {
-      // Layout overflows at large text fail the test.
-      tester.platformDispatcher.textScaleFactorTestValue = scale;
-      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-      final app = await _start(
-        tester,
-        config: const FakeCameraConfig(bonded: true, unreachable: true),
-        sessionOptions: const GrSessionOptions(
-          scanTimeout: Duration(seconds: 1),
-          bleConnectTimeout: Duration(seconds: 1),
-          bleConnectAttempts: 1,
-        ),
-      );
-      unawaited(app.models.connection.connect());
-      await pumpUntil(
-        tester,
-        () => app.models.connection.status == ConnectionStatus.failed,
-        reason: 'failed',
-      );
-      expect(
-        app.models.connection.failure?.kind,
-        ConnectFailureKind.unreachable,
-      );
-
-      await _openSheet(tester);
-      expect(
-        find.byKey(const Key('camera-sheet-failed-unreachable')),
-        findsOneWidget,
-      );
-      expect(find.text("Can't reach GR IV"), findsOneWidget);
-
-      await _tap(tester, const Key('camera-sheet-retry'));
-      expect(app.models.connection.status, ConnectionStatus.connecting);
-      expect(find.byKey(const Key('camera-sheet-connecting')), findsOneWidget);
-      await pumpUntil(
-        tester,
-        () => app.models.connection.status == ConnectionStatus.failed,
-        reason: 'failed again',
-      );
-
-      await app.dispose();
-    });
-  }
 }

@@ -5,10 +5,10 @@ import 'package:gr_protocol/gr_protocol.dart';
 
 import '../app_scope.dart';
 import '../data/cameras.dart';
-import '../pairing/pairing_flow.dart';
 import '../pairing/pairing_widgets.dart';
 import '../theme/tokens.dart';
 import '../widgets/group.dart';
+import 'connect_steps.dart';
 import 'connection_controller.dart';
 
 /// Opens the camera sheet over the current screen.
@@ -21,9 +21,9 @@ Future<void> showCameraSheet(BuildContext context) =>
     );
 
 /// Everything about the current camera, from the camera pill (subset of
-/// mock `b-camera`, with the `b-connect` / `b-connect-fail` states):
-/// connection progress or failure, battery and storage while connected,
-/// and renaming, pairing another camera or forgetting this one.
+/// mock `b-camera`): battery, storage and link while connected, the steps
+/// of a quiet reconnect, and the camera's name and power-on choice.
+/// Disconnecting returns to the Cameras screen.
 class CameraSheet extends StatelessWidget {
   const CameraSheet({super.key});
 
@@ -53,12 +53,14 @@ class CameraSheet extends StatelessWidget {
                   camera,
                   connection,
                 ),
-                ConnectionStatus.failed => _failed(context, camera, connection),
                 ConnectionStatus.connected => _connected(
                   context,
                   camera,
                   connection,
                 ),
+                // Only while the sheet closes: leaving the session returns
+                // to the Cameras screen.
+                ConnectionStatus.failed ||
                 ConnectionStatus.offline => _offline(context, camera),
               },
               const SectionLabel('Camera'),
@@ -77,26 +79,13 @@ class CameraSheet extends StatelessWidget {
     SavedCamera camera,
     ConnectionController connection,
   ) {
-    final visible = connection.visibleSteps;
-    // The wake happens before the link that stays up, as the user sees it.
-    final ordered = [
-      if (visible.contains(ConnectStep.waking)) ConnectStep.waking,
-      ...visible.where((s) => s != ConnectStep.waking),
-    ];
-    final current = connection.step;
-    final at = current == null ? -1 : ordered.indexOf(current);
-    GrStepState state(int i) => i < at
-        ? GrStepState.done
-        : i == at
-        ? GrStepState.now
-        : GrStepState.todo;
-    final waitingToRedial = connection.reconnecting && current == null;
+    final waitingToRedial = connection.reconnecting && connection.step == null;
     return [
       _Header(
         title: connection.reconnecting
             ? 'Reconnecting to ${camera.name}'
             : 'Connecting to ${camera.name}',
-        subtitle: _identityLine(camera, null),
+        subtitle: camera.identityLine(),
       ),
       Padding(
         key: const Key('camera-sheet-connecting'),
@@ -111,12 +100,7 @@ class CameraSheet extends StatelessWidget {
                   color: GrColors.of(context).t2,
                 ),
               )
-            : GrStepList(
-                steps: [
-                  for (var i = 0; i < ordered.length; i++)
-                    _step(ordered[i], state(i)),
-                ],
-              ),
+            : ConnectSteps(connection: connection),
       ),
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
@@ -124,213 +108,6 @@ class CameraSheet extends StatelessWidget {
           key: const Key('camera-sheet-cancel'),
           onPressed: () => unawaited(connection.disconnect()),
           child: const Text('Cancel'),
-        ),
-      ),
-    ];
-  }
-
-  static GrStep _step(ConnectStep step, GrStepState state) => switch (step) {
-    ConnectStep.bluetooth => GrStep(
-      state == GrStepState.done
-          ? 'Connected over Bluetooth'
-          : 'Connecting over Bluetooth',
-      state,
-    ),
-    ConnectStep.waking => GrStep(
-      'Waking the camera',
-      state,
-      detail: state == GrStepState.now
-          ? 'It was off. The first link drops while it starts up; the app '
-                'reconnects'
-          : null,
-    ),
-    ConnectStep.wifiOn => GrStep("Turning on the camera's Wi-Fi", state),
-    ConnectStep.joining => GrStep(
-      "Joining the camera's Wi-Fi",
-      state,
-      detail: state == GrStepState.now ? 'This can take a while' : null,
-    ),
-  };
-
-  // ---------------------------------------------------------------- failed
-
-  List<Widget> _failed(
-    BuildContext context,
-    SavedCamera camera,
-    ConnectionController connection,
-  ) {
-    final c = GrColors.of(context);
-    final failure = connection.failure;
-    final kind = failure?.kind ?? ConnectFailureKind.unreachable;
-    final name = camera.name;
-    final (title, body) = switch (kind) {
-      ConnectFailureKind.bluetoothOff => (
-        'Bluetooth is off',
-        'Turn on Bluetooth on this phone, then try again.',
-      ),
-      ConnectFailureKind.bluetoothDenied => (
-        "GR Lab can't use Bluetooth",
-        'Allow Bluetooth (on Android: Nearby devices) for GR Lab in the '
-            "phone's settings, then try again.",
-      ),
-      ConnectFailureKind.unreachable => (
-        "Can't reach $name",
-        "The camera didn't answer over Bluetooth.",
-      ),
-      ConnectFailureKind.needsPairing => (
-        'Pair $name again',
-        "The camera no longer accepts this phone's pairing, so trying again "
-            "won't help. To pair again:",
-      ),
-      ConnectFailureKind.wifi => (
-        "Couldn't join $name's Wi-Fi",
-        "Bluetooth works, but the phone couldn't join or keep the camera's "
-            'Wi-Fi.',
-      ),
-      ConnectFailureKind.wifiDeclined => (
-        "Not on $name's Wi-Fi",
-        "Photos come over the camera's own Wi-Fi. Join it to browse and "
-            'download them.',
-      ),
-    };
-    final retryLabel = Text(
-      kind == ConnectFailureKind.wifiDeclined ? 'Join Wi-Fi' : 'Try again',
-    );
-    final tryAgain = kind == ConnectFailureKind.needsPairing
-        ? OutlinedButton(
-            key: const Key('camera-sheet-retry'),
-            onPressed: () => unawaited(connection.connect()),
-            child: retryLabel,
-          )
-        : FilledButton(
-            key: const Key('camera-sheet-retry'),
-            onPressed: () => unawaited(connection.connect()),
-            child: retryLabel,
-          );
-    return [
-      Padding(
-        key: Key('camera-sheet-failed-${kind.name}'),
-        padding: const EdgeInsets.fromLTRB(22, 16, 22, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -.2,
-                color: c.t1,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              body,
-              style: TextStyle(fontSize: 14, height: 1.45, color: c.t2),
-            ),
-          ],
-        ),
-      ),
-      ...switch (kind) {
-        ConnectFailureKind.unreachable => [
-          const SectionLabel('Check'),
-          const GroupBox(
-            children: [
-              GroupRow(
-                icon: Icons.battery_std_rounded,
-                title: "The camera is close and its battery isn't empty",
-              ),
-              GroupRow(
-                icon: Icons.bluetooth_rounded,
-                title: 'Action Mode is On',
-                subtitle:
-                    'MENU → E6 Wireless Connection → Wireless Communication',
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          GroupBox(
-            children: [
-              GroupRow(
-                icon: Icons.info_outline_rounded,
-                title: 'Camera forgot this phone?',
-                subtitle:
-                    "If its Paired Devices list doesn't show this phone, "
-                    'pair again',
-                trailing: TrailingFit(
-                  child: TextButton(
-                    key: const Key('camera-sheet-pair-again'),
-                    onPressed: () => _pairAnother(context),
-                    child: const Text('Pair again'),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-        ConnectFailureKind.needsPairing => [
-          const SizedBox(height: 18),
-          const GroupBox(
-            children: [
-              GroupRow(
-                leading: NumberTile(1),
-                title: "Delete this phone from the camera's Paired Devices",
-              ),
-              GroupRow(
-                leading: NumberTile(2),
-                title: "Delete the camera from this phone's Bluetooth settings",
-              ),
-              GroupRow(
-                leading: NumberTile(3),
-                title: 'Open Execute Pairing on the camera and pair',
-              ),
-            ],
-          ),
-        ],
-        ConnectFailureKind.wifi => [
-          const SectionLabel('Check'),
-          const GroupBox(
-            children: [
-              GroupRow(
-                icon: Icons.wifi_rounded,
-                title: 'The phone stays close to the camera',
-              ),
-              GroupRow(
-                icon: Icons.check_circle_outline_rounded,
-                title:
-                    "If the phone asks to join the camera's network, "
-                    'allow it',
-              ),
-            ],
-          ),
-        ],
-        ConnectFailureKind.bluetoothOff ||
-        ConnectFailureKind.bluetoothDenied ||
-        ConnectFailureKind.wifiDeclined => const <Widget>[],
-      },
-      if (failure != null && kind != ConnectFailureKind.wifiDeclined)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
-          child: Text(
-            failure.message,
-            style: GrFonts.monoStyle(context, size: 11, color: c.t3),
-          ),
-        ),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (kind == ConnectFailureKind.needsPairing) ...[
-              FilledButton(
-                key: const Key('camera-sheet-pair-again'),
-                onPressed: () => _pairAnother(context),
-                child: const Text('Pair again'),
-              ),
-              const SizedBox(height: 10),
-            ],
-            tryAgain,
-          ],
         ),
       ),
     ];
@@ -350,7 +127,7 @@ class CameraSheet extends StatelessWidget {
     return [
       _Header(
         title: camera.name,
-        subtitle: _identityLine(camera, props),
+        subtitle: camera.identityLine(props: props),
         large: true,
       ),
       Padding(
@@ -482,57 +259,17 @@ class CameraSheet extends StatelessWidget {
 
   // --------------------------------------------------------------- offline
 
-  List<Widget> _offline(BuildContext context, SavedCamera camera) {
-    final connection = AppScope.of(context).connection;
-    return [
-      _Header(
-        title: camera.name,
-        subtitle: _identityLine(camera, null),
-        large: true,
+  List<Widget> _offline(BuildContext context, SavedCamera camera) => [
+    _Header(title: camera.name, subtitle: camera.identityLine(), large: true),
+    Padding(
+      key: const Key('camera-sheet-offline'),
+      padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
+      child: Text(
+        'Not connected.',
+        style: TextStyle(fontSize: 14, color: GrColors.of(context).t2),
       ),
-      Padding(
-        key: const Key('camera-sheet-offline'),
-        padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
-        child: Text(
-          'Not connected.',
-          style: TextStyle(fontSize: 14, color: GrColors.of(context).t2),
-        ),
-      ),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-        child: FilledButton(
-          key: const Key('camera-sheet-connect'),
-          onPressed: () => unawaited(connection.connect()),
-          child: const Text('Connect'),
-        ),
-      ),
-    ];
-  }
-
-  /// `GR IV · No. 1234567 · fw 1.20`, leaving out the model when the name
-  /// already says it.
-  static String _identityLine(SavedCamera camera, GrProps? props) {
-    final model =
-        stripRicohPrefix(props?.model) ??
-        stripRicohPrefix(camera.paired.modelName);
-    final firmware = props?.firmwareVersion ?? camera.paired.firmwareRevision;
-    return [
-      if (model != null && model.isNotEmpty && model != camera.name) model,
-      'No. ${camera.serial}',
-      if (firmware != null) 'fw $firmware',
-    ].join(' · ');
-  }
-}
-
-/// Closes the sheet and starts pairing over the Library.
-void _pairAnother(BuildContext context) {
-  final navigator = Navigator.of(context);
-  navigator.pop();
-  unawaited(
-    navigator.push(
-      MaterialPageRoute<void>(builder: (_) => const PairingFlow()),
     ),
-  );
+  ];
 }
 
 class _Header extends StatelessWidget {
@@ -645,7 +382,7 @@ class _Fit extends StatelessWidget {
   );
 }
 
-/// Name, power-on choice, pairing another camera and forgetting this one.
+/// Name and power-on choice.
 class _CameraRows extends StatelessWidget {
   const _CameraRows({required this.camera});
 
@@ -653,7 +390,6 @@ class _CameraRows extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = GrColors.of(context);
     final models = AppScope.of(context);
     return GroupBox(
       children: [
@@ -674,81 +410,8 @@ class _CameraRows extends StatelessWidget {
             onChanged: (v) => models.settings.powerOnWhenConnecting = v,
           ),
         ),
-        GroupRow(
-          key: const Key('camera-sheet-pair-another'),
-          icon: Icons.add_rounded,
-          title: 'Pair another camera',
-          chevron: true,
-          onTap: () => _pairAnother(context),
-        ),
-        InkWell(
-          key: const Key('camera-sheet-forget'),
-          onTap: () => _forget(context),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 56),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Row(
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: c.danger.withValues(alpha: .14),
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                    child: Icon(
-                      Icons.delete_outline_rounded,
-                      size: 18,
-                      color: c.danger,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      'Forget camera',
-                      style: TextStyle(fontSize: 15, color: c.danger),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ],
     );
-  }
-
-  Future<void> _forget(BuildContext context) async {
-    final models = AppScope.of(context);
-    final navigator = Navigator.of(context);
-    final c = GrColors.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Forget ${camera.name}?'),
-        content: const Text(
-          'GR Lab stops connecting to this camera. To use it again, delete '
-          "this phone from the camera's Paired Devices and pair again.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            key: const Key('camera-forget-confirm'),
-            style: TextButton.styleFrom(foregroundColor: c.danger),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Forget'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    navigator.pop();
-    await models.connection.disconnect();
-    await models.cameras.remove(camera.serial);
   }
 }
 

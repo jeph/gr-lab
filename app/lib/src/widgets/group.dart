@@ -25,10 +25,13 @@ class SectionLabel extends StatelessWidget {
 
 /// Rounded card of rows separated by hairlines (mock `.group`).
 class GroupBox extends StatelessWidget {
-  const GroupBox({super.key, required this.children, this.margin});
+  const GroupBox({super.key, required this.children, this.margin, this.color});
 
   final List<Widget> children;
   final EdgeInsetsGeometry? margin;
+
+  /// Background; defaults to the raised surface (`s1`).
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +39,7 @@ class GroupBox extends StatelessWidget {
     return Container(
       margin: margin ?? const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: c.s1,
+        color: color ?? c.s1,
         borderRadius: BorderRadius.circular(GrRadii.lg),
         border: Border.all(color: c.line),
       ),

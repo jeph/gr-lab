@@ -131,7 +131,9 @@ final class PillLinkState {
             ConnectStep.waking => 'Waking…',
             ConnectStep.wifiOn => 'Wi-Fi on…',
             ConnectStep.joining => 'Joining Wi-Fi…',
-            ConnectStep.bluetooth || null => 'Connecting…',
+            ConnectStep.finding ||
+            ConnectStep.bluetooth ||
+            null => 'Connecting…',
           },
         ),
         ConnectionStatus.connected when connection.reconnecting =>

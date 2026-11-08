@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/library/library_screen.dart';
 
 import '../support/test_app.dart';
 
-const _sheet = Key('camera-sheet');
+const _cameras = Key('cameras');
 const _dialog = Key('wifi-consent');
 
-/// The whole app with a paired camera, the camera sheet open and the
-/// question about the camera's Wi-Fi on top of it.
+/// The whole app with a paired camera nearby: the Cameras screen connects
+/// to it and asks before the first join of its Wi-Fi.
 Future<TestApp> _asked(WidgetTester tester) async {
   tester.view
     ..physicalSize = const Size(1170, 2532)
@@ -23,8 +24,6 @@ Future<TestApp> _asked(WidgetTester tester) async {
     ),
   ))!;
   await app.pumpApp(tester);
-  await tapWhenReady(tester, find.byKey(const Key('camera-pill')));
-  await pumpUntilFound(tester, find.byKey(_sheet));
   await pumpUntilFound(tester, find.byKey(_dialog));
   return app;
 }
@@ -52,54 +51,49 @@ Future<void> _pastAnimations(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('Continue closes only the question', (tester) async {
+  testWidgets('Continue joins and hands over to the Library', (tester) async {
     final app = await _asked(tester);
     await _answer(tester, const Key('wifi-consent-join'));
 
-    expect(find.byKey(_sheet), findsOneWidget);
-    await pumpUntil(
-      tester,
-      () => app.models.connection.status == ConnectionStatus.connected,
-      reason: 'connected',
-    );
-    expect(find.byKey(_sheet), findsOneWidget);
+    expect(find.byKey(_cameras), findsOneWidget);
+    await pumpUntilFound(tester, find.byType(LibraryScreen));
+    expect(app.models.connection.status, ConnectionStatus.connected);
+    expect(app.models.cameras.current?.wifiApproved, isTrue);
     await app.dispose();
   });
 
-  testWidgets('Not now closes only the question', (tester) async {
+  testWidgets('Not now leaves the camera card showing the decline', (
+    tester,
+  ) async {
     final app = await _asked(tester);
     await _answer(tester, const Key('wifi-consent-later'));
 
-    expect(find.byKey(_sheet), findsOneWidget);
     await pumpUntil(
       tester,
       () => app.models.connection.status == ConnectionStatus.failed,
       reason: 'failed',
     );
-    expect(find.byKey(_sheet), findsOneWidget);
     expect(
       app.models.connection.failure?.kind,
       ConnectFailureKind.wifiDeclined,
     );
+    await pumpUntilFound(
+      tester,
+      find.byKey(const Key('camera-card-failed-wifiDeclined')),
+    );
+    expect(find.byKey(_cameras), findsOneWidget);
     await app.dispose();
   });
 
-  testWidgets('Join Wi-Fi after Not now asks again over the sheet', (
-    tester,
-  ) async {
+  testWidgets('Join Wi-Fi after Not now asks again', (tester) async {
     final app = await _asked(tester);
     await _answer(tester, const Key('wifi-consent-later'));
-    await tapWhenReady(tester, find.byKey(const Key('camera-sheet-retry')));
+    await tapWhenReady(tester, find.byKey(const Key('camera-card-retry')));
     await pumpUntilFound(tester, find.byKey(_dialog));
     await _answer(tester, const Key('wifi-consent-join'));
 
-    expect(find.byKey(_sheet), findsOneWidget);
-    await pumpUntil(
-      tester,
-      () => app.models.connection.status == ConnectionStatus.connected,
-      reason: 'connected',
-    );
-    expect(find.byKey(_sheet), findsOneWidget);
+    await pumpUntilFound(tester, find.byType(LibraryScreen));
+    expect(app.models.connection.status, ConnectionStatus.connected);
     await app.dispose();
   });
 
@@ -113,7 +107,8 @@ void main() {
     );
     await _pastAnimations(tester);
 
-    expect(find.byKey(_sheet), findsOneWidget);
+    expect(find.byKey(_cameras), findsOneWidget);
+    expect(app.models.connection.status, ConnectionStatus.offline);
     await app.dispose();
   });
 }

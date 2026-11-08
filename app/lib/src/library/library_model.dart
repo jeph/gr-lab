@@ -77,6 +77,52 @@ enum LibraryFilter { all, jpeg, raw, video, notDownloaded }
 /// `library.json` format; info cached under another version is dropped.
 const _cacheVersion = 2;
 
+File _cacheFile(Directory cacheDir, String serial) =>
+    File('${cacheDir.path}/$serial/library.json');
+
+/// What `library.json` kept for one camera.
+typedef CachedListing = ({
+  List<CameraFile> files,
+  Map<String, FileInfo> info,
+  DateTime? listedAt,
+});
+
+/// Reads [serial]'s `library.json`; null when there is none.
+Future<CachedListing?> readCachedListing(
+  Directory cacheDir,
+  String serial,
+) async {
+  final json = await JsonFile(_cacheFile(cacheDir, serial)).read();
+  if (json == null) return null;
+  final files = <CameraFile>[];
+  for (final e in json['files'] as List<Object?>? ?? const []) {
+    if (e is! Map<String, Object?>) continue;
+    final dir = e['d'], file = e['f'], storage = e['s'];
+    if (dir is! String || file is! String) continue;
+    try {
+      files.add(CameraFile(storage as String?, GrPhotoPath(dir, file)));
+    } on Object {
+      continue;
+    }
+  }
+  final info = <String, FileInfo>{};
+  // Version 1 info lacks the orientation; it is fetched again.
+  final cachedInfo = json['version'] == _cacheVersion ? json['info'] : null;
+  if (cachedInfo is Map<String, Object?>) {
+    for (final MapEntry(:key, :value) in cachedInfo.entries) {
+      if (value is Map<String, Object?>) info[key] = FileInfo.fromJson(value);
+    }
+  }
+  return (
+    files: files,
+    info: info,
+    listedAt: switch (json['listedAt']) {
+      final String t => DateTime.tryParse(t),
+      _ => null,
+    },
+  );
+}
+
 /// The camera's photos as shots, kept per camera serial in
 /// `<cacheDir>/<serial>/library.json` so the grid appears at once and
 /// offline. Refreshes whenever the camera connects and when its
@@ -289,38 +335,13 @@ final class LibraryModel extends ChangeNotifier {
     });
   }
 
-  File _cacheFile(String serial) =>
-      File('${cacheDir.path}/$serial/library.json');
-
   Future<void> _readCache(String serial, int generation) async {
-    final json = await JsonFile(_cacheFile(serial)).read();
-    if (json == null || generation != _generation) return;
-    final files = <CameraFile>[];
-    for (final e in json['files'] as List<Object?>? ?? const []) {
-      if (e is! Map<String, Object?>) continue;
-      final dir = e['d'], file = e['f'], storage = e['s'];
-      if (dir is! String || file is! String) continue;
-      try {
-        files.add(CameraFile(storage as String?, GrPhotoPath(dir, file)));
-      } on Object {
-        continue;
-      }
-    }
-    // Version 1 info lacks the orientation; it is fetched again.
-    final info = json['version'] == _cacheVersion ? json['info'] : null;
-    if (info is Map<String, Object?>) {
-      for (final MapEntry(:key, :value) in info.entries) {
-        if (value is Map<String, Object?>) {
-          _info[key] = FileInfo.fromJson(value);
-        }
-      }
-    }
-    _files = files;
-    _shots = groupShots(files);
-    _listedAt = switch (json['listedAt']) {
-      final String t => DateTime.tryParse(t),
-      _ => null,
-    };
+    final cached = await readCachedListing(cacheDir, serial);
+    if (cached == null || generation != _generation) return;
+    _info.addAll(cached.info);
+    _files = cached.files;
+    _shots = groupShots(cached.files);
+    _listedAt = cached.listedAt;
   }
 
   void _scheduleSave({bool immediately = false}) {
@@ -347,7 +368,7 @@ final class LibraryModel extends ChangeNotifier {
         for (final MapEntry(:key, :value) in _info.entries) key: value.toJson(),
       },
     };
-    final file = JsonFile(_cacheFile(serial));
+    final file = JsonFile(_cacheFile(cacheDir, serial));
     _saving = _saving.then((_) => file.write(snapshot)).catchError((_) {});
   }
 
@@ -369,6 +390,8 @@ final class LibraryModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    // A refresh or info request still in flight must not write afterwards.
+    _generation++;
     link.removeListener(_onLink);
     _changeTimer?.cancel();
     unawaited(_changes?.cancel());

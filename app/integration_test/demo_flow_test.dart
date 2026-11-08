@@ -31,10 +31,12 @@ void main() {
     }
 
     await app.main();
-    await _pumpUntilFound(tester, find.byKey(const Key('pair-add-1234567')));
-    await tester.tap(find.byKey(const Key('pair-add-1234567')));
-    await _pumpUntilFound(tester, find.byKey(const Key('pair-start')));
-    await tester.tap(find.byKey(const Key('pair-start')));
+    // Each page slides in over the last; tap once a button can take it.
+    for (final key in ['cameras-add', 'pair-add-1234567', 'pair-start']) {
+      final button = find.byKey(Key(key)).hitTestable();
+      await _pumpUntilFound(tester, button);
+      await tester.tap(button);
+    }
 
     await _pumpUntilFound(
       tester,

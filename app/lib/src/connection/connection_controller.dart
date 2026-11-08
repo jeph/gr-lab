@@ -17,9 +17,10 @@ enum ConnectionStatus {
   failed,
 }
 
-/// Steps of the connecting sheet (mock `b-connect`), in order. [waking]
-/// only appears when the camera was off.
-enum ConnectStep { bluetooth, waking, wifiOn, joining }
+/// Steps of a connection attempt, in the order the Cameras card lists them
+/// (mock `b-home-connecting`). [waking] only appears when the camera was
+/// off; the wake happens before the link that stays up.
+enum ConnectStep { finding, waking, bluetooth, wifiOn, joining }
 
 enum ConnectFailureKind {
   bluetoothOff,
@@ -43,7 +44,13 @@ enum ConnectFailureKind {
 
 @immutable
 final class ConnectFailure {
-  const ConnectFailure(this.kind, this.message, {this.step, this.cause});
+  const ConnectFailure(
+    this.kind,
+    this.message, {
+    this.step,
+    this.cause,
+    this.lost = false,
+  });
 
   final ConnectFailureKind kind;
   final String message;
@@ -51,6 +58,11 @@ final class ConnectFailure {
   /// The step that failed, when the session got that far.
   final ConnectStep? step;
   final Object? cause;
+
+  /// The camera had been connected: the connection was lost and every
+  /// quiet reconnect failed (mock `b-home-lost`), rather than an attempt
+  /// that never got through.
+  final bool lost;
 
   @override
   String toString() => 'ConnectFailure(${kind.name}): $message';
@@ -95,6 +107,10 @@ final class ConnectionController extends ChangeNotifier {
   GrSession? _session;
   StreamSubscription<GrSessionEvent>? _events;
   String? _cameraSerial;
+
+  /// Set once the current chain of attempts has connected; quiet
+  /// reconnects after a loss keep it, a disconnect or failure clears it.
+  bool _hadConnection = false;
   int _generation = 0;
   final _connected = StreamController<GrHttpClient>.broadcast();
   Future<void> _closing = Future.value();
@@ -120,6 +136,12 @@ final class ConnectionController extends ChangeNotifier {
   bool get reconnecting => _reconnecting;
   ConnectFailure? get failure => _failure;
 
+  /// Connected, or quietly getting a lost connection back: the app shows
+  /// the camera's Library rather than the Cameras screen.
+  bool get inSession =>
+      _status == ConnectionStatus.connected ||
+      (_status == ConnectionStatus.connecting && _hadConnection);
+
   /// Non-null while a join waits for the user to agree to the camera
   /// network (see [AppServices.askBeforeWifiJoin]).
   WifiConsentRequest? get wifiConsent => _consent;
@@ -136,10 +158,13 @@ final class ConnectionController extends ChangeNotifier {
   /// `/v1/props` from the identity check.
   GrProps? get props => _session?.props;
 
+  /// The camera network's name, once the session has read it.
+  String? get ssid => _session?.credentials?.ssid;
+
   /// Emits the HTTP client every time a connection completes.
   Stream<GrHttpClient> get onConnected => _connected.stream;
 
-  /// The steps the sheet lists for the current attempt.
+  /// The steps listed for the current attempt, in order.
   List<ConnectStep> get visibleSteps => [
     for (final s in ConnectStep.values)
       if (s != ConnectStep.waking || _waking) s,
@@ -172,6 +197,14 @@ final class ConnectionController extends ChangeNotifier {
     return _connect(quiet: false);
   }
 
+  /// Makes the paired camera [serial] the current one and connects to it;
+  /// changing the current camera ends any attempt or session with the
+  /// previous one.
+  Future<void> connectTo(String serial) async {
+    if (cameras.current?.serial != serial) await cameras.select(serial);
+    return connect();
+  }
+
   /// Answers [wifiConsent]: join the camera network, or not now.
   void answerWifiConsent(bool join) {
     final answer = _consentAnswer;
@@ -189,7 +222,7 @@ final class ConnectionController extends ChangeNotifier {
     _waking = false;
     _reconnecting = quiet;
     _status = ConnectionStatus.connecting;
-    _step = ConnectStep.bluetooth;
+    _step = ConnectStep.finding;
     notifyListeners();
 
     // A disconnect may still be releasing the previous BLE link.
@@ -264,6 +297,7 @@ final class ConnectionController extends ChangeNotifier {
     }
     if (generation != _generation) return;
     _status = ConnectionStatus.connected;
+    _hadConnection = true;
     _step = null;
     _reconnecting = false;
     _redials = 0;
@@ -277,6 +311,7 @@ final class ConnectionController extends ChangeNotifier {
   /// (switching cameras) starts a new attempt instead of seeing the old one.
   Future<void> disconnect() {
     _generation++;
+    _hadConnection = false;
     _cancelRedial();
     _status = ConnectionStatus.offline;
     _step = null;
@@ -319,9 +354,14 @@ final class ConnectionController extends ChangeNotifier {
   void _onEvent(int generation, GrSessionEvent e) {
     if (generation != _generation) return;
     switch (e.phase) {
-      case GrSessionPhase.idle ||
-          GrSessionPhase.scanning ||
-          GrSessionPhase.bleConnecting:
+      case GrSessionPhase.idle || GrSessionPhase.scanning:
+        // A camera that was woken is looked for again; it was found already.
+        if (_status == ConnectionStatus.connecting) {
+          _step = _step == null || _step == ConnectStep.finding
+              ? ConnectStep.finding
+              : ConnectStep.bluetooth;
+        }
+      case GrSessionPhase.bleConnecting:
         if (_status == ConnectionStatus.connecting) {
           _step = ConnectStep.bluetooth;
         }
@@ -371,6 +411,7 @@ final class ConnectionController extends ChangeNotifier {
       GrSessionPhase.connected ||
       GrSessionPhase.recovering ||
       GrSessionPhase.lost => ConnectStep.joining,
+      GrSessionPhase.idle || GrSessionPhase.scanning => ConnectStep.finding,
       _ => ConnectStep.bluetooth,
     };
     final kind = e.needsPairing
@@ -378,6 +419,7 @@ final class ConnectionController extends ChangeNotifier {
         : e.wifiDeclined
         ? ConnectFailureKind.wifiDeclined
         : switch (step) {
+            ConnectStep.finding ||
             ConnectStep.bluetooth ||
             ConnectStep.waking => ConnectFailureKind.unreachable,
             ConnectStep.wifiOn ||
@@ -442,7 +484,16 @@ final class ConnectionController extends ChangeNotifier {
   void _fail(int generation, ConnectFailure failure) {
     if (generation != _generation) return;
     _status = ConnectionStatus.failed;
-    _failure = failure;
+    _failure = _hadConnection
+        ? ConnectFailure(
+            failure.kind,
+            failure.message,
+            step: failure.step,
+            cause: failure.cause,
+            lost: true,
+          )
+        : failure;
+    _hadConnection = false;
     _step = null;
     _reconnecting = false;
     notifyListeners();

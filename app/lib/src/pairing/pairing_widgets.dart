@@ -2,18 +2,21 @@ import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
 
-/// Round 36 px button of the mock top bars (`.iconbtn`).
+/// Round button of the mock top bars (`.iconbtn`), 36 px unless [size]
+/// says otherwise.
 class GrIconButton extends StatelessWidget {
   const GrIconButton({
     super.key,
     required this.icon,
     required this.tooltip,
     required this.onPressed,
+    this.size = 36,
   });
 
   final IconData icon;
   final String tooltip;
   final VoidCallback? onPressed;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -27,8 +30,8 @@ class GrIconButton extends StatelessWidget {
           customBorder: const CircleBorder(),
           onTap: onPressed,
           child: SizedBox(
-            width: 36,
-            height: 36,
+            width: size,
+            height: size,
             child: Icon(icon, size: 18, color: c.t1),
           ),
         ),

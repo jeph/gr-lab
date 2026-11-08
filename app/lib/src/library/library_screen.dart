@@ -192,13 +192,7 @@ class _LibraryViewState extends State<_LibraryView> {
                       ),
                     ),
                   ),
-                  SliverToBoxAdapter(
-                    child: _StatusLine(
-                      model: model,
-                      connecting:
-                          _app.connection.status == ConnectionStatus.connecting,
-                    ),
-                  ),
+                  SliverToBoxAdapter(child: _StatusLine(model: model)),
                   if (filtered != null && all!.isNotEmpty)
                     SliverToBoxAdapter(
                       child: _Chips(
@@ -405,12 +399,12 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// Offline, updating or failed-update note under the title.
+/// Connecting, updating or failed-update note under the title. The
+/// Library only shows while a camera is connected or reconnecting.
 class _StatusLine extends StatelessWidget {
-  const _StatusLine({required this.model, required this.connecting});
+  const _StatusLine({required this.model});
 
   final LibraryModel model;
-  final bool connecting;
 
   @override
   Widget build(BuildContext context) {
@@ -418,7 +412,7 @@ class _StatusLine extends StatelessWidget {
     if (model.shots == null) return const SizedBox.shrink();
     final style = TextStyle(fontSize: 13, color: c.t2);
     final Widget content;
-    if (model.refreshing || (connecting && !model.connected)) {
+    if (model.refreshing || !model.connected) {
       content = Row(
         children: [
           SizedBox(
@@ -428,22 +422,6 @@ class _StatusLine extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(model.refreshing ? 'Updating…' : 'Connecting…', style: style),
-        ],
-      );
-    } else if (!model.connected) {
-      final at = model.listedAt;
-      content = Row(
-        children: [
-          Icon(Icons.cloud_off_rounded, size: 15, color: c.t2),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              at == null
-                  ? 'Offline'
-                  : 'Offline · as of ${formatDayTime(at, DateTime.now())}',
-              style: style,
-            ),
-          ),
         ],
       );
     } else if (model.error != null) {
@@ -576,18 +554,22 @@ class _EmptyState extends StatelessWidget {
       icon = Icons.photo_library_outlined;
       if (filter == LibraryFilter.all) {
         title = 'No photos';
-        body = model.connected
-            ? 'The camera has no photos or videos.'
-            : 'There were no photos on $name when it was last connected.';
+        body = 'The camera has no photos or videos.';
       } else {
         title = 'Nothing here';
         body = filter == LibraryFilter.notDownloaded
             ? 'Every photo is on your phone.'
             : 'No photos match this filter.';
       }
-    } else if (model.loadingCache ||
-        model.refreshing ||
-        connection.status == ConnectionStatus.connecting) {
+    } else if (model.connected && model.error != null) {
+      icon = Icons.error_outline_rounded;
+      title = "Couldn't read the photos";
+      body = 'The camera did not send its photo list.';
+      action = FilledButton(
+        onPressed: () => unawaited(model.refresh()),
+        child: const Text('Try again'),
+      );
+    } else {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -602,22 +584,6 @@ class _EmptyState extends StatelessWidget {
             ),
           ],
         ),
-      );
-    } else if (model.connected && model.error != null) {
-      icon = Icons.error_outline_rounded;
-      title = "Couldn't read the photos";
-      body = 'The camera did not send its photo list.';
-      action = FilledButton(
-        onPressed: () => unawaited(model.refresh()),
-        child: const Text('Try again'),
-      );
-    } else {
-      icon = Icons.cloud_off_rounded;
-      title = 'Not connected';
-      body = 'Connect to $name to see its photos.';
-      action = FilledButton(
-        onPressed: () => unawaited(connection.connect()),
-        child: const Text('Connect'),
       );
     }
     return Padding(

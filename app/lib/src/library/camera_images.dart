@@ -59,8 +59,16 @@ final class CameraImages {
     GrImageSize.xs => 'xs',
   };
 
+  /// Where [serial]'s [size] image of [f] is kept on disk.
+  static File diskFile(
+    Directory cacheDir,
+    String serial,
+    CameraFile f,
+    GrImageSize size,
+  ) => File('${cacheDir.path}/$serial/${_dirName(size)}/${f.fileStem}.jpg');
+
   File _file(String serial, CameraFile f, GrImageSize size) =>
-      File('${cacheDir.path}/$serial/${_dirName(size)}/${f.fileStem}.jpg');
+      diskFile(cacheDir, serial, f, size);
 
   String _key(String serial, CameraFile f, GrImageSize size) =>
       '$serial|${size.name}|${f.key}';
