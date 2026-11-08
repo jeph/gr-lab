@@ -45,4 +45,4 @@ flutter test integration_test --dart-define=GR_DEMO=true -d <simulator>
 
 ## Not verified on hardware yet
 
-Everything above runs against the simulated camera. On a real GR and phone the following are untested: Android's Wi-Fi join dialog and network binding, iOS hotspot joining, saving RAW+JPEG pairs to Photos, and movie playback from a downloaded file. iOS device builds need the Hotspot Configuration and Access Wi-Fi Information capabilities on the signing team.
+Everything above runs against the simulated camera. On a GR IV HDF with an Android phone, pairing, connecting, browsing and downloading worked. Still untested on hardware: the explanation before Android's Wi-Fi approval and whether the approval is then remembered, rejoining quietly after the phone leaves the camera's Wi-Fi, portrait orientation of the camera's thumbnails (based on its per-photo info), iOS hotspot joining, saving RAW+JPEG pairs to Photos, and movie playback from a downloaded file. iOS device builds need the Hotspot Configuration and Access Wi-Fi Information capabilities on the signing team.

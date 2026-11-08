@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:gr_protocol/gr_protocol.dart';
 import '../theme/tokens.dart';
 import 'camera_images.dart';
 import 'format.dart';
+import 'image_orientation.dart';
 import 'library_scope.dart';
 import 'shot.dart';
 
@@ -13,7 +15,9 @@ import 'shot.dart';
 enum CellMark { none, downloaded, queued, selected, unselected }
 
 /// A camera image that loads through [CameraImages] while it is on screen
-/// and drops its pending request when it scrolls away.
+/// and drops its pending request when it scrolls away. It shows the image
+/// upright using the shot's `/info` orientation, which it fetches when the
+/// image does not carry its own (see [orientationToApply]).
 class CameraImage extends StatefulWidget {
   const CameraImage({
     super.key,
@@ -31,8 +35,8 @@ class CameraImage extends StatefulWidget {
   final GrImageSize size;
   final BoxFit fit;
 
-  /// Decode width in physical pixels; thumbnails need far less than the
-  /// file holds.
+  /// Decode width in physical pixels of the shown (upright) image;
+  /// thumbnails need far less than the file holds.
   final int? cacheWidth;
   final Widget? placeholder;
   final VoidCallback? onLoaded;
@@ -44,6 +48,10 @@ class CameraImage extends StatefulWidget {
 class _CameraImageState extends State<CameraImage> {
   late final LibraryContext _library = LibraryScope.of(context);
   Uint8List? _bytes;
+  JpegLayout? _layout;
+
+  /// The file's `/info` orientation as last built.
+  int? _orientation;
   ImageRequest? _request;
   bool _listening = false;
 
@@ -53,6 +61,8 @@ class _CameraImageState extends State<CameraImage> {
     if (!_listening) {
       _listening = true;
       _library.link.addListener(_onLink);
+      _library.model.addListener(_onModel);
+      _orientation = _infoOrientation();
       _load();
     }
   }
@@ -65,6 +75,8 @@ class _CameraImageState extends State<CameraImage> {
         old.size != widget.size) {
       _request?.cancel();
       _bytes = null;
+      _layout = null;
+      _orientation = _infoOrientation();
       _load();
     }
   }
@@ -72,6 +84,7 @@ class _CameraImageState extends State<CameraImage> {
   @override
   void dispose() {
     _library.link.removeListener(_onLink);
+    _library.model.removeListener(_onModel);
     _request?.cancel();
     super.dispose();
   }
@@ -85,11 +98,37 @@ class _CameraImageState extends State<CameraImage> {
     }
   }
 
+  /// The `/info` orientation, once the library knows it for this camera.
+  int? _infoOrientation() {
+    final model = _library.model;
+    if (model.serial != widget.serial) return null;
+    return model.info(widget.file)?.orientation;
+  }
+
+  void _onModel() {
+    final orientation = _infoOrientation();
+    if (orientation != _orientation) {
+      setState(() => _orientation = orientation);
+    }
+  }
+
+  void _show(Uint8List bytes) {
+    _bytes = bytes;
+    _layout = readJpegLayout(bytes);
+    // Only `/info` says how a shot in stored layout was held.
+    final model = _library.model;
+    if (_layout?.decoderOrients != true &&
+        model.serial == widget.serial &&
+        model.info(widget.file) == null) {
+      unawaited(model.ensureInfo(widget.file));
+    }
+  }
+
   void _load() {
     final images = _library.images;
     final hit = images.cached(widget.serial, widget.file, widget.size);
     if (hit != null) {
-      _bytes = hit;
+      _show(hit);
       widget.onLoaded?.call();
       return;
     }
@@ -100,7 +139,7 @@ class _CameraImageState extends State<CameraImage> {
       if (!mounted || !identical(_request, request)) return;
       _request = null;
       if (bytes == null) return;
-      setState(() => _bytes = bytes);
+      setState(() => _show(bytes));
       widget.onLoaded?.call();
     }, onError: (Object _) {});
   }
@@ -111,12 +150,20 @@ class _CameraImageState extends State<CameraImage> {
     if (bytes == null) {
       return widget.placeholder ?? const SizedBox.expand();
     }
+    final orientation = orientationToApply(_layout, _orientation);
+    // Decode sizes count stored pixels: after a quarter turn the shown
+    // width is the stored height.
+    final turned = orientationSwapsAxes(orientation);
     return Image.memory(
       bytes,
       key: ValueKey('image:${widget.size.name}:${widget.file.key}'),
       fit: widget.fit,
-      cacheWidth: widget.cacheWidth,
+      cacheWidth: turned ? null : widget.cacheWidth,
+      cacheHeight: turned ? widget.cacheWidth : null,
       gaplessPlayback: true,
+      // Turns the decoded image only, never the error placeholder.
+      frameBuilder: (context, child, _, _) =>
+          ExifOrientation(orientation: orientation, child: child),
       errorBuilder: (context, _, _) =>
           widget.placeholder ?? const SizedBox.expand(),
     );

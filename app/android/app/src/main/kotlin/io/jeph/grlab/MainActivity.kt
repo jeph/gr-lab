@@ -26,6 +26,16 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        wifi?.onResume()
+    }
+
+    override fun onPause() {
+        wifi?.onPause()
+        super.onPause()
+    }
+
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         wifi?.dispose()
         wifi = null

@@ -19,6 +19,20 @@ Finder _cell(String key) => find.byKey(ValueKey(key));
 Finder _downloadedBadge(String key) =>
     find.descendant(of: _cell(key), matching: find.byIcon(Icons.check_rounded));
 
+/// Quarter turns and mirroring the image keyed [key] is shown with.
+(int, bool) _shownAs(WidgetTester tester, String key) {
+  final image = find.byKey(ValueKey(key));
+  final turns = tester
+      .widget<RotatedBox>(
+        find.descendant(of: image, matching: find.byType(RotatedBox)),
+      )
+      .quarterTurns;
+  final flip = tester.widget<Transform>(
+    find.descendant(of: image, matching: find.byType(Transform)),
+  );
+  return (turns, flip.transform.storage[0] < 0);
+}
+
 void main() {
   testWidgets('grid shows thumbnails and tags; selected shots download and '
       'get badges', (tester) async {
@@ -128,6 +142,80 @@ void main() {
       () => find.text('R0000268.JPG + R0000268.DNG').evaluate().isEmpty,
       reason: 'viewer closed',
     );
+
+    await app.dispose();
+  });
+
+  testWidgets('portrait shots show upright in the grid and the viewer, '
+      'from the orientation /info reports', (tester) async {
+    tester.view
+      ..physicalSize = const Size(1170, 2532)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final at = DateTime(2026, 11, 5, 10);
+    // Previews are unrotated landscape JPEGs without EXIF, as a GR serves
+    // them; only /info says how each shot was held.
+    final app = (await tester.runAsync(
+      () => createTestApp(
+        config: FakeCameraConfig(
+          bonded: true,
+          photos: [
+            FakePhoto('100RICOH', 'R0000001.JPG', at),
+            FakePhoto('100RICOH', 'R0000002.JPG', at, orientation: 6),
+            FakePhoto('100RICOH', 'R0000003.JPG', at, orientation: 8),
+            FakePhoto('100RICOH', 'R0000004.JPG', at, orientation: 3),
+            FakePhoto('100RICOH', 'R0000005.JPG', at, orientation: null),
+          ],
+        ),
+        saveCamera: true,
+      ),
+    ))!;
+    await app.pumpApp(tester);
+    String thumb(int n) => 'image:thumb:sd1|100RICOH/R000000$n.JPG';
+    const expected = {
+      1: (0, false),
+      2: (1, false),
+      3: (3, false),
+      4: (2, false),
+      5: (0, false),
+    };
+    await pumpUntil(
+      tester,
+      () => expected.keys.every(
+        (n) =>
+            find.byKey(ValueKey(thumb(n))).evaluate().isNotEmpty &&
+            _shownAs(tester, thumb(n)) == expected[n],
+      ),
+      reason: 'grid thumbnails upright',
+    );
+    // Decode size follows the shown width: the stored height of a turned
+    // thumbnail.
+    final cell = (1170 / 3).round();
+    ResizeImage resize(int n) =>
+        tester.widget<Image>(find.byKey(ValueKey(thumb(n)))).image
+            as ResizeImage;
+    expect((resize(1).width, resize(1).height), (cell, null));
+    expect((resize(2).width, resize(2).height), (null, cell));
+
+    await tester.tap(_cell('sd1|100RICOH/R0000002'));
+    const view = 'image:view:sd1|100RICOH/R0000002.JPG';
+    await pumpUntilFound(tester, find.byKey(const ValueKey(view)));
+    final raw = find.descendant(
+      of: find.byKey(const ValueKey(view)),
+      matching: find.byType(RawImage),
+    );
+    await pumpUntil(
+      tester,
+      () => tester.widget<RawImage>(raw).image != null,
+      reason: 'preview decoded',
+    );
+    expect(_shownAs(tester, view), (1, false));
+    // The stored 24×16 frame is laid out in the viewer's box turned on its
+    // side, so it shows taller than wide at its own aspect ratio.
+    final stored = tester.widget<RawImage>(raw).image!;
+    expect((stored.width, stored.height), (24, 16));
+    final box = tester.getSize(find.byKey(const ValueKey(view)));
+    expect(tester.getSize(raw), Size(box.height, box.width));
 
     await app.dispose();
   });

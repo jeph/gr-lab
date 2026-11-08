@@ -90,20 +90,33 @@ class CameraSheet extends StatelessWidget {
         : i == at
         ? GrStepState.now
         : GrStepState.todo;
+    final waitingToRedial = connection.reconnecting && current == null;
     return [
       _Header(
-        title: 'Connecting to ${camera.name}',
+        title: connection.reconnecting
+            ? 'Reconnecting to ${camera.name}'
+            : 'Connecting to ${camera.name}',
         subtitle: _identityLine(camera, null),
       ),
       Padding(
         key: const Key('camera-sheet-connecting'),
         padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
-        child: GrStepList(
-          steps: [
-            for (var i = 0; i < ordered.length; i++)
-              _step(ordered[i], state(i)),
-          ],
-        ),
+        child: waitingToRedial
+            ? Text(
+                "The phone lost the camera's Wi-Fi. GR Lab joins it again "
+                'by itself.',
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.45,
+                  color: GrColors.of(context).t2,
+                ),
+              )
+            : GrStepList(
+                steps: [
+                  for (var i = 0; i < ordered.length; i++)
+                    _step(ordered[i], state(i)),
+                ],
+              ),
       ),
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
@@ -174,17 +187,25 @@ class CameraSheet extends StatelessWidget {
         "Bluetooth works, but the phone couldn't join or keep the camera's "
             'Wi-Fi.',
       ),
+      ConnectFailureKind.wifiDeclined => (
+        "Not on $name's Wi-Fi",
+        "Photos come over the camera's own Wi-Fi. Join it to browse and "
+            'download them.',
+      ),
     };
+    final retryLabel = Text(
+      kind == ConnectFailureKind.wifiDeclined ? 'Join Wi-Fi' : 'Try again',
+    );
     final tryAgain = kind == ConnectFailureKind.needsPairing
         ? OutlinedButton(
             key: const Key('camera-sheet-retry'),
             onPressed: () => unawaited(connection.connect()),
-            child: const Text('Try again'),
+            child: retryLabel,
           )
         : FilledButton(
             key: const Key('camera-sheet-retry'),
             onPressed: () => unawaited(connection.connect()),
-            child: const Text('Try again'),
+            child: retryLabel,
           );
     return [
       Padding(
@@ -284,9 +305,10 @@ class CameraSheet extends StatelessWidget {
           ),
         ],
         ConnectFailureKind.bluetoothOff ||
-        ConnectFailureKind.bluetoothDenied => const <Widget>[],
+        ConnectFailureKind.bluetoothDenied ||
+        ConnectFailureKind.wifiDeclined => const <Widget>[],
       },
-      if (failure != null)
+      if (failure != null && kind != ConnectFailureKind.wifiDeclined)
         Padding(
           padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
           child: Text(

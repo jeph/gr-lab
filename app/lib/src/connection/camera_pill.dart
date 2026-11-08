@@ -123,6 +123,8 @@ final class PillLinkState {
           PillLinkKind.failed,
           'Not connected',
         ),
+        ConnectionStatus.connecting when connection.reconnecting =>
+          const PillLinkState._(PillLinkKind.reconnecting, 'Reconnecting…'),
         ConnectionStatus.connecting => PillLinkState._(
           PillLinkKind.connecting,
           switch (connection.step) {

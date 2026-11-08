@@ -7,14 +7,13 @@ import 'package:gr_protocol/gr_protocol.dart';
 final class WifiJoinException implements Exception {
   const WifiJoinException(this.code, this.message);
 
-  /// `declined` (the user rejected the system prompt), `invalid` (the OS
-  /// rejected the SSID or passphrase), `superseded` (a newer join replaced
-  /// this one), `cancelled` ([PlatformWifiControl.leave] during the join),
-  /// `unsupported` (no native implementation) or `failed`.
+  /// `background` (Android only joins for an app in the foreground),
+  /// `invalid` (the OS rejected the SSID or passphrase), `superseded` (a
+  /// newer join replaced this one), `cancelled` ([PlatformWifiControl.leave]
+  /// during the join), `unsupported` (no native implementation) or
+  /// `failed`. A declined prompt is [WifiJoinDeclined] instead.
   final String code;
   final String message;
-
-  bool get declined => code == 'declined';
 
   @override
   String toString() => 'WifiJoinException($code): $message';
@@ -58,6 +57,7 @@ final class PlatformWifiControl implements WifiNetworkControl {
     } on PlatformException catch (e) {
       final message = e.message ?? 'joining "$ssid" failed';
       if (e.code == 'timeout') throw TimeoutException(message, timeout);
+      if (e.code == 'declined') throw WifiJoinDeclined(message);
       throw WifiJoinException(e.code, message);
     } on MissingPluginException {
       throw const WifiJoinException(

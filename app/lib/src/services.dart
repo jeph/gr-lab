@@ -39,6 +39,12 @@ final class AppServices {
     this.cameraHost = '192.168.0.1',
     this.httpFactory,
     this.sessionOptions = const GrSessionOptions(),
+    this.redialDelays = const [
+      Duration(seconds: 2),
+      Duration(seconds: 5),
+      Duration(seconds: 15),
+    ],
+    this.askBeforeWifiJoin = false,
     this.isDemo = false,
   });
 
@@ -65,6 +71,16 @@ final class AppServices {
   /// on a loopback port).
   final GrHttpClient Function(String host, TraceSink? trace)? httpFactory;
   final GrSessionOptions sessionOptions;
+
+  /// Pauses before each quiet reconnect after the camera's Wi-Fi was lost
+  /// for longer than the session's own recovery; its length is the number
+  /// of tries before the loss is shown as a failure.
+  final List<Duration> redialDelays;
+
+  /// Explain the camera network before the first join of each camera.
+  /// Android's approval screen names only the network, and on some phones
+  /// fills the screen like a settings page; iOS asks in a small alert.
+  final bool askBeforeWifiJoin;
 
   /// Running against the simulated camera.
   final bool isDemo;

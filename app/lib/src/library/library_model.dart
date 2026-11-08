@@ -12,12 +12,13 @@ import 'shot.dart';
 /// What `/v1/photos/<dir>/<file>/info` told us about one file.
 @immutable
 final class FileInfo {
-  const FileInfo({this.taken, this.size, this.duration});
+  const FileInfo({this.taken, this.size, this.duration, this.orientation});
 
   factory FileInfo.fromPhotoInfo(GrPhotoInfo info) => FileInfo(
     taken: parseCameraTime(info.datetime ?? info.recordedTime),
     size: info.size,
     duration: info.duration == null ? null : Duration(seconds: info.duration!),
+    orientation: info.orientation,
   );
 
   factory FileInfo.fromJson(Map<String, Object?> json) => FileInfo(
@@ -30,6 +31,7 @@ final class FileInfo {
       final num v => Duration(seconds: v.toInt()),
       _ => null,
     },
+    orientation: (json['o'] as num?)?.toInt(),
   );
 
   /// Capture time in the camera's clock (local, no zone).
@@ -41,10 +43,15 @@ final class FileInfo {
   /// Movie length.
   final Duration? duration;
 
+  /// EXIF orientation (1–8) the camera reports for the shot; its
+  /// thumbnails and previews are stored unrotated (image_orientation.dart).
+  final int? orientation;
+
   Map<String, Object?> toJson() => {
     if (taken != null) 't': taken!.toIso8601String(),
     'z': ?size,
     if (duration != null) 'v': duration!.inSeconds,
+    'o': ?orientation,
   };
 }
 
@@ -66,6 +73,9 @@ DateTime? parseCameraTime(String? text) {
 }
 
 enum LibraryFilter { all, jpeg, raw, video, notDownloaded }
+
+/// `library.json` format; info cached under another version is dropped.
+const _cacheVersion = 2;
 
 /// The camera's photos as shots, kept per camera serial in
 /// `<cacheDir>/<serial>/library.json` so the grid appears at once and
@@ -296,7 +306,8 @@ final class LibraryModel extends ChangeNotifier {
         continue;
       }
     }
-    final info = json['info'];
+    // Version 1 info lacks the orientation; it is fetched again.
+    final info = json['version'] == _cacheVersion ? json['info'] : null;
     if (info is Map<String, Object?>) {
       for (final MapEntry(:key, :value) in info.entries) {
         if (value is Map<String, Object?>) {
@@ -327,7 +338,7 @@ final class LibraryModel extends ChangeNotifier {
     final shots = _shots;
     if (serial == null || shots == null) return;
     final snapshot = {
-      'version': 1,
+      'version': _cacheVersion,
       'listedAt': _listedAt?.toIso8601String(),
       'files': [
         for (final f in _files) {'s': f.storage, 'd': f.dir, 'f': f.name},

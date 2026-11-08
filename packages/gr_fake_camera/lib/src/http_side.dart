@@ -229,10 +229,11 @@ extension on FakeGrCamera {
     } on Object {
       return _error(request, 500, 'Internal Server Error');
     }
+    // Stored (sensor) layout for every still, as the EXIF image size of a
+    // portrait GR IV HDF file reads (6192×4128); what the camera's own
+    // `resolution` says for a portrait frame is untested.
     final (resolution, aspect) = photo.isVideo
         ? ('1920x1080', '16:9')
-        : photo.portrait
-        ? ('4000x6000', '2:3')
         : ('6000x4000', '3:2');
     return _send(request, {
       'errCode': 200,
@@ -242,7 +243,7 @@ extension on FakeGrCamera {
       'file': photo.file,
       'size': size,
       'datetime': _stamp(photo.dateTime),
-      'orientation': 1,
+      'orientation': ?photo.orientation,
       'aspectRatio': aspect,
       'resolution': resolution,
       if (photo.videoLength case final length?) 'duration': length.inSeconds,

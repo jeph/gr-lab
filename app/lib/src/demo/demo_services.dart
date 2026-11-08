@@ -62,6 +62,8 @@ Future<AppServices> buildDemoServices() async {
     cacheDir: cache,
     ensureBluetoothPermission: () async => true,
     httpFactory: camera.httpClient,
+    // As with a real camera, so the demo shows the same first join.
+    askBeforeWifiJoin: Platform.isAndroid,
     isDemo: true,
   );
 }
@@ -72,6 +74,11 @@ const _clipLength = Duration(seconds: 3);
 /// Twelve scenes (nine landscape, three portrait), each as a ~160 px
 /// thumbnail, a ~1280 px view and a ~2000 px full JPEG, plus one movie.
 /// Both halves of a RAW+JPEG pair map to the same scene.
+///
+/// Portrait scenes are stored as a GR stores them (see
+/// [FakePhoto.orientation]): landscape pixels, with the Orientation tag
+/// only in the full JPEG. `tall01` and `tall02` are held for orientation 6,
+/// `tall03` for orientation 8.
 FakeMediaSource _bundledMedia(AssetBundle bundle) {
   final loaded = <String, Future<Uint8List>>{};
   Future<Uint8List> load(String name) => loaded[name] ??= bundle
@@ -89,9 +96,11 @@ FakeMediaSource _bundledMedia(AssetBundle bundle) {
     }
     final number =
         int.tryParse(photo.baseName.replaceAll(RegExp(r'\D'), '')) ?? 0;
-    final scene = photo.portrait
-        ? 'tall${(number % 3 + 1).toString().padLeft(2, '0')}'
-        : 'land${(number % 9 + 1).toString().padLeft(2, '0')}';
+    final scene = switch (photo.orientation) {
+      6 => 'tall${(number % 2 + 1).toString().padLeft(2, '0')}',
+      8 => 'tall03',
+      _ => 'land${(number % 9 + 1).toString().padLeft(2, '0')}',
+    };
     // Demo only: a DNG's full download is its scene's JPEG bytes. A real
     // DNG is a 20+ MB raw file that no bundled asset should stand in for.
     return load('${scene}_$variant.jpg');

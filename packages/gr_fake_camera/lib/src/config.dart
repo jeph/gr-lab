@@ -19,7 +19,7 @@ final class FakePhoto {
     this.size,
     this.videoLength,
     this.storage = GrStorageId.sd,
-    this.portrait = false,
+    this.orientation = 1,
     this.av = '2.8',
     this.tv = '1.250',
     this.sv = '200',
@@ -44,8 +44,19 @@ final class FakePhoto {
   /// `in` (internal memory) or `sd1`.
   final String storage;
 
-  /// Shot in portrait orientation; only changes the reported resolution.
-  final bool portrait;
+  /// EXIF orientation (1–8) that `/info` `orientation` reports; null leaves
+  /// the field out. A GR stores every frame in sensor (landscape) layout:
+  /// the full JPEG carries this value as its EXIF Orientation tag, while
+  /// thumbnails and previews are unrotated JPEGs without the tag (as in the
+  /// embedded previews of a GR IV HDF file). [FakeMediaSource]s serve them
+  /// that way.
+  final int? orientation;
+
+  /// Held upright (orientation 5–8): shown taller than wide.
+  bool get portrait => switch (orientation) {
+    5 || 6 || 7 || 8 => true,
+    _ => false,
+  };
 
   /// Exposure as `/info` reports it, in the camera's own notation
   /// (`tv` `1.250` = 1/250 s, the form `/v1/props` uses).
@@ -68,7 +79,8 @@ final class FakePhoto {
   /// A realistic GR card: 40 shots over six days ending on [lastDay] in
   /// `100RICOH` and `101RICOH`, mixing JPEG-only, DNG-only and RAW+JPEG
   /// shots (58 files), three movies (lengths from [videoLengths]) and a few
-  /// portrait frames. Deterministic for a given [lastDay].
+  /// portrait frames, held both ways (orientations 6 and 8). Deterministic
+  /// for a given [lastDay].
   static List<FakePhoto> defaultCard({
     DateTime? lastDay,
     List<Duration> videoLengths = const [
@@ -112,7 +124,11 @@ final class FakePhoto {
           at,
           videoLength: length,
           storage: storage,
-          portrait: kind != 'M' && shot % 5 == 3,
+          orientation: kind == 'M' || shot % 5 != 3
+              ? 1
+              : shot % 10 == 3
+              ? 6
+              : 8,
           av: avs[shot % avs.length],
           tv: tvs[shot % tvs.length],
           sv: svs[shot % svs.length],

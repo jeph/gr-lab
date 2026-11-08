@@ -3,6 +3,20 @@
 /// 2 WPA2/WPA3 transition).
 enum WifiSecurity { wpa2, wpa3, transition }
 
+/// Thrown by [WifiNetworkControl.join] when the user declined joining the
+/// camera network (an app or OS prompt). Sessions never retry it: asking
+/// again is the user's call.
+final class WifiJoinDeclined implements Exception {
+  const WifiJoinDeclined([
+    this.message = 'joining the camera Wi-Fi was declined',
+  ]);
+
+  final String message;
+
+  @override
+  String toString() => 'WifiJoinDeclined: $message';
+}
+
 /// Platform control of the phone/computer Wi-Fi link to the camera AP,
 /// implemented outside this package.
 abstract interface class WifiNetworkControl {

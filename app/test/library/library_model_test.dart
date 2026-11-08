@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -17,7 +18,7 @@ final _day1 = DateTime(2026, 11, 4, 9, 30);
 final _day2 = DateTime(2026, 11, 5, 18, 2, 7);
 
 List<FakePhoto> card() => [
-  FakePhoto('100RICOH', 'R0000001.JPG', _day1),
+  FakePhoto('100RICOH', 'R0000001.JPG', _day1, orientation: 6),
   FakePhoto('100RICOH', 'R0000001.DNG', _day1),
   FakePhoto(
     '100RICOH',
@@ -136,6 +137,41 @@ void main() {
 
     await offline.setCamera('another');
     expect(offline.shots, isNull);
+  });
+
+  test('keeps the orientation /info reports; info cached before it was '
+      'kept is fetched again', () async {
+    final first = model();
+    await first.setCamera(serial);
+    link.value = connected();
+    await until(() => first.shots != null && !first.refreshing);
+    final held = first.shots!.firstWhere((s) => s.isPair).primary;
+    final movie = first.shots!.firstWhere((s) => s.isVideo).primary;
+    expect((await first.ensureInfo(held))?.orientation, 6);
+    expect((await first.ensureInfo(movie))?.orientation, 1);
+    await first.flush();
+
+    link.value = null;
+    final offline = model();
+    await offline.setCamera(serial);
+    expect(offline.info(held)?.orientation, 6);
+    expect(offline.info(movie)?.orientation, 1);
+    await offline.setCamera(null);
+
+    // A version 1 cache: same listing, info without orientation.
+    final file = File('${cache.path}/$serial/library.json');
+    final json = jsonDecode(await file.readAsString()) as Map<String, Object?>;
+    final info = json['info']! as Map<String, Object?>;
+    for (final v in info.values) {
+      (v! as Map<String, Object?>).remove('o');
+    }
+    await file.writeAsString(jsonEncode({...json, 'version': 1}));
+    final old = model();
+    await old.setCamera(serial);
+    expect(old.shots, first.shots);
+    expect(old.info(held), isNull);
+    link.value = connected();
+    expect((await old.ensureInfo(held))?.orientation, 6);
   });
 
   test('refreshes on a storage change from /v1/changes', () async {

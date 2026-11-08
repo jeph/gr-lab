@@ -155,7 +155,7 @@ final class WifiPlugin: NSObject, FlutterPlugin {
         details: nil)
     case .applicationIsNotInForeground:
       return FlutterError(
-        code: "failed", message: "iOS only joins camera networks while GR Lab is open",
+        code: "background", message: "iOS only joins camera networks while GR Lab is open",
         details: nil)
     default:
       return FlutterError(code: "failed", message: error.localizedDescription, details: nil)

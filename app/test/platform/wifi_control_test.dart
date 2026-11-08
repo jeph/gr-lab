@@ -79,16 +79,13 @@ void main() {
     );
   });
 
-  test('a declined system prompt is a WifiJoinException', () async {
+  test('a declined system prompt is WifiJoinDeclined, which sessions never '
+      'retry', () async {
     reply = (_) async =>
         throw PlatformException(code: 'declined', message: 'declined');
     await expectLater(
       join(PlatformWifiControl()),
-      throwsA(
-        isA<WifiJoinException>()
-            .having((e) => e.declined, 'declined', isTrue)
-            .having((e) => e.code, 'code', 'declined'),
-      ),
+      throwsA(isA<WifiJoinDeclined>()),
     );
   });
 
@@ -100,7 +97,6 @@ void main() {
         throwsA(
           isA<WifiJoinException>()
               .having((e) => e.code, 'code', code)
-              .having((e) => e.declined, 'declined', isFalse)
               .having((e) => e.message, 'message', contains('GR_1234567')),
         ),
       );

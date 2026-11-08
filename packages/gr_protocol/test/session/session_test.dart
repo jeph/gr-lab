@@ -13,11 +13,15 @@ final class BondedCamera implements BleTransport {
     this.connectError,
     this.bonded = true,
     this.dropLinks = 0,
+    this.security = 2,
   });
 
   int operationMode;
   final BleException? connectError;
   final bool bonded;
+
+  /// WLAN security byte: 0 WPA2, 1 WPA3, 2 transition (the GR IV's).
+  final int security;
 
   /// Links whose discovery fails as if the camera dropped them (waking).
   int dropLinks;
@@ -114,6 +118,9 @@ final class _Link implements BleConnection {
         'Authentication is insufficient.',
       );
     }
+    if (uuid == GrBleCatalog.wlanSecurity.uuid) {
+      return Uint8List.fromList([camera.security]);
+    }
     final values = {
       GrBleCatalog.serialNumber.uuid: '1234567',
       GrBleCatalog.modelName.uuid: 'RICOH GR IV HDF',
@@ -157,6 +164,34 @@ final class FailingWifi implements WifiNetworkControl {
     required WifiSecurity security,
     required Duration timeout,
   }) async => throw StateError('no Wi-Fi in this test');
+
+  @override
+  Future<String?> currentSsid() async => null;
+
+  @override
+  Future<void> leave() async {}
+}
+
+/// Records the security of every join and fails each one, the first with
+/// [first] when given.
+final class RecordingWifi implements WifiNetworkControl {
+  RecordingWifi({this.first});
+
+  final Object? first;
+  final joins = <WifiSecurity>[];
+
+  @override
+  Future<void> join({
+    required String ssid,
+    required String passphrase,
+    required WifiSecurity security,
+    required Duration timeout,
+  }) async {
+    joins.add(security);
+    final error = first;
+    if (joins.length == 1 && error != null) throw error;
+    throw StateError('no camera network yet');
+  }
 
   @override
   Future<String?> currentSsid() async => null;
@@ -314,5 +349,50 @@ void main() {
       ),
     );
     expect(camera.ops.where((o) => o == 'connect cam'), hasLength(3));
+  });
+
+  group('Wi-Fi join', () {
+    GrSession withWifi(BondedCamera camera, RecordingWifi wifi) => GrSession(
+      transport: camera,
+      wifi: wifi,
+      options: const GrSessionOptions(
+        joinTimeout: Duration(milliseconds: 200),
+        joinRetryDelay: Duration(milliseconds: 1),
+      ),
+    );
+
+    test('a transition-mode camera is joined with WPA2 on every attempt, '
+        'so Android asks for approval once', () async {
+      final wifi = RecordingWifi();
+      await expectLater(
+        withWifi(BondedCamera(), wifi).connect(deviceId: 'cam'),
+        throwsA(isA<GrSessionException>()),
+      );
+      expect(wifi.joins.length, greaterThan(1));
+      expect(wifi.joins, everyElement(WifiSecurity.wpa2));
+    });
+
+    test('a WPA3-only camera is joined with WPA3', () async {
+      final wifi = RecordingWifi();
+      await expectLater(
+        withWifi(BondedCamera(security: 1), wifi).connect(deviceId: 'cam'),
+        throwsA(isA<GrSessionException>()),
+      );
+      expect(wifi.joins, isNotEmpty);
+      expect(wifi.joins, everyElement(WifiSecurity.wpa3));
+    });
+
+    test('a declined join is not retried, although time is left', () async {
+      final wifi = RecordingWifi(first: const WifiJoinDeclined());
+      await expectLater(
+        withWifi(BondedCamera(), wifi).connect(deviceId: 'cam'),
+        throwsA(
+          isA<GrSessionException>()
+              .having((e) => e.wifiDeclined, 'wifiDeclined', isTrue)
+              .having((e) => e.needsPairing, 'needsPairing', isFalse),
+        ),
+      );
+      expect(wifi.joins, hasLength(1));
+    });
   });
 }

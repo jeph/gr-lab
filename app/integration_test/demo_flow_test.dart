@@ -41,6 +41,16 @@ void main() {
       find.byKey(const Key('pairing-done-button')),
       timeout: const Duration(seconds: 30),
     );
+    // Connecting starts with pairing; Android asks before the first join.
+    if (Platform.isAndroid) {
+      await _pumpUntilFound(
+        tester,
+        find.byKey(const Key('wifi-consent-join')),
+        timeout: const Duration(seconds: 30),
+      );
+      await tester.tap(find.byKey(const Key('wifi-consent-join')));
+      await tester.pump();
+    }
     await tester.tap(find.byKey(const Key('pairing-done-button')));
 
     final pillState = find.byKey(const Key('camera-pill-state'));

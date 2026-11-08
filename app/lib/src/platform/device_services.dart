@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 
@@ -20,6 +22,7 @@ Future<AppServices> buildDeviceServices() async {
     dataDir: dirs.data,
     cacheDir: dirs.cache,
     ensureBluetoothPermission: ensureBluetoothPermission,
+    askBeforeWifiJoin: Platform.isAndroid,
   );
 }
 

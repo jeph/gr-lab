@@ -179,6 +179,31 @@ void main() {
     },
   );
 
+  test('info: orientation as the photo was held; absent when unset', () async {
+    final at = DateTime(2026, 11, 5);
+    await start(
+      fastConfig(
+        photos: [
+          FakePhoto('100RICOH', 'R0000001.JPG', at),
+          FakePhoto('100RICOH', 'R0000002.JPG', at, orientation: 6),
+          FakePhoto('100RICOH', 'R0000003.JPG', at, orientation: 8),
+          FakePhoto('100RICOH', 'R0000004.JPG', at, orientation: null),
+        ],
+      ),
+    );
+    Future<GrPhotoInfo> info(String file) =>
+        http.photoInfo(GrPhotoPath('100RICOH', file));
+    expect((await info('R0000001.JPG')).orientation, 1);
+    final held = await info('R0000002.JPG');
+    expect(held.orientation, 6);
+    // Stored (sensor) layout, as the file's EXIF size reads.
+    expect(held.resolution, '6000x4000');
+    expect((await info('R0000003.JPG')).orientation, 8);
+    final unset = await info('R0000004.JPG');
+    expect(unset.ok, isTrue);
+    expect(unset.raw, isNot(contains('orientation')));
+  });
+
   test('full download: bytes and Content-Length match the source', () async {
     final media = syntheticMedia();
     await start(fastConfig(), media: media);

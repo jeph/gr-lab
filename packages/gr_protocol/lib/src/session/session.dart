@@ -67,6 +67,10 @@ final class GrSessionException implements Exception {
             c.code == BleErrorCode.unauthorized);
   }
 
+  /// The user declined joining the camera's Wi-Fi; only asking them again
+  /// (an explicit connect) can continue.
+  bool get wifiDeclined => cause is WifiJoinDeclined;
+
   @override
   String toString() =>
       'GrSessionException(${phase.name}): $message'
@@ -550,7 +554,13 @@ final class GrSession {
 
   Future<void> _joinAndVerify() async {
     final c = _credentials!;
-    final security = c.wifiSecurity ?? WifiSecurity.wpa2;
+    // One security type per camera: Android approves a camera network per
+    // app and security type, so alternating WPA3 and WPA2 asks the user
+    // twice. Transition-mode APs accept WPA2, which is what GR WORLD's
+    // approval on a test phone records (GR IV HDF, 2026-11-08).
+    final security = c.wifiSecurity == WifiSecurity.wpa3
+        ? WifiSecurity.wpa3
+        : WifiSecurity.wpa2;
     _set(
       _phase == GrSessionPhase.recovering ? _phase : GrSessionPhase.joining,
       'wifi.join',
@@ -558,11 +568,9 @@ final class GrSession {
     );
     // The AP comes up several seconds after WLAN-on (GR IV HDF: a join at
     // 0 s found no network, one at 16 s succeeded), so retry within
-    // joinTimeout. After the first failure, WPA3/transition falls back to
-    // WPA2 as GR WORLD's "TIMEOUT … try WPA2" path does.
+    // joinTimeout.
     final deadline = DateTime.now().add(options.joinTimeout);
     var attempt = 0;
-    var current = security;
     while (true) {
       // close() during the hand-off must not leave the phone retrying, and
       // possibly joining, the camera's network afterwards.
@@ -575,22 +583,23 @@ final class GrSession {
         await wifi.join(
           ssid: c.ssid,
           passphrase: c.passphrase,
-          security: current,
+          security: security,
           timeout: left,
         );
         break;
+      } on WifiJoinDeclined catch (e) {
+        _emit('wifi.declined');
+        throw GrSessionException(GrSessionPhase.joining, 'declined', e);
       } catch (e) {
         final remaining = deadline.difference(DateTime.now());
         _emit('wifi.joinRetry', {
           'attempt': attempt,
-          'security': current.name,
           'remainingMs': remaining.inMilliseconds,
           'error': '$e',
         });
         if (remaining <= options.joinRetryDelay) {
           throw GrSessionException(GrSessionPhase.joining, 'join failed', e);
         }
-        current = current == WifiSecurity.wpa2 ? security : WifiSecurity.wpa2;
         await Future<void>.delayed(options.joinRetryDelay);
       }
     }
@@ -695,11 +704,10 @@ final class GrSession {
   Future<void> _recoverWifi() async {
     _set(GrSessionPhase.recovering, 'recovery.start');
     await _stopWifiServices();
-    for (
-      var attempt = 0;
-      attempt < options.maxWifiRecoveryAttempts;
-      attempt++
-    ) {
+    var declined = false;
+    var attempts = 0;
+    while (attempts < options.maxWifiRecoveryAttempts) {
+      final attempt = attempts++;
       await Future<void>.delayed(_delay(options.wifiRecoveryDelays, attempt));
       if (_closing) return;
       _emit('recovery.attempt', {'attempt': attempt + 1});
@@ -723,10 +731,15 @@ final class GrSession {
         return;
       } catch (e) {
         _emit('recovery.failed', {'attempt': attempt + 1, 'error': '$e'});
+        if (e is GrSessionException && e.wifiDeclined) {
+          declined = true;
+          break;
+        }
       }
     }
     _set(GrSessionPhase.lost, 'recovery.gaveUp', {
-      'attempts': options.maxWifiRecoveryAttempts,
+      'attempts': attempts,
+      if (declined) 'declined': true,
     });
   }
 

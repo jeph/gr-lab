@@ -23,6 +23,13 @@ import io.flutter.plugin.common.MethodChannel
  *
  * Every callback runs on the main looper, the same thread as the method
  * channel, so the request state needs no locking.
+ *
+ * The first join of a camera network shows Android's approval screen
+ * (`NetworkRequestDialogActivity`, full-screen on some OEMs). While it
+ * covers the app the join timeout is paused, so a user who is still
+ * choosing never has the request pulled away; Android remembers the
+ * approval per app, network and security type, and later joins of the same
+ * network connect without it.
  */
 class WifiChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.MethodCallHandler {
     private val connectivity = context.getSystemService(ConnectivityManager::class.java)
@@ -35,9 +42,25 @@ class WifiChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.
     private var timeout: Runnable? = null
     private var requestedSsid: String? = null
     private var network: Network? = null
+    private var timeoutMs = 0L
+
+    /** Whether the activity is resumed; MainActivity reports changes. */
+    private var resumed = true
 
     init {
         channel.setMethodCallHandler(this)
+    }
+
+    fun onResume() {
+        resumed = true
+        // Back from the approval screen (or the user returned to the app):
+        // give the pending join its full window from now.
+        if (callback != null && pending != null) armTimeout()
+    }
+
+    fun onPause() {
+        resumed = false
+        cancelTimeout()
     }
 
     fun dispose() {
@@ -68,7 +91,13 @@ class WifiChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.
             result.error("invalid", "join needs ssid, passphrase, security and timeoutMs", null)
             return
         }
-
+        // Android rejects specifier requests from apps that are not in the
+        // foreground; report that distinctly so it is not taken as the user
+        // declining.
+        if (!resumed) {
+            result.error("background", "the app is not in the foreground", null)
+            return
+        }
         // Always start from a fresh request: after a loss the old one is gone,
         // and a request the OS still holds may be for another network.
         fail("superseded", "a newer Wi-Fi join replaced this one")
@@ -130,13 +159,7 @@ class WifiChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.
         callback = cb
         pending = result
         requestedSsid = ssid
-        val onTimeout = Runnable {
-            if (callback === cb) {
-                fail("timeout", "\"$ssid\" did not connect within ${timeoutMs} ms")
-                release()
-            }
-        }
-        timeout = onTimeout
+        this.timeoutMs = timeoutMs
         try {
             connectivity.requestNetwork(request, cb, main)
         } catch (e: RuntimeException) {
@@ -147,7 +170,22 @@ class WifiChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.
             release()
             return
         }
-        main.postDelayed(onTimeout, timeoutMs)
+        if (resumed) armTimeout()
+    }
+
+    private fun armTimeout() {
+        cancelTimeout()
+        val cb = callback ?: return
+        val ssid = requestedSsid
+        val ms = timeoutMs
+        val onTimeout = Runnable {
+            if (callback === cb) {
+                fail("timeout", "\"$ssid\" did not connect within $ms ms")
+                release()
+            }
+        }
+        timeout = onTimeout
+        main.postDelayed(onTimeout, ms)
     }
 
     private fun currentSsid(): String? {

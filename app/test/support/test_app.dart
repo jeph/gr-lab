@@ -110,11 +110,14 @@ final class TestApp {
 /// or without it for one that needs pairing again). [sessionOptions]
 /// shortens session timeouts for failure tests. [transport] wraps the
 /// camera's BLE transport, e.g. to add a second camera.
+/// [askBeforeWifiJoin] and [redialDelays] are passed to [AppServices].
 Future<TestApp> createTestApp({
   FakeCameraConfig config = const FakeCameraConfig(),
   bool saveCamera = false,
   GrSessionOptions sessionOptions = const GrSessionOptions(),
   BleTransport Function(BleTransport camera)? transport,
+  bool askBeforeWifiJoin = false,
+  List<Duration> redialDelays = const [Duration(milliseconds: 20)],
 }) async {
   // flutter_test answers every dart:io HttpClient request with 400; the
   // fake camera serves real HTTP on loopback.
@@ -156,6 +159,8 @@ Future<TestApp> createTestApp({
     ensureBluetoothPermission: () async => permission.granted,
     httpFactory: camera.httpClient,
     sessionOptions: sessionOptions,
+    askBeforeWifiJoin: askBeforeWifiJoin,
+    redialDelays: redialDelays,
   );
   return TestApp._(
     models: await AppModels.load(services),
