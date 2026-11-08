@@ -48,6 +48,9 @@ class _RootScreenState extends State<RootScreen> {
   String? _connectedSerial;
   WifiConsentRequest? _shownConsent;
 
+  /// The route showing [_shownConsent], while it is open.
+  DialogRoute<bool>? _consentRoute;
+
   @override
   void initState() {
     super.initState();
@@ -83,20 +86,28 @@ class _RootScreenState extends State<RootScreen> {
 
   void _onConnection() {
     final request = _models.connection.wifiConsent;
-    if (request == null || identical(request, _shownConsent)) return;
+    if (identical(request, _shownConsent)) return;
+    // Withdrawn or replaced: close that question only, and only while it
+    // is still showing (an answered one is already on its way out).
+    final open = _consentRoute;
+    _consentRoute = null;
+    if (open != null && open.isActive) open.navigator!.removeRoute(open);
     _shownConsent = request;
-    unawaited(_askWifi(request));
+    if (request != null) unawaited(_askWifi(request));
   }
 
   Future<void> _askWifi(WifiConsentRequest request) async {
     final connection = _models.connection;
-    final join = await showDialog<bool>(
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final route = _consentRoute = DialogRoute<bool>(
       context: context,
+      themes: InheritedTheme.capture(from: context, to: navigator.context),
       // A stray tap beside it must not count as Not now.
       barrierDismissible: false,
-      builder: (_) =>
-          WifiConsentDialog(request: request, connection: connection),
+      builder: (_) => WifiConsentDialog(request: request),
     );
+    final join = await navigator.push(route);
+    if (identical(_consentRoute, route)) _consentRoute = null;
     if (identical(connection.wifiConsent, request)) {
       connection.answerWifiConsent(join ?? false);
     }
