@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 import 'package:video_player/video_player.dart';
 
+import '../app_scope.dart';
+import '../connection/idle_disconnect.dart';
 import '../downloads/download_engine.dart';
 import '../theme/tokens.dart';
 import '../widgets/group.dart';
@@ -209,9 +211,30 @@ class _VideoPage extends StatefulWidget {
 
 class _VideoPageState extends State<_VideoPage> {
   late final LibraryContext _library = LibraryScope.of(context);
+  late final IdleDisconnect _idle = AppScope.of(context).idle;
   VideoPlayerController? _video;
   MovieDownload? _download;
   String? _error;
+
+  /// Set while a movie copy or playback keeps the camera's Wi-Fi up.
+  VoidCallback? _release;
+
+  void _holdWhileBusy() {
+    final busy = _download != null || (_video?.value.isPlaying ?? false);
+    if (busy && _release == null) {
+      _release = _idle.hold();
+    } else if (!busy && _release != null) {
+      _release!();
+      _release = null;
+    }
+  }
+
+  /// Every change of [_download] or [_video] goes through here.
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _holdWhileBusy();
+  }
 
   @override
   void didUpdateWidget(_VideoPage old) {
@@ -221,9 +244,14 @@ class _VideoPageState extends State<_VideoPage> {
 
   @override
   void dispose() {
+    _release?.call();
+    _release = null;
     _download?.cancel();
     final video = _video;
-    if (video != null) unawaited(_disposePlayer(video));
+    if (video != null) {
+      video.removeListener(_holdWhileBusy);
+      unawaited(_disposePlayer(video));
+    }
     super.dispose();
   }
 
@@ -257,7 +285,8 @@ class _VideoPageState extends State<_VideoPage> {
       }
       if (!current()) return;
     }
-    final controller = VideoPlayerController.file(local);
+    final controller = VideoPlayerController.file(local)
+      ..addListener(_holdWhileBusy);
     setState(() {
       _download = null;
       _video = controller;

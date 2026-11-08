@@ -1,6 +1,9 @@
 package io.jeph.grlab
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
@@ -10,6 +13,8 @@ import android.net.wifi.WifiManager
 import android.net.wifi.WifiNetworkSpecifier
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
+import android.widget.Toast
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -29,20 +34,45 @@ import io.flutter.plugin.common.MethodChannel
  * covers the app the join timeout is paused, so a user who is still
  * choosing never has the request pulled away; Android remembers the
  * approval per app, network and security type, and later joins of the same
- * network connect without it.
+ * network connect without it. Android shows the screen again despite that
+ * approval after the network was disconnected by hand in Wi-Fi settings
+ * (`WifiNetworkFactory`: user-disabled networks skip the bypass), so the
+ * app is told whenever the screen covers a join (`approvalShown`) and a
+ * toast names the network to choose.
+ *
+ * For a camera approved before, Android connects as soon as one of its
+ * scans sees the camera network, but it scans when a request arrives and
+ * then only every ~17.5 s (Android 17, 2026-11-08; AOSP
+ * says 10 s), while the camera's access point comes up a variable time
+ * after WLAN-on. So the request is repeated every [RESCAN_MS], each time
+ * starting a scan, until Android starts connecting. That start is seen in
+ * the primary Wi-Fi state broadcasts, which fire whether the phone was on
+ * another Wi-Fi network or on mobile data; any change after a request
+ * keeps that request. Phones that join the camera on a second, concurrent
+ * Wi-Fi interface get no such broadcast, so there the request is never
+ * repeated. Neither is it while Android's approval screen is up.
  */
-class WifiChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.MethodCallHandler {
+class WifiChannel(private val context: Context, messenger: BinaryMessenger) :
+    MethodChannel.MethodCallHandler {
     private val connectivity = context.getSystemService(ConnectivityManager::class.java)
     private val channel = MethodChannel(messenger, "io.jeph.grlab/wifi")
     private val main = Handler(Looper.getMainLooper())
 
     /** The live request; callbacks from any older request are ignored. */
     private var callback: ConnectivityManager.NetworkCallback? = null
+    private var request: NetworkRequest? = null
     private var pending: MethodChannel.Result? = null
     private var timeout: Runnable? = null
     private var requestedSsid: String? = null
     private var network: Network? = null
     private var timeoutMs = 0L
+
+    /** Counts joins, so a timeout only ends the join that armed it. */
+    private var joinId = 0
+
+    private var rescan: Runnable? = null
+    private var stateReceiver: BroadcastReceiver? = null
+    private var requests = 0
 
     /** Whether the activity is resumed; MainActivity reports changes. */
     private var resumed = true
@@ -61,6 +91,18 @@ class WifiChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.
     fun onPause() {
         resumed = false
         cancelTimeout()
+        stopRescans()
+        // A join in progress loses the foreground to Android's network
+        // screen (or, rarely, to the user leaving the app).
+        val ssid = requestedSsid
+        if (callback != null && pending != null && ssid != null) {
+            channel.invokeMethod("approvalShown", null)
+            Toast.makeText(
+                context,
+                "Choose \"$ssid\" to connect your camera",
+                Toast.LENGTH_LONG,
+            ).show()
+        }
     }
 
     fun dispose() {
@@ -87,6 +129,7 @@ class WifiChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.
         val passphrase = call.argument<String>("passphrase")
         val security = call.argument<String>("security")
         val timeoutMs = call.argument<Number>("timeoutMs")?.toLong()
+        val approved = call.argument<Boolean>("approved") ?: false
         if (ssid == null || passphrase == null || security == null || timeoutMs == null) {
             result.error("invalid", "join needs ssid, passphrase, security and timeoutMs", null)
             return
@@ -120,9 +163,26 @@ class WifiChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.
             .setNetworkSpecifier(specifier)
             .build()
 
+        joinId++
+        this.request = request
+        pending = result
+        requestedSsid = ssid
+        this.timeoutMs = timeoutMs
+        requests = 0
+        if (!requestNetwork()) return
+        if (resumed) armTimeout()
+        val wifi = context.getSystemService(WifiManager::class.java)
+        if (approved && !wifi.isStaConcurrencyForLocalOnlyConnectionsSupported) startRescans()
+    }
+
+    /** Files [request] with a new callback; false when Android refused it. */
+    private fun requestNetwork(): Boolean {
+        val request = request ?: return false
+        val ssid = requestedSsid
         val cb = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(n: Network) {
                 if (callback !== this) return
+                stopRescans()
                 network = n
                 if (!connectivity.bindProcessToNetwork(n)) {
                     fail("failed", "Android would not route traffic over \"$ssid\"")
@@ -158,10 +218,9 @@ class WifiChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.
             }
         }
 
+        unregisterCallback()
         callback = cb
-        pending = result
-        requestedSsid = ssid
-        this.timeoutMs = timeoutMs
+        requests++
         try {
             connectivity.requestNetwork(request, cb, main)
         } catch (e: RuntimeException) {
@@ -170,18 +229,57 @@ class WifiChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.
             callback = null
             fail("failed", "Android refused the Wi-Fi request: ${e.message}")
             release()
-            return
+            return false
         }
-        if (resumed) armTimeout()
+        return true
+    }
+
+    /** Repeats the request every [RESCAN_MS] until Wi-Fi state moves. */
+    private fun startRescans() {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context, intent: Intent) {
+                // Registering delivers the last (sticky) state at once; only
+                // changes after the request count.
+                if (isInitialStickyBroadcast) return
+                Log.i(TAG, "Wi-Fi state changed after request $requests; keeping it")
+                stopRescans()
+            }
+        }
+        stateReceiver = receiver
+        context.registerReceiver(
+            receiver,
+            IntentFilter(WifiManager.NETWORK_STATE_CHANGED_ACTION),
+            Context.RECEIVER_NOT_EXPORTED,
+        )
+        val tick = object : Runnable {
+            override fun run() {
+                if (rescan !== this || pending == null || !resumed) return
+                Log.i(TAG, "\"$requestedSsid\" not found yet; request ${requests + 1}")
+                if (!requestNetwork()) return
+                main.postDelayed(this, RESCAN_MS)
+            }
+        }
+        rescan = tick
+        main.postDelayed(tick, RESCAN_MS)
+    }
+
+    private fun stopRescans() {
+        rescan?.let(main::removeCallbacks)
+        rescan = null
+        stateReceiver?.let {
+            stateReceiver = null
+            context.unregisterReceiver(it)
+        }
     }
 
     private fun armTimeout() {
         cancelTimeout()
-        val cb = callback ?: return
+        if (callback == null) return
+        val id = joinId
         val ssid = requestedSsid
         val ms = timeoutMs
         val onTimeout = Runnable {
-            if (callback === cb) {
+            if (id == joinId && pending != null) {
                 fail("timeout", "\"$ssid\" did not connect within $ms ms")
                 release()
             }
@@ -214,9 +312,7 @@ class WifiChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.
         timeout = null
     }
 
-    /** Drops the request and the process binding; [pending] must be settled first. */
-    private fun release() {
-        cancelTimeout()
+    private fun unregisterCallback() {
         callback?.let {
             try {
                 connectivity.unregisterNetworkCallback(it)
@@ -225,6 +321,14 @@ class WifiChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.
             }
         }
         callback = null
+    }
+
+    /** Drops the request and the process binding; [pending] must be settled first. */
+    private fun release() {
+        cancelTimeout()
+        stopRescans()
+        unregisterCallback()
+        request = null
         val joined = network
         if (joined != null && connectivity.boundNetworkForProcess == joined) {
             connectivity.bindProcessToNetwork(null)
@@ -233,3 +337,8 @@ class WifiChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.
         requestedSsid = null
     }
 }
+
+private const val TAG = "GrLabWifi"
+
+/** Longer than one scan and connect (≤ 4.8 s and ≤ 1.2 s observed). */
+private const val RESCAN_MS = 7_000L

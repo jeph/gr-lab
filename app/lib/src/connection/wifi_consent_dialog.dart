@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'connection_controller.dart';
 
 /// Explains the camera network before Android's own approval screen, the
-/// first time a camera's Wi-Fi is joined. Pops true for Continue and false
-/// for Not now; whoever shows it closes it if the request is withdrawn.
+/// first time a camera's Wi-Fi is joined, or after Android showed that
+/// screen again and the join failed ([WifiConsentRequest.again]). Pops true
+/// for Continue / Try again and false for Not now; whoever shows it closes
+/// it if the request is withdrawn.
 class WifiConsentDialog extends StatelessWidget {
   const WifiConsentDialog({super.key, required this.request});
 
@@ -13,11 +15,20 @@ class WifiConsentDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AlertDialog(
     key: const Key('wifi-consent'),
-    title: Text("Join ${request.cameraName}'s Wi-Fi?"),
+    title: Text(
+      request.again
+          ? 'Choose "${request.ssid}"'
+          : "Join ${request.cameraName}'s Wi-Fi?",
+    ),
     content: Text(
-      'Photos come over the camera\'s own Wi-Fi network, '
-      '"${request.ssid}". Android asks you to approve it once; after that '
-      'GR Lab joins it by itself.',
+      request.again
+          ? 'Android needs you to choose the camera\'s network in its list '
+                'again. It asks after that network was disconnected in '
+                'Wi-Fi settings. Choose "${request.ssid}" once and GR Lab '
+                'joins it by itself again.'
+          : 'Photos come over the camera\'s own Wi-Fi network, '
+                '"${request.ssid}". Android asks you to approve it once; '
+                'after that GR Lab joins it by itself.',
     ),
     actions: [
       TextButton(
@@ -28,7 +39,7 @@ class WifiConsentDialog extends StatelessWidget {
       FilledButton(
         key: const Key('wifi-consent-join'),
         onPressed: () => Navigator.of(context).pop(true),
-        child: const Text('Continue'),
+        child: Text(request.again ? 'Try again' : 'Continue'),
       ),
     ],
   );

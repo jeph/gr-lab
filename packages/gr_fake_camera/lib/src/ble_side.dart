@@ -331,6 +331,11 @@ extension on FakeGrCamera {
         if (_poweredOn) {
           _mode = first;
           _notify(c, v);
+        } else if (wakes && config.wakeKeepsLink) {
+          _after(
+            config.wakeDelay,
+            () => _setPower(true, mode: first, keepLinks: true),
+          );
         } else if (wakes) {
           // GR WORLD's power-on: the camera boots its main firmware and the
           // BT-only link goes silent, then drops (GR IV: ~5.5 s).

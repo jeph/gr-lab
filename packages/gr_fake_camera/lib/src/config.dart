@@ -186,6 +186,7 @@ final class FakeCameraConfig {
     this.connectDelay = const Duration(milliseconds: 100),
     this.bleLatency = const Duration(milliseconds: 10),
     this.wakeDelay = const Duration(seconds: 1),
+    this.wakeKeepsLink = false,
     this.wlanOnDelay = const Duration(milliseconds: 500),
     this.joinDelay = const Duration(milliseconds: 500),
     this.httpLatency = const Duration(milliseconds: 30),
@@ -252,9 +253,14 @@ final class FakeCameraConfig {
   /// Added to every GATT operation.
   final Duration bleLatency;
 
-  /// After the power-on write the camera restarts into its main firmware:
-  /// the link stops answering and drops after this delay (GR IV: ~5.5 s).
+  /// After the power-on write the camera restarts into its main firmware
+  /// after this delay. Unless [wakeKeepsLink], the link stops answering
+  /// meanwhile and then drops (the first-link drop, GR IV: ~5.5 s).
   final Duration wakeDelay;
+
+  /// The power-on write turns the camera on and the link stays up and
+  /// answering (GR IV HDF, 2026-11-08, write on a 3 s old link).
+  final bool wakeKeepsLink;
 
   /// From the WLAN-on write until the access point can be joined.
   final Duration wlanOnDelay;

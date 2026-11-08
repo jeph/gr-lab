@@ -16,10 +16,10 @@ void main() {
     await camera.close();
   });
 
-  Future<GrSession> connect({bool powerOn = true, List<String>? kinds}) async {
+  Future<GrSession> connect({List<String>? kinds}) async {
     final s = session = sessionFor(camera);
     if (kinds != null) s.events.listen((e) => kinds.add(e.kind));
-    await s.connect(deviceId: camera.config.deviceId, powerOn: powerOn);
+    await s.connect(deviceId: camera.config.deviceId);
     // Session events are delivered asynchronously.
     await Future<void>.delayed(Duration.zero);
     return s;
@@ -43,8 +43,8 @@ void main() {
   });
 
   test(
-    'from off: power-on write, the first link drops while the camera '
-    'wakes, the retry connects, Wi-Fi joins and /v1/props verifies',
+    'from off: linked first, the Wi-Fi start wakes the camera, the link '
+    'drops while it boots, it links again, joins and /v1/props verifies',
     () async {
       camera = await startCamera(fastConfig(poweredOn: false, bonded: true));
       final kinds = <String>[];
@@ -55,9 +55,10 @@ void main() {
         kinds,
         containsAllInOrder([
           'ble.connect',
+          'ble.cameraOff',
+          'bluetooth',
           'power.on',
-          'power.onWritten',
-          'ble.connectRetry',
+          'power.relink',
           'ble.ready',
           'wlan.on',
           'wifi.join',
@@ -80,21 +81,6 @@ void main() {
     },
   );
 
-  test('powerOn false: an off camera stays off; the link stays up and '
-      'the Wi-Fi start fails without needsPairing', () async {
-    camera = await startCamera(fastConfig(poweredOn: false, bonded: true));
-    await expectLater(
-      connect(powerOn: false),
-      throwsA(
-        isA<GrSessionException>()
-            .having((e) => e.cameraOff, 'cameraOff', isTrue)
-            .having((e) => e.needsPairing, 'needsPairing', isFalse),
-      ),
-    );
-    expect(camera.poweredOn, isFalse);
-    expect(session!.phase, GrSessionPhase.bluetooth);
-  });
-
   group('Bluetooth first', () {
     Future<GrSession> linkBluetooth(List<String> kinds) async {
       final s = session = sessionFor(camera);
@@ -105,7 +91,7 @@ void main() {
     }
 
     test('an off camera is linked and left off until Wi-Fi starts, which '
-        'wakes it, reconnects and joins', () async {
+        'wakes it, links again and joins', () async {
       camera = await startCamera(fastConfig(poweredOn: false, bonded: true));
       final kinds = <String>[];
       final s = await linkBluetooth(kinds);
@@ -124,13 +110,34 @@ void main() {
         containsAllInOrder([
           'bluetooth',
           'power.on',
-          'power.restarted',
+          'power.relink',
           'ble.ready',
           'wlan.on',
           'connected',
         ]),
       );
       expect(kinds, isNot(contains('ble.lost')));
+    });
+
+    test('a camera that turns on and keeps the link: the Wi-Fi start '
+        'carries on over it without waiting for a drop', () async {
+      camera = await startCamera(
+        fastConfig(poweredOn: false, bonded: true, wakeKeepsLink: true),
+      );
+      final kinds = <String>[];
+      final s = await linkBluetooth(kinds);
+      expect(s.cameraOff, isTrue);
+
+      await s.startWifi();
+      expect(s.phase, GrSessionPhase.connected);
+      expect(camera.poweredOn, isTrue);
+      expect(camera.wifiJoined, isTrue);
+      expect(
+        kinds,
+        containsAllInOrder(['power.on', 'power.onLinked', 'wlan.on']),
+      );
+      expect(kinds, isNot(contains('power.relink')));
+      expect(kinds.where((k) => k == 'ble.ready'), hasLength(1));
     });
 
     test('stopping Wi-Fi turns the camera Wi-Fi off and keeps Bluetooth; '

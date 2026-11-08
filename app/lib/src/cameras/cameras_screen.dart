@@ -348,6 +348,9 @@ class _CameraList extends StatelessWidget {
         failure.lost &&
         (failure.kind == ConnectFailureKind.wifi ||
             failure.kind == ConnectFailureKind.unreachable);
+    final idleFor = connection.status == ConnectionStatus.bluetooth
+        ? connection.idleClosedAfter
+        : null;
     return SafeArea(
       bottom: false,
       child: ListView(
@@ -385,7 +388,26 @@ class _CameraList extends StatelessWidget {
               ),
             ),
           ),
-          if (lost) _LostBanner(camera: current, failure: failure),
+          if (lost)
+            _Banner(
+              key: const Key('cameras-lost'),
+              icon: failure.kind == ConnectFailureKind.wifi
+                  ? Icons.wifi_off_rounded
+                  : Icons.bluetooth_disabled_rounded,
+              title: 'Lost the connection to ${current.name}',
+              body: failure.kind == ConnectFailureKind.wifi
+                  ? "The phone left the camera's Wi-Fi."
+                  : 'The camera stopped answering over Bluetooth.',
+            )
+          else if (idleFor != null)
+            _Banner(
+              key: const Key('cameras-idle'),
+              icon: Icons.timer_outlined,
+              title: "Left ${current.name}'s Wi-Fi",
+              body:
+                  "GR Lab wasn't used for ${_minutes(idleFor)}. Tap "
+                  'Library to join again.',
+            ),
           _CameraCard(
             camera: current,
             presence: presence,
@@ -644,11 +666,6 @@ class _Failure extends StatelessWidget {
         "The camera no longer accepts this phone's pairing, so trying again "
             "won't help. To pair again:",
       ),
-      ConnectFailureKind.cameraOff => (
-        '$name is off',
-        'Turn the camera on, or switch on "Turn on when connecting" in '
-            'Settings, then try again.',
-      ),
       ConnectFailureKind.wifi => (
         "Couldn't join $name's Wi-Fi",
         "Bluetooth works, but the phone couldn't join or keep the camera's "
@@ -711,7 +728,6 @@ class _Failure extends StatelessWidget {
       ],
       ConnectFailureKind.bluetoothOff ||
       ConnectFailureKind.bluetoothDenied ||
-      ConnectFailureKind.cameraOff ||
       ConnectFailureKind.wifiDeclined => const <Widget>[],
     };
     final retryLabel = Text(
@@ -774,22 +790,28 @@ class _Failure extends StatelessWidget {
   }
 }
 
-/// The camera's link was lost (mock `b-home-lost`). Shown once: the next
-/// attempt clears it.
-class _LostBanner extends StatelessWidget {
-  const _LostBanner({required this.camera, required this.failure});
+String _minutes(Duration d) =>
+    d.inMinutes == 1 ? '1 minute' : '${d.inMinutes} minutes';
 
-  final SavedCamera camera;
-  final ConnectFailure failure;
+/// A note above the camera card: the camera's link was lost (mock
+/// `b-home-lost`), or its Wi-Fi was left for lack of use. Shown once: the
+/// next attempt clears it.
+class _Banner extends StatelessWidget {
+  const _Banner({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
 
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    final body = failure.kind == ConnectFailureKind.wifi
-        ? "The phone left the camera's Wi-Fi."
-        : 'The camera stopped answering over Bluetooth.';
     return Container(
-      key: const Key('cameras-lost'),
       margin: const EdgeInsets.fromLTRB(18, 4, 18, 6),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
@@ -799,20 +821,14 @@ class _LostBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
-            failure.kind == ConnectFailureKind.wifi
-                ? Icons.wifi_off_rounded
-                : Icons.bluetooth_disabled_rounded,
-            size: 20,
-            color: c.accent,
-          ),
+          Icon(icon, size: 20, color: c.accent),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Lost the connection to ${camera.name}',
+                  title,
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,

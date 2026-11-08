@@ -317,7 +317,7 @@ final class FakeGrCamera {
     _timers.remove(timer);
   }
 
-  void _setPower(bool on, {required int mode}) {
+  void _setPower(bool on, {required int mode, bool keepLinks = false}) {
     if (on == _poweredOn) return;
     _poweredOn = on;
     if (on) {
@@ -331,7 +331,9 @@ final class FakeGrCamera {
       on ? BleCameraPower.on.wire : BleCameraPower.off.wire,
     ]);
     // The main firmware's links end when it shuts down; a link opened to
-    // the BT-only firmware ends when the main firmware takes over.
+    // the BT-only firmware ends when the main firmware takes over, unless
+    // the camera keeps it ([FakeCameraConfig.wakeKeepsLink]).
+    if (keepLinks) return;
     for (final link in _links.toList()) {
       link._drop(on ? 'camera restarted' : 'camera powered off');
     }

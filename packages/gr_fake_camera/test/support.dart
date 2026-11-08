@@ -19,8 +19,10 @@ FakeCameraConfig fastConfig({
   bool sdCard = true,
   Duration? joinDelay,
   bool reportsWifiLoss = true,
+  bool wakeKeepsLink = false,
 }) => FakeCameraConfig(
   poweredOn: poweredOn,
+  wakeKeepsLink: wakeKeepsLink,
   executePairingOpen: executePairingOpen,
   bonded: bonded,
   openExecutePairingOnScan: openExecutePairingOnScan,
@@ -49,6 +51,7 @@ const fastSessionOptions = GrSessionOptions(
   bleConnectTimeout: Duration(seconds: 1),
   joinTimeout: Duration(seconds: 2),
   joinRetryDelay: Duration(milliseconds: 20),
+  wakeSettle: Duration(milliseconds: 200),
   verifyTimeout: Duration(seconds: 2),
   verifyProbeTimeout: Duration(seconds: 1),
   livenessInterval: Duration(milliseconds: 20),

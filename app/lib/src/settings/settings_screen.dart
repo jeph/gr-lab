@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app_scope.dart';
+import '../data/settings.dart';
+import '../pairing/pairing_widgets.dart';
 import '../theme/tokens.dart';
 import '../widgets/group.dart';
 
-/// App settings (subset of mock `b-settings`): appearance, powering the
-/// camera on when connecting, and licenses.
+/// App settings (subset of mock `b-settings`): appearance, leaving the
+/// camera's Wi-Fi when the app is not used, and licenses.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -30,16 +34,16 @@ class SettingsScreen extends StatelessWidget {
             GroupBox(
               children: [
                 GroupRow(
-                  icon: Icons.power_settings_new_rounded,
-                  title: 'Turn on when connecting',
-                  subtitle: 'Wakes the camera over Bluetooth',
-                  onTap: () => settings.powerOnWhenConnecting =
-                      !settings.powerOnWhenConnecting,
-                  trailing: Switch(
-                    key: const ValueKey('setting-power-on'),
-                    value: settings.powerOnWhenConnecting,
-                    onChanged: (v) => settings.powerOnWhenConnecting = v,
+                  key: const Key('setting-auto-disconnect'),
+                  icon: Icons.timer_outlined,
+                  title: 'Auto-disconnect',
+                  subtitle: "Leaves the camera's Wi-Fi when GR Lab isn't used",
+                  trailing: TrailingFit.value(
+                    context,
+                    settings.autoDisconnect.label,
                   ),
+                  chevron: true,
+                  onTap: () => unawaited(_chooseAutoDisconnect(context)),
                 ),
               ],
             ),
@@ -62,6 +66,45 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> _chooseAutoDisconnect(BuildContext context) {
+  final settings = AppScope.of(context).settings;
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) => SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SectionLabel('Disconnect Wi-Fi after'),
+            GroupBox(
+              children: [
+                for (final choice in AutoDisconnect.values)
+                  GroupRow(
+                    key: ValueKey('auto-disconnect:${choice.name}'),
+                    title: choice.label,
+                    trailing: choice == settings.autoDisconnect
+                        ? Icon(
+                            Icons.check_rounded,
+                            color: GrColors.of(context).accent,
+                          )
+                        : null,
+                    onTap: () {
+                      settings.autoDisconnect = choice;
+                      Navigator.of(context).pop();
+                    },
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _ThemeGroup extends StatelessWidget {

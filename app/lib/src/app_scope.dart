@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'connection/connection_controller.dart';
+import 'connection/idle_disconnect.dart';
 import 'data/cameras.dart';
 import 'data/settings.dart';
 import 'services.dart';
@@ -13,7 +14,7 @@ final class AppModels {
     required this.settings,
     required this.cameras,
     required this.connection,
-  });
+  }) : idle = IdleDisconnect(connection: connection, settings: settings);
 
   static Future<AppModels> load(AppServices services) async {
     final settings = await SettingsController.load(services.dataDir);
@@ -22,11 +23,7 @@ final class AppModels {
       services: services,
       settings: settings,
       cameras: cameras,
-      connection: ConnectionController(
-        services: services,
-        cameras: cameras,
-        settings: settings,
-      ),
+      connection: ConnectionController(services: services, cameras: cameras),
     );
   }
 
@@ -34,6 +31,9 @@ final class AppModels {
   final SettingsController settings;
   final CameraStore cameras;
   final ConnectionController connection;
+
+  /// Leaves the camera's Wi-Fi after the app was not used for a while.
+  final IdleDisconnect idle;
 
   /// Lets screens know when another route covers them (the Cameras screen
   /// stops scanning then).

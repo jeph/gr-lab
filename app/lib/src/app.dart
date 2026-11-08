@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'app_scope.dart';
 import 'cameras/cameras_screen.dart';
 import 'connection/connection_controller.dart';
+import 'connection/idle_disconnect.dart';
 import 'connection/wifi_consent_dialog.dart';
 import 'library/library_screen.dart';
 import 'theme/tokens.dart';
@@ -25,7 +26,9 @@ class GrLabApp extends StatelessWidget {
         theme: grTheme(Brightness.light),
         darkTheme: grTheme(Brightness.dark),
         themeMode: models.settings.themeMode,
-        navigatorObservers: [models.routes],
+        navigatorObservers: [models.routes, models.idle.observer],
+        builder: (context, child) =>
+            IdleInput(idle: models.idle, child: child!),
         home: const RootScreen(),
       ),
     ),

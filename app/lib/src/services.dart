@@ -45,6 +45,7 @@ final class AppServices {
       Duration(seconds: 15),
     ],
     this.askBeforeWifiJoin = false,
+    this.wifiApprovalShown = const Stream.empty(),
     this.isDemo = false,
   });
 
@@ -81,6 +82,13 @@ final class AppServices {
   /// Android's approval screen names only the network, and on some phones
   /// fills the screen like a settings page; iOS asks in a small alert.
   final bool askBeforeWifiJoin;
+
+  /// Emits when the OS's own network screen covers the app while a [wifi]
+  /// join is in progress (Android's approval list). It also comes back for
+  /// a camera that was approved before, after its network was disconnected
+  /// by hand in Wi-Fi settings; a join that then fails is explained and
+  /// retried only if the user agrees.
+  final Stream<void> wifiApprovalShown;
 
   /// Running against the simulated camera.
   final bool isDemo;

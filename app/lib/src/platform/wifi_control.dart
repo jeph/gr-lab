@@ -33,18 +33,29 @@ final class PlatformWifiControl implements WifiNetworkControl {
   PlatformWifiControl({
     this._channel = const MethodChannel('io.jeph.grlab/wifi'),
   }) {
-    // Android calls `lost` when the joined camera network goes away; iOS
-    // has no such callback, so there the stream never emits.
+    // Android calls `lost` when the joined camera network goes away and
+    // `approvalShown` when its network screen covers a join; iOS has
+    // neither, so there the streams never emit.
     _channel.setMethodCallHandler((call) async {
-      if (call.method == 'lost') _lost.add(null);
+      switch (call.method) {
+        case 'lost':
+          _lost.add(null);
+        case 'approvalShown':
+          _approvalShown.add(null);
+      }
     });
   }
 
   final MethodChannel _channel;
   final _lost = StreamController<void>.broadcast();
+  final _approvalShown = StreamController<void>.broadcast();
 
   @override
   Stream<void> get lost => _lost.stream;
+
+  /// Emits when Android's own network screen covers the app while a join
+  /// is in progress (passed on as `AppServices.wifiApprovalShown`).
+  Stream<void> get approvalShown => _approvalShown.stream;
 
   @override
   Future<void> join({
@@ -52,6 +63,7 @@ final class PlatformWifiControl implements WifiNetworkControl {
     required String passphrase,
     required WifiSecurity security,
     required Duration timeout,
+    bool approved = false,
   }) async {
     // A non-positive window still gets one immediate native attempt rather
     // than an argument error, so the caller sees the real OS outcome.
@@ -62,6 +74,7 @@ final class PlatformWifiControl implements WifiNetworkControl {
         'passphrase': passphrase,
         'security': security.name,
         'timeoutMs': ms,
+        'approved': approved,
       });
     } on PlatformException catch (e) {
       final message = e.message ?? 'joining "$ssid" failed';

@@ -11,6 +11,7 @@ final class _FakeWifi implements WifiNetworkControl {
     required String passphrase,
     required WifiSecurity security,
     required Duration timeout,
+    bool approved = false,
   }) => _camera._join(ssid, passphrase, timeout);
 
   @override

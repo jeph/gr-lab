@@ -333,37 +333,25 @@ class _Fit extends StatelessWidget {
   );
 }
 
-/// Name and power-on choice.
+/// The camera's name.
 class _CameraRows extends StatelessWidget {
   const _CameraRows({required this.camera});
 
   final SavedCamera camera;
 
   @override
-  Widget build(BuildContext context) {
-    final models = AppScope.of(context);
-    return GroupBox(
-      children: [
-        GroupRow(
-          key: const Key('camera-sheet-rename'),
-          icon: Icons.edit_outlined,
-          title: 'Name',
-          trailing: TrailingFit.value(context, camera.name),
-          chevron: true,
-          onTap: () => showRenameCameraDialog(context, camera),
-        ),
-        GroupRow(
-          icon: Icons.power_settings_new_rounded,
-          title: 'Turn on when connecting',
-          trailing: Switch(
-            key: const Key('camera-sheet-power-on'),
-            value: models.settings.powerOnWhenConnecting,
-            onChanged: (v) => models.settings.powerOnWhenConnecting = v,
-          ),
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => GroupBox(
+    children: [
+      GroupRow(
+        key: const Key('camera-sheet-rename'),
+        icon: Icons.edit_outlined,
+        title: 'Name',
+        trailing: TrailingFit.value(context, camera.name),
+        chevron: true,
+        onTap: () => showRenameCameraDialog(context, camera),
+      ),
+    ],
+  );
 }
 
 /// Asks for a new display name for [camera] and saves it.

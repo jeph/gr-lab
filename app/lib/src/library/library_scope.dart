@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../app_scope.dart';
+import '../connection/idle_disconnect.dart';
 import '../downloads/download_engine.dart';
 import 'camera_images.dart';
 import 'camera_link.dart';
@@ -17,13 +18,17 @@ final class LibraryContext {
     required this.images,
     required this.movies,
     required this.engine,
-  });
+    IdleDisconnect? idle,
+  }) : _idle = idle {
+    if (idle != null) engine.addListener(_holdWhileDownloading);
+  }
 
   factory LibraryContext.create(AppModels app) {
     final services = app.services;
     final link = ConnectionLink(app.connection);
     final queue = RequestQueue();
     return LibraryContext(
+      idle: app.idle,
       link: link,
       model: LibraryModel(
         cacheDir: services.cacheDir,
@@ -52,7 +57,25 @@ final class LibraryContext {
   final MovieCache movies;
   final DownloadEngine engine;
 
+  /// A running download keeps the camera's Wi-Fi from being left for
+  /// lack of use.
+  final IdleDisconnect? _idle;
+  VoidCallback? _release;
+
+  void _holdWhileDownloading() {
+    final running = engine.current != null;
+    if (running && _release == null) {
+      _release = _idle!.hold();
+    } else if (!running && _release != null) {
+      _release!();
+      _release = null;
+    }
+  }
+
   void dispose() {
+    engine.removeListener(_holdWhileDownloading);
+    _release?.call();
+    _release = null;
     engine.dispose();
     model.dispose();
     link.dispose();

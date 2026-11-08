@@ -20,11 +20,18 @@ final class WifiJoinDeclined implements Exception {
 /// Platform control of the phone/computer Wi-Fi link to the camera AP,
 /// implemented outside this package.
 abstract interface class WifiNetworkControl {
+  /// Joins the camera network within [timeout].
+  ///
+  /// [approved]: the user already approved this network for the app (the
+  /// app knows; the session does not), so the platform may look for it
+  /// harder without asking again. Android then repeats its request while
+  /// the network has not been found (see the app's `WifiChannel`).
   Future<void> join({
     required String ssid,
     required String passphrase,
     required WifiSecurity security,
     required Duration timeout,
+    bool approved = false,
   });
 
   /// SSID of the current association, or null when unknown or not associated.

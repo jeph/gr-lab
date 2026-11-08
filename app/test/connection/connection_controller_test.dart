@@ -244,6 +244,131 @@ void main() {
       expect(connection.status, ConnectionStatus.offline);
     });
   });
+
+  group("Android's network list for an approved camera", () {
+    // The camera has been joined once (approved), then Android shows its
+    // list again and the user backs out of it, as after the network was
+    // disconnected in Wi-Fi settings.
+    Future<(TestApp, _ListWifi)> approvedThenListed() async {
+      late _ListWifi wifi;
+      final shown = StreamController<void>.broadcast(sync: true);
+      final app = await createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+        askBeforeWifiJoin: true,
+        wifi: (camera) => wifi = _ListWifi(camera, shown),
+        wifiApprovalShown: shown.stream,
+      );
+      addTearDown(shown.close);
+      final connection = app.models.connection;
+      final first = connection.openLibrary();
+      await _until(() => connection.wifiConsent != null);
+      connection.answerWifiConsent(true);
+      await first;
+      expect(connection.status, ConnectionStatus.connected);
+      await connection.closeLibrary();
+      expect(connection.status, ConnectionStatus.bluetooth);
+      wifi.backOutOfList = 1;
+      return (app, wifi);
+    }
+
+    test('explains it and Try again joins', () async {
+      final (app, wifi) = await approvedThenListed();
+      addTearDown(app.dispose);
+      final connection = app.models.connection;
+
+      final attempt = connection.openLibrary();
+      await _until(() => connection.wifiConsent != null);
+      expect(connection.wifiConsent!.again, isTrue);
+      expect(connection.wifiConsent!.ssid, app.camera.config.ssid);
+      final joinsBefore = wifi.joins;
+      connection.answerWifiConsent(true);
+      await attempt;
+
+      expect(connection.status, ConnectionStatus.connected);
+      expect(wifi.joins, joinsBefore + 1);
+    });
+
+    test('Not now keeps Bluetooth and reports the decline', () async {
+      final (app, _) = await approvedThenListed();
+      addTearDown(app.dispose);
+      final connection = app.models.connection;
+
+      final attempt = connection.openLibrary();
+      await _until(() => connection.wifiConsent != null);
+      connection.answerWifiConsent(false);
+      await attempt;
+
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(connection.failure?.kind, ConnectFailureKind.wifiDeclined);
+      expect(await app.camera.wifi.currentSsid(), isNull);
+    });
+
+    test('is not asked about on a first join', () async {
+      final shown = StreamController<void>.broadcast(sync: true);
+      addTearDown(shown.close);
+      final app = await createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+        askBeforeWifiJoin: true,
+        wifi: (camera) => _ListWifi(camera, shown)..backOutOfList = 1,
+        wifiApprovalShown: shown.stream,
+      );
+      addTearDown(app.dispose);
+      final connection = app.models.connection;
+
+      final attempt = connection.openLibrary();
+      await _until(() => connection.wifiConsent != null);
+      expect(connection.wifiConsent!.again, isFalse);
+      connection.answerWifiConsent(true);
+      await attempt;
+
+      expect(connection.wifiConsent, isNull);
+      expect(connection.failure?.kind, ConnectFailureKind.wifiDeclined);
+    });
+  });
+}
+
+/// The camera's Wi-Fi, with Android's network list shown during the next
+/// [backOutOfList] joins and the user backing out of it each time.
+final class _ListWifi implements WifiNetworkControl {
+  _ListWifi(this._camera, this._shown);
+
+  final WifiNetworkControl _camera;
+  final StreamController<void> _shown;
+  int backOutOfList = 0;
+  int joins = 0;
+
+  @override
+  Future<void> join({
+    required String ssid,
+    required String passphrase,
+    required WifiSecurity security,
+    required Duration timeout,
+    bool approved = false,
+  }) async {
+    joins++;
+    if (backOutOfList > 0) {
+      backOutOfList--;
+      _shown.add(null);
+      throw const WifiJoinDeclined('the system dialog was declined');
+    }
+    await _camera.join(
+      ssid: ssid,
+      passphrase: passphrase,
+      security: security,
+      timeout: timeout,
+    );
+  }
+
+  @override
+  Future<String?> currentSsid() => _camera.currentSsid();
+
+  @override
+  Future<void> leave() => _camera.leave();
+
+  @override
+  Stream<void> get lost => _camera.lost;
 }
 
 Future<void> _until(

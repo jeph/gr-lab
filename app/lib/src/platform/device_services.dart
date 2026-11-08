@@ -14,15 +14,17 @@ import 'wifi_control.dart';
 /// joined natively, downloads saved to the photo library.
 Future<AppServices> buildDeviceServices() async {
   final dirs = await appDirectories();
+  final wifi = PlatformWifiControl();
   return AppServices(
     ble: UniversalBleTransport(),
-    wifi: PlatformWifiControl(),
+    wifi: wifi,
     media: PlatformMediaSaver(),
     clientName: await deviceClientName(),
     dataDir: dirs.data,
     cacheDir: dirs.cache,
     ensureBluetoothPermission: ensureBluetoothPermission,
     askBeforeWifiJoin: Platform.isAndroid,
+    wifiApprovalShown: wifi.approvalShown,
   );
 }
 

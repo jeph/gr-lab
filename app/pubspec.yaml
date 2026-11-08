@@ -10,6 +10,7 @@ environment:
 resolution: workspace
 
 dependencies:
+  clock: ^1.1.3
   flutter:
     sdk: flutter
   gr_fake_camera:

@@ -196,10 +196,6 @@ void main() {
     expect(find.text('GR IV is paired'), findsOneWidget);
     expect(find.text('No. 1234567 · fw 1.20'), findsOneWidget);
 
-    expect(app.models.settings.powerOnWhenConnecting, isTrue);
-    await tapWhenReady(tester, find.byKey(const Key('pairing-done-power-on')));
-    expect(app.models.settings.powerOnWhenConnecting, isFalse);
-
     // The pairing link was released, so the session links on its own,
     // over Bluetooth only.
     await pumpUntil(

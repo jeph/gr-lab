@@ -54,6 +54,7 @@ void main() {
             'passphrase': 'abcd1234',
             'security': name,
             'timeoutMs': 42000,
+            'approved': false,
           },
       ],
     );

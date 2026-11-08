@@ -83,22 +83,6 @@ class PairingDoneScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SectionLabel('When connecting'),
-                      GroupBox(
-                        children: [
-                          GroupRow(
-                            icon: Icons.power_settings_new_rounded,
-                            title: 'Turn the camera on',
-                            subtitle: 'Switch it on over Bluetooth when off',
-                            trailing: Switch(
-                              key: const Key('pairing-done-power-on'),
-                              value: models.settings.powerOnWhenConnecting,
-                              onChanged: (v) =>
-                                  models.settings.powerOnWhenConnecting = v,
-                            ),
-                          ),
-                        ],
-                      ),
                     ],
                   ),
                 ),

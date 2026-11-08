@@ -81,6 +81,7 @@ final class TestApp {
         models.connection.disconnect().whenComplete(() => closed = true),
       );
       await pumpUntil(tester, () => closed, reason: 'session close');
+      models.idle.dispose();
       models.connection.dispose();
       await tester.runAsync(camera.close);
       // Lets timers the camera or session started run out.
@@ -88,6 +89,7 @@ final class TestApp {
       await tester.runAsync(_deleteRoot);
     } else {
       await models.connection.disconnect();
+      models.idle.dispose();
       models.connection.dispose();
       await camera.close();
       await _deleteRoot();
@@ -109,14 +111,17 @@ final class TestApp {
 /// `FakeCameraConfig(bonded: true)` for a camera that accepts this phone,
 /// or without it for one that needs pairing again). [sessionOptions]
 /// shortens session timeouts for failure tests. [transport] wraps the
-/// camera's BLE transport, e.g. to add a second camera.
-/// [askBeforeWifiJoin] and [redialDelays] are passed to [AppServices].
+/// camera's BLE transport, e.g. to add a second camera; [wifi] wraps its
+/// Wi-Fi control. [askBeforeWifiJoin], [wifiApprovalShown] and
+/// [redialDelays] are passed to [AppServices].
 Future<TestApp> createTestApp({
   FakeCameraConfig config = const FakeCameraConfig(),
   bool saveCamera = false,
   GrSessionOptions sessionOptions = const GrSessionOptions(),
   BleTransport Function(BleTransport camera)? transport,
+  WifiNetworkControl Function(WifiNetworkControl camera)? wifi,
   bool askBeforeWifiJoin = false,
+  Stream<void> wifiApprovalShown = const Stream.empty(),
   List<Duration> redialDelays = const [Duration(milliseconds: 20)],
 }) async {
   // flutter_test answers every dart:io HttpClient request with 400; the
@@ -151,7 +156,7 @@ Future<TestApp> createTestApp({
   final media = RecordingMediaSaver();
   final services = AppServices(
     ble: ble,
-    wifi: camera.wifi,
+    wifi: wifi == null ? camera.wifi : wifi(camera.wifi),
     media: media,
     clientName: 'GR Lab',
     dataDir: data,
@@ -160,6 +165,7 @@ Future<TestApp> createTestApp({
     httpFactory: camera.httpClient,
     sessionOptions: sessionOptions,
     askBeforeWifiJoin: askBeforeWifiJoin,
+    wifiApprovalShown: wifiApprovalShown,
     redialDelays: redialDelays,
   );
   return TestApp._(

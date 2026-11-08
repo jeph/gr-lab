@@ -4,6 +4,22 @@ import 'package:flutter/material.dart';
 
 import 'json_file.dart';
 
+/// How long the camera's Wi-Fi stays connected without use before the app
+/// leaves it.
+enum AutoDisconnect {
+  oneMinute(Duration(minutes: 1), '1 min'),
+  fiveMinutes(Duration(minutes: 5), '5 min'),
+  tenMinutes(Duration(minutes: 10), '10 min'),
+  fifteenMinutes(Duration(minutes: 15), '15 min'),
+  never(null, 'Never');
+
+  const AutoDisconnect(this.after, this.label);
+
+  /// Null for [never].
+  final Duration? after;
+  final String label;
+}
+
 /// User settings, persisted as `settings.json` in the app data directory.
 final class SettingsController extends ChangeNotifier {
   SettingsController._(this._file);
@@ -16,8 +32,9 @@ final class SettingsController extends ChangeNotifier {
     if (json != null) {
       c._themeMode =
           ThemeMode.values.asNameMap()[json['themeMode']] ?? c._themeMode;
-      c._powerOnWhenConnecting =
-          json['powerOnWhenConnecting'] as bool? ?? c._powerOnWhenConnecting;
+      c._autoDisconnect =
+          AutoDisconnect.values.asNameMap()[json['autoDisconnect']] ??
+          c._autoDisconnect;
     }
     return c;
   }
@@ -26,23 +43,22 @@ final class SettingsController extends ChangeNotifier {
   Future<void> _pending = Future.value();
 
   ThemeMode _themeMode = ThemeMode.system;
-  bool _powerOnWhenConnecting = true;
+  AutoDisconnect _autoDisconnect = AutoDisconnect.fiveMinutes;
 
   ThemeMode get themeMode => _themeMode;
 
-  /// Turn the camera on over Bluetooth when it is off and the app connects.
-  bool get powerOnWhenConnecting => _powerOnWhenConnecting;
+  /// Leave the camera's Wi-Fi after this long without use.
+  AutoDisconnect get autoDisconnect => _autoDisconnect;
 
   set themeMode(ThemeMode v) => _update(() => _themeMode = v);
-  set powerOnWhenConnecting(bool v) =>
-      _update(() => _powerOnWhenConnecting = v);
+  set autoDisconnect(AutoDisconnect v) => _update(() => _autoDisconnect = v);
 
   void _update(void Function() change) {
     change();
     notifyListeners();
     final snapshot = {
       'themeMode': _themeMode.name,
-      'powerOnWhenConnecting': _powerOnWhenConnecting,
+      'autoDisconnect': _autoDisconnect.name,
     };
     _pending = _pending.then((_) => _file.write(snapshot));
   }

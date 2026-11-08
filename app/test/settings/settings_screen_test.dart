@@ -27,10 +27,14 @@ void main() {
       await tester.pump();
       expect(settings.themeMode, ThemeMode.dark);
 
-      final powerOn = settings.powerOnWhenConnecting;
-      await tester.tap(find.byKey(const ValueKey('setting-power-on')));
-      await tester.pump();
-      expect(settings.powerOnWhenConnecting, !powerOn);
+      expect(settings.autoDisconnect, AutoDisconnect.fiveMinutes);
+      expect(find.text('5 min'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('setting-auto-disconnect')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('auto-disconnect:never')));
+      await tester.pumpAndSettle();
+      expect(settings.autoDisconnect, AutoDisconnect.never);
+      expect(find.text('Never'), findsOneWidget);
 
       expect(find.text('Licenses'), findsOneWidget);
 
@@ -43,7 +47,7 @@ void main() {
         () => SettingsController.load(app.models.services.dataDir),
       ))!;
       expect(reloaded.themeMode, ThemeMode.dark);
-      expect(reloaded.powerOnWhenConnecting, !powerOn);
+      expect(reloaded.autoDisconnect, AutoDisconnect.never);
 
       await app.dispose();
     });
