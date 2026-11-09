@@ -34,10 +34,14 @@ final class SavedCamera {
 
   String get serial => paired.serialNumber;
 
-  /// Model without "RICOH", as the camera reported it at pairing. The
-  /// identity check over Wi-Fi refuses a camera whose `/v1/props` model
-  /// differs, so this is the connected camera's model too.
-  String? get model => _modelOf(paired);
+  /// The model name to show: without "RICOH", as the camera reported it at
+  /// pairing. The identity check over Wi-Fi refuses a camera whose
+  /// `/v1/props` model differs, so this is the connected camera's model too.
+  String? get modelName => _modelOf(paired);
+
+  /// The camera's model, which decides what it supports ([CameraFeature]);
+  /// null when it was not read at pairing or is one GR Lab does not know.
+  GrModel? get model => paired.model;
 
   /// Firmware version as the camera last reported it over Bluetooth.
   String? get firmware => paired.firmwareRevision;

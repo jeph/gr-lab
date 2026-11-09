@@ -907,7 +907,7 @@ class _NearLabel extends StatelessWidget {
       // Not scanning (no Bluetooth permission, Bluetooth off): unknown.
       Presence.away => null,
     };
-    final model = camera.model;
+    final model = camera.modelName;
     final text = switch ((model, seen)) {
       (null, null) => '',
       (final model?, null) => model,

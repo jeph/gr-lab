@@ -21,7 +21,6 @@ void main() {
     final looks = rig.session.looks;
     expect(looks.slots, isNull);
     await looks.wake();
-    expect(looks.hasSlots, isTrue);
     await looks.readSlots();
 
     final slots = looks.slots!;
@@ -140,13 +139,6 @@ void main() {
       look: positive.withBase(LookBase.standardMono),
     );
     expect(mono.look!.base, LookBase.standardMono);
-  });
-
-  test('a GR III has no slots', () async {
-    rig = await ShootRig.start(
-      config: const FakeCameraConfig(bonded: true, model: 'RICOH GR III'),
-    );
-    expect(rig.session.looks.hasSlots, isFalse);
   });
 
   test("the library reads a photo's Image Control over Wi-Fi", () async {

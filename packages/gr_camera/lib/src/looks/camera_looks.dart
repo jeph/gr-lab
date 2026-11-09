@@ -59,13 +59,12 @@ final class LookSlot {
 }
 
 /// The camera's Image Control Custom slots C1–C3 over Bluetooth, for one
-/// session: reading what each holds and loading a look into one.
-///
-/// The slots are characteristics of the Camera Control service, present on
-/// the GR IV family only (`GrBleCatalog.imageControlSlots`). GR WORLD
-/// loads a look by writing the data, then the name, then reading every
-/// slot back (`/imageControlWrite`, CamSvcChars.md §7 item 4); this does
-/// the same for the one slot it writes.
+/// session: reading what each holds and loading a look into one. Only
+/// models with `CameraFeature.lookSlots` serve them (the slots are
+/// `GrBleCatalog.imageControlSlots`). GR WORLD loads a look by writing the
+/// data, then the name, then reading every slot back
+/// (`/imageControlWrite`, CamSvcChars.md §7 item 4); this does the same for
+/// the one slot it writes.
 final class CameraLooks extends ChangeNotifier {
   new _(this._session, this._camera);
 
@@ -80,10 +79,6 @@ final class CameraLooks extends ChangeNotifier {
 
   /// The Bluetooth link is up.
   bool get linked => _session.ble != null;
-
-  /// Whether the linked camera has the Custom slots; null before its
-  /// services are known.
-  bool? get hasSlots => _session.ble?.isPresent(GrBleCatalog.imageControl1Data);
 
   /// Turns the camera on, or puts a camera that is on into shooting, as
   /// `CameraRemote.wake` does: the slots are served by the camera's main
@@ -168,10 +163,7 @@ final class CameraLooks extends ChangeNotifier {
   }
 
   /// The linked camera's model, as it reported it at connect.
-  GrModel? get _model => switch (_session.identity?.modelName) {
-    final name? => GrModel.fromModelString(name),
-    null => null,
-  };
+  GrModel? get _model => _session.identity?.model;
 
   static Future<LookSlot> _read(GrBleClient ble, int number) async {
     final read = await ble.readImageControl(number);

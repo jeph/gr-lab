@@ -136,6 +136,26 @@ void main() {
     expect(app.camera.lookSlot(1).data, isNot(held));
   });
 
+  testWidgets('a GR III has no slots to show and is not turned on for them', (
+    tester,
+  ) async {
+    final app = await _inLooks(tester, model: 'RICOH GR III');
+    await pumpUntilFound(
+      tester,
+      find.text(
+        "GR Lab can load looks into the GR IV family only. This camera's "
+        "Custom slots can't be reached over Bluetooth.",
+      ),
+    );
+    await pumpUntil(
+      tester,
+      () => app.models.connection.bleLinked,
+      reason: 'linked',
+    );
+    expect(app.camera.poweredOn, isFalse);
+    await app.dispose();
+  });
+
   testWidgets('a slot saved from the editor joins the library, from C2 and '
       'tagged as in C2', (tester) async {
     final app = await _inLooks(tester);

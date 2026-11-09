@@ -55,6 +55,7 @@ export 'package:gr_protocol/gr_protocol.dart'
         TraceSink,
         stripRicohPrefix;
 
+export 'src/camera_features.dart' show CameraFeature, CameraFeatures;
 export 'src/environment.dart' show GrCameraEnvironment;
 export 'src/library/camera_file.dart' show CameraFile, FileInfo;
 export 'src/library/camera_images.dart'

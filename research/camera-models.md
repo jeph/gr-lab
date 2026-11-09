@@ -131,7 +131,7 @@ The camera enumerates as a standard PTP device (class 6) with vendor ID `0x25FB`
 ## 5. Recommendations for the client
 
 1. Treat model as an enum keyed by advertising code with a string fallback: `{1: GR III, 5: GR III HDF, 3: GR IIIx, 6: GR IIIx HDF, 7: GR IV, 8: GR IV HDF, 9: GR IV Monochrome, 10: GR IVx (unreleased)}`; GR II only from `/v1/props`.
-2. Capability flags per family, not per body: `gr3family` (codes 1, 3, 5, 6 — identical `bled`/`webapid`) and `gr4family` (7, 8, 9, 10 — identical firmware file). Add body-specific flags only where hardware differs (e.g. Monochrome image controls, HDF filter), and confirm them on hardware.
+2. Capability flags per family, not per body: `gr3family` (codes 1, 3, 5, 6 — identical `bled`/`webapid`) and `gr4family` (7, 8, 9, 10 — identical firmware file). Add body-specific flags only where hardware differs (e.g. Monochrome image controls, HDF filter), and confirm them on hardware. GR Lab keeps these flags in its `CameraFeature` table (`packages/gr_camera/lib/src/camera_features.dart`).
 3. Minimum firmware: follow GR WORLD (GR III ≥ 2.00, GR IIIx ≥ 1.50, GR II ≥ 3.00, GR IV any). Compare versions per model: GR IV Monochrome's version line is 0.10 behind GR IV for the same image (1.10 vs 1.20).
 4. Persist `(model code, serial, BLE address)` at pairing; re-check `serialNo` and `model` from `/v1/props` after every Wi-Fi join, as GR WORLD does.
 

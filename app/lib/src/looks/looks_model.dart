@@ -21,7 +21,8 @@ enum SlotsState {
   /// Turning the camera on or reading the slots failed.
   failed,
 
-  /// The camera has no Custom slots GR Lab can reach (GR III family).
+  /// The camera's model has no Custom slots GR Lab can reach
+  /// ([CameraFeature.lookSlots]).
   unsupported,
 }
 
@@ -66,7 +67,8 @@ final class LooksModel extends ChangeNotifier {
   /// A load the camera refused, for a snack bar.
   Stream<LoadRefusal> get refusals => _refusals.stream;
 
-  SlotsState get state => _state;
+  SlotsState get state =>
+      model.supports(CameraFeature.lookSlots) ? _state : SlotsState.unsupported;
 
   /// The technical code of the last failure to read the slots.
   String? get failureCode => _failureCode;
@@ -77,8 +79,8 @@ final class LooksModel extends ChangeNotifier {
   /// The slot (1–3) a load is being written to.
   int? get loading => _loading;
 
-  /// The model the connected camera reports, for the base images it offers.
-  GrModel? get model => connection.camera?.paired.model;
+  /// The paired camera's model, for the slots and base images it offers.
+  GrModel? get model => connection.camera?.model;
 
   /// A look the camera produced, whose header a new look copies
   /// (`Look.onBase`): a slot's look, else a saved look's; null when there
@@ -99,7 +101,7 @@ final class LooksModel extends ChangeNotifier {
   set visible(bool value) {
     if (_visible == value) return;
     _visible = value;
-    if (value && _state != SlotsState.unsupported) _state = SlotsState.idle;
+    if (value) _state = SlotsState.idle;
     _sync();
   }
 
@@ -160,8 +162,7 @@ final class LooksModel extends ChangeNotifier {
     if (!identical(session, _session)) _attach(session);
     final looks = _looks;
     final linked = looks != null && connection.bleLinked;
-    if (linked && looks.hasSlots == false) _state = SlotsState.unsupported;
-    if (_visible && linked && _state == SlotsState.idle) {
+    if (_visible && linked && state == SlotsState.idle) {
       unawaited(_read(looks));
     }
     notifyListeners();
@@ -194,9 +195,7 @@ final class LooksModel extends ChangeNotifier {
       return;
     }
     if (_disposed || run != _run) return;
-    _state = looks.hasSlots == false
-        ? SlotsState.unsupported
-        : SlotsState.ready;
+    _state = SlotsState.ready;
     notifyListeners();
   }
 
