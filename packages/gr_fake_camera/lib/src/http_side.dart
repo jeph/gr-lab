@@ -71,6 +71,8 @@ extension on FakeGrCamera {
           return await _error(request, 400, 'Bad Request', httpStatus: 200);
         case ['photos', final dir, final file, 'info']:
           return await _info(request, dir, file);
+        case ['photos', final dir, final file, 'imgctrl']:
+          return await _imageControl(request, dir, file);
         case ['photos', final dir, final file]:
           return await _download(request, dir, file);
       }
@@ -470,6 +472,22 @@ extension on FakeGrCamera {
         'xv': photo.xv,
       },
     });
+  }
+
+  /// `/imgctrl`: the photo's Image Control blob (http-api.md §4.3).
+  Future<void> _imageControl(
+    HttpRequest request,
+    String dir,
+    String file,
+  ) async {
+    final blob = _requested(request, dir, file)?.imageControl;
+    if (blob == null) return await _error(request, 404, 'Not Found');
+    request.response
+      ..statusCode = 200
+      ..contentLength = blob.length
+      ..headers.contentType = ContentType.binary
+      ..add(blob);
+    await request.response.close();
   }
 
   /// Streams the file with a Content-Length on a connection that closes

@@ -94,7 +94,9 @@ final class _FakeLink implements BleConnection {
     if (!c.readable) {
       throw BleException(BleErrorCode.gatt, '${c.key}: read not permitted');
     }
-    _camera._requireBond(c);
+    _camera
+      .._requireBond(c)
+      .._requireMainFirmware(c);
     return _camera._read(c);
   }
 
@@ -113,6 +115,7 @@ final class _FakeLink implements BleConnection {
     }
     _camera
       .._requireBond(c)
+      .._requireMainFirmware(c)
       .._write(this, c, Uint8List.fromList(value));
   }
 
@@ -312,6 +315,17 @@ extension on FakeGrCamera {
     );
   }
 
+  /// The Custom slots are served by the camera's main firmware, not by the
+  /// Bluetooth-only state of a camera that is off \[inferred\]
+  /// (firmware-bonding.md §6).
+  void _requireMainFirmware(GrBleCharacteristic<Object> c) {
+    if (_poweredOn || !_isLookSlot(c)) return;
+    throw BleException(BleErrorCode.gatt, '${c.key}: camera is off');
+  }
+
+  static bool _isLookSlot(GrBleCharacteristic<Object> c) =>
+      GrBleCatalog.imageControlSlots.any((s) => s.name == c || s.data == c);
+
   Uint8List _read(GrBleCharacteristic<Object> c) {
     final live = switch (c) {
       GrBleCatalog.cameraPower =>
@@ -403,6 +417,16 @@ extension on FakeGrCamera {
           throw BleException(BleErrorCode.gatt, '${c.key}: invalid value');
         }
         _setDriveMode(first);
+      case GrBleCatalog.imageControl1Data ||
+          GrBleCatalog.imageControl2Data ||
+          GrBleCatalog.imageControl3Data:
+        // A blob GR WORLD would ignore is refused \[design\]: what the
+        // camera does with one is \[unknown\].
+        final decoded = GrBleCatalog.imageControl1Data.codec.decode(v);
+        if (decoded.value == null || decoded.issues.isNotEmpty) {
+          throw BleException(BleErrorCode.gatt, '${c.key}: invalid value');
+        }
+        _values[c.uuid] = v;
       default:
         _values[c.uuid] = v;
     }

@@ -26,6 +26,7 @@ final class FakePhoto {
     this.tv = '1.250',
     this.sv = '200',
     this.xv = '0.0',
+    this.imageControl,
   }) : path = GrPhotoPath(dir, file);
 
   /// Folder on the card, e.g. `100RICOH`.
@@ -77,6 +78,11 @@ final class FakePhoto {
 
   /// Exposure compensation in EV as `/info` `xv` reports it, e.g. `-0.3`.
   final String xv;
+
+  /// The Image Control blob `/imgctrl` serves for this photo; null
+  /// answers 404, as for a movie \[design\]: what the camera answers for
+  /// one is \[unknown\].
+  final List<int>? imageControl;
 
   /// Upper-case extension: `JPG`, `DNG` or `MOV`.
   String get extension => path.extension;
@@ -150,6 +156,9 @@ final class FakePhoto {
           tv: tvs[shot % tvs.length],
           sv: svs[shot % svs.length],
           xv: xvs[shot % xvs.length],
+          imageControl: kind == 'M'
+              ? null
+              : FakeLook.presets[shot % FakeLook.presets.length].data,
         );
         switch (kind) {
           case 'P':
@@ -175,6 +184,58 @@ final class FakePhoto {
 
   @override
   String toString() => '$storage:$dir/$file';
+}
+
+/// A look on the simulated camera: a Custom slot's name and Image Control
+/// blob (ble.md § Image Control blob), also what `/imgctrl` serves.
+final class FakeLook {
+  /// A look named [name] holding blob [data].
+  const new(this.name, this.data);
+
+  /// Slot name, as the camera keeps it.
+  final String name;
+
+  /// The blob: `[version][byte 1][base][N][N × (id, value)]`.
+  final List<int> data;
+
+  /// Looks for the demo and tests. Each carries every parameter its base
+  /// has in the GR IV firmware's settings (research/protocol/image-control.md
+  /// §3), with values in GR Lab's ranges, in the version-2 layout
+  /// \[design\]: what a real camera stores is \[unknown\]. The first three
+  /// fill C1–C3 by default.
+  static const presets = [
+    // Positive Film: saturation +1, key −1, grain on, medium, high.
+    FakeLook('Tokyo Night', [
+      2, 0, 0x06, 12, //
+      0x00, 1, 0x01, 0, 0x02, 0xff, 0x03, 0, 0x04, 0, 0x05, 0, 0x06, 0,
+      0x13, 0, 0x14, 0, 0x15, 1, 0x16, 1, 0x17, 2,
+    ]),
+    // Hi-Contrast B&W: shading −2, grain on, large, high.
+    FakeLook('Daido', [
+      2, 0, 0x05, 18, //
+      0x02, 0, 0x03, 0, 0x04, 0, 0x05, 0, 0x06, 0, 0x07, 0,
+      0x0c, 0, 0x0d, 0, 0x0e, 0, 0x0f, 0, 0x10, 0, 0x11, 0, 0x12, 0,
+      0x13, 0xfe, 0x14, 0, 0x15, 1, 0x16, 2, 0x17, 2,
+    ]),
+    // Negative Film: saturation −1, hue +1, key +1.
+    FakeLook('Soft Summer', [
+      2, 0, 0x0d, 12, //
+      0x00, 0xff, 0x01, 1, 0x02, 1, 0x03, 0, 0x04, 0, 0x05, 0, 0x06, 0,
+      0x13, 0, 0x14, 0, 0x15, 0, 0x16, 0, 0x17, 0,
+    ]),
+    // Cinema (Green): cinema toning high, clarity +1.
+    FakeLook('Cine Teal', [
+      2, 0, 0x0f, 13, //
+      0x00, 0, 0x01, 0, 0x02, 0, 0x03, 0, 0x04, 0, 0x05, 0, 0x06, 0,
+      0x08, 2, 0x13, 0, 0x14, 1, 0x15, 0, 0x16, 0, 0x17, 0,
+    ]),
+    // Standard, unchanged.
+    FakeLook('Standard', [
+      2, 0, 0x00, 9, //
+      0x00, 0, 0x01, 0, 0x02, 0, 0x03, 0, 0x04, 0, 0x05, 0, 0x06, 0,
+      0x13, 0, 0x14, 0,
+    ]),
+  ];
 }
 
 /// Identity, timing and failure injection for a [FakeGrCamera].
@@ -223,6 +284,7 @@ final class FakeCameraConfig {
     this.lensBeforeFocusAnswer = false,
     this.announcesDialChanges = true,
     this.selfTimerScale = 1.0,
+    this.lookSlots,
   });
 
   /// `/v1/props` `model` and the Camera Information model name; must be a
@@ -371,4 +433,8 @@ final class FakeCameraConfig {
   /// Scales the 2 s and 10 s self-timer countdowns; tests pass small
   /// values.
   final double selfTimerScale;
+
+  /// What Custom slots C1–C3 hold (GR IV family); null means the first
+  /// three [FakeLook.presets].
+  final List<FakeLook>? lookSlots;
 }

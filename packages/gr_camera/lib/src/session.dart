@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:gr_camera/src/environment.dart';
 import 'package:gr_camera/src/library/camera_library.dart';
+import 'package:gr_camera/src/looks/camera_looks.dart';
 import 'package:gr_camera/src/shoot/live_view.dart';
 import 'package:gr_camera/src/shoot/remote.dart';
 import 'package:gr_protocol/gr_protocol.dart';
@@ -77,6 +78,7 @@ final class CameraSession {
   /// The change socket of the link [_library] belongs to.
   GrChangesSocket? _libraryLink;
   CameraRemote? _remote;
+  CameraLooks? _looks;
   CameraLiveView? _liveView;
 
   /// Every step of the session, such as `ble.lost`, `ble.restored`,
@@ -131,6 +133,7 @@ final class CameraSession {
   /// whose wake is still in flight) is turned off again.
   Future<void> close({bool powerOffIfWoken = false}) {
     _remote?.close();
+    _looks?.close();
     _liveView?.close();
     return _session.close(powerOffIfWoken: powerOffIfWoken);
   }
@@ -186,6 +189,10 @@ final class CameraSession {
     _environment,
     onModeChanged: () => _liveView?.modeChanged(),
   );
+
+  /// The camera's Image Control Custom slots over Bluetooth. One for the
+  /// whole session.
+  CameraLooks get looks => _looks ??= createCameraLooks(_session, _environment);
 
   /// Live view over the camera's Wi-Fi, run between its `start` and
   /// `stop`. One for the whole session; it stops when the session closes.

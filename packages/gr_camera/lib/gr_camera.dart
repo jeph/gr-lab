@@ -18,6 +18,10 @@ export 'package:gr_protocol/gr_protocol.dart'
         BleErrorCode,
         BleException,
         BleExposureMode,
+        BleImageControlBase,
+        BleImageControlBlob,
+        BleImageControlEntry,
+        BleImageControlParameter,
         BleShootingMode,
         BleUserMode,
         GrApiException,
@@ -62,6 +66,7 @@ export 'src/library/camera_images.dart'
 export 'src/library/camera_library.dart'
     show
         CameraLibrary,
+        NoImageControl,
         TransferConnectionLost,
         TransferCutOff,
         TransferFailure,
@@ -83,6 +88,23 @@ export 'src/library/request_queue.dart'
         RequestSignal,
         RequestTicket,
         SharedRequests;
+export 'src/looks/camera_looks.dart'
+    show
+        CameraLooks,
+        LookSlot,
+        imageControlFromBytes,
+        imageControlToBytes,
+        lookNameCharacters,
+        lookNameMaxLength;
+export 'src/looks/image_control.dart'
+    show
+        ImageControlEdits,
+        ImageControlRange,
+        ImageControlValueKind,
+        imageControlBases,
+        imageControlParameters,
+        imageControlRange,
+        newImageControl;
 export 'src/nearby.dart' show NearbyCamera, NearbyScanner;
 export 'src/pairing.dart' show PairingRun, pairedDeviceName;
 export 'src/presence.dart' show CameraSighting, PresenceScanner;

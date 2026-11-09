@@ -8,6 +8,7 @@ import 'package:grlab/src/connection/idle_disconnect.dart';
 import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/data/settings.dart';
 import 'package:grlab/src/debug/debug_log.dart';
+import 'package:grlab/src/looks/looks_store.dart';
 import 'package:grlab/src/services.dart';
 
 /// App-wide models, created once in `main` and reached through
@@ -19,11 +20,13 @@ final class AppModels {
     required this.cameras,
     required this.connection,
     required this.debugLog,
+    required this.looks,
   }) : idle = IdleDisconnect(connection: connection, settings: settings);
 
   static Future<AppModels> load(AppServices services) async {
     final settings = await SettingsController.load(services.dataDir);
     final cameras = await CameraStore.load(services.dataDir);
+    final looks = await LooksStore.load(services.dataDir);
     final debugLog = await DebugLog.open(
       dir: services.debugLogDir,
       defaultEnabled: DebugLog.defaultEnabledFor(appFlavor),
@@ -46,6 +49,7 @@ final class AppModels {
       cameras: cameras,
       connection: ConnectionController(services: services, cameras: cameras),
       debugLog: debugLog,
+      looks: looks,
     );
   }
 
@@ -57,6 +61,9 @@ final class AppModels {
   /// The app's debug log, camera traffic included, for bug reports
   /// (Settings).
   final DebugLog debugLog;
+
+  /// The user's saved Image Control looks.
+  final LooksStore looks;
 
   /// Leaves the camera's Wi-Fi after the app was not used for a while.
   final IdleDisconnect idle;

@@ -34,6 +34,10 @@ enum CameraTab {
 
   /// Remote over Bluetooth, or live view over Wi-Fi.
   shoot,
+
+  /// The camera's Image Control Custom slots and the saved looks; over
+  /// Bluetooth.
+  looks,
 }
 
 enum ConnectFailureKind {
@@ -276,8 +280,8 @@ final class ConnectionController extends ChangeNotifier {
   }
 
   /// Opens the camera's pages on [tab] (the camera card's buttons). The
-  /// Library joins the camera's Wi-Fi ([joinWifi]); Shoot links Bluetooth,
-  /// and its Remote needs nothing more.
+  /// Library joins the camera's Wi-Fi ([joinWifi]); Shoot and Looks link
+  /// Bluetooth and need nothing more.
   Future<void> openCamera(CameraTab tab) {
     _tab = tab;
     notifyListeners();

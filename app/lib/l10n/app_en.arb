@@ -12,6 +12,10 @@
   "@cameraBarLibrary": {
     "description": "Tab of the camera's pages showing the photos on the camera."
   },
+  "cameraBarLooks": "Looks",
+  "@cameraBarLooks": {
+    "description": "Tab of the camera's pages for the Image Control looks: the camera's Custom slots and the user's saved looks."
+  },
   "cameraBarSettings": "Settings",
   "@cameraBarSettings": {
     "description": "Button at the top of the camera's pages that opens Settings. Used as tooltip and accessibility label."
@@ -1255,6 +1259,596 @@
   "@liveViewTimerOff": {
     "description": "Live view self-timer picker: no self-timer."
   },
+  "looksBaseBleachBypass": "Bleach Bypass",
+  "@looksBaseBleachBypass": {
+    "description": "Image Control base image, as Ricoh names it."
+  },
+  "looksBaseCinemaGreen": "Cinema (Green)",
+  "@looksBaseCinemaGreen": {
+    "description": "Image Control base image, as Ricoh names it."
+  },
+  "looksBaseCinemaYellow": "Cinema (Yellow)",
+  "@looksBaseCinemaYellow": {
+    "description": "Image Control base image, as Ricoh names it."
+  },
+  "looksBaseCrossProcessing": "Cross Processing",
+  "@looksBaseCrossProcessing": {
+    "description": "Image Control base image, as Ricoh names it."
+  },
+  "looksBaseGrainy": "Grainy",
+  "@looksBaseGrainy": {
+    "description": "Image Control base image, as Ricoh names it on the GR IV Monochrome."
+  },
+  "looksBaseHardMonotone": "Hard Monotone",
+  "@looksBaseHardMonotone": {
+    "description": "Image Control base image, as Ricoh names it."
+  },
+  "looksBaseHdrTone": "HDR Tone",
+  "@looksBaseHdrTone": {
+    "description": "Image Control base image, as Ricoh names it."
+  },
+  "looksBaseHighContrastBw": "Hi-Contrast B&W",
+  "@looksBaseHighContrastBw": {
+    "description": "Image Control base image, as Ricoh names it."
+  },
+  "looksBaseMonoHdrTone": "HDR Tone",
+  "@looksBaseMonoHdrTone": {
+    "description": "Image Control base image, as Ricoh names it on the GR IV Monochrome."
+  },
+  "looksBaseMonoHighContrast": "High Contrast",
+  "@looksBaseMonoHighContrast": {
+    "description": "Image Control base image, as Ricoh names it on the GR IV Monochrome."
+  },
+  "looksBaseMonoSoft": "Soft",
+  "@looksBaseMonoSoft": {
+    "description": "Image Control base image, as Ricoh names it on the GR IV Monochrome."
+  },
+  "looksBaseMonoStandard": "Standard",
+  "@looksBaseMonoStandard": {
+    "description": "Image Control base image, as Ricoh names it on the GR IV Monochrome."
+  },
+  "looksBaseMonotone": "Monotone",
+  "@looksBaseMonotone": {
+    "description": "Image Control base image, as Ricoh names it on the GR IV Monochrome."
+  },
+  "looksBaseNegativeFilm": "Negative Film",
+  "@looksBaseNegativeFilm": {
+    "description": "Image Control base image, as Ricoh names it."
+  },
+  "looksBasePalette": "Palette",
+  "@looksBasePalette": {
+    "description": "Image Control base image, as Ricoh names it."
+  },
+  "looksBasePictorialist": "Pictorialist Effect",
+  "@looksBasePictorialist": {
+    "description": "Image Control base image, as Ricoh names it on the GR IV Monochrome."
+  },
+  "looksBasePositiveFilm": "Positive Film",
+  "@looksBasePositiveFilm": {
+    "description": "Image Control base image, as Ricoh names it."
+  },
+  "looksBaseRetro": "Retro",
+  "@looksBaseRetro": {
+    "description": "Image Control base image, as Ricoh names it."
+  },
+  "looksBaseSoftMonotone": "Soft Monotone",
+  "@looksBaseSoftMonotone": {
+    "description": "Image Control base image, as Ricoh names it."
+  },
+  "looksBaseSolarized": "Solarized Effect",
+  "@looksBaseSolarized": {
+    "description": "Image Control base image, as Ricoh names it on the GR IV Monochrome."
+  },
+  "looksBaseSolid": "Solid",
+  "@looksBaseSolid": {
+    "description": "Image Control base image, as Ricoh names it on the GR IV Monochrome."
+  },
+  "looksBaseStandard": "Standard",
+  "@looksBaseStandard": {
+    "description": "Image Control base image, as Ricoh names it."
+  },
+  "looksBaseUnknown": "Base {number}",
+  "@looksBaseUnknown": {
+    "description": "Name of a base image GR Lab doesn't know, with its number.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "description": "The base image's number in the camera's data."
+      }
+    }
+  },
+  "looksBaseVivid": "Vivid",
+  "@looksBaseVivid": {
+    "description": "Image Control base image, as Ricoh names it."
+  },
+  "looksBefore": "Before",
+  "@looksBefore": {
+    "description": "Tag on the unaltered photo in the look editor."
+  },
+  "looksCustomSlots": "Custom 1-3",
+  "@looksCustomSlots": {
+    "description": "Note beside the On the camera label: which camera settings the three slots are."
+  },
+  "looksDelete": "Delete",
+  "@looksDelete": {
+    "description": "Menu item and confirmation button that delete a saved look."
+  },
+  "looksDeleteBody": "The look is removed from GR Lab. Custom slots that hold it keep it.",
+  "@looksDeleteBody": {
+    "description": "Body of the delete confirmation."
+  },
+  "looksDeleteTitle": "Delete {name}?",
+  "@looksDeleteTitle": {
+    "description": "Title of the delete confirmation for a saved look.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "description": "The look's name, as the user or the camera named it."
+      }
+    }
+  },
+  "looksDragHint": "Drag onto a Custom slot to load it",
+  "@looksDragHint": {
+    "description": "Screen reader hint on a saved look: it can be dragged onto a slot."
+  },
+  "looksEdit": "Edit",
+  "@looksEdit": {
+    "description": "Menu item that opens the look editor."
+  },
+  "looksEmpty": "No saved looks yet. Save one from a photo's details in the Library, from a Custom slot, or make one with +.",
+  "@looksEmpty": {
+    "description": "Shown when the user has no saved looks."
+  },
+  "looksEmptyFiltered": "No saved looks match this filter.",
+  "@looksEmptyFiltered": {
+    "description": "Shown when no saved look matches the selected filter chip."
+  },
+  "looksFilterAll": "My looks",
+  "@looksFilterAll": {
+    "description": "Filter chip showing every saved look; the count follows it."
+  },
+  "looksFilterColour": "Colour",
+  "@looksFilterColour": {
+    "description": "Filter chip showing saved looks with a colour base image."
+  },
+  "looksFilterMono": "Mono",
+  "@looksFilterMono": {
+    "description": "Filter chip showing saved looks with a black-and-white base image."
+  },
+  "looksFrom": "From {source}",
+  "@looksFrom": {
+    "description": "Where a saved look came from: a photo's file name or a Custom slot.",
+    "placeholders": {
+      "source": {
+        "type": "String",
+        "description": "A camera file name such as R0001234.JPG, or a slot such as C1."
+      }
+    }
+  },
+  "looksGroupColour": "Colour",
+  "@looksGroupColour": {
+    "description": "Look editor tab: saturation, hue and toning."
+  },
+  "looksGroupDetail": "Detail",
+  "@looksGroupDetail": {
+    "description": "Look editor tab: sharpness and clarity."
+  },
+  "looksGroupEffects": "Effects",
+  "@looksGroupEffects": {
+    "description": "Look editor tab: filter, grain and HDR effects."
+  },
+  "looksGroupTone": "Tone",
+  "@looksGroupTone": {
+    "description": "Look editor tab: brightness and contrast adjustments."
+  },
+  "looksLoadConfirmBody": "The look replaces what C{number} holds on the camera.",
+  "@looksLoadConfirmBody": {
+    "description": "Body of the load confirmation when the slot has no name.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "description": "Custom slot number, 1 to 3."
+      }
+    }
+  },
+  "looksLoadConfirmReplaces": "The look replaces {current} in C{number} on the camera.",
+  "@looksLoadConfirmReplaces": {
+    "description": "Body of the load confirmation, naming the look the slot holds now.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "description": "Custom slot number, 1 to 3."
+      },
+      "current": {
+        "type": "String",
+        "description": "The name of the look the slot holds now."
+      }
+    }
+  },
+  "looksLoadConfirmTitle": "Load {name} into C{number}?",
+  "@looksLoadConfirmTitle": {
+    "description": "Title of the confirmation before writing a look into a Custom slot.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "description": "The look's name, as the user or the camera named it."
+      },
+      "number": {
+        "type": "int",
+        "description": "Custom slot number, 1 to 3."
+      }
+    }
+  },
+  "looksLoadFailed": "The camera didn't take the look into C{number}.",
+  "@looksLoadFailed": {
+    "description": "Snack bar when writing a look into a Custom slot failed.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "description": "Custom slot number, 1 to 3."
+      }
+    }
+  },
+  "looksLoadFailedWithCode": "The camera didn't take the look into C{number} ({code}).",
+  "@looksLoadFailedWithCode": {
+    "description": "Snack bar when writing a look into a Custom slot failed, with the error's technical code.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "description": "Custom slot number, 1 to 3."
+      },
+      "code": {
+        "type": "String",
+        "description": "A short technical code for the error, for example timeout."
+      }
+    }
+  },
+  "looksLoadInto": "Load into C{number}",
+  "@looksLoadInto": {
+    "description": "Button and menu item that write a look into a Custom slot of the camera.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "description": "Custom slot number, 1 to 3."
+      }
+    }
+  },
+  "looksLoaded": "Loaded {name} into C{number}",
+  "@looksLoaded": {
+    "description": "Snack bar after the camera took a look into a Custom slot.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "description": "The look's name, as the user or the camera named it."
+      },
+      "number": {
+        "type": "int",
+        "description": "Custom slot number, 1 to 3."
+      }
+    }
+  },
+  "looksMadeInApp": "Made in app",
+  "@looksMadeInApp": {
+    "description": "Where a saved look came from, for one made in GR Lab."
+  },
+  "looksMore": "More",
+  "@looksMore": {
+    "description": "Tooltip of a look's menu button."
+  },
+  "looksNameSave": "Save",
+  "@looksNameSave": {
+    "description": "Button that confirms a look's name."
+  },
+  "looksNameTitle": "Name the look",
+  "@looksNameTitle": {
+    "description": "Title of the dialog that names or renames a look."
+  },
+  "looksNew": "New look",
+  "@looksNew": {
+    "description": "Tooltip of the button that makes a new look in the app."
+  },
+  "looksOnCamera": "On the camera",
+  "@looksOnCamera": {
+    "description": "Section label above the camera's three Custom slots."
+  },
+  "looksParamBaseColor": "Base Color",
+  "@looksParamBaseColor": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamBlackPoint": "Black Point",
+  "@looksParamBlackPoint": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamClarity": "Clarity",
+  "@looksParamClarity": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamColorTone": "Color Tone",
+  "@looksParamColorTone": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamContrast": "Contrast",
+  "@looksParamContrast": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamContrastHighlight": "Highlight contrast",
+  "@looksParamContrastHighlight": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamContrastShadow": "Shadow contrast",
+  "@looksParamContrastShadow": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamFilterBlue": "Filter blue",
+  "@looksParamFilterBlue": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamFilterEffect": "Filter Effect",
+  "@looksParamFilterEffect": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamFilterGreen": "Filter green",
+  "@looksParamFilterGreen": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamFilterRed": "Filter red",
+  "@looksParamFilterRed": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamFixed": "Kept as set on the camera",
+  "@looksParamFixed": {
+    "description": "Under a look parameter that GR Lab shows but can't change."
+  },
+  "looksParamGrain": "Grain Effect",
+  "@looksParamGrain": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamGrainSize": "Grain size",
+  "@looksParamGrainSize": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamGrainStrength": "Grain intensity",
+  "@looksParamGrainStrength": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamHdrLevel": "HDR Tone Level",
+  "@looksParamHdrLevel": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamHue": "Hue",
+  "@looksParamHue": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamKey": "High/Low Key",
+  "@looksParamKey": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamRgbToneHighlights": "RGB Tone (highlights)",
+  "@looksParamRgbToneHighlights": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamRgbToneMidtones": "RGB Tone (midtones)",
+  "@looksParamRgbToneMidtones": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamRgbToneShadows": "RGB Tone (shadows)",
+  "@looksParamRgbToneShadows": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamSaturation": "Saturation",
+  "@looksParamSaturation": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamShading": "Shading",
+  "@looksParamShading": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamSharpness": "Sharpness",
+  "@looksParamSharpness": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamSolarizationType": "Solarization Type",
+  "@looksParamSolarizationType": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamToning": "Toning",
+  "@looksParamToning": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksParamWhitePoint": "White Point",
+  "@looksParamWhitePoint": {
+    "description": "Name of an Image Control adjustment, as Ricoh names it."
+  },
+  "looksPreview": "Approximate",
+  "@looksPreview": {
+    "description": "Tag on the look editor's preview: GR Lab only approximates how the camera renders the look."
+  },
+  "looksRename": "Rename",
+  "@looksRename": {
+    "description": "Menu item that renames a look."
+  },
+  "looksSave": "Save",
+  "@looksSave": {
+    "description": "Button in the look editor that saves the look to the user's library."
+  },
+  "looksSaved": "Saved {name}",
+  "@looksSaved": {
+    "description": "Snack bar after a look was saved.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "description": "The look's name, as the user or the camera named it."
+      }
+    }
+  },
+  "looksSlotLabel": "Custom slot {number}",
+  "@looksSlotLabel": {
+    "description": "Screen reader label of a Custom slot card.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "description": "Custom slot number, 1 to 3."
+      }
+    }
+  },
+  "looksSlotShort": "C{number}",
+  "@looksSlotShort": {
+    "description": "Short name of a Custom slot as the camera's mode dial shows it, for example C1.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "description": "Custom slot number, 1 to 3."
+      }
+    }
+  },
+  "looksSlotUnnamed": "No name",
+  "@looksSlotUnnamed": {
+    "description": "Shown for a Custom slot the camera keeps without a name."
+  },
+  "looksSlotsFailed": "Couldn't read the camera's Custom slots.",
+  "@looksSlotsFailed": {
+    "description": "Shown when turning the camera on or reading its Custom slots over Bluetooth failed."
+  },
+  "looksSlotsFailedWithCode": "Couldn't read the camera's Custom slots ({code}).",
+  "@looksSlotsFailedWithCode": {
+    "description": "Shown when reading the Custom slots failed, with the error's technical code.",
+    "placeholders": {
+      "code": {
+        "type": "String",
+        "description": "A short technical code for the error, for example timeout."
+      }
+    }
+  },
+  "looksSlotsUnsupported": "GR Lab can load looks into the GR IV family only. This camera's Custom slots can't be reached over Bluetooth.",
+  "@looksSlotsUnsupported": {
+    "description": "Shown instead of the slots for a camera without Custom slot characteristics (GR III family)."
+  },
+  "looksSummaryValue": "{parameter} {value}",
+  "@looksSummaryValue": {
+    "description": "One adjustment in a look's summary line, for example Contrast +1.",
+    "placeholders": {
+      "parameter": {
+        "type": "String",
+        "description": "The adjustment's name, for example Contrast."
+      },
+      "value": {
+        "type": "String",
+        "description": "Its value, for example +1 or Sepia."
+      }
+    }
+  },
+  "looksTagInSlot": "In C{number}",
+  "@looksTagInSlot": {
+    "description": "Tag on a saved look that a Custom slot holds.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "description": "Custom slot number, 1 to 3."
+      }
+    }
+  },
+  "looksTagSaved": "Saved",
+  "@looksTagSaved": {
+    "description": "Tag on a saved look that no Custom slot holds."
+  },
+  "looksTitle": "Looks",
+  "@looksTitle": {
+    "description": "Large title of the Looks page."
+  },
+  "looksTryAgain": "Try again",
+  "@looksTryAgain": {
+    "description": "Button that reads the Custom slots again after a failure."
+  },
+  "looksUnreadable": "GR Lab can't read this look.",
+  "@looksUnreadable": {
+    "description": "Shown for a look whose Image Control data GR Lab can't decode."
+  },
+  "looksValueBasic": "Basic",
+  "@looksValueBasic": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueBlackAndWhite": "B&W",
+  "@looksValueBlackAndWhite": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueBlue": "Blue",
+  "@looksValueBlue": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueCool": "Cool",
+  "@looksValueCool": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueCustomFilter": "Custom {number}",
+  "@looksValueCustomFilter": {
+    "description": "Filter Effect value: one of the camera's four custom filters.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "description": "The custom filter's number, 1 to 4."
+      }
+    }
+  },
+  "looksValueGreen": "Green",
+  "@looksValueGreen": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueHigh": "High",
+  "@looksValueHigh": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueLarge": "Large",
+  "@looksValueLarge": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueLow": "Low",
+  "@looksValueLow": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueMagenta": "Magenta",
+  "@looksValueMagenta": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueMedium": "Medium",
+  "@looksValueMedium": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueNormal": "Normal",
+  "@looksValueNormal": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueOff": "Off",
+  "@looksValueOff": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueOn": "On",
+  "@looksValueOn": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValuePurple": "Purple",
+  "@looksValuePurple": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueRed": "Red",
+  "@looksValueRed": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueSepia": "Sepia",
+  "@looksValueSepia": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueSmall": "Small",
+  "@looksValueSmall": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueWarm": "Warm",
+  "@looksValueWarm": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
+  "looksValueYellow": "Yellow",
+  "@looksValueYellow": {
+    "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
+  },
   "pairingAdd": "Add",
   "@pairingAdd": {
     "description": "Button on a nearby camera's row that starts adding it."
@@ -2088,6 +2682,10 @@
   "@viewerFormat": {
     "description": "Label of the shot's format in the viewer details."
   },
+  "viewerImageControl": "Image Control",
+  "@viewerImageControl": {
+    "description": "Title of the viewer details row with the Image Control the photo was shot with."
+  },
   "viewerLength": "Length",
   "@viewerLength": {
     "description": "Label of the video length in the viewer details."
@@ -2111,6 +2709,10 @@
   "viewerRetryDownload": "Retry download",
   "@viewerRetryDownload": {
     "description": "Viewer action that retries a failed download."
+  },
+  "viewerSaveLook": "Save look",
+  "@viewerSaveLook": {
+    "description": "Button in the viewer details that saves the photo's Image Control as a look."
   },
   "viewerSize": "Size",
   "@viewerSize": {

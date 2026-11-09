@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
@@ -11,6 +12,8 @@ import 'package:grlab/src/library/library_model.dart';
 import 'package:grlab/src/library/library_scope.dart';
 import 'package:grlab/src/library/shot.dart';
 import 'package:grlab/src/library/shot_cell.dart';
+import 'package:grlab/src/looks/look_spec.dart';
+import 'package:grlab/src/looks/look_widgets.dart';
 import 'package:grlab/src/theme/tokens.dart';
 import 'package:grlab/src/widgets/group.dart';
 import 'package:video_player/video_player.dart';
@@ -533,7 +536,137 @@ class _Details extends StatelessWidget {
             ],
           ),
         ),
+        if (!shot.isVideo)
+          _ImageControlRow(key: ValueKey(shot.key), shot: shot),
       ],
+    );
+  }
+}
+
+/// The Image Control the photo was shot with, read from the camera, and
+/// Save look (mock `b-viewer`; GR WORLD's "save image control from
+/// images"). Hidden while the camera is not connected or has none for the
+/// photo.
+class _ImageControlRow extends StatefulWidget {
+  const new({required this.shot, super.key});
+
+  final Shot shot;
+
+  @override
+  State<_ImageControlRow> createState() => _ImageControlRowState();
+}
+
+class _ImageControlRowState extends State<_ImageControlRow> {
+  late final LibraryContext _library = LibraryScope.of(context);
+  BleImageControlBlob? _look;
+  bool _saving = false;
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    unawaited(_read());
+  }
+
+  Future<void> _read() async {
+    final link = _library.link.value;
+    if (link == null) return;
+    try {
+      final look = await link.imageControl(widget.shot.primary);
+      if (mounted) setState(() => _look = look);
+    } on Object {
+      // No Image Control for this file, or the camera did not answer: the
+      // row stays hidden; the camera layer traced the exchange.
+    }
+  }
+
+  Future<void> _save(BleImageControlBlob look) async {
+    final l10n = context.l10n;
+    final store = AppScope.of(context).looks;
+    final messenger = ScaffoldMessenger.of(context);
+    final name = await askLookName(
+      context,
+      initial: baseLabel(l10n, look.base),
+    );
+    if (name == null || !mounted) return;
+    setState(() => _saving = true);
+    final serial = _library.model.serial;
+    final file = widget.shot.primary;
+    final photo = serial == null
+        ? null
+        : await _library.images
+              .load(serial, file, GrImageSize.view)
+              .future
+              .then<Uint8List?>((b) => b, onError: (Object _) => null);
+    await store.add(
+      name: name,
+      data: imageControlToBytes(look),
+      source: file.name,
+      photo: photo,
+    );
+    if (!mounted) return;
+    setState(() => _saving = false);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l10n.looksSaved(name))));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final look = _look;
+    if (look == null) return const SizedBox.shrink();
+    final c = GrColors.of(context);
+    final l10n = context.l10n;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: c.accent.withValues(alpha: .16),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.tune_rounded, size: 18, color: c.accent),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.viewerImageControl,
+                  style: const TextStyle(fontSize: 14.5),
+                ),
+                Text(
+                  lookSummary(l10n, look),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: c.t2),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton(
+            key: const Key('viewer-save-look'),
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(0, 36),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              textStyle: const TextStyle(
+                fontFamily: GrFonts.ui,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            onPressed: _saving ? null : () => unawaited(_save(look)),
+            child: Text(l10n.viewerSaveLook),
+          ),
+        ],
+      ),
     );
   }
 }

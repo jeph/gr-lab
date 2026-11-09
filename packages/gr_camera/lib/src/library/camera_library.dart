@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/src/library/camera_file.dart';
+import 'package:gr_camera/src/looks/camera_looks.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 
 /// The photos of one camera over one verified Wi-Fi link: listing, file
@@ -99,6 +100,22 @@ final class CameraLibrary {
   /// The camera's `/info` for [f].
   Future<FileInfo> fileInfo(CameraFile f) async =>
       fileInfoOf(await _http.photoInfo(f.path, storage: f.storage));
+
+  /// The Image Control [f] was shot with, from `/imgctrl` (http-api.md
+  /// §4.3), as GR WORLD reads it to save a look from a photo. Throws
+  /// [NoImageControl] when the camera's answer is not a blob GR Lab can
+  /// read, and the HTTP client's errors otherwise.
+  Future<BleImageControlBlob> imageControl(CameraFile f) async {
+    final bytes = await _http.imageControl(f.path, storage: f.storage);
+    final look = imageControlFromBytes(bytes);
+    _event('library.imageControl', {
+      'file': '$f',
+      'hex': BleBytes.toHex(bytes),
+      'decoded': look != null,
+    });
+    if (look == null) throw NoImageControl(bytes);
+    return look;
+  }
 
   /// A request failed ([after] says which): asks the camera once whether
   /// its Wi-Fi still works. When it does not, the session counts the link
@@ -207,6 +224,18 @@ List<String?> listedStorages(GrProps? props) {
       if (s.name case final name? when s.equipped != false) name,
   ];
   return names.isEmpty ? const [null] : names;
+}
+
+/// The camera's `/imgctrl` answer is not an Image Control blob.
+final class NoImageControl implements Exception {
+  /// The answer as received.
+  const new(this.bytes);
+
+  /// The bytes the camera sent.
+  final Uint8List bytes;
+
+  @override
+  String toString() => 'NoImageControl(${BleBytes.toHex(bytes)})';
 }
 
 /// The error means the link to the camera broke (no answer, a reset

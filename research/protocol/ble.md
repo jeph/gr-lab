@@ -430,7 +430,7 @@ Parser 0xd8e104 (custom 1–3 data characteristics):
 | 4 + 2i | 1 | parameter id (`nRb.off_14`, list [pp+0x2bcf8]): 0 saturation, 1 hue, 2 key, 3 contrast, 4 contrast high, 5 contrast low, 6 sharpness, 7–0x0b toning (monotone, cinema, bleach bypass, retro, HDR), 0x0c filter effect, 0x0d–0x12 filter R/G/B high/low, 0x13 shading, 0x14 clarity, 0x15 grain, 0x16 grain size, 0x17 grain strength, 0x18 HDR strength, 0x19 cross process, 0x1a base color, 0x1b white point, 0x1c black point, 0x1d–0x22 RGB tone (highlights/midtones/shadows × GM/BA), 0x23 solarization type |
 | 5 + 2i | 1 | value, signed int8 (`(b & 0x7f) - (b & 0x80)` at 0xd8e504) |
 
-Unknown parameter ids are logged ("イメコン不正値") and skipped.
+Unknown parameter ids are logged ("イメコン不正値") and skipped. Which parameters each base image has, what the values mean, the slot-name rules and who builds a blob are in [image-control.md](image-control.md).
 
 ### Storage information
 

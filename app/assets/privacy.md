@@ -11,6 +11,7 @@ GR Lab keeps the following in its own app storage on your phone:
 - Your settings: the theme, the auto-disconnect time, the Shoot mode you used last and whether debug logging is on.
 - Your paired cameras: the name you gave each one, its model, serial number, firmware version, Bluetooth name and address, the identifier your phone uses for it, when you paired it and whether your phone has already joined its Wi-Fi.
 - A record of your downloads: which files from which camera you have saved, and downloads still waiting.
+- Your saved looks: the name you gave each one, its Image Control settings, where it came from (a photo's file name or a Custom slot) and, for a look saved from a photo, a preview-sized copy of that photo.
 - Copies of what your cameras sent, so the Library opens quickly: the list of files on each camera with their date, size and orientation, thumbnails and previews, videos you played, and files that are still being downloaded. These are kept in the app's cache, which your phone may clear when it needs space.
 - The debug log, when it is on (see below).
 
@@ -26,7 +27,7 @@ On Android, GR Lab turns off backup to your Google account. When you move to a n
 
 GR Lab communicates only with your camera:
 
-- Over Bluetooth, to pair with the camera, find it nearby, wake it, turn on its Wi-Fi, read its Wi-Fi network name and password, and work as a remote shutter with its shooting settings. When pairing, GR Lab gives the camera your phone's name, which the camera shows in its list of paired devices. On Android this is the device name you set; on iOS it is the model, such as iPhone.
+- Over Bluetooth, to pair with the camera, find it nearby, wake it, turn on its Wi-Fi, read its Wi-Fi network name and password, work as a remote shutter with its shooting settings, and read and write the looks in its Custom slots C1 to C3. When pairing, GR Lab gives the camera your phone's name, which the camera shows in its list of paired devices. On Android this is the device name you set; on iOS it is the model, such as iPhone.
 - Over the camera's own Wi-Fi network, to list, preview and download your photos and videos, show the camera's live view and shoot. These requests go only to the camera, at the address 192.168.0.1 on its network.
 
 GR Lab makes no other network connections. It sends nothing to the developer or to third parties: no analytics, no usage statistics, no crash reports, no update checks and no advertising. Its fonts and license texts are included in the app.
@@ -61,6 +62,7 @@ GR Lab does not use your location, camera, microphone, contacts or notifications
 ## Deleting your data
 
 - Forget camera, on the camera's page under Cameras, removes the camera from GR Lab's paired cameras. The cached file list, thumbnails, previews and videos of that camera and its download record stay in the app's storage until your phone clears the cache or you uninstall GR Lab. Your phone's Bluetooth settings may still list the camera, and the camera may still list your phone; you can remove those entries in the phone's Bluetooth settings and on the camera.
+- Delete, in a saved look's menu under Looks, removes the look and its copy of the photo from your phone. Looks you loaded into the camera's Custom slots stay on the camera.
 - Clear log, under Settings, Debug log, deletes the debug log from your phone.
 - Uninstalling GR Lab deletes everything GR Lab keeps on your phone, including the debug log. Photos and videos you saved to your photo library stay there.
 

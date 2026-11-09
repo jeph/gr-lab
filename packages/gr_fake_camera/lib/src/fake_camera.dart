@@ -254,6 +254,15 @@ final class FakeGrCamera {
   /// The `pos` of every focus the camera ran, in percent, in order.
   List<(int, int)> get focusPoints => List.unmodifiable(_focusPoints);
 
+  /// What Custom slot [number] (1–3) holds: its name and blob.
+  FakeLook lookSlot(int number) {
+    final slot = GrBleCatalog.imageControlSlots[number - 1];
+    return FakeLook(
+      utf8.decode(_values[slot.name.uuid]!),
+      _values[slot.data.uuid]!,
+    );
+  }
+
   /// The user turns the camera on and opens MENU → Wireless Connection →
   /// Pairing → Execute Pairing.
   void openExecutePairing() {
@@ -398,6 +407,12 @@ final class FakeGrCamera {
       BleEnableCondition.enableAnytime.wire,
     );
     byte(GrBleCatalog.geoTag, 0);
+    final looks = config.lookSlots ?? FakeLook.presets.sublist(0, 3);
+    for (var i = 0; i < GrBleCatalog.imageControlSlots.length; i++) {
+      final slot = GrBleCatalog.imageControlSlots[i];
+      text(slot.name, looks[i].name);
+      _values[slot.data.uuid] = Uint8List.fromList(looks[i].data);
+    }
   }
 
   /// Runs [action] after [delay] unless the camera has been closed.

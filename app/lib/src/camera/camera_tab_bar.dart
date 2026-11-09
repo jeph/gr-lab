@@ -19,6 +19,7 @@ class CameraTabBar extends StatelessWidget {
       switch (t) {
         CameraTab.library => (Icons.grid_view_rounded, l10n.cameraBarLibrary),
         CameraTab.shoot => (Icons.camera_outlined, l10n.cameraBarShoot),
+        CameraTab.looks => (Icons.tune_rounded, l10n.cameraBarLooks),
       };
 
   @override
