@@ -222,7 +222,7 @@ final class GrUnparsedChange extends GrChangeEvent {
   };
 }
 
-/// What [GrChangesSocket] does after an established socket drops.
+/// What [GrChangesSocket] does after its socket drops or an open fails.
 sealed class GrReconnectPolicy {
   const new();
 
@@ -352,7 +352,7 @@ final class GrChangesSocket {
   /// Image Sync uses 7 s (connection-imagesync.md §2.2).
   final Duration connectTimeout;
 
-  /// What to do after an established socket drops.
+  /// What to do after the socket drops or an open fails.
   final GrReconnectPolicy reconnect;
   final HttpClient? _http;
   final TraceSink? _trace;
@@ -368,6 +368,10 @@ final class GrChangesSocket {
       StreamController.broadcast();
   WebSocket? _socket;
   StreamSubscription<Object?>? _sub;
+
+  /// The open in progress; [connect] and a reconnect share it, so only one
+  /// socket is ever being opened or open.
+  Future<void>? _opening;
   Timer? _retry;
   Object? _lastError;
   int _attempt = 0;
@@ -386,13 +390,18 @@ final class GrChangesSocket {
   /// Current lifecycle state.
   GrSocketStatus get status => _status;
 
-  /// Opens the socket. Throws the handshake failure (or [TimeoutException])
-  /// of this first attempt; the reconnect policy applies only after a socket
-  /// was established.
+  /// Opens the socket, or joins the open already in progress; a reconnect
+  /// waiting to run is dropped in favour of this open. Throws the handshake
+  /// failure (or [TimeoutException]) of the attempt, after which the
+  /// reconnect policy retries as after a drop: Image Sync reopens the
+  /// channel on any failure (connection-imagesync.md §2.2), so a refused
+  /// first upgrade is not final.
   Future<void> connect() async {
     if (_closed) throw StateError('GrChangesSocket is closed');
     if (_socket != null) return;
-    await _open();
+    _retry?.cancel();
+    _retry = null;
+    await (_opening ??= _openOrRetry());
   }
 
   /// The first event matching [test] within [timeout], or `null`. Subscribe
@@ -410,6 +419,19 @@ final class GrChangesSocket {
       return event;
     } on TimeoutException {
       return null;
+    }
+  }
+
+  /// One open ([_opening] while it runs); a failure goes to the reconnect
+  /// policy.
+  Future<void> _openOrRetry() async {
+    try {
+      await _open();
+    } on Object catch (e) {
+      if (!_closed) _scheduleReconnect(e);
+      rethrow;
+    } finally {
+      _opening = null;
     }
   }
 
@@ -442,10 +464,10 @@ final class GrChangesSocket {
     _sub = ws.listen(
       _onMessage,
       onError: (Object error) {
-        _lastError = error;
+        if (identical(_socket, ws)) _lastError = error;
         _emitTrace(TraceDirection.internal, 'error', {'error': '$error'});
       },
-      onDone: _onDone,
+      onDone: () => _onDone(ws),
     );
   }
 
@@ -467,14 +489,16 @@ final class GrChangesSocket {
     if (!_events.isClosed) _events.add(event);
   }
 
-  void _onDone() {
-    final ws = _socket;
+  /// [ws] closed. Only the current socket's end clears it and reconnects;
+  /// one [close] already let go of is just traced.
+  void _onDone(WebSocket ws) {
+    _emitTrace(TraceDirection.inbound, 'closed', {
+      'closeCode': ws.closeCode,
+      'closeReason': ws.closeReason,
+    });
+    if (!identical(_socket, ws)) return;
     _socket = null;
     _sub = null;
-    _emitTrace(TraceDirection.inbound, 'closed', {
-      'closeCode': ws?.closeCode,
-      'closeReason': ws?.closeReason,
-    });
     if (_closed) return;
     _scheduleReconnect(_lastError);
   }
@@ -503,13 +527,13 @@ final class GrChangesSocket {
         error: error,
       ),
     );
-    _retry = Timer(delay, () async {
-      if (_closed) return;
-      try {
-        await _open();
-      } on Object catch (e) {
-        if (!_closed) _scheduleReconnect(e);
-      }
+    _retry = Timer(delay, () {
+      _retry = null;
+      // An explicit connect may have opened the socket meanwhile.
+      if (_closed || _socket != null || _opening != null) return;
+      final opening = _opening = _openOrRetry();
+      // A failure has gone to the policy already.
+      unawaited(opening.then<void>((_) {}, onError: (_) {}));
     });
   }
 

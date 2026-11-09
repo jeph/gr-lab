@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:gr_protocol/src/http/http.dart';
+import 'package:gr_protocol/src/trace.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -186,5 +187,107 @@ void main() {
     );
     await socket.close();
     expect(await lens.timeout(const Duration(seconds: 5)), isNull);
+  });
+
+  group('GrChangesSocket opens', () {
+    /// A loopback `/v1/changes` whose first [refuse] upgrades answer HTTP
+    /// 503 and whose first socket is closed at once with [dropFirst]; the
+    /// sockets it keeps send one `battery` change. Returns the server and
+    /// its upgrade request count.
+    Future<(HttpServer, int Function())> serve({
+      int refuse = 0,
+      bool dropFirst = false,
+    }) async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      var requests = 0;
+      server.listen((request) async {
+        final n = ++requests;
+        if (n <= refuse) {
+          request.response.statusCode = HttpStatus.serviceUnavailable;
+          await request.response.close();
+          return;
+        }
+        final ws = await WebSocketTransformer.upgrade(request);
+        if (dropFirst && n == 1) return await ws.close();
+        ws
+          ..add('{"errCode":200,"changed":"battery"}')
+          ..listen((_) {});
+      });
+      return (server, () => requests);
+    }
+
+    test('a refused first open is retried by the reconnect policy', () async {
+      final (server, requests) = await serve(refuse: 1);
+      final socket = GrChangesSocket(
+        '127.0.0.1',
+        port: server.port,
+        reconnect: const GrBackoffReconnect(delays: [Duration.zero]),
+      );
+      addTearDown(socket.close);
+      final open = socket.statuses.firstWhere(
+        (s) => s.state == GrSocketState.open,
+      );
+      final event = socket.events.first;
+      await expectLater(socket.connect(), throwsA(isA<WebSocketException>()));
+      await open.timeout(const Duration(seconds: 5));
+      expect((await event).changed, 'battery');
+      expect(requests(), 2);
+    });
+
+    test('a refused open without reconnects ends disconnected', () async {
+      final (server, _) = await serve(refuse: 1);
+      final socket = GrChangesSocket(
+        '127.0.0.1',
+        port: server.port,
+        reconnect: const GrNoReconnect(),
+      );
+      addTearDown(socket.close);
+      await expectLater(socket.connect(), throwsA(isA<WebSocketException>()));
+      expect(socket.status.state, GrSocketState.disconnected);
+    });
+
+    test('two connects at once share one open', () async {
+      final (server, requests) = await serve();
+      final opens = <TraceEvent>[];
+      final socket = GrChangesSocket(
+        '127.0.0.1',
+        port: server.port,
+        trace: (e) {
+          if (e.kind == 'connect') opens.add(e);
+        },
+      );
+      addTearDown(socket.close);
+      await Future.wait([socket.connect(), socket.connect()]);
+      expect(opens, hasLength(1));
+      expect(requests(), 1);
+      expect(socket.status.state, GrSocketState.open);
+    });
+
+    test('a connect while a reconnect waits takes its place', () async {
+      final (server, requests) = await serve(dropFirst: true);
+      final opens = <TraceEvent>[];
+      final socket = GrChangesSocket(
+        '127.0.0.1',
+        port: server.port,
+        reconnect: const GrImmediateReconnect(),
+        trace: (e) {
+          if (e.kind == 'connect') opens.add(e);
+        },
+      );
+      addTearDown(socket.close);
+      final waiting = socket.statuses.firstWhere(
+        (s) => s.state == GrSocketState.reconnectWaiting,
+      );
+      await socket.connect();
+      await waiting;
+      // Status events arrive before the reconnect's zero-delay timer runs.
+      await socket.connect();
+      // A timer due before this one has run by now.
+      await Future<void>.delayed(Duration.zero);
+      expect(opens, hasLength(2));
+      expect(requests(), 2);
+      expect(socket.status.state, GrSocketState.open);
+    });
   });
 }
