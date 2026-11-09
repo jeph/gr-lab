@@ -90,8 +90,9 @@ Responses are parsed as `{errCode, errMsg, detail: {reason}}` [app 0x855200]; su
 
 Registered in `WebapiServer::Run` (`firmware/evidence/gr4-webapid-run.json`); crow method masks: `/v1/configs/firmware` = `0x11` (DELETE and PUT), `/prepare` and `/cancel` = `0x08` (POST).
 
-- The `/v1/configs/firmware` route installs a body handler, `Firmware::ReceiveFirmwareHandler` [webapid 0x7d540], so the request body is passed to the handler in chunks as it arrives instead of being buffered. The request handler then always calls `Firmware::SaveFirmware` [webapid 0x7d688] and answers with HTTP 200 and a JSON body. `Firmware::DeleteFirmware` [webapid 0x7c3c4] has no caller, so `DELETE` behaves like `PUT` **[inferred from the handler; not tried]**.
-- As on other routes, failures are carried in the JSON `errCode` with HTTP status 200 (GR IV HDF 1.20 does this for unknown routes, see [remote shooting](remote-shooting.md)).
+- The `/v1/configs/firmware` route installs a body handler, `Firmware::ReceiveFirmwareHandler` [webapid 0x7d540], so the request body is passed to the handler in chunks as it arrives instead of being buffered.
+- The request handler (objdump file address `0x3348c`) first checks the method: anything other than PUT (crow method 4, compare at `0x334a4`) gets a bare crow response with HTTP status 400 and no JSON body. PUT calls `Firmware::SaveFirmware` [webapid 0x7d688] and answers with HTTP 200 and a JSON body. So `DELETE` is registered but refused; `Firmware::DeleteFirmware` [webapid 0x7c3c4] has no caller.
+- For PUT, as on other routes, failures are carried in the JSON `errCode` with HTTP status 200 (GR IV HDF 1.20 does this for unknown routes, see [remote shooting](remote-shooting.md)).
 
 ### 3.2 Prepare: `POST /v1/configs/firmware/prepare`
 
