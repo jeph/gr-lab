@@ -63,7 +63,7 @@ Test files follow their source files. `gr_fake_camera` is shared: changes to it 
 - [x] (d304c5c) **C24. A camera that is turned off ends the pairing search** even when another camera nearby is on. `pairing.dart` scan predicate.
 - [x] (d304c5c) **C25. A disconnect error during pairing cleanup hides the real pairing failure.** `pairing.dart` `fail`.
 - [x] (bde0240) **C26. Delete `wakeCamera`.** It uses a wake method our GR IV test showed doesn't work, and nothing in the app calls it. `wake.dart`.
-- [~] **C27. A camera whose Wi-Fi security can't be read is still joined with WPA2.** After C23 the credentials report unknown security, but `session.dart` `_joinAndVerify` treats anything but WPA3 as WPA2, so a WPA3-only camera still fails to join. Decide what unknown security does (read it again, or try both). Follow-up after W1 lands, since W1 owns `session.dart`.
+- [x] (7c81265) **C27. A camera whose Wi-Fi security can't be read is still joined with WPA2.** After C23 the credentials report unknown security, but `session.dart` `_joinAndVerify` treats anything but WPA3 as WPA2, so a WPA3-only camera still fails to join. Decide what unknown security does (read it again, or try both). Follow-up after W1 lands, since W1 owns `session.dart`.
 
 ## Data safety
 
