@@ -10,7 +10,7 @@ The work is split into workstreams so that no two agents edit the same source fi
 
 | ID | Area | Owns | Status |
 |---|---|---|---|
-| W1 | Protocol session and change socket | `packages/gr_protocol/lib/src/session/`, `packages/gr_protocol/lib/src/http/changes.dart` | `[~]` |
+| W1 | Protocol session and change socket | `packages/gr_protocol/lib/src/session/`, `packages/gr_protocol/lib/src/http/changes.dart` | `[x]` |
 | W2 | HTTP client and camera Library caches | `packages/gr_protocol/lib/src/http/client.dart`, `packages/gr_camera/lib/src/library/` | `[x]` |
 | W3 | Camera layer pairing, Bluetooth adapter, native Wi-Fi, app pairing screens | `packages/gr_camera/lib/src/{session,pairing}.dart`, `packages/gr_camera/lib/src/platform/`, `packages/gr_camera/lib/src/shoot/remote.dart`, `packages/gr_camera/android/`, `packages/gr_camera/ios/`, `app/lib/src/pairing/` | `[x]` |
 | W4 | App data, downloads and debug log | `app/lib/src/data/`, `app/lib/src/downloads/`, `app/lib/src/library/library_scope.dart`, `app/lib/src/debug/`, `app/lib/src/app_scope.dart` | `[x]` |
@@ -24,14 +24,14 @@ Test files follow their source files. `gr_fake_camera` is shared: changes to it 
 
 ### W1: protocol session and change socket
 
-- [ ] **C1. A failed Wi-Fi start keeps the phone on the camera's network.** When the phone joins but the camera doesn't answer (or is the wrong camera), the session drops back to Bluetooth without releasing the phone's join, and `stopWifi()` then does nothing. Release the join on every abandoned start. `session.dart` `_startWifi` error path, `_wifiInUse`.
-- [ ] **C2. A normal session close keeps the phone on the camera's network.** `close()` releases the join only when asked to power the camera off. Release it on every close; camera power stays a separate choice. `session.dart` `close`. (W3 updates the `CameraSession.close` doc in `gr_camera` to match.)
-- [ ] **C3. A Bluetooth drop during a wake leaves a dead link in use.** Drops are ignored while `_relinking` is set, which starts before the Operation Mode write; if the write then fails, the dead client is kept. `session.dart` `_powerOn`, `_onBleDisconnected`.
-- [ ] **C4. A closed session can come back to life.** A WebSocket handshake or a scan that finishes after `close()` can start services or change the phase. `session.dart` `_startWifi`, `_startWifiServices`, `connectBluetooth`.
-- [ ] **C5. Two Wi-Fi starts can run at once.** `startWifi()` doesn't check for a start already in flight. `session.dart`.
-- [ ] **C6. Cancelling a Wi-Fi start or wake waits for the whole Bluetooth reconnect cycle**, which can take minutes. `session.dart` `_bleReconnect` waits.
-- [ ] **C7. If the change notifications fail to open the first time, they are never retried.** `changes.dart` initial `connect()` failure, session `_startWifiServices`.
-- [ ] **C8. Two change sockets can be open at once.** `connect()` doesn't share an open in progress or cancel a scheduled reconnect. `changes.dart`.
+- [x] (51337b8) **C1. A failed Wi-Fi start keeps the phone on the camera's network.** When the phone joins but the camera doesn't answer (or is the wrong camera), the session drops back to Bluetooth without releasing the phone's join, and `stopWifi()` then does nothing. Release the join on every abandoned start. `session.dart` `_startWifi` error path, `_wifiInUse`.
+- [x] (51337b8) **C2. A normal session close keeps the phone on the camera's network.** `close()` releases the join only when asked to power the camera off. Release it on every close; camera power stays a separate choice. `session.dart` `close`. (W3 updates the `CameraSession.close` doc in `gr_camera` to match.)
+- [x] (51337b8) **C3. A Bluetooth drop during a wake leaves a dead link in use.** Drops are ignored while `_relinking` is set, which starts before the Operation Mode write; if the write then fails, the dead client is kept. `session.dart` `_powerOn`, `_onBleDisconnected`.
+- [x] (51337b8) **C4. A closed session can come back to life.** A WebSocket handshake or a scan that finishes after `close()` can start services or change the phase. `session.dart` `_startWifi`, `_startWifiServices`, `connectBluetooth`.
+- [x] (51337b8) **C5. Two Wi-Fi starts can run at once.** `startWifi()` doesn't check for a start already in flight. `session.dart`.
+- [x] (51337b8) **C6. Cancelling a Wi-Fi start or wake waits for the whole Bluetooth reconnect cycle**, which can take minutes. `session.dart` `_bleReconnect` waits.
+- [x] (75f38ee, 51337b8) **C7. If the change notifications fail to open the first time, they are never retried.** `changes.dart` initial `connect()` failure, session `_startWifiServices`.
+- [x] (75f38ee) **C8. Two change sockets can be open at once.** `connect()` doesn't share an open in progress or cancel a scheduled reconnect. `changes.dart`.
 
 ### W2: HTTP client and camera Library request limits
 
@@ -63,7 +63,7 @@ Test files follow their source files. `gr_fake_camera` is shared: changes to it 
 - [x] (d304c5c) **C24. A camera that is turned off ends the pairing search** even when another camera nearby is on. `pairing.dart` scan predicate.
 - [x] (d304c5c) **C25. A disconnect error during pairing cleanup hides the real pairing failure.** `pairing.dart` `fail`.
 - [x] (bde0240) **C26. Delete `wakeCamera`.** It uses a wake method our GR IV test showed doesn't work, and nothing in the app calls it. `wake.dart`.
-- [ ] **C27. A camera whose Wi-Fi security can't be read is still joined with WPA2.** After C23 the credentials report unknown security, but `session.dart` `_joinAndVerify` treats anything but WPA3 as WPA2, so a WPA3-only camera still fails to join. Decide what unknown security does (read it again, or try both). Follow-up after W1 lands, since W1 owns `session.dart`.
+- [~] **C27. A camera whose Wi-Fi security can't be read is still joined with WPA2.** After C23 the credentials report unknown security, but `session.dart` `_joinAndVerify` treats anything but WPA3 as WPA2, so a WPA3-only camera still fails to join. Decide what unknown security does (read it again, or try both). Follow-up after W1 lands, since W1 owns `session.dart`.
 
 ## Data safety
 
