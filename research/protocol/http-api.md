@@ -44,6 +44,8 @@ Base URL is `http://192.168.0.1`. Dart classes store it in a field (`pp+0x1e7c8`
 
 Storage values: `"in"` (internal memory, pp+0x11290) or `"sd1"` (SD slot, pp+0x31808). The app sends `sd1` when the selected storage enum `aFb` equals `sdSlot` (pp+0x315a8), otherwise `in`. The storage parameter is only added when a per-camera value equals 2 (`0xdbb41c`, `0xdbe6e8`), which is **[inferred]** to be "camera has two storages" (GR IV: internal + SD). Single-storage cameras get the URLs without `storage`.
 
+GR IV webapid 1.20 (found in code, not observed; Rea evidence bundle `firmware/evidence/gr4-webapid-storage-events.json`, 2026-11-09): `GET /v1/photos` checks the storage with `CheckAvailableStorageId` (`0xbbb16`), which requires it to be equipped, accessible, formatted (format state 1) and without error, and answers `InternalServerError` (500) otherwise. That same condition is what `/v1/props` reports as a storage's `available` (`Storage::Fetch` `0xa95f8`, serialized by `0xa90ee`). So a storage that is equipped but not available (an unformatted card, one in an error state) cannot be listed. Other listing failures map through `ConvertResponseToErr` (`0x8e458`): controller results 1, 11, 12 and 13 become 400, 2 and 10 become 412, anything else, including a failed request to the camera's RTOS, 500. Which camera states produce a 412 or 500 for a healthy card is **[unknown]**.
+
 Java request settings (all native calls): `HttpURLConnection`, no custom headers except where listed, `getResponseCode()==200` is the only success test. Non-200 results go back to Dart as `PlatformException("GET error"/"PUT error"/"POST error", "response", "<code>")`. Exceptions go back as `("Exception", "GET error", msg)` (e.g. `AbstractActivityC0655d.java:715-735`). On the Dart side these are mapped to `lTb` ER_WF errors (pp+0x27b38 = `getException` ER_WF_003).
 
 ## 2. Gallery import flows
@@ -200,6 +202,17 @@ Message schema (handler `0xd28f24`, GR II path only):
 
 For GR III/GR IV the socket is opened but its messages are ignored (no-op handler). It works only as a liveness signal: socket closed ⇒ `disconnected`.
 
+### GR IV firmware: `storage` changes
+
+Found in GR IV webapid 1.20 code, not yet observed on hardware (Rea evidence bundle `firmware/evidence/gr4-webapid-storage-events.json`, 2026-11-09):
+
+- `StorageEvent::Serialize` (`0xab8a8`) sends `{"errCode":200,…,"changed":"storage","action":…,"storage":…,"filepath":…,"captureId":…}`; `captureId` is written as a JSON number.
+- The action table (`_INIT_41` `0xabfc4`) maps `add`, `delete` and `format`. `storage_action::ConvertToWebapi` (`0xabc6c`) drops the other raw actions, including 4 ("storage info changed", which libcamera-controller's `CacheController::StorageChanged` `0x69af4` handles internally). `StatusEventHandler::StorageChanged` (`0x8d23c`) sends nothing for an event whose result is not 0, and `StorageEvent::Create` (`0xabd78`) drops paths that are not DCF paths, strips the `DCIM/` prefix, and sends `format` with an empty `filepath`.
+- `WebsocketAdapter::IssueEvent` (`0x6b97c`) sends each change to the sockets open at that moment; nothing is queued or replayed, so a client whose socket was closed misses the changes made meanwhile.
+- **[inferred]** A delete on the camera body reaches webapid as `delete`: the RTOS has `NotifyFileDeleted` next to `NotifyFileCreated` (strings only, not traced). **[unknown]** Whether a multi-delete or delete-all sends one change per file, whether the camera allows deleting while its Wi-Fi is on, and whether inserting or removing a card sends any change.
+
+Neither Ricoh app acts on a `storage` `delete`: Image Sync acts only on `add`, and GR WORLD ignores the socket on GR III and IV.
+
 ## 6. Camera log (GR Log)
 `GET /v1/logs/camera?type=monthly_capture&date=<YYYY>-<MM>`. The month is zero-padded with `padLeft(2,"0")` (`0xe07e2c-0xe07ee4`). The app iterates months up to the current one (`CameraLog: currentMonth completed->`). Response parsed by `0x90d178`: `errCode`, `errMsg`, `type`, `date`, `dailyData`. Sub-parsers (exact nesting **[inferred]**):
 - `0x90d5c4` keys `still`, `video`.
@@ -267,3 +280,4 @@ The full flow, the camera's handlers and the error reasons are in [firmware upda
 9. WebSocket: does the camera send other `changed` values, does it send pings or require them, what are the idle timeout and close codes, and is it the camera that drops the socket during Wi-Fi power saving (relevant to the disconnects)?
 10. Firmware: maximum upload and update time and whether `storage=sd1` is accepted; see [firmware update §6](firmware-update.md#6-open-questions).
 11. The origin of the URL used by `0xd8eb6c` (30 s Image Control GET) and of the end-screen image URL (`0x952890`).
+12. Deleting photos on the camera body while connected (see §5 "GR IV firmware: `storage` changes"): is the camera's playback usable while its Wi-Fi is on, does a single delete, a multi-delete or delete-all send `storage` `delete` changes and how soon, does a card swap keep the link and send any change, and which `errCode` do `/info`, a preview and a full download of a deleted file answer?
