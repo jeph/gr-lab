@@ -322,6 +322,122 @@ void main() {
     );
   });
 
+  group('a camera that stops sending', () {
+    late _StallingServer camera;
+    late GrHttpClient stalled;
+    const silence = Duration(milliseconds: 100);
+    // Long enough that the test fails on this guard, not on its own timeout,
+    // when a connection is left open.
+    const guard = Duration(seconds: 5);
+    final p = GrPhotoPath('100RICOH', 'R1.JPG');
+
+    Future<void> start(
+      String? head, {
+      GrHttpTimeouts timeouts = const GrHttpTimeouts(downloadIdle: silence),
+    }) async {
+      camera = await _StallingServer.start(head);
+      stalled = GrHttpClient(
+        '127.0.0.1',
+        port: camera.port,
+        timeouts: timeouts,
+      );
+    }
+
+    tearDown(() async {
+      stalled.close(force: true);
+      await camera.close();
+    });
+
+    test('a request past its deadline closes its stalled body, every '
+        'time', () async {
+      await start(
+        'HTTP/1.1 200 OK\r\n'
+        'Content-Type: application/json\r\n'
+        'Content-Length: 1000\r\n\r\n'
+        '{"errCode":200,',
+      );
+      for (var i = 0; i < 3; i++) {
+        await expectLater(
+          stalled.props(timeout: silence),
+          throwsA(isA<TimeoutException>()),
+        );
+        await camera.closed[i].future.timeout(guard);
+        expect(camera.open, 0, reason: 'no reader left behind');
+      }
+      expect(camera.closed, hasLength(3));
+    });
+
+    test('a stalled error answer to a download times out and is '
+        'closed', () async {
+      await start(
+        'HTTP/1.1 404 Not Found\r\n'
+        'Content-Type: application/json\r\n'
+        'Content-Length: 1000\r\n\r\n'
+        '{"errCode":404,',
+      );
+      await expectLater(
+        stalled.download(p, _CollectingSink()).timeout(guard),
+        throwsA(
+          isA<TimeoutException>().having((e) => e.duration, 'after', silence),
+        ),
+      );
+      await camera.closed.single.future.timeout(guard);
+    });
+
+    test('a stalled JSON error under HTTP 200 times out and is '
+        'closed', () async {
+      await start(
+        'HTTP/1.1 200 OK\r\n'
+        'Content-Type: application/json\r\n'
+        'Content-Length: 1000\r\n\r\n'
+        '{"errCode":404,',
+      );
+      await expectLater(
+        stalled.download(p, _CollectingSink()).timeout(guard),
+        throwsA(isA<TimeoutException>()),
+      );
+      await camera.closed.single.future.timeout(guard);
+    });
+
+    test('abort closes a download whose image stalled', () async {
+      await start(
+        'HTTP/1.1 200 OK\r\n'
+        'Content-Type: image/jpeg\r\n'
+        'Content-Length: 1000\r\n\r\n'
+        '\xFF\xD8\xFF\xE0',
+        timeouts: const GrHttpTimeouts(),
+      );
+      final abort = Completer<Object>();
+      final started = Completer<void>();
+      final download = stalled.download(
+        p,
+        _CollectingSink(),
+        abort: abort.future,
+        onProgress: (_, _) {
+          if (!started.isCompleted) started.complete();
+        },
+      );
+      await started.future;
+      abort.complete(const _Stop());
+      await expectLater(download, throwsA(isA<_Stop>()));
+      await camera.closed.single.future.timeout(guard);
+    });
+
+    test('abort closes a download the camera has not answered', () async {
+      await start(null, timeouts: const GrHttpTimeouts());
+      final abort = Completer<Object>();
+      final download = stalled.download(
+        p,
+        _CollectingSink(),
+        abort: abort.future,
+      );
+      await camera.requested.future;
+      abort.complete(const _Stop());
+      await expectLater(download, throwsA(isA<_Stop>()));
+      await camera.closed.single.future.timeout(guard);
+    });
+  });
+
   group('live view', () {
     test('HttpServer chunked multipart stream yields frames', () async {
       final frames = [jpeg(), jpeg(width: 640, height: 360), jpeg()];
@@ -458,4 +574,65 @@ final class _CollectingSink implements StreamSink<List<int>> {
 
   @override
   Future<void> get done => _done.future;
+}
+
+/// Why a test stopped a download.
+final class _Stop implements Exception {
+  const new();
+}
+
+/// A camera that answers each request with [head] (status line, headers
+/// and the start of a body), or not at all when it is null, then sends
+/// nothing more while keeping the connection open.
+final class _StallingServer {
+  new _(this._server, this.head) {
+    _server.listen((socket) {
+      _sockets.add(socket);
+      final closed = Completer<void>();
+      this.closed.add(closed);
+      void done() {
+        if (!closed.isCompleted) closed.complete();
+        socket.destroy();
+      }
+
+      var answered = false;
+      socket.listen(
+        (data) {
+          if (answered || !latin1.decode(data).contains('\r\n\r\n')) return;
+          answered = true;
+          if (!requested.isCompleted) requested.complete();
+          if (head case final head?) socket.add(latin1.encode(head));
+        },
+        onDone: done,
+        onError: (Object _) => done(),
+      );
+    });
+  }
+
+  static Future<_StallingServer> start(String? head) async => _StallingServer._(
+    await ServerSocket.bind(InternetAddress.loopbackIPv4, 0),
+    head,
+  );
+
+  final ServerSocket _server;
+  final String? head;
+  final _sockets = <Socket>[];
+
+  /// Per connection, completes when the client has closed it.
+  final closed = <Completer<void>>[];
+
+  /// Completes when the first request has arrived.
+  final requested = Completer<void>();
+
+  int get port => _server.port;
+
+  /// Connections the client still holds open.
+  int get open => closed.where((c) => !c.isCompleted).length;
+
+  Future<void> close() async {
+    await _server.close();
+    for (final s in _sockets) {
+      s.destroy();
+    }
+  }
 }

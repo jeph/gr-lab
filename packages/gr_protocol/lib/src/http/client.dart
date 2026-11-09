@@ -272,26 +272,37 @@ final class GrHttpClient {
   /// a JSON error even under HTTP 200 (http-api.md §2.4 step 4,
   /// connection-imagesync.md §4) and raises [GrApiException]. A body shorter
   /// than its `Content-Length` raises [GrMalformedResponseException]. A
-  /// silence longer than [GrHttpTimeouts.downloadIdle] raises
-  /// [TimeoutException].
+  /// silence longer than [GrHttpTimeouts.downloadIdle], in the image or in
+  /// an error answer, raises [TimeoutException].
+  ///
+  /// Once [abort] completes, the transfer stops and its connection is
+  /// closed at once, and [download] throws the value [abort] completed with.
   Future<GrDownloadResult> download(
     GrPhotoPath path,
     StreamSink<List<int>> sink, {
     GrImageSize? size = GrImageSize.full,
     String? storage,
     void Function(int received, int? total)? onProgress,
+    Future<Object>? abort,
   }) async {
     final uri = photoUri(path, size: size, storage: storage);
     final route = 'GET ${uri.path}';
     final watch = Stopwatch()..start();
     final request = await _open('GET', uri, timeouts.connect);
     request.done.ignore();
+    // Until the response arrives; after that [_consume] stops the body.
+    unawaited(abort?.then(request.abort));
     _traceRequest(request, null, null);
     try {
       final response = await request.close().timeout(timeouts.request);
       final total = response.contentLength >= 0 ? response.contentLength : null;
       if (response.statusCode != 200) {
-        final body = await _readBody(response, route);
+        final body = await _readBody(
+          response,
+          route,
+          idle: timeouts.downloadIdle,
+          stop: abort,
+        );
         _traceResponse(uri, response, body, watch.elapsed);
         _throwForError(route, response.statusCode, body);
         throw GrHttpStatusException(
@@ -302,31 +313,37 @@ final class GrHttpClient {
       var received = 0;
       BytesBuilder? jsonBody;
       var first = true;
-      await for (final chunk in response.timeout(timeouts.downloadIdle)) {
-        if (chunk.isEmpty) continue;
-        if (first) {
-          first = false;
-          if (chunk[0] == 0x7B) jsonBody = BytesBuilder();
-        }
-        if (jsonBody != null) {
-          // Kept whole for the error and the trace, within the bound every
-          // other response has.
-          if (jsonBody.length + chunk.length > _maxBodyBytes) {
-            throw GrMalformedResponseException(
-              route: route,
-              httpStatus: response.statusCode,
-              issue: 'response body exceeds $_maxBodyBytes bytes',
-            );
+      await _consume(
+        response,
+        route,
+        (chunk) {
+          if (chunk.isEmpty) return;
+          if (first) {
+            first = false;
+            if (chunk[0] == 0x7B) jsonBody = BytesBuilder();
           }
-          jsonBody.add(chunk);
-          continue;
-        }
-        sink.add(chunk);
-        received += chunk.length;
-        onProgress?.call(received, total);
-      }
-      if (jsonBody != null) {
-        final body = jsonBody.takeBytes();
+          if (jsonBody case final json?) {
+            // Kept whole for the error and the trace, within the bound every
+            // other response has.
+            if (json.length + chunk.length > _maxBodyBytes) {
+              throw GrMalformedResponseException(
+                route: route,
+                httpStatus: response.statusCode,
+                issue: 'response body exceeds $_maxBodyBytes bytes',
+              );
+            }
+            json.add(chunk);
+            return;
+          }
+          sink.add(chunk);
+          received += chunk.length;
+          onProgress?.call(received, total);
+        },
+        idle: timeouts.downloadIdle,
+        stop: abort,
+      );
+      if (jsonBody case final json?) {
+        final body = json.takeBytes();
         _traceResponse(uri, response, body, watch.elapsed);
         _throwForError(route, response.statusCode, body);
         throw GrMalformedResponseException(
@@ -383,6 +400,7 @@ final class GrHttpClient {
     GrImageSize? size = GrImageSize.full,
     String? storage,
     void Function(int received, int? total)? onProgress,
+    Future<Object>? abort,
   }) async {
     final part = File('${file.path}.part');
     final sink = part.openWrite();
@@ -393,6 +411,7 @@ final class GrHttpClient {
         size: size,
         storage: storage,
         onProgress: onProgress,
+        abort: abort,
       );
       await sink.flush();
       await sink.close();
@@ -983,6 +1002,8 @@ final class GrHttpClient {
     );
     request.done.ignore();
     final deadline = timeout ?? timeouts.request;
+    // Completed when the deadline passes, to close a body still arriving.
+    final stop = Completer<Object>();
     try {
       final reply = await _exchange(
         request,
@@ -992,6 +1013,7 @@ final class GrHttpClient {
         bodyFileLength: bodyFileLength,
         onSendProgress: onSendProgress,
         contentType: contentType,
+        stop: stop.future,
       ).timeout(deadline);
       _trace?.call(
         TraceEvent(
@@ -1012,11 +1034,14 @@ final class GrHttpClient {
       );
       return reply;
     } on TimeoutException {
-      request.abort();
       final e = TimeoutException(
         '$route: no complete response within $deadline',
         deadline,
       );
+      // Abort ends the request only until the response has arrived; the
+      // body is closed through [stop].
+      request.abort(e);
+      stop.complete(e);
       _traceError(method, uri, e);
       throw e;
     } catch (e) {
@@ -1029,6 +1054,7 @@ final class GrHttpClient {
   Future<_Reply> _exchange(
     HttpClientRequest request,
     String route, {
+    required Future<Object> stop,
     List<int>? body,
     File? bodyFile,
     int? bodyFileLength,
@@ -1058,7 +1084,7 @@ final class GrHttpClient {
       _traceRequest(request, null, null);
     }
     final response = await request.close();
-    final bytes = await _readBody(response, route);
+    final bytes = await _readBody(response, route, stop: stop);
     return _Reply(
       route,
       response.statusCode,
@@ -1071,19 +1097,89 @@ final class GrHttpClient {
   /// Largest response body read into memory (images stream instead).
   static const int _maxBodyBytes = 32 * 1024 * 1024;
 
-  Future<Uint8List> _readBody(HttpClientResponse response, String route) async {
+  /// The whole body of [response], read as [_consume] reads it.
+  Future<Uint8List> _readBody(
+    HttpClientResponse response,
+    String route, {
+    Duration? idle,
+    Future<Object>? stop,
+  }) async {
     final builder = BytesBuilder(copy: false);
-    await for (final chunk in response) {
-      if (builder.length + chunk.length > _maxBodyBytes) {
-        throw GrMalformedResponseException(
-          route: route,
-          httpStatus: response.statusCode,
-          issue: 'response body exceeds $_maxBodyBytes bytes',
-        );
-      }
-      builder.add(chunk);
-    }
+    await _consume(
+      response,
+      route,
+      (chunk) {
+        if (builder.length + chunk.length > _maxBodyBytes) {
+          throw GrMalformedResponseException(
+            route: route,
+            httpStatus: response.statusCode,
+            issue: 'response body exceeds $_maxBodyBytes bytes',
+          );
+        }
+        builder.add(chunk);
+      },
+      idle: idle,
+      stop: stop,
+    );
     return builder.takeBytes();
+  }
+
+  /// Hands [response]'s body to [onChunk] through a subscription of its
+  /// own, so that a deadline can end it: once the response has arrived,
+  /// `HttpClientRequest.abort` has no effect, and cancelling the body's
+  /// subscription is what closes the connection. Fails with what [onChunk]
+  /// throws, with [TimeoutException] after [idle] without data, or with the
+  /// value [stop] completes with; each of those closes the connection.
+  static Future<void> _consume(
+    HttpClientResponse response,
+    String route,
+    void Function(List<int> chunk) onChunk, {
+    Duration? idle,
+    Future<Object>? stop,
+  }) {
+    final done = Completer<void>();
+    late final StreamSubscription<List<int>> body;
+    Timer? silence;
+    void fail(Object error, StackTrace stack) {
+      if (done.isCompleted) return;
+      silence?.cancel();
+      unawaited(body.cancel());
+      done.completeError(error, stack);
+    }
+
+    void waitForData() {
+      if (idle == null) return;
+      silence?.cancel();
+      silence = Timer(
+        idle,
+        () => fail(
+          TimeoutException('$route: no data within $idle', idle),
+          StackTrace.current,
+        ),
+      );
+    }
+
+    body = response.listen(
+      (chunk) {
+        if (done.isCompleted) return;
+        try {
+          onChunk(chunk);
+        } on Object catch (e, st) {
+          fail(e, st);
+          return;
+        }
+        waitForData();
+      },
+      onError: fail,
+      onDone: () {
+        if (done.isCompleted) return;
+        silence?.cancel();
+        done.complete();
+      },
+    );
+    waitForData();
+    unawaited(stop?.then((reason) => fail(reason, StackTrace.current)));
+    return done.future;
   }
 
   /// Traces [request] once its headers are final, with [body] in full when
