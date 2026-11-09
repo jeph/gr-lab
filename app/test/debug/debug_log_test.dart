@@ -167,6 +167,23 @@ void main() {
     expect(reopened.sizeBytes, 3 * lineBytes);
   });
 
+  for (final enabled in [true, false]) {
+    test('a log folder that cannot be opened leaves the log unavailable, '
+        'not failing (logging ${enabled ? 'on' : 'off'})', () async {
+      // A file where the folder goes.
+      await File(logDir.path).writeAsString('');
+      final log = await open(defaultEnabled: enabled);
+      expect(log.available, isFalse);
+      expect(log.enabled, enabled);
+      log.sink(event(0));
+      await log.flush();
+      expect(log.sizeBytes, 0);
+      expect(await log.export(), isFalse);
+      expect(shared, isEmpty);
+      await log.close();
+    });
+  }
+
   test('rotation keeps the newest data and drops the oldest file', () async {
     // Two lines fill a file exactly; the third starts the next one.
     final log = await open(maxFileBytes: 2 * lineBytes, maxFiles: 2);

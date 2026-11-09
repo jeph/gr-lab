@@ -134,6 +134,8 @@ final class TestApp {
 /// camera's BLE transport, e.g. to add a second camera; [wifi] wraps its
 /// Wi-Fi control. [wifiApprovalShown] goes to the [GrCameraEnvironment],
 /// [askBeforeWifiJoin] and [redialDelays] to [AppServices].
+/// [debugLogBlocked] puts a file where the debug log's folder goes, so the
+/// log cannot open.
 Future<TestApp> createTestApp({
   FakeCameraConfig config = const FakeCameraConfig(),
   bool saveCamera = false,
@@ -143,6 +145,7 @@ Future<TestApp> createTestApp({
   bool askBeforeWifiJoin = false,
   Stream<void> wifiApprovalShown = const Stream.empty(),
   List<Duration> redialDelays = const [Duration(milliseconds: 20)],
+  bool debugLogBlocked = false,
 }) async {
   // flutter_test answers every dart:io HttpClient request with 400; the
   // fake camera serves real HTTP on loopback.
@@ -150,6 +153,8 @@ Future<TestApp> createTestApp({
   final root = await Directory.systemTemp.createTemp('grlab_test_');
   final data = await Directory('${root.path}/data').create();
   final cache = await Directory('${root.path}/cache').create();
+  final debugLogDir = Directory('${data.path}/debug-log');
+  if (debugLogBlocked) await File(debugLogDir.path).writeAsString('');
   final camera = FakeGrCamera(config: config, media: syntheticMedia());
   await camera.startHttp();
   if (saveCamera) {
@@ -190,7 +195,7 @@ Future<TestApp> createTestApp({
     clientName: 'GR Lab',
     dataDir: data,
     cacheDir: cache,
-    debugLogDir: Directory('${data.path}/debug-log'),
+    debugLogDir: debugLogDir,
     askBeforeWifiJoin: askBeforeWifiJoin,
     redialDelays: redialDelays,
   );

@@ -714,6 +714,10 @@
       }
     }
   },
+  "debugLogUnavailable": "Logging unavailable: couldn't open the log folder. Restart the app to try again.",
+  "@debugLogUnavailable": {
+    "description": "Settings: shown under Enable debug logging instead of its explanation when the phone's storage would not open the debug log's folder at start-up, so nothing is being logged."
+  },
   "downloadBarDownloading": "Downloading",
   "@downloadBarDownloading": {
     "description": "Download bar title while a shot is being downloaded."

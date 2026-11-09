@@ -42,7 +42,8 @@ final class DebugLog extends ChangeNotifier {
 
   /// Opens the log in [dir], continuing the newest file left by an earlier
   /// run. [settings] holds the user's choice, which overrides
-  /// [defaultEnabled].
+  /// [defaultEnabled]. Never fails: when [dir] cannot be opened, the log
+  /// is not [available] and records nothing.
   static Future<DebugLog> open({
     required Directory dir,
     required bool defaultEnabled,
@@ -63,18 +64,25 @@ final class DebugLog extends ChangeNotifier {
       maxFiles: maxFiles,
       share: share ?? _shareWithSystem,
     );
-    await dir.create(recursive: true);
-    final files = await log._files();
-    var total = 0;
-    for (final f in files) {
-      total += await f.length();
-    }
-    if (files.isNotEmpty) {
-      final current = await files.last.length();
-      log
-        .._index = _indexOf(files.last)!
-        .._currentBytes = current
-        .._closedBytes = total - current;
+    try {
+      await dir.create(recursive: true);
+      final files = await log._files();
+      var total = 0;
+      for (final f in files) {
+        total += await f.length();
+      }
+      if (files.isNotEmpty) {
+        final current = await files.last.length();
+        log
+          .._index = _indexOf(files.last)!
+          .._currentBytes = current
+          .._closedBytes = total - current;
+      }
+    } on FileSystemException catch (e) {
+      // Logging is optional: the app starts without it. Printed, the
+      // message would come back here, so it goes straight to the console.
+      Zone.root.print('debug log unavailable: $e');
+      log._available = false;
     }
     return log;
   }
@@ -112,6 +120,7 @@ final class DebugLog extends ChangeNotifier {
   final ShareLogFiles _share;
 
   bool _enabled;
+  bool _available = true;
 
   /// Lines recorded but not yet handed to a file write.
   final List<String> _pending = [];
@@ -146,6 +155,11 @@ final class DebugLog extends ChangeNotifier {
     _settings.debugLogging = value;
     notifyListeners();
   }
+
+  /// False when the log's folder could not be opened at start-up: nothing
+  /// is recorded this run, whatever [enabled] says (Settings tells the
+  /// user).
+  bool get available => _available;
 
   /// Bytes on disk across all log files, as of the last finished write.
   int get sizeBytes => _closedBytes + _currentBytes;
@@ -182,7 +196,7 @@ final class DebugLog extends ChangeNotifier {
   void _record(TraceEvent event) => _recordJson(event.toJson());
 
   void _recordJson(Map<String, Object?> json) {
-    if (!_enabled || _closed) return;
+    if (!_enabled || !_available || _closed) return;
     // Fields come from many protocol layers; anything JSON cannot encode
     // natively is kept as its string form rather than losing the event.
     _pending.add('${jsonEncode(json, toEncodable: _fallback)}\n');

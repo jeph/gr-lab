@@ -26,7 +26,9 @@ class DebugLogGroup extends StatelessWidget {
             key: const Key('setting-debug-log'),
             icon: Icons.bug_report_outlined,
             title: l10n.debugLogEnable,
-            subtitle: l10n.debugLogEnableSubtitle,
+            subtitle: log.available
+                ? l10n.debugLogEnableSubtitle
+                : l10n.debugLogUnavailable,
             trailing: Switch(
               key: const Key('setting-debug-log-switch'),
               value: log.enabled,

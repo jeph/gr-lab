@@ -92,6 +92,27 @@ void main() {
     expect(shared, isFalse);
   });
 
+  testWidgets('a log that could not open says logging is unavailable', (
+    tester,
+  ) async {
+    final logDir = File('${temp.path}/debug-log');
+    await tester.runAsync(() => logDir.writeAsString(''));
+    final log = await open(tester, (files, origin) async {});
+    await pumpGroup(tester, log);
+
+    expect(
+      find.text(
+        "Logging unavailable: couldn't open the log folder. Restart the app "
+        'to try again.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Keeps app and camera logs for bug reports'),
+      findsNothing,
+    );
+  });
+
   test('sizes read in plain units, formatted for the locale', () {
     final en = lookupAppLocalizations(const Locale('en'));
     expect(formatLogSize(en, 512), '512 B');
