@@ -309,7 +309,8 @@ final class DebugLog extends ChangeNotifier {
       await _current?.flush();
     } on FileSystemException catch (e) {
       // A full or vanished disk must not break the camera connection that
-      // feeds this log; the batch is lost and the next one reopens the file.
+      // feeds this log; the batch is lost and the next one reopens the file,
+      // cutting off whatever part of this one reached it.
       // The message goes straight to the console: printed, it would come
       // back here as a log line and fail again.
       Zone.root.print('debug log write failed: $e');
@@ -321,10 +322,40 @@ final class DebugLog extends ChangeNotifier {
 
   Future<void> _write(Uint8List bytes) async {
     if (bytes.isEmpty) return;
-    final file = _current ??= await _fileAt(_index)
-        .open(mode: FileMode.writeOnlyAppend);
+    final file = _current ??= await _openCurrent();
     await file.writeFrom(bytes);
     _currentBytes += bytes.length;
+  }
+
+  /// Opens the current file to append to it. A record left half-written at
+  /// its end, by a crash or a failed write, is cut off first, so the next
+  /// record starts a line of its own.
+  Future<RandomAccessFile> _openCurrent() async {
+    final file = await _fileAt(_index).open(mode: FileMode.append);
+    try {
+      final complete = await _completeLength(file);
+      if (complete < await file.length()) await file.truncate(complete);
+      await file.setPosition(complete);
+      _currentBytes = complete;
+      return file;
+    } on FileSystemException {
+      await file.close().catchError((Object _) {});
+      rethrow;
+    }
+  }
+
+  /// Bytes of [file] up to and including its last line break.
+  static Future<int> _completeLength(RandomAccessFile file) async {
+    const step = 4096;
+    var end = await file.length();
+    while (end > 0) {
+      final start = end > step ? end - step : 0;
+      await file.setPosition(start);
+      final newline = (await file.read(end - start)).lastIndexOf(0x0a);
+      if (newline >= 0) return start + newline + 1;
+      end = start;
+    }
+    return 0;
   }
 
   /// Starts the next file and deletes the oldest ones beyond [maxFiles].

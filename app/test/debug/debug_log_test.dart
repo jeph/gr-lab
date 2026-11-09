@@ -167,6 +167,22 @@ void main() {
     expect(reopened.sizeBytes, 3 * lineBytes);
   });
 
+  test('a record left half-written by a crash is cut off, so the next one '
+      'starts its own line', () async {
+    final log = await open();
+    log.sink(event(0));
+    await log.close();
+    final file = File('${logDir.path}/trace-000001.jsonl');
+    final torn = jsonEncode(event(1).toJson()).substring(0, 20);
+    await file.writeAsString(torn, mode: FileMode.append);
+
+    final reopened = await open();
+    reopened.sink(event(2));
+    await reopened.flush();
+    expect(kinds(await file.readAsString()), ['e00', 'e02']);
+    expect(reopened.sizeBytes, 2 * lineBytes);
+  });
+
   for (final enabled in [true, false]) {
     test('a log folder that cannot be opened leaves the log unavailable, '
         'not failing (logging ${enabled ? 'on' : 'off'})', () async {
