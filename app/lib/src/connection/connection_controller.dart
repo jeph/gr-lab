@@ -471,7 +471,7 @@ final class ConnectionController extends ChangeNotifier {
       );
     } on Object catch (e) {
       if (generation != _generation) return;
-      await _closeSession();
+      await _endSession();
       return _fail(generation, _failureFor(e, ConnectStep.bluetooth));
     }
     if (generation != _generation) return;
