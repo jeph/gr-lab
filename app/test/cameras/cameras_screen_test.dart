@@ -19,12 +19,14 @@ const _other = GrPairedCamera(
 );
 
 /// The whole app on a phone-sized screen with the fake GR IV paired.
+/// [bluetoothPermission] is what the permission request answers.
 Future<TestApp> _start(
   WidgetTester tester, {
   FakeCameraConfig config = const FakeCameraConfig(bonded: true),
   GrSessionOptions sessionOptions = const GrSessionOptions(),
   List<Duration> redialDelays = const [Duration(milliseconds: 20)],
   bool withOther = false,
+  bool bluetoothPermission = true,
 }) async {
   tester.view
     ..physicalSize = const Size(1170, 2532)
@@ -44,6 +46,7 @@ Future<TestApp> _start(
       );
       await cameras.select(config.serial);
     }
+    app.bluetoothPermission = bluetoothPermission;
     return app;
   }))!;
   await app.pumpApp(tester);
@@ -113,6 +116,65 @@ void main() {
     await pumpUntil(tester, () => app.ble.scanning == 1, reason: 'resumed');
 
     await app.dispose();
+  });
+
+  group('a Bluetooth permission denied at first', () {
+    Future<TestApp> denied(WidgetTester tester) async {
+      final app = await _start(
+        tester,
+        withOther: true,
+        bluetoothPermission: false,
+      );
+      await pumpRounds(tester, 20);
+      expect(app.ble.scans, 0);
+      expect(app.models.connection.status, ConnectionStatus.offline);
+      return app;
+    }
+
+    /// The scan starts, and the camera nearby is linked by itself as on
+    /// launch.
+    Future<void> expectScanAndLink(WidgetTester tester, TestApp app) async {
+      await pumpUntil(tester, () => app.ble.scanning == 1, reason: 'scan');
+      await _untilStatus(tester, app, ConnectionStatus.bluetooth);
+      expect(app.ble.connects, 1);
+    }
+
+    testWidgets('and granted in the system settings is used on return', (
+      tester,
+    ) async {
+      final app = await denied(tester);
+
+      [
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+      ].forEach(tester.binding.handleAppLifecycleStateChanged);
+      await pumpRounds(tester, 2);
+      app.bluetoothPermission = true;
+      [
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ].forEach(tester.binding.handleAppLifecycleStateChanged);
+      await expectScanAndLink(tester, app);
+
+      await app.dispose();
+    });
+
+    testWidgets('and granted on another screen is used on return', (
+      tester,
+    ) async {
+      final app = await denied(tester);
+
+      await _tap(tester, const Key('camera-row-1111111'));
+      final details = find.byKey(const Key('camera-details'));
+      await pumpUntilFound(tester, details);
+      app.bluetoothPermission = true;
+      Navigator.of(tester.element(details)).pop();
+      await expectScanAndLink(tester, app);
+
+      await app.dispose();
+    });
   });
 
   testWidgets('links the nearby camera over Bluetooth by itself; Wi-Fi '

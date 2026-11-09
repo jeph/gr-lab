@@ -47,7 +47,13 @@ class _CamerasScreenState extends State<CamerasScreen> with RouteAware {
   /// it), so only hiding it stops the scan.
   bool _visible = _isVisible(WidgetsBinding.instance.lifecycleState);
   late final AppLifecycleListener _lifecycle;
+
+  /// The Bluetooth permission's last answer; null until asked, and again
+  /// once a denial may have changed in the system settings: when the app
+  /// is hidden or another route covers the screen. Asked again when the
+  /// screen is back in front.
   bool? _permission;
+  bool _askingPermission = false;
   bool _autoConnected = false;
 
   static bool _isVisible(AppLifecycleState? state) =>
@@ -66,6 +72,7 @@ class _CamerasScreenState extends State<CamerasScreen> with RouteAware {
         final visible = _isVisible(state);
         if (visible == _visible) return;
         _visible = visible;
+        if (!visible) _forgetDenial();
         _update();
       },
     );
@@ -98,6 +105,7 @@ class _CamerasScreenState extends State<CamerasScreen> with RouteAware {
   @override
   void didPushNext() {
     _covered = true;
+    _forgetDenial();
     _update();
   }
 
@@ -121,8 +129,7 @@ class _CamerasScreenState extends State<CamerasScreen> with RouteAware {
       return;
     }
     switch (_permission) {
-      case null:
-        _permission = false;
+      case null when !_askingPermission:
         unawaited(_askPermission());
       case true when !_presence.scanning:
         _presence.start();
@@ -132,10 +139,18 @@ class _CamerasScreenState extends State<CamerasScreen> with RouteAware {
   }
 
   Future<void> _askPermission() async {
+    _askingPermission = true;
     final granted = await _models.services.camera.requestBluetoothPermission();
+    _askingPermission = false;
     if (!mounted) return;
     _permission = granted;
     _update();
+  }
+
+  /// The user may grant a denied permission in the system settings, or on
+  /// another route (pairing), while this screen is not in front.
+  void _forgetDenial() {
+    if (_permission == false) _permission = null;
   }
 
   void _onPresence() {
