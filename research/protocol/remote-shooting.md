@@ -303,6 +303,15 @@ The YAML `rest_value` maps SDK constant name → wire value. GR III, GR III HDF,
 | Drive | `shootMode` | `single continuous self10s self2s bracket bracketSelf10s bracketSelf2s multiExp multiExpSelf10s multiExpSelf2s interval intervalSelf10s intervalSelf2s intervalComp intervalCompSelf10s intervalCompSelf2s` (`:370-388`) | – (no drive key) |
 | Capture mode (read) | `captureMode` | `still movie` (`:405-409`) | – |
 
+`sv` is the ISO in effect, not the ISO setting:
+
+- Found in code (GR IV webapid): `CameraParams::Fetch` (0x9d888) takes `sv` from `sv::GetCurrentValue` (0xb9614), which reads the *current* value of camera property 0x44 (0x77 for movies), not the setting value. `sv::ConvertToWebapi` (0xb91e0) turns 0 into `auto`, 1 into `auto_hi` and anything else into the number. With ISO AUTO the current value is the metered ISO, so `/v1/props` and the `PUT /v1/params/camera` answer report a number. The GR III webapid does the same (`sv::GetCurrentValue` 0xebc6c, `ConvertToWebapi` 0xebb40).
+- Found in code: `sv::SetValue` (0xb9848) turns `auto`/`auto_hi` into 0/1 and writes them as the setting. `svList` comes from `sv::GetSupportedValues` (0xb93ec) with the same conversion; webapid does not filter it by exposure mode. Nothing in webapid reads the ISO setting. Over BLE, bled's `Shooting::ISO::GetBLEValue` (0x7071c) also reads the current value, so the ISO characteristic's 0 = AUTO is very likely no better **[inferred]**.
+- Found in code: Image Sync shows AUTO only when `sv` is the string `auto` (`m/r4.java:973-998`).
+- Observed on a GR IV HDF (reported 2026-11-09, firmware not recorded): after AUTO was picked on GR Lab's ISO dial, the readout showed a number at the next props read.
+- Observed on a GR IV HDF (fw 1.20, 2026-11-07, Av): `svList` was `100 … 204800` with no `auto`, `sv` was `6400`. Whether ISO was AUTO on the body then is **[unknown]**.
+- **[unknown]**: any HTTP, WebSocket or BLE field that says ISO is AUTO while `sv` shows a number. **[inferred]**: an empty `svList` may mean the camera sets ISO itself (as `tvList: []` did in Av), which would cover TAv but not AUTO in P, Av or Tv. Next step: a debug log in Av and TAv, each with ISO AUTO and with a fixed ISO.
+
 - Camera (device) params: `camera_ricoh_gr_iii.yaml`:
   - `datetime`, `channel` `1..11`, `key`, `ssid`
   - `focusEffectiveArea`
