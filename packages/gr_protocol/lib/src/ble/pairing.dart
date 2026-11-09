@@ -224,7 +224,7 @@ Future<GrPairing> pairCamera(
     // Best effort: a failed disconnect must not hide the pairing failure.
     try {
       await connection.disconnect();
-    } catch (d) {
+    } on Object catch (d) {
       emit('disconnectFailed', {'failure': f.name, 'error': '$d'});
     }
     throw GrPairingException(f, message, e);

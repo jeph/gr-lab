@@ -276,7 +276,7 @@ Our paths:
 
 - `packages/gr_protocol/lib/src/ble/pairing.dart` (`pairCamera`);
 - `.../session/session.dart` (`GrSession.connect` / `_connectBle` / `_reconnectBle`);
-- `.../ble/wake.dart` (`wakeCamera`);
+- `.../ble/wake.dart` (`wakeCamera`; removed 2026-11-08, it applied Image Sync's bare-link wake, which did not wake a GR IV HDF / 1.20 — see `research/hardware-validation.md`);
 - `apps/gr_lab/lib/src/ble/universal_ble_transport.dart`;
 - `apps/gr_lab/integration_test/{pair_and_pull,wake_probe}_test.dart`.
 
