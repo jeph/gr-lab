@@ -1217,13 +1217,17 @@
   "@liveViewNotOnWifi": {
     "description": "Snack bar: a setting could not be changed because the phone is not on the camera's Wi-Fi."
   },
-  "liveViewSettingFailed": "The camera didn't change it ({detail})",
+  "liveViewSettingFailed": "The camera didn't change it",
   "@liveViewSettingFailed": {
-    "description": "Snack bar: the camera refused or failed to change an exposure setting.",
+    "description": "Snack bar: the camera refused or failed to change an exposure setting."
+  },
+  "liveViewSettingFailedCode": "The camera didn't change it ({code})",
+  "@liveViewSettingFailedCode": {
+    "description": "Snack bar: the camera refused or failed to change an exposure setting, with the error's technical code.",
     "placeholders": {
-      "detail": {
+      "code": {
         "type": "String",
-        "description": "Technical detail of the error, as reported by the camera or the phone; not translated."
+        "description": "Technical code of the error: the camera's error number, an HTTP status or a Bluetooth error name. Not translated."
       }
     }
   },
@@ -1806,13 +1810,17 @@
   "@shootDriveContinuous": {
     "description": "Drive mode name, as in the camera's Drive menu: Continuous."
   },
-  "shootDriveFailed": "The camera didn't change the drive mode ({detail})",
+  "shootDriveFailed": "The camera didn't change the drive mode",
   "@shootDriveFailed": {
-    "description": "Snack bar: the camera refused or failed to change the drive mode or self-timer.",
+    "description": "Snack bar: the camera refused or failed to change the drive mode or self-timer."
+  },
+  "shootDriveFailedCode": "The camera didn't change the drive mode ({code})",
+  "@shootDriveFailedCode": {
+    "description": "Snack bar: the camera refused or failed to change the drive mode or self-timer, with the error's technical code.",
     "placeholders": {
-      "detail": {
+      "code": {
         "type": "String",
-        "description": "Technical detail of the error, as reported by the camera or the phone; not translated."
+        "description": "Technical code of the error: the camera's error number, an HTTP status or a Bluetooth error name. Not translated."
       }
     }
   },
@@ -1916,6 +1924,22 @@
   "@shootModeRemote": {
     "description": "Shoot mode switch: control the camera over Bluetooth, without a picture."
   },
+  "shootPowerFailureBluetoothOff": "Bluetooth is off on this phone.",
+  "@shootPowerFailureBluetoothOff": {
+    "description": "Shoot: under \"Couldn't turn … on\", when Bluetooth is off on the phone."
+  },
+  "shootPowerFailureLinkLost": "The Bluetooth connection dropped.",
+  "@shootPowerFailureLinkLost": {
+    "description": "Shoot: under \"Couldn't turn … on\", when the Bluetooth link to the camera dropped."
+  },
+  "shootPowerFailureNeedsPairing": "The camera no longer accepts this phone. Pair it again.",
+  "@shootPowerFailureNeedsPairing": {
+    "description": "Shoot: under \"Couldn't turn … on\", when the camera refused this phone's pairing and only pairing again helps."
+  },
+  "shootPowerFailureNoAnswer": "The camera didn't answer.",
+  "@shootPowerFailureNoAnswer": {
+    "description": "Shoot: under \"Couldn't turn … on\", when the camera did not turn on or did not answer in time."
+  },
   "shootSelfTimer": "Self-timer",
   "@shootSelfTimer": {
     "description": "Shoot remote section heading above the self-timer choices."
@@ -1924,13 +1948,17 @@
   "@shootShutter": {
     "description": "Accessibility label of the shutter button."
   },
-  "shootShutterFailed": "The camera didn't take the picture ({detail})",
+  "shootShutterFailed": "The camera didn't take the picture",
   "@shootShutterFailed": {
-    "description": "Snack bar: the camera refused or failed to take a picture.",
+    "description": "Snack bar: the camera refused or failed to take a picture."
+  },
+  "shootShutterFailedCode": "The camera didn't take the picture ({code})",
+  "@shootShutterFailedCode": {
+    "description": "Snack bar: the camera refused or failed to take a picture, with the error's technical code.",
     "placeholders": {
-      "detail": {
+      "code": {
         "type": "String",
-        "description": "Technical detail of the error, as reported by the camera or the phone; not translated."
+        "description": "Technical code of the error: the camera's error number, an HTTP status or a Bluetooth error name. Not translated."
       }
     }
   },

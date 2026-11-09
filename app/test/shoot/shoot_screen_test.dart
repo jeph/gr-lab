@@ -8,6 +8,8 @@ import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart' show BleOperationMode;
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/library/library_screen.dart';
+import 'package:grlab/src/shoot/live_view_controller.dart';
+import 'package:grlab/src/shoot/shoot_screen.dart';
 
 import '../support/test_app.dart';
 
@@ -301,6 +303,27 @@ void main() {
         reason: 'new aperture',
       );
       await expectCameraSetting(tester, app, 'av', '4.0');
+      await app.dispose();
+    });
+
+    testWidgets('a value the camera refuses comes back as its error code', (
+      tester,
+    ) async {
+      final app = await inLiveView(tester);
+      final live = tester
+          .widget<ShootScreen>(find.byType(ShootScreen))
+          .model
+          .liveView;
+      await pumpUntil(
+        tester,
+        () => live.props?.setting('av') != null,
+        reason: 'aperture list',
+      );
+      final refusal = await tester.runAsync(() => live.setSetting('av', '99'));
+      expect(
+        refusal,
+        isA<SettingRefusalByCamera>().having((r) => r.code, 'code', '400'),
+      );
       await app.dispose();
     });
 

@@ -70,11 +70,7 @@ class _ShootScreenState extends State<ShootScreen> {
 
   void _sayRefused(ShootRefusal refusal) {
     if (!mounted) return;
-    final l10n = context.l10n;
-    final message = switch (refusal.request) {
-      ShootRequest.shutter => l10n.shootShutterFailed(refusal.detail),
-      ShootRequest.driveMode => l10n.shootDriveFailed(refusal.detail),
-    };
+    final message = shootRefusalMessage(context.l10n, refusal);
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
@@ -336,15 +332,16 @@ class ShootPowerLine extends StatelessWidget {
             (_, null) => l10n.shootTurnOnFailedUnnamed,
             (_, final name?) => l10n.shootTurnOnFailed(name),
           }, style: style),
-          if (model.power == ShootPower.failed)
-            if (model.powerFailureDetail case final detail?)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  detail,
-                  style: GrFonts.monoStyle(context, size: 11, color: c.t3),
-                ),
+          if (model.powerFailure case final failure?)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                shootPowerFailureMessage(l10n, failure),
+                key: const Key('shoot-power-failure'),
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: c.t3),
               ),
+            ),
           const SizedBox(height: 10),
           FilledButton(
             key: const Key('shoot-turn-on'),
@@ -356,3 +353,23 @@ class ShootPowerLine extends StatelessWidget {
     };
   }
 }
+
+/// The snack bar for a request the camera refused.
+String shootRefusalMessage(AppLocalizations l10n, ShootRefusal refusal) =>
+    switch ((refusal.request, refusal.code)) {
+      (ShootRequest.shutter, null) => l10n.shootShutterFailed,
+      (ShootRequest.shutter, final code?) => l10n.shootShutterFailedCode(code),
+      (ShootRequest.driveMode, null) => l10n.shootDriveFailed,
+      (ShootRequest.driveMode, final code?) => l10n.shootDriveFailedCode(code),
+    };
+
+/// Why the camera did not turn on, under "Couldn't turn … on".
+String shootPowerFailureMessage(
+  AppLocalizations l10n,
+  ShootPowerFailure failure,
+) => switch (failure) {
+  ShootPowerFailure.bluetoothOff => l10n.shootPowerFailureBluetoothOff,
+  ShootPowerFailure.needsPairing => l10n.shootPowerFailureNeedsPairing,
+  ShootPowerFailure.linkLost => l10n.shootPowerFailureLinkLost,
+  ShootPowerFailure.noAnswer => l10n.shootPowerFailureNoAnswer,
+};

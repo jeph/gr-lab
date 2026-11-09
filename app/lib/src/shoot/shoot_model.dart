@@ -5,6 +5,7 @@ import 'package:gr_camera/gr_camera.dart';
 
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/data/settings.dart';
+import 'package:grlab/src/shoot/camera_error_code.dart';
 import 'package:grlab/src/shoot/live_view_controller.dart';
 import 'package:grlab/src/shoot/shoot_format.dart';
 
@@ -22,8 +23,39 @@ enum ShootPower {
   /// Switched off after it was on; turning it on again is the user's call.
   off,
 
-  /// Turning it on failed; [ShootModel.powerFailureDetail] says why.
+  /// Turning it on failed; [ShootModel.powerFailure] says why.
   failed,
+}
+
+/// Why turning the camera on for shooting failed.
+enum ShootPowerFailure {
+  /// Bluetooth is off on the phone.
+  bluetoothOff,
+
+  /// The camera refused this phone's bond; only pairing again helps.
+  needsPairing,
+
+  /// The Bluetooth link dropped.
+  linkLost,
+
+  /// The camera did not turn on, or did not answer in time.
+  noAnswer;
+
+  /// Classifies the error [CameraRemote.wake] threw.
+  static ShootPowerFailure of(Object error) {
+    if (error is GrSessionException && error.needsPairing) return needsPairing;
+    final cause = error is GrSessionException ? error.cause : error;
+    if (cause is! BleException) return noAnswer;
+    return switch (cause.code) {
+      BleErrorCode.poweredOff => bluetoothOff,
+      BleErrorCode.bondRejected || BleErrorCode.unauthorized => needsPairing,
+      BleErrorCode.notConnected => linkLost,
+      BleErrorCode.timeout ||
+      BleErrorCode.notFound ||
+      BleErrorCode.gatt ||
+      BleErrorCode.transport => noAnswer,
+    };
+  }
 }
 
 /// What the app asked the camera to do from the Shoot tab.
@@ -37,12 +69,12 @@ enum ShootRequest {
 
 /// A [request] the camera did not carry out, for a snack bar.
 final class ShootRefusal {
-  const new(this.request, this.detail);
+  const new(this.request, this.code);
 
   final ShootRequest request;
 
-  /// The error, as technical detail; not translated.
-  final String detail;
+  /// The error's technical code ([cameraErrorCode]); null when it has none.
+  final String? code;
 }
 
 /// The Shoot tab's state for one visit to the camera's pages: the camera
@@ -72,16 +104,16 @@ final class ShootModel extends ChangeNotifier {
   int _wakeRun = 0;
 
   ShootPower _power = ShootPower.idle;
-  String? _powerFailureDetail;
+  ShootPowerFailure? _powerFailure;
 
   /// A shutter or drive change the camera refused, for a snack bar.
   Stream<ShootRefusal> get refusals => _refusals.stream;
 
   ShootPower get power => _power;
 
-  /// Why turning the camera on failed, as technical detail (the session's
-  /// error); not translated.
-  String? get powerFailureDetail => _powerFailureDetail;
+  /// Why turning the camera on failed; null unless [power] is
+  /// [ShootPower.failed].
+  ShootPowerFailure? get powerFailure => _powerFailure;
 
   /// Mode dial position, from Shooting Mode.
   BleShootingMode? get exposure => _remote?.exposure;
@@ -144,6 +176,7 @@ final class ShootModel extends ChangeNotifier {
   void turnOn() {
     if (_power != ShootPower.off && _power != ShootPower.failed) return;
     _power = ShootPower.idle;
+    _powerFailure = null;
     _sync();
   }
 
@@ -181,7 +214,8 @@ final class ShootModel extends ChangeNotifier {
   }
 
   void _refuse(ShootRequest request, Object error) {
-    if (!_disposed) _refusals.add(ShootRefusal(request, '$error'));
+    if (_disposed) return;
+    _refusals.add(ShootRefusal(request, cameraErrorCode(error)));
   }
 
   void _sync() {
@@ -217,7 +251,7 @@ final class ShootModel extends ChangeNotifier {
     _remote = session?.remote;
     _remote?.addListener(_onRemote);
     _power = ShootPower.idle;
-    _powerFailureDetail = null;
+    _powerFailure = null;
   }
 
   void _onRemote() {
@@ -227,14 +261,14 @@ final class ShootModel extends ChangeNotifier {
   Future<void> _wake(CameraRemote remote) async {
     final run = ++_wakeRun;
     _power = ShootPower.waking;
-    _powerFailureDetail = null;
+    _powerFailure = null;
     notifyListeners();
     try {
       await remote.wake();
     } on Object catch (e) {
       if (_disposed || run != _wakeRun) return;
       _power = ShootPower.failed;
-      _powerFailureDetail = e is GrSessionException ? e.message : '$e';
+      _powerFailure = ShootPowerFailure.of(e);
       notifyListeners();
       return;
     }

@@ -78,9 +78,9 @@ class _LiveLayoutState extends State<_LiveLayout> {
     final l10n = context.l10n;
     final message = switch (refusal) {
       SettingRefusalNotOnWifi() => l10n.liveViewNotOnWifi,
-      SettingRefusalByCamera(:final detail) => l10n.liveViewSettingFailed(
-        detail,
-      ),
+      SettingRefusalByCamera(code: null) => l10n.liveViewSettingFailed,
+      SettingRefusalByCamera(code: final code?) =>
+        l10n.liveViewSettingFailedCode(code),
     };
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()

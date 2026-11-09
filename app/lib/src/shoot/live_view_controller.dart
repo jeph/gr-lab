@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
 
 import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/shoot/camera_error_code.dart';
 
 /// Where live view is.
 enum LiveViewPhase {
@@ -34,10 +35,10 @@ final class SettingRefusalNotOnWifi extends SettingRefusal {
 
 /// The camera did not take the new value.
 final class SettingRefusalByCamera extends SettingRefusal {
-  const new(this.detail);
+  const new(this.code);
 
-  /// The error, as technical detail; not translated.
-  final String detail;
+  /// The error's technical code ([cameraErrorCode]); null when it has none.
+  final String? code;
 }
 
 /// Live view on the Shoot tab (mock `b-shoot`): wanting it joins the
@@ -134,7 +135,7 @@ final class LiveViewController extends ChangeNotifier {
       return null;
     } on Object catch (e) {
       if (_disposed) return null;
-      return SettingRefusalByCamera('$e');
+      return SettingRefusalByCamera(cameraErrorCode(e));
     }
   }
 
