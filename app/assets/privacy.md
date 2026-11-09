@@ -20,7 +20,7 @@ Photos and videos you download are saved to your phone's photo library: on iOS i
 
 The demo version of GR Lab uses a simulated camera with sample photos included in the app. It keeps its data apart from that of real cameras.
 
-On Android, GR Lab turns off backup to your Google account. When you move to a new Android phone with a cable or Wi-Fi transfer, Android can still copy GR Lab's data, including the debug log, to the new phone. On iOS, your iCloud or computer backup can include your GR Lab settings, paired cameras and download record, and restoring it puts them on the new phone; the debug log and the cache are left out of iOS backups.
+On Android, GR Lab turns off backup to your Google account. When you move to a new Android phone with a cable or Wi-Fi transfer, Android can still copy GR Lab's data, including the debug log, to the new phone. On iOS, GR Lab leaves all of its data out of your iCloud and computer backups.
 
 ## What GR Lab sends, and to whom
 

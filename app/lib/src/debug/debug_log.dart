@@ -86,14 +86,14 @@ final class DebugLog extends ChangeNotifier {
 
   /// Where the log lives on this phone: on Android the app's external files
   /// directory, so `adb pull /sdcard/Android/data/<appId>/files/debug-log`
-  /// works on a release build; on iOS the cache directory, which iOS leaves
-  /// out of backups (the log holds the camera's Wi-Fi passphrase). Android
-  /// backup is off for the whole app (`android:allowBackup`).
+  /// works on a release build; on iOS the application support directory.
+  /// Backups never include it, as they hold none of the app's data
+  /// (`android:allowBackup`, `AppDelegate.excludeAppDataFromBackup`).
   static Future<Directory> platformDirectory() async {
     final base = Platform.isAndroid
         ? await getExternalStorageDirectory() ??
               await getApplicationSupportDirectory()
-        : await getApplicationCacheDirectory();
+        : await getApplicationSupportDirectory();
     return Directory('${base.path}/debug-log');
   }
 
