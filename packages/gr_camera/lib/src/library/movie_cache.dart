@@ -146,12 +146,15 @@ final class MovieCache {
           throw const MovieDownloadCancelled();
         }
         await staging.rename(file.path);
+        if (cameraDropped()) throw const MovieDownloadCancelled();
         _copiedFrom[file.path] = library;
       } catch (_) {
         if (staging.existsSync()) await staging.delete();
-        // The camera was forgotten meanwhile, its folder deleted.
-        if (cameraDropped()) throw const MovieDownloadCancelled();
-        rethrow;
+        if (!cameraDropped()) rethrow;
+        // The camera was forgotten meanwhile, its folder deleted. A later
+        // copy of this movie waits for this one, so the file is this copy.
+        await _disk.discard(file);
+        throw const MovieDownloadCancelled();
       }
       _lastUsed = file.path;
       _disk.added(file, await file.length());
@@ -162,10 +165,8 @@ final class MovieCache {
     final settled = download.done.then<void>((_) {}, onError: (Object _) {});
     _latest[key] = settled;
     unawaited(
-      settled.whenComplete(() async {
+      settled.whenComplete(() {
         if (identical(_latest[key], settled)) unawaited(_latest.remove(key));
-        // Its folder may have been written again after it was deleted.
-        if (cameraDropped()) await _disk.forgetCamera(serial);
       }),
     );
     return download;

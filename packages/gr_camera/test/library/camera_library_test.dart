@@ -617,7 +617,7 @@ void main() {
 
     test('forgetting a camera deletes its folder and its images in memory, '
         'keeps an image fetched meanwhile off disk, and leaves other '
-        "cameras' images", () async {
+        "cameras' images and the camera's cache once paired again", () async {
       link.value = connected();
       final loader = images();
       final thumb = await loader.load(serial, file, GrImageSize.thumb).future;
@@ -643,10 +643,15 @@ void main() {
       expect(Directory('${cache.path}/$serial').existsSync(), isFalse);
       expect(listing.existsSync(), isFalse);
       expect(loader.cached(serial, file, GrImageSize.thumb), isNull);
+      // Paired again: its listing is cached anew.
+      listing
+        ..parent.createSync()
+        ..writeAsStringSync('{}');
       hang.complete();
       expect(await inFlight.future, isNotNull, reason: 'still shown');
       await loader.diskSettled;
-      expect(Directory('${cache.path}/$serial').existsSync(), isFalse);
+      expect(Directory('${cache.path}/$serial/thumbs').existsSync(), isFalse);
+      expect(listing.existsSync(), isTrue);
       expect(loader.cached(serial, raw, GrImageSize.thumb), isNull);
       expect(other.existsSync(), isTrue);
     });
@@ -704,7 +709,8 @@ void main() {
       );
     });
 
-    test('a copy running while its camera is forgotten is not kept', () async {
+    test('a copy running while its camera is forgotten is not kept, and '
+        "leaves the camera's cache once paired again", () async {
       await camera.close();
       camera = FakeGrCamera(
         config: FakeCameraConfig(
@@ -725,12 +731,25 @@ void main() {
       );
 
       await movies.forgetCamera(serial);
+      expect(Directory('${cache.path}/$serial').existsSync(), isFalse);
+      // Paired again: a listing and another movie are cached anew.
+      final listing = File('${cache.path}/$serial/library.json');
+      final otherMovie = File('${cache.path}/$serial/movies/other.MOV');
+      otherMovie.parent.createSync(recursive: true);
+      listing.writeAsStringSync('{}');
+      otherMovie.writeAsBytesSync([1, 2, 3]);
+
       await expectLater(download.done, throwsA(isA<MovieDownloadCancelled>()));
-      await until(
-        () => !Directory('${cache.path}/$serial').existsSync(),
-        reason: 'folder deleted again',
+      // Lets anything the copy left to do once settled run.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      await movies.diskSettled;
+      expect(movies.fileFor(serial, movie).existsSync(), isFalse);
+      expect(
+        Directory('${cache.path}/$serial/movies').listSync().map((e) => e.path),
+        [otherMovie.path],
+        reason: 'nothing of the forgotten copy',
       );
-      expect(movies.cached(serial, movie), isNull);
+      expect(listing.existsSync(), isTrue);
     });
 
     test('cancelling a stalled copy closes its connection at once', () async {

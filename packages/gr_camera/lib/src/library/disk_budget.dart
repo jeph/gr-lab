@@ -98,7 +98,24 @@ final class DiskBudget {
       try {
         if (dir.existsSync()) await dir.delete(recursive: true);
       } on FileSystemException {
-        // A file written meanwhile; its writer forgets the camera again.
+        // A file written meanwhile; its writer [discard]s it.
+      }
+    });
+    return _work;
+  }
+
+  /// Deletes [file], written for a camera after [forgetCamera] deleted its
+  /// folder, and the folders the write created again while they are
+  /// empty. Anything else in them, such as a cache of the camera paired
+  /// again, stays.
+  Future<void> discard(File file) {
+    _run(() async {
+      try {
+        if (file.existsSync()) await file.delete();
+        await file.parent.delete();
+        await file.parent.parent.delete();
+      } on FileSystemException {
+        // A folder that holds something else.
       }
     });
     return _work;

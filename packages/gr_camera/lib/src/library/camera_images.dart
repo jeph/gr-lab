@@ -292,8 +292,9 @@ final class CameraImages {
     if (!_onDisk(size)) return _remember(size, key, bytes);
     final stored = await _store(file, bytes);
     if (cameraDropped()) {
-      // Forgotten while it was written.
-      await _disk.forgetCamera(library.serial);
+      // Forgotten while it was written. One request at a time has this
+      // path, so the file is this copy.
+      await _disk.discard(file);
       return bytes;
     }
     _fetchedFrom[key] = library;
