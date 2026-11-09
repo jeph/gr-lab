@@ -272,6 +272,8 @@ Reading the iOS Dart code needs a decrypted copy of the iOS app (App Store binar
 
 ## 5. GR WORLD vs our client
 
+> **Historical: a snapshot of GR Lab's client as of 2026-11-07.** The "Our client" column, its file and line references and the `apps/gr_lab` paths describe code that has since changed. In particular, rows 5–6 describe a bare-link wake that no longer exists. The session now wakes the camera with GR WORLD's Operation Mode write (`session.dart`, `_wakeAndWlanOn`), and `wakeCamera` was removed on 2026-11-08. For current behaviour, read the source. The GR WORLD column and the ranking reasoning still stand.
+
 Our paths:
 
 - `packages/gr_protocol/lib/src/ble/pairing.dart` (`pairCamera`);
