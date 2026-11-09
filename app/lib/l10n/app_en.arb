@@ -2205,6 +2205,17 @@
   "@pairingRetry": {
     "description": "Small button that restarts scanning after it stopped."
   },
+  "pairingRetryWait": "You can pair again in {seconds, plural, =1{1 second} other{{seconds} seconds}}. The camera stops accepting pairing after quick retries.",
+  "@pairingRetryWait": {
+    "description": "Shown on the pairing failure and instructions pages while the next pairing attempt must wait; the Pair button stays off until then. Counts down.",
+    "placeholders": {
+      "seconds": {
+        "type": "int",
+        "description": "Seconds left until the next pairing attempt can start.",
+        "format": "decimalPattern"
+      }
+    }
+  },
   "pairingScanStopped": "Scanning stopped",
   "@pairingScanStopped": {
     "description": "Shown when scanning for nearby cameras stopped with an error."

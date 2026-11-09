@@ -265,6 +265,41 @@ void main() {
     });
   }
 
+  testWidgets('after a failed attempt, Pair waits until the camera accepts '
+      'another one, and the pages say when', (tester) async {
+    final app = await _start(
+      tester,
+      const FakeCameraConfig(executePairingOpen: true, refusePairing: true),
+    );
+    const wait = Key('pairing-retry-wait');
+
+    await _selectAndPair(tester);
+    await pumpUntilFound(tester, find.byKey(_failure));
+    await tester.scrollUntilVisible(
+      find.byKey(wait),
+      200,
+      scrollable: _flowScrollable,
+    );
+    expect(find.textContaining('You can pair again in 1'), findsOneWidget);
+
+    await tapWhenReady(tester, find.byKey(const Key('pair-again')));
+    expect(find.byKey(_instructions), findsOneWidget);
+    final pair = find.byKey(const Key('pair-start'));
+    expect(tester.widget<FilledButton>(pair).onPressed, isNull);
+    await tester.scrollUntilVisible(
+      find.byKey(wait),
+      200,
+      scrollable: _flowScrollable,
+    );
+
+    await tester.pump(PairingRun.bondInterval);
+    expect(tester.widget<FilledButton>(pair).onPressed, isNotNull);
+    expect(find.byKey(wait), findsNothing);
+    expect(app.ble.connects, 1);
+
+    await app.dispose();
+  });
+
   testWidgets('going back while confirming returns to the instructions', (
     tester,
   ) async {

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:grlab/l10n/l10n.dart';
@@ -270,6 +271,7 @@ class _PairingFlowState extends State<PairingFlow> {
         leading: back,
         trailing: close,
         camera: _selected!,
+        pairAt: _nextAttemptAt(),
         onPair: _pair,
       ),
       _Page.pairing => _PairingPage(
@@ -283,6 +285,7 @@ class _PairingFlowState extends State<PairingFlow> {
         leading: close,
         error: _pairingError!,
         cameraName: _selected!.model.shortName,
+        pairAt: _nextAttemptAt(),
         onPairAgain: _pairAgain,
       ),
     };
@@ -293,6 +296,72 @@ class _PairingFlowState extends State<PairingFlow> {
       },
       child: Scaffold(body: SafeArea(child: page)),
     );
+  }
+
+  /// When the selected camera accepts the next pairing attempt; null when
+  /// it does now.
+  DateTime? _nextAttemptAt() =>
+      PairingRun.nextAttemptAt(_models.services.camera, _selected!);
+}
+
+/// Builds with the whole seconds left until [until], rebuilding each
+/// second; null once it passed (or when there is no [until]).
+class _Countdown extends StatefulWidget {
+  const new({required this.until, required this.builder});
+
+  final DateTime? until;
+  final Widget Function(BuildContext context, int? secondsLeft) builder;
+
+  @override
+  State<_Countdown> createState() => _CountdownState();
+}
+
+class _CountdownState extends State<_Countdown> {
+  Timer? _tick;
+
+  Duration? get _left {
+    final until = widget.until;
+    if (until == null) return null;
+    final left = until.difference(clock.now());
+    return left > Duration.zero ? left : null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _schedule();
+  }
+
+  @override
+  void didUpdateWidget(_Countdown oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _schedule();
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  /// Rebuilds when the shown number of seconds next changes.
+  void _schedule() {
+    _tick?.cancel();
+    _tick = null;
+    final left = _left;
+    if (left == null) return;
+    final ms = left.inMilliseconds % 1000;
+    _tick = Timer(Duration(milliseconds: ms == 0 ? 1000 : ms), () {
+      if (!mounted) return;
+      setState(_schedule);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final left = _left;
+    final seconds = left == null ? null : (left.inMilliseconds / 1000).ceil();
+    return widget.builder(context, seconds);
   }
 }
 
@@ -622,16 +691,23 @@ class _InstructionsPage extends StatelessWidget {
     required this.leading,
     required this.trailing,
     required this.camera,
+    required this.pairAt,
     required this.onPair,
   });
 
   final Widget leading;
   final Widget? trailing;
   final NearbyCamera camera;
+
+  /// When the camera accepts the next attempt; Pair is off until then.
+  final DateTime? pairAt;
   final VoidCallback onPair;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      _Countdown(until: pairAt, builder: _build);
+
+  Widget _build(BuildContext context, int? wait) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
     return _PageLayout(
@@ -644,7 +720,7 @@ class _InstructionsPage extends StatelessWidget {
           children: [
             FilledButton(
               key: const Key('pair-start'),
-              onPressed: onPair,
+              onPressed: wait == null ? onPair : null,
               child: Text(l10n.pairingPair),
             ),
           ],
@@ -680,10 +756,29 @@ class _InstructionsPage extends StatelessWidget {
             ),
           ],
         ),
+        if (wait != null) ...[const SizedBox(height: 12), _RetryWait(wait)],
         FootNote(l10n.pairingInstructionsPairingAgain),
       ],
     );
   }
+}
+
+/// How long the next pairing attempt has to wait.
+class _RetryWait extends StatelessWidget {
+  const new(this.seconds);
+
+  final int seconds;
+
+  @override
+  Widget build(BuildContext context) => GroupBox(
+    key: const Key('pairing-retry-wait'),
+    children: [
+      GroupRow(
+        icon: Icons.schedule_rounded,
+        title: context.l10n.pairingRetryWait(seconds),
+      ),
+    ],
+  );
 }
 
 // ----------------------------------------------------------------- pairing
@@ -776,6 +871,7 @@ class _FailurePage extends StatelessWidget {
     required this.leading,
     required this.error,
     required this.cameraName,
+    required this.pairAt,
     required this.onPairAgain,
   });
 
@@ -784,10 +880,16 @@ class _FailurePage extends StatelessWidget {
   /// What `pairCamera` threw.
   final Object error;
   final String cameraName;
+
+  /// When the camera accepts the next attempt, shown until then.
+  final DateTime? pairAt;
   final VoidCallback onPairAgain;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      _Countdown(until: pairAt, builder: _build);
+
+  Widget _build(BuildContext context, int? wait) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
     final info = PairingFailureInfo.from(error, camera: cameraName, l10n: l10n);
@@ -826,6 +928,7 @@ class _FailurePage extends StatelessWidget {
               GroupRow(leading: NumberTile(i + 1), title: info.steps[i]),
           ],
         ),
+        if (wait != null) ...[const SizedBox(height: 12), _RetryWait(wait)],
         if (info.hintTitle case final hint?) ...[
           const SizedBox(height: 12),
           GroupBox(
