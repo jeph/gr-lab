@@ -39,18 +39,6 @@ final class SavedCamera {
       stripRicohPrefix(props?.model)?.nonEmpty ??
       stripRicohPrefix(paired.modelName)?.nonEmpty;
 
-  /// `GR IV · No. 1234567 · fw 1.20`, leaving out the model when [name]
-  /// already says it and the firmware unless [firmware].
-  String identityLine({GrProps? props, bool firmware = true}) {
-    final model = this.model(props);
-    final version = props?.firmwareVersion ?? paired.firmwareRevision;
-    return [
-      if (model != null && model != name) model,
-      'No. $serial',
-      if (firmware && version != null) 'fw $version',
-    ].join(' · ');
-  }
-
   /// Default display name for a newly paired camera.
   static String defaultName(GrPairedCamera paired) =>
       stripRicohPrefix(paired.modelName)?.nonEmpty ?? 'GR camera';

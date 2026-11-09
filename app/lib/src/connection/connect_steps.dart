@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart';
 
@@ -18,14 +19,17 @@ class ConnectSteps extends StatelessWidget {
     final joining =
         connection.status == ConnectionStatus.connecting &&
         connection.step == ConnectStep.wifi;
+    final l10n = context.l10n;
     return GrStepList(
       steps: [
         GrStep(
-          linked ? 'Connected via Bluetooth' : 'Connecting via Bluetooth',
+          linked
+              ? l10n.connectionStepBluetoothConnected
+              : l10n.connectionStepBluetoothConnecting,
           linked ? GrStepState.done : GrStepState.now,
         ),
         GrStep(
-          'Connecting to Wi-Fi',
+          l10n.connectionStepWifi,
           joining
               ? GrStepState.now
               : connection.status == ConnectionStatus.connected

@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/cameras/camera_identity.dart';
 import 'package:grlab/src/connection/camera_sheet.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/data/cameras.dart';
@@ -49,7 +51,7 @@ class CameraDetailsScreen extends StatelessWidget {
                       GrIconButton(
                         key: const Key('camera-details-back'),
                         icon: Icons.arrow_back_rounded,
-                        tooltip: 'Back',
+                        tooltip: context.l10n.camerasBack,
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],
@@ -67,23 +69,23 @@ class CameraDetailsScreen extends StatelessWidget {
                             Navigator.of(context).pop();
                             unawaited(models.connection.connectTo(serial));
                           },
-                    child: const Text('Connect'),
+                    child: Text(context.l10n.camerasConnect),
                   ),
                 ),
-                const SectionLabel('This camera'),
+                SectionLabel(context.l10n.camerasDetailsSectionThisCamera),
                 GroupBox(
                   children: [
                     GroupRow(
                       key: const Key('camera-details-rename'),
                       icon: Icons.edit_outlined,
-                      title: 'Name',
+                      title: context.l10n.camerasDetailsName,
                       trailing: TrailingFit.value(context, camera.name),
                       chevron: true,
                       onTap: () => showRenameCameraDialog(context, camera),
                     ),
                     GroupRow(
                       icon: Icons.schedule_rounded,
-                      title: 'Paired',
+                      title: context.l10n.camerasDetailsPaired,
                       trailing: TrailingFit.value(
                         context,
                         formatDate(context, camera.pairedAt),
@@ -96,9 +98,7 @@ class CameraDetailsScreen extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
                   child: Text(
-                    'Also delete this phone under Paired Devices on the '
-                    'camera. While the camera still lists it, the camera '
-                    'refuses to pair with it again.',
+                    context.l10n.camerasDetailsUnpairHint,
                     style: TextStyle(
                       fontSize: 12.5,
                       height: 1.45,
@@ -151,7 +151,10 @@ class _Header extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-                Text(camera.identityLine(), style: GrFonts.monoStyle(context)),
+                Text(
+                  camera.identityLine(context.l10n),
+                  style: GrFonts.monoStyle(context),
+                ),
               ],
             ),
           ),
@@ -194,7 +197,7 @@ class _ForgetRow extends StatelessWidget {
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  'Forget camera',
+                  context.l10n.camerasDetailsForget,
                   style: TextStyle(fontSize: 15, color: c.danger),
                 ),
               ),
@@ -212,21 +215,18 @@ class _ForgetRow extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Forget ${camera.name}?'),
-        content: const Text(
-          'GR Lab stops connecting to this camera. Photos already '
-          'downloaded stay on this phone.',
-        ),
+        title: Text(context.l10n.camerasDetailsForgetTitle(camera.name)),
+        content: Text(context.l10n.camerasDetailsForgetMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
+            child: Text(context.l10n.camerasDetailsForgetCancel),
           ),
           TextButton(
             key: const Key('camera-forget-confirm'),
             style: TextButton.styleFrom(foregroundColor: c.danger),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Forget'),
+            child: Text(context.l10n.camerasDetailsForgetConfirm),
           ),
         ],
       ),

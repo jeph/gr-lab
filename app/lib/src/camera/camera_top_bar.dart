@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/connection/camera_pill.dart';
 import 'package:grlab/src/settings/settings_screen.dart';
 import 'package:grlab/src/theme/tokens.dart';
@@ -18,7 +19,7 @@ class CameraTopBar extends StatelessWidget {
           key: const Key('camera-back'),
           icon: Icons.arrow_back_ios_new_rounded,
           iconSize: 16,
-          label: 'Cameras',
+          label: context.l10n.cameraBarCameras,
           onTap: () => Navigator.of(context).maybePop(),
         ),
         const SizedBox(width: 8),
@@ -32,7 +33,7 @@ class CameraTopBar extends StatelessWidget {
         RoundIconButton(
           key: const Key('camera-settings'),
           icon: Icons.settings_outlined,
-          label: 'Settings',
+          label: context.l10n.cameraBarSettings,
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
           ),

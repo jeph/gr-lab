@@ -70,7 +70,7 @@ void main() {
     expect(find.text('GR IV'), findsOneWidget);
     expect(find.text('Offline'), findsOneWidget);
 
-    final seen = <String>[];
+    final seen = <PillLinkLabel>[];
     void record() {
       final label = PillLinkState.of(connection).label;
       if (seen.isEmpty || seen.last != label) seen.add(label);
@@ -86,7 +86,12 @@ void main() {
     await pumpUntilFound(tester, find.byKey(const Key('camera-pill-battery')));
     expect(find.text('Wi-Fi'), findsOneWidget);
     expect(find.text('82%'), findsOneWidget);
-    expect(seen, ['Connecting…', 'Bluetooth', 'Connecting to Wi-Fi…', 'Wi-Fi']);
+    expect(seen, [
+      PillLinkLabel.connecting,
+      PillLinkLabel.bluetooth,
+      PillLinkLabel.connectingWifi,
+      PillLinkLabel.wifi,
+    ]);
     connection.removeListener(record);
 
     await app.dispose();

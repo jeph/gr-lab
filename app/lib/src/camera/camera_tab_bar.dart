@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/theme/tokens.dart';
 
@@ -14,14 +15,16 @@ class CameraTabBar extends StatelessWidget {
   final CameraTab tab;
   final ValueChanged<CameraTab> onSelect;
 
-  static (IconData, String) _look(CameraTab t) => switch (t) {
-    CameraTab.library => (Icons.grid_view_rounded, 'Library'),
-    CameraTab.shoot => (Icons.camera_outlined, 'Shoot'),
-  };
+  static (IconData, String) _look(AppLocalizations l10n, CameraTab t) =>
+      switch (t) {
+        CameraTab.library => (Icons.grid_view_rounded, l10n.cameraBarLibrary),
+        CameraTab.shoot => (Icons.camera_outlined, l10n.cameraBarShoot),
+      };
 
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     return Container(
       key: const Key('camera-tabs'),
       height: height,
@@ -46,13 +49,14 @@ class CameraTabBar extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             for (final t in CameraTab.values)
-              _Tab(
-                key: Key('camera-tab-${t.name}'),
-                icon: _look(t).$1,
-                label: _look(t).$2,
-                selected: t == tab,
-                onTap: () => onSelect(t),
-              ),
+              if (_look(l10n, t) case (final icon, final label))
+                _Tab(
+                  key: Key('camera-tab-${t.name}'),
+                  icon: icon,
+                  label: label,
+                  selected: t == tab,
+                  onTap: () => onSelect(t),
+                ),
           ],
         ),
       ),

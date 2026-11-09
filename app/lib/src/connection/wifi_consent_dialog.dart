@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 
 /// Explains the camera network before Android's own approval screen, the
@@ -13,34 +14,37 @@ class WifiConsentDialog extends StatelessWidget {
   final WifiConsentRequest request;
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    key: const Key('wifi-consent'),
-    title: Text(
-      request.again
-          ? 'Choose "${request.ssid}"'
-          : "Join ${request.cameraName}'s Wi-Fi?",
-    ),
-    content: Text(
-      request.again
-          ? "Android needs you to choose the camera's network in its list "
-                'again. It asks after that network was disconnected in '
-                'Wi-Fi settings. Choose "${request.ssid}" once and GR Lab '
-                'joins it by itself again.'
-          : "Photos come over the camera's own Wi-Fi network, "
-                '"${request.ssid}". Android asks you to approve it once; '
-                'after that GR Lab joins it by itself.',
-    ),
-    actions: [
-      TextButton(
-        key: const Key('wifi-consent-later'),
-        onPressed: () => Navigator.of(context).pop(false),
-        child: const Text('Not now'),
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final again = request.again;
+    return AlertDialog(
+      key: const Key('wifi-consent'),
+      title: Text(
+        again
+            ? l10n.connectionWifiConsentAgainTitle(request.ssid)
+            : l10n.connectionWifiConsentTitle(request.cameraName),
       ),
-      FilledButton(
-        key: const Key('wifi-consent-join'),
-        onPressed: () => Navigator.of(context).pop(true),
-        child: Text(request.again ? 'Try again' : 'Continue'),
+      content: Text(
+        again
+            ? l10n.connectionWifiConsentAgainBody(request.ssid)
+            : l10n.connectionWifiConsentBody(request.ssid),
       ),
-    ],
-  );
+      actions: [
+        TextButton(
+          key: const Key('wifi-consent-later'),
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(l10n.connectionWifiConsentNotNow),
+        ),
+        FilledButton(
+          key: const Key('wifi-consent-join'),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(
+            again
+                ? l10n.connectionWifiConsentTryAgain
+                : l10n.connectionWifiConsentContinue,
+          ),
+        ),
+      ],
+    );
+  }
 }

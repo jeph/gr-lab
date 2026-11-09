@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/cameras/camera_details.dart';
+import 'package:grlab/src/cameras/camera_identity.dart';
 import 'package:grlab/src/cameras/camera_presence.dart';
 import 'package:grlab/src/cameras/recent_thumbs.dart';
 import 'package:grlab/src/connection/connect_failure_view.dart';
@@ -235,9 +237,9 @@ class _Welcome extends StatelessWidget {
                               .copyWith(letterSpacing: 1.7),
                         ),
                         const SizedBox(height: 10),
-                        const Text(
-                          'Your GR,\non your phone',
-                          style: TextStyle(
+                        Text(
+                          context.l10n.camerasWelcomeTitle,
+                          style: const TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.w700,
                             letterSpacing: -.8,
@@ -246,9 +248,7 @@ class _Welcome extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Browse and download the photos on your camera, '
-                          'shoot from a distance and keep your Image Control '
-                          'looks in one place.',
+                          context.l10n.camerasWelcomeBody,
                           style: TextStyle(
                             fontSize: 15,
                             height: 1.5,
@@ -270,11 +270,11 @@ class _Welcome extends StatelessWidget {
                           key: const Key('cameras-add'),
                           onPressed: () => unawaited(PairingFlow.push(context)),
                           icon: const Icon(Icons.add_rounded, size: 20),
-                          label: const Text('Add a camera'),
+                          label: Text(context.l10n.camerasAddCamera),
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Have the camera with you and switched on.',
+                          context.l10n.camerasWelcomeHint,
                           textAlign: TextAlign.center,
                           style: TextStyle(fontSize: 12.5, color: c.t3),
                         ),
@@ -363,7 +363,7 @@ class _CameraList extends StatelessWidget {
                 GrIconButton(
                   key: const Key('cameras-settings'),
                   icon: Icons.settings_outlined,
-                  tooltip: 'Settings',
+                  tooltip: context.l10n.camerasSettings,
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => const SettingsScreen(),
@@ -373,11 +373,11 @@ class _CameraList extends StatelessWidget {
               ],
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 4, 20, 4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
             child: Text(
-              'Cameras',
-              style: TextStyle(
+              context.l10n.camerasTitle,
+              style: const TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -.8,
@@ -390,19 +390,17 @@ class _CameraList extends StatelessWidget {
               icon: failure.kind == ConnectFailureKind.wifi
                   ? Icons.wifi_off_rounded
                   : Icons.bluetooth_disabled_rounded,
-              title: 'Lost the connection to ${current.name}',
+              title: context.l10n.camerasLostTitle(current.name),
               body: failure.kind == ConnectFailureKind.wifi
-                  ? "The phone left the camera's Wi-Fi."
-                  : 'The camera stopped answering over Bluetooth.',
+                  ? context.l10n.camerasLostWifiBody
+                  : context.l10n.camerasLostBluetoothBody,
             )
           else if (idleFor != null)
             _Banner(
               key: const Key('cameras-idle'),
               icon: Icons.timer_outlined,
-              title: "Left ${current.name}'s Wi-Fi",
-              body:
-                  "GR Lab wasn't used for ${_minutes(idleFor)}. Tap "
-                  'Library to join again.',
+              title: context.l10n.camerasIdleTitle(current.name),
+              body: context.l10n.camerasIdleBody(idleFor.inMinutes),
             ),
           _CameraCard(
             camera: current,
@@ -412,7 +410,7 @@ class _CameraList extends StatelessWidget {
             failure: lost ? null : failure,
             onConnect: () => onConnect(current.serial),
           ),
-          const SectionLabel('Other cameras'),
+          SectionLabel(context.l10n.camerasOtherCameras),
           IgnorePointer(
             ignoring: connecting,
             child: AnimatedOpacity(
@@ -503,7 +501,7 @@ class _CameraCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      camera.identityLine(firmware: false),
+                      camera.identityLine(context.l10n, firmware: false),
                       style: GrFonts.monoStyle(context, size: 11.5),
                     ),
                   ],
@@ -512,7 +510,7 @@ class _CameraCard extends StatelessWidget {
               GrIconButton(
                 key: const Key('camera-card-more'),
                 icon: Icons.more_horiz_rounded,
-                tooltip: 'Camera details',
+                tooltip: context.l10n.camerasDetailsTooltip,
                 size: 32,
                 onPressed: () =>
                     unawaited(CameraDetailsScreen.push(context, camera.serial)),
@@ -536,7 +534,7 @@ class _CameraCard extends StatelessWidget {
                     ? connection.closeCamera()
                     : connection.disconnect(),
               ),
-              child: const Text('Cancel'),
+              child: Text(context.l10n.camerasCancel),
             ),
           ] else if (failure != null)
             ConnectFailureView(
@@ -562,7 +560,7 @@ class _CameraCard extends StatelessWidget {
                 GrIconButton(
                   key: const Key('camera-card-library'),
                   icon: Icons.grid_view_rounded,
-                  tooltip: 'Library',
+                  tooltip: context.l10n.camerasLibrary,
                   size: 34,
                   onPressed: () =>
                       unawaited(connection.openCamera(CameraTab.library)),
@@ -571,7 +569,7 @@ class _CameraCard extends StatelessWidget {
                 GrIconButton(
                   key: const Key('camera-card-shoot'),
                   icon: Icons.camera_outlined,
-                  tooltip: 'Shoot',
+                  tooltip: context.l10n.camerasShoot,
                   size: 34,
                   onPressed: () =>
                       unawaited(connection.openCamera(CameraTab.shoot)),
@@ -582,7 +580,7 @@ class _CameraCard extends StatelessWidget {
                     key: const Key('camera-card-connect'),
                     style: smallFilledStyle,
                     onPressed: onConnect,
-                    child: const Text('Connect'),
+                    child: Text(context.l10n.camerasConnect),
                   ),
                 ],
               ],
@@ -608,7 +606,7 @@ class _LinkedLabel extends StatelessWidget {
         const SizedBox(width: 6),
         Flexible(
           child: Text(
-            'Connected via Bluetooth',
+            context.l10n.camerasConnectedViaBluetooth,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(fontSize: 12.5, color: c.t2),
@@ -618,9 +616,6 @@ class _LinkedLabel extends StatelessWidget {
     );
   }
 }
-
-String _minutes(Duration d) =>
-    d.inMinutes == 1 ? '1 minute' : '${d.inMinutes} minutes';
 
 /// A note above the camera card: the camera's link was lost (mock
 /// `b-home-lost`), or its Wi-Fi was left for lack of use. Shown once: the
@@ -758,21 +753,22 @@ class _NearLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
     final p = presence.of(camera);
-    final status = switch (p) {
-      Presence.nearbyOff => 'nearby · switched off',
-      Presence.nearbyOn => 'nearby · on',
-      Presence.nearby => 'nearby',
-      Presence.away when presence.settled => 'not nearby',
-      Presence.away when presence.scanning => 'looking…',
+    final seen = switch (p) {
+      Presence.nearbyOff => _Seen.nearbyOff,
+      Presence.nearbyOn => _Seen.nearbyOn,
+      Presence.nearby => _Seen.nearby,
+      Presence.away when presence.settled => _Seen.away,
+      Presence.away when presence.scanning => _Seen.looking,
       // Not scanning (no Bluetooth permission, Bluetooth off): unknown.
       Presence.away => null,
     };
     final model = withModel ? camera.model() : null;
-    final text = withModel
-        ? [?model, ?status].join(' · ')
-        : status == null
-        ? ''
-        : status[0].toUpperCase() + status.substring(1);
+    final text = switch ((model, seen)) {
+      (null, null) => '',
+      (final model?, null) => model,
+      (null, final seen?) => seen.text(context.l10n),
+      (final model?, final seen?) => seen.withModel(context.l10n, model),
+    };
     final dot = switch (p) {
       Presence.nearbyOff => BoxDecoration(
         shape: BoxShape.circle,
@@ -785,7 +781,7 @@ class _NearLabel extends StatelessWidget {
     return Row(
       key: Key('camera-near-${camera.serial}'),
       children: [
-        if (status != null) ...[
+        if (seen != null) ...[
           Container(width: 7, height: 7, decoration: dot),
           const SizedBox(width: 6),
         ],
@@ -800,6 +796,31 @@ class _NearLabel extends StatelessWidget {
       ],
     );
   }
+}
+
+/// What the scan says about a camera, as [_NearLabel] words it.
+enum _Seen {
+  nearbyOff,
+  nearbyOn,
+  nearby,
+  away,
+  looking;
+
+  String text(AppLocalizations l10n) => switch (this) {
+    nearbyOff => l10n.camerasPresenceNearbyOff,
+    nearbyOn => l10n.camerasPresenceNearbyOn,
+    nearby => l10n.camerasPresenceNearby,
+    away => l10n.camerasPresenceAway,
+    looking => l10n.camerasPresenceLooking,
+  };
+
+  String withModel(AppLocalizations l10n, String model) => switch (this) {
+    nearbyOff => l10n.camerasPresenceWithModelNearbyOff(model),
+    nearbyOn => l10n.camerasPresenceWithModelNearbyOn(model),
+    nearby => l10n.camerasPresenceWithModelNearby(model),
+    away => l10n.camerasPresenceWithModelAway(model),
+    looking => l10n.camerasPresenceWithModelLooking(model),
+  };
 }
 
 class _OtherCameraRow extends StatelessWidget {
@@ -855,7 +876,7 @@ class _OtherCameraRow extends StatelessWidget {
               key: Key('camera-row-connect-${camera.serial}'),
               style: smallOutlinedStyle,
               onPressed: onConnect,
-              child: const Text('Connect'),
+              child: Text(context.l10n.camerasConnect),
             ),
           ],
         ),
@@ -891,7 +912,7 @@ class _AddCameraRow extends StatelessWidget {
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  'Add a camera',
+                  context.l10n.camerasAddCamera,
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,

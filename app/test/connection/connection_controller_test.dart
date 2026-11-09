@@ -197,11 +197,7 @@ void main() {
       // The camera pill turns red while the Library stays.
       void record() {
         final pill = PillLinkState.of(connection);
-        off.add(
-          connection.inSession &&
-              pill.kind == PillLinkKind.failed &&
-              pill.label == 'Camera off',
-        );
+        off.add(connection.inSession && pill.label == PillLinkLabel.cameraOff);
       }
 
       connection.addListener(record);
@@ -229,7 +225,7 @@ void main() {
       );
       expect(connection.inSession, isFalse);
       expect(connection.failure?.kind, ConnectFailureKind.wifi);
-      expect(connection.failure?.lost, isTrue);
+      expect(connection.failure?.loss, ConnectLoss.wifi);
       expect(await app.camera.wifi.currentSsid(), isNull);
     });
 
@@ -244,7 +240,7 @@ void main() {
       );
       expect(connection.inSession, isFalse);
       expect(connection.failure?.kind, ConnectFailureKind.unreachable);
-      expect(connection.failure?.lost, isTrue);
+      expect(connection.failure?.loss, ConnectLoss.camera);
     });
 
     test(

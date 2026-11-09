@@ -2,12 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/cameras/camera_identity.dart';
+import 'package:grlab/src/connection/camera_pill.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart';
 import 'package:grlab/src/theme/tokens.dart';
 import 'package:grlab/src/widgets/group.dart';
+import 'package:intl/intl.dart';
 
 /// Opens the camera sheet over the current screen.
 Future<void> showCameraSheet(BuildContext context) =>
@@ -58,7 +62,7 @@ class CameraSheet extends StatelessWidget {
                 ConnectionStatus.failed ||
                 ConnectionStatus.offline => _offline(context, camera),
               },
-              const SectionLabel('Camera'),
+              SectionLabel(context.l10n.connectionSheetSectionCamera),
               _CameraRows(camera: camera),
             ],
           ),
@@ -75,13 +79,17 @@ class CameraSheet extends StatelessWidget {
     ConnectionController connection,
   ) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
+    final count = NumberFormat.decimalPattern(
+      Localizations.localeOf(context).toString(),
+    );
     final props = connection.props;
     final battery = props?.battery;
-    final storages = _storages(props);
+    final storages = _storages(l10n, props);
     return [
       _Header(
         title: camera.name,
-        subtitle: camera.identityLine(props: props),
+        subtitle: camera.identityLine(l10n, props: props),
         large: true,
       ),
       Padding(
@@ -92,10 +100,10 @@ class CameraSheet extends StatelessWidget {
           children: [
             Expanded(
               child: _Tile(
-                label: 'Battery',
+                label: l10n.connectionSheetBattery,
                 value: _Fit(
                   child: Text(
-                    battery == null ? '—' : '$battery%',
+                    battery == null ? '—' : formatBattery(context, battery),
                     key: const Key('camera-sheet-battery'),
                     style: GrFonts.monoStyle(context, size: 20, color: c.t1),
                   ),
@@ -105,7 +113,7 @@ class CameraSheet extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: _Tile(
-                label: 'Storage',
+                label: l10n.connectionSheetStorage,
                 value: Column(
                   key: const Key('camera-sheet-storage'),
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -133,7 +141,7 @@ class CameraSheet extends StatelessWidget {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              s.remain == null ? '—' : _grouped(s.remain!),
+                              s.remain == null ? '—' : count.format(s.remain),
                               style: GrFonts.monoStyle(
                                 context,
                                 // Two cards share the tile's height.
@@ -146,13 +154,15 @@ class CameraSheet extends StatelessWidget {
                       ),
                   ],
                 ),
-                caption: storages.isEmpty ? null : 'shots left',
+                caption: storages.isEmpty
+                    ? null
+                    : l10n.connectionSheetShotsLeft,
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: _Tile(
-                label: 'Link',
+                label: l10n.connectionSheetLink,
                 value: Padding(
                   padding: const EdgeInsets.only(top: 2),
                   child: Row(
@@ -163,7 +173,7 @@ class CameraSheet extends StatelessWidget {
                     ],
                   ),
                 ),
-                caption: 'Wi-Fi',
+                caption: l10n.connectionSheetLinkWifi,
               ),
             ),
           ],
@@ -174,7 +184,7 @@ class CameraSheet extends StatelessWidget {
         child: OutlinedButton(
           key: const Key('camera-sheet-disconnect'),
           onPressed: () => unawaited(connection.closeCamera()),
-          child: const Text('Disconnect Wi-Fi'),
+          child: Text(l10n.connectionSheetDisconnectWifi),
         ),
       ),
     ];
@@ -183,6 +193,7 @@ class CameraSheet extends StatelessWidget {
   /// Every storage that can take photos, SD card first because that is
   /// where photos normally go.
   static List<({String id, String label, int? remain})> _storages(
+    AppLocalizations l10n,
     GrProps? props,
   ) {
     final storages = [
@@ -191,10 +202,10 @@ class CameraSheet extends StatelessWidget {
           (
             id: s.name ?? '?',
             label: switch (s.name) {
-              'sd1' => 'SD',
-              'in' => 'Internal',
+              'sd1' => l10n.connectionSheetStorageSd,
+              'in' => l10n.connectionSheetStorageInternal,
               final name? => name,
-              null => 'Storage',
+              null => l10n.connectionSheetStorageUnnamed,
             },
             remain: s.remain,
           ),
@@ -210,12 +221,16 @@ class CameraSheet extends StatelessWidget {
   // --------------------------------------------------------------- offline
 
   List<Widget> _offline(BuildContext context, SavedCamera camera) => [
-    _Header(title: camera.name, subtitle: camera.identityLine(), large: true),
+    _Header(
+      title: camera.name,
+      subtitle: camera.identityLine(context.l10n),
+      large: true,
+    ),
     Padding(
       key: const Key('camera-sheet-offline'),
       padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
       child: Text(
-        'Not connected.',
+        context.l10n.connectionSheetNotConnected,
         style: TextStyle(fontSize: 14, color: GrColors.of(context).t2),
       ),
     ),
@@ -340,7 +355,7 @@ class _CameraRows extends StatelessWidget {
       GroupRow(
         key: const Key('camera-sheet-rename'),
         icon: Icons.edit_outlined,
-        title: 'Name',
+        title: context.l10n.connectionSheetName,
         trailing: TrailingFit.value(context, camera.name),
         chevron: true,
         onTap: () => showRenameCameraDialog(context, camera),
@@ -391,7 +406,7 @@ class _RenameDialogState extends State<_RenameDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Camera name'),
+    title: Text(context.l10n.connectionRenameTitle),
     content: TextField(
       key: const Key('camera-rename-field'),
       controller: _text,
@@ -403,27 +418,16 @@ class _RenameDialogState extends State<_RenameDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
+        child: Text(context.l10n.connectionRenameCancel),
       ),
       ListenableBuilder(
         listenable: _text,
         builder: (context, _) => TextButton(
           key: const Key('camera-rename-save'),
           onPressed: _text.text.trim().isEmpty ? null : _save,
-          child: const Text('Save'),
+          child: Text(context.l10n.connectionRenameSave),
         ),
       ),
     ],
   );
-}
-
-/// `1234` → `1,234`.
-String _grouped(int n) {
-  final s = n.toString();
-  final b = StringBuffer();
-  for (var i = 0; i < s.length; i++) {
-    if (i > 0 && (s.length - i) % 3 == 0) b.write(',');
-    b.write(s[i]);
-  }
-  return b.toString();
 }

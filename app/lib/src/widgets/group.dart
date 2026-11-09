@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:grlab/src/theme/tokens.dart';
+import 'package:intl/intl.dart';
 
 /// Uppercase label above a [GroupBox] (mock `.seclabel`).
 class SectionLabel extends StatelessWidget {
@@ -178,7 +179,9 @@ class GrChip extends StatelessWidget {
               if (count != null) ...[
                 const SizedBox(width: 6),
                 Text(
-                  _formatCount(count!),
+                  NumberFormat.decimalPattern(
+                    Localizations.localeOf(context).toString(),
+                  ).format(count),
                   style: TextStyle(
                     fontFamily: GrFonts.mono,
                     fontSize: 11.5,
@@ -192,15 +195,4 @@ class GrChip extends StatelessWidget {
       ),
     );
   }
-}
-
-/// `1234` → `1,234`.
-String _formatCount(int n) {
-  final s = n.toString();
-  final b = StringBuffer();
-  for (var i = 0; i < s.length; i++) {
-    if (i > 0 && (s.length - i) % 3 == 0) b.write(',');
-    b.write(s[i]);
-  }
-  return b.toString();
 }

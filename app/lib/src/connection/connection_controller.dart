@@ -55,32 +55,53 @@ enum ConnectFailureKind {
   wifiDeclined,
 }
 
+/// The link a [ConnectFailure] lost after it had been up.
+enum ConnectLoss {
+  /// Bluetooth went and the session's reconnect gave up.
+  bluetooth,
+
+  /// Neither the camera's Wi-Fi nor Bluetooth came back: the camera was
+  /// switched off with its Bluetooth, or is out of range.
+  camera,
+
+  /// The camera's Wi-Fi went and could not be got back; Bluetooth stays.
+  wifi,
+}
+
+/// Why connecting failed, as data: the view words it (AGENTS.md, "Text the
+/// user sees").
 @immutable
 final class ConnectFailure {
-  const new(
-    this.kind,
-    this.message, {
-    this.step,
-    this.cause,
-    this.lost = false,
-  });
+  const new(this.kind, {this.step, this.cause, this.loss});
 
   final ConnectFailureKind kind;
-  final String message;
 
   /// The link that failed.
   final ConnectStep? step;
+
+  /// The error that ended the attempt.
   final Object? cause;
 
-  /// The link had been up and was lost (mock `b-home-lost`), rather than an
-  /// attempt that never got through.
-  final bool lost;
+  /// The link that had been up and was lost (mock `b-home-lost`); null for
+  /// an attempt that never got through.
+  final ConnectLoss? loss;
 
-  ConnectFailure _asLost() =>
-      ConnectFailure(kind, message, step: step, cause: cause, lost: true);
+  /// The link had been up and was lost, rather than an attempt that never
+  /// got through.
+  bool get lost => loss != null;
+
+  /// What [cause] says, untranslated technical detail: the step the
+  /// session reports as failed, or the error's own text.
+  String? get detail => switch (cause) {
+    null => null,
+    GrSessionException(:final message) => message,
+    final error => '$error',
+  };
 
   @override
-  String toString() => 'ConnectFailure(${kind.name}): $message';
+  String toString() =>
+      'ConnectFailure(${kind.name}, step: ${step?.name}, '
+      'loss: ${loss?.name}): $cause';
 }
 
 /// A join waiting for the user to agree to the camera network; answered
@@ -386,7 +407,6 @@ final class ConnectionController extends ChangeNotifier {
         generation,
         const ConnectFailure(
           ConnectFailureKind.bluetoothOff,
-          'Bluetooth is off',
           step: ConnectStep.bluetooth,
         ),
       );
@@ -397,7 +417,6 @@ final class ConnectionController extends ChangeNotifier {
         generation,
         const ConnectFailure(
           ConnectFailureKind.bluetoothDenied,
-          'Bluetooth permission was denied',
           step: ConnectStep.bluetooth,
         ),
       );
@@ -422,17 +441,7 @@ final class ConnectionController extends ChangeNotifier {
     } on Object catch (e) {
       if (generation != _generation) return;
       await _closeSession();
-      return _fail(
-        generation,
-        e is GrSessionException
-            ? _failureFor(e, ConnectStep.bluetooth)
-            : ConnectFailure(
-                ConnectFailureKind.unreachable,
-                '$e',
-                step: ConnectStep.bluetooth,
-                cause: e,
-              ),
-      );
+      return _fail(generation, _failureFor(e, ConnectStep.bluetooth));
     }
     if (generation != _generation) return;
     _status = ConnectionStatus.bluetooth;
@@ -460,16 +469,7 @@ final class ConnectionController extends ChangeNotifier {
       await session.startWifi();
     } on Object catch (e) {
       if (stale()) return;
-      return _wifiFailed(
-        e is GrSessionException
-            ? _failureFor(e, ConnectStep.wifi)
-            : ConnectFailure(
-                ConnectFailureKind.wifi,
-                '$e',
-                step: ConnectStep.wifi,
-                cause: e,
-              ),
-      );
+      return _wifiFailed(_failureFor(e, ConnectStep.wifi));
     }
     if (stale()) return;
     _status = ConnectionStatus.connected;
@@ -557,9 +557,9 @@ final class ConnectionController extends ChangeNotifier {
               e.kind == 'ble.needsPairing'
                   ? ConnectFailureKind.needsPairing
                   : ConnectFailureKind.unreachable,
-              'Lost the Bluetooth link',
               step: ConnectStep.bluetooth,
-            )._asLost(),
+              loss: ConnectLoss.bluetooth,
+            ),
           );
         }
       case 'wifi.lost' when _status == ConnectionStatus.connected:
@@ -593,9 +593,8 @@ final class ConnectionController extends ChangeNotifier {
     if (noBle || _bleGaveUp) {
       _failure = const ConnectFailure(
         ConnectFailureKind.unreachable,
-        'Lost the connection to the camera',
         step: ConnectStep.bluetooth,
-        lost: true,
+        loss: ConnectLoss.camera,
       );
       unawaited(_relinkLater());
       return;
@@ -604,14 +603,12 @@ final class ConnectionController extends ChangeNotifier {
     _failure = declined
         ? const ConnectFailure(
             ConnectFailureKind.wifiDeclined,
-            "Not joining the camera's Wi-Fi now",
             step: ConnectStep.wifi,
           )
         : const ConnectFailure(
             ConnectFailureKind.wifi,
-            "Lost the camera's Wi-Fi",
             step: ConnectStep.wifi,
-            lost: true,
+            loss: ConnectLoss.wifi,
           );
     notifyListeners();
     // The pages stay, so a camera the app turned on stays on for Shoot;
@@ -619,15 +616,15 @@ final class ConnectionController extends ChangeNotifier {
     _stoppingWifi = session.stopWifi();
   }
 
-  ConnectFailure _failureFor(GrSessionException e, ConnectStep step) {
-    final kind = e.needsPairing
-        ? ConnectFailureKind.needsPairing
-        : e.wifiDeclined
-        ? ConnectFailureKind.wifiDeclined
-        : step == ConnectStep.bluetooth
-        ? ConnectFailureKind.unreachable
-        : ConnectFailureKind.wifi;
-    return ConnectFailure(kind, e.message, step: step, cause: e);
+  /// The failure [error] means for the [step] being set up.
+  ConnectFailure _failureFor(Object error, ConnectStep step) {
+    final kind = switch (error) {
+      GrSessionException(needsPairing: true) => ConnectFailureKind.needsPairing,
+      GrSessionException(wifiDeclined: true) => ConnectFailureKind.wifiDeclined,
+      _ when step == ConnectStep.bluetooth => ConnectFailureKind.unreachable,
+      _ => ConnectFailureKind.wifi,
+    };
+    return ConnectFailure(kind, step: step, cause: error);
   }
 
   /// A Wi-Fi start failed: tries again quietly when the join failed
@@ -658,9 +655,8 @@ final class ConnectionController extends ChangeNotifier {
     _status = ConnectionStatus.failed;
     _failure ??= const ConnectFailure(
       ConnectFailureKind.unreachable,
-      'Lost the Bluetooth link',
       step: ConnectStep.bluetooth,
-      lost: true,
+      loss: ConnectLoss.bluetooth,
     );
     notifyListeners();
     await (_closing = _closeSession());

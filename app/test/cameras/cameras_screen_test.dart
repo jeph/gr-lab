@@ -198,6 +198,10 @@ void main() {
       );
       expect(find.text("Can't reach GR IV"), findsOneWidget);
       expect(find.text('Action Mode is On'), findsOneWidget);
+      // What the session reported, as technical detail under the checks.
+      final detail = app.models.connection.failure?.detail;
+      expect(detail, isNotNull);
+      expect(find.text('Error: $detail'), findsOneWidget);
 
       await _tap(tester, const Key('connect-retry'));
       expect(app.models.connection.status, ConnectionStatus.connecting);
@@ -260,6 +264,7 @@ void main() {
     );
     expect(find.byType(LibraryScreen), findsOneWidget);
     expect(app.models.connection.status, ConnectionStatus.bluetooth);
+    expect(find.text("Lost the camera's Wi-Fi"), findsOneWidget);
 
     await app.dispose();
   });
@@ -288,6 +293,21 @@ void main() {
     );
     expect(await app.camera.wifi.currentSsid(), isNull);
     expect(find.byKey(const Key('cameras-lost')), findsNothing);
+
+    await app.dispose();
+  });
+
+  testWidgets('a camera says whether the scan sees it, and its details show '
+      'its identity and pairing date', (tester) async {
+    final app = await _start(tester, config: _unreachable, withOther: true);
+    // The GR IV is on the card, the GR IIIx in the list with its model.
+    await pumpUntilFound(tester, find.text('Looking…'));
+    expect(find.text('GR IIIx · looking…'), findsOneWidget);
+
+    await _tap(tester, const Key('camera-row-1111111'));
+    await pumpUntilFound(tester, find.byKey(const Key('camera-details')));
+    expect(find.text('GR IIIx · No. 1111111'), findsOneWidget);
+    expect(find.text('Jan 1, 2026'), findsOneWidget);
 
     await app.dispose();
   });

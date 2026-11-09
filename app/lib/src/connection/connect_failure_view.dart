@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/pairing/pairing_flow.dart';
@@ -48,93 +49,93 @@ class ConnectFailureView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     final kind = failure.kind;
     final name = camera.name;
     final (title, body) = switch (kind) {
       ConnectFailureKind.bluetoothOff => (
-        'Bluetooth is off',
-        'Turn on Bluetooth on this phone, then try again.',
+        l10n.connectionFailureBluetoothOffTitle,
+        l10n.connectionFailureBluetoothOffBody,
       ),
       ConnectFailureKind.bluetoothDenied => (
-        "GR Lab can't use Bluetooth",
-        'Allow Bluetooth (on Android: Nearby devices) for GR Lab in the '
-            "phone's settings, then try again.",
+        l10n.connectionFailureBluetoothDeniedTitle,
+        l10n.connectionFailureBluetoothDeniedBody,
       ),
       ConnectFailureKind.unreachable => (
-        "Can't reach $name",
-        "The camera didn't answer over Bluetooth.",
+        l10n.connectionFailureUnreachableTitle(name),
+        l10n.connectionFailureUnreachableBody,
       ),
       ConnectFailureKind.needsPairing => (
-        'Pair $name again',
-        "The camera no longer accepts this phone's pairing, so trying again "
-            "won't help. To pair again:",
+        l10n.connectionFailureNeedsPairingTitle(name),
+        l10n.connectionFailureNeedsPairingBody,
       ),
       ConnectFailureKind.wifi => (
-        "Couldn't join $name's Wi-Fi",
-        "Bluetooth works, but the phone couldn't join or keep the camera's "
-            'Wi-Fi.',
+        l10n.connectionFailureWifiTitle(name),
+        l10n.connectionFailureWifiBody,
       ),
       ConnectFailureKind.wifiDeclined => (
-        "Not on $name's Wi-Fi",
-        "Photos come over the camera's own Wi-Fi. Join it to browse and "
-            'download them.',
+        l10n.connectionFailureWifiDeclinedTitle(name),
+        l10n.connectionFailureWifiDeclinedBody,
       ),
     };
     void pairAgain() => unawaited(PairingFlow.push(context));
     final checks = switch (kind) {
       ConnectFailureKind.unreachable => [
-        const GroupRow(
+        GroupRow(
           icon: Icons.battery_std_rounded,
-          title: "The camera is close and its battery isn't empty",
+          title: l10n.connectionFailureCheckBattery,
         ),
-        const GroupRow(
+        GroupRow(
           icon: Icons.bluetooth_rounded,
-          title: 'Action Mode is On',
-          subtitle: 'MENU → E6 → Wireless Communication',
+          title: l10n.connectionFailureCheckActionMode,
+          subtitle: l10n.connectionFailureCheckActionModePath,
         ),
         GroupRow(
           icon: Icons.info_outline_rounded,
-          title: 'Camera forgot this phone?',
-          subtitle: "If its Paired Devices list doesn't show this phone",
+          title: l10n.connectionFailureCheckForgotten,
+          subtitle: l10n.connectionFailureCheckForgottenHint,
           trailing: TrailingFit(
             child: TextButton(
               key: const Key('connect-pair-again'),
               onPressed: pairAgain,
-              child: const Text('Pair again'),
+              child: Text(l10n.connectionFailurePairAgain),
             ),
           ),
         ),
       ],
-      ConnectFailureKind.needsPairing => const [
+      ConnectFailureKind.needsPairing => [
         GroupRow(
-          leading: NumberTile(1),
-          title: "Delete this phone from the camera's Paired Devices",
+          leading: const NumberTile(1),
+          title: l10n.connectionFailurePairStep1,
         ),
         GroupRow(
-          leading: NumberTile(2),
-          title: "Delete the camera from this phone's Bluetooth settings",
+          leading: const NumberTile(2),
+          title: l10n.connectionFailurePairStep2,
         ),
         GroupRow(
-          leading: NumberTile(3),
-          title: 'Open Execute Pairing on the camera and pair',
+          leading: const NumberTile(3),
+          title: l10n.connectionFailurePairStep3,
         ),
       ],
-      ConnectFailureKind.wifi => const [
+      ConnectFailureKind.wifi => [
         GroupRow(
           icon: Icons.wifi_rounded,
-          title: 'The phone stays close to the camera',
+          title: l10n.connectionFailureCheckStayClose,
         ),
         GroupRow(
           icon: Icons.check_circle_outline_rounded,
-          title: "If the phone asks to join the camera's network, allow it",
+          title: l10n.connectionFailureCheckAllowJoin,
         ),
       ],
       ConnectFailureKind.bluetoothOff ||
       ConnectFailureKind.bluetoothDenied ||
       ConnectFailureKind.wifiDeclined => const <Widget>[],
     };
+    final detail = _detail(l10n);
     final retryLabel = Text(
-      kind == ConnectFailureKind.wifiDeclined ? 'Join Wi-Fi' : 'Try again',
+      kind == ConnectFailureKind.wifiDeclined
+          ? l10n.connectionFailureJoinWifi
+          : l10n.connectionFailureTryAgain,
     );
     // Wi-Fi failures keep the Bluetooth link; only Wi-Fi is tried again,
     // from the camera's pages when they are open.
@@ -165,10 +166,10 @@ class ConnectFailureView extends StatelessWidget {
           const SizedBox(height: 12),
           GroupBox(margin: EdgeInsets.zero, color: c.s2, children: checks),
         ],
-        if (kind != ConnectFailureKind.wifiDeclined) ...[
+        if (detail != null) ...[
           const SizedBox(height: 10),
           Text(
-            failure.message,
+            detail,
             style: GrFonts.monoStyle(context, size: 11, color: c.t3),
           ),
         ],
@@ -178,7 +179,7 @@ class ConnectFailureView extends StatelessWidget {
             key: const Key('connect-pair-again'),
             style: smallFilledStyle,
             onPressed: pairAgain,
-            child: const Text('Pair again'),
+            child: Text(l10n.connectionFailurePairAgain),
           ),
           const SizedBox(height: 8),
           OutlinedButton(
@@ -196,5 +197,29 @@ class ConnectFailureView extends StatelessWidget {
           ),
       ],
     );
+  }
+
+  /// The small technical line under the checks: the link that was lost,
+  /// what the connection reported, or the phone's Bluetooth state. A
+  /// declined join needs none.
+  String? _detail(AppLocalizations l10n) {
+    if (failure.kind == ConnectFailureKind.wifiDeclined) return null;
+    if (failure.loss case final loss?) {
+      return switch (loss) {
+        ConnectLoss.bluetooth => l10n.connectionFailureDetailLostBluetooth,
+        ConnectLoss.camera => l10n.connectionFailureDetailLostCamera,
+        ConnectLoss.wifi => l10n.connectionFailureDetailLostWifi,
+      };
+    }
+    if (failure.detail case final detail?) {
+      return l10n.connectionFailureDetailError(detail);
+    }
+    return switch (failure.kind) {
+      ConnectFailureKind.bluetoothOff =>
+        l10n.connectionFailureDetailBluetoothOff,
+      ConnectFailureKind.bluetoothDenied =>
+        l10n.connectionFailureDetailBluetoothDenied,
+      _ => null,
+    };
   }
 }

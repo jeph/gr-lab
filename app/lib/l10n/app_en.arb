@@ -4,9 +4,612 @@
   "@appTitle": {
     "description": "The app's name, shown by the system (task switcher, window title)."
   },
+  "cameraBarCameras": "Cameras",
+  "@cameraBarCameras": {
+    "description": "Back button at the top of the camera's pages (Library, Shoot): returns to the Cameras screen. Used as tooltip and accessibility label."
+  },
+  "cameraBarLibrary": "Library",
+  "@cameraBarLibrary": {
+    "description": "Tab of the camera's pages showing the photos on the camera."
+  },
+  "cameraBarSettings": "Settings",
+  "@cameraBarSettings": {
+    "description": "Button at the top of the camera's pages that opens Settings. Used as tooltip and accessibility label."
+  },
+  "cameraBarShoot": "Shoot",
+  "@cameraBarShoot": {
+    "description": "Tab of the camera's pages for remote shooting and live view."
+  },
+  "camerasAddCamera": "Add a camera",
+  "@camerasAddCamera": {
+    "description": "Button on the Cameras screen (welcome page and the list of cameras) that starts pairing a new camera."
+  },
+  "camerasBack": "Back",
+  "@camerasBack": {
+    "description": "Tooltip of the back button on the camera details screen."
+  },
+  "camerasCancel": "Cancel",
+  "@camerasCancel": {
+    "description": "Button on the camera card that stops connecting to the camera."
+  },
+  "camerasConnect": "Connect",
+  "@camerasConnect": {
+    "description": "Button that connects to a paired camera (camera card, other cameras list, camera details)."
+  },
+  "camerasConnectedViaBluetooth": "Connected via Bluetooth",
+  "@camerasConnectedViaBluetooth": {
+    "description": "Link line on the camera card while the camera is connected over Bluetooth only."
+  },
+  "camerasDetailsForget": "Forget camera",
+  "@camerasDetailsForget": {
+    "description": "Row on the camera details screen that removes the camera from GR Lab."
+  },
+  "camerasDetailsForgetCancel": "Cancel",
+  "@camerasDetailsForgetCancel": {
+    "description": "Button of the forget-camera confirmation that keeps the camera."
+  },
+  "camerasDetailsForgetConfirm": "Forget",
+  "@camerasDetailsForgetConfirm": {
+    "description": "Button of the forget-camera confirmation that removes the camera."
+  },
+  "camerasDetailsForgetMessage": "GR Lab stops connecting to this camera. Photos already downloaded stay on this phone.",
+  "@camerasDetailsForgetMessage": {
+    "description": "Body of the forget-camera confirmation."
+  },
+  "camerasDetailsForgetTitle": "Forget {cameraName}?",
+  "@camerasDetailsForgetTitle": {
+    "description": "Title of the forget-camera confirmation.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name as the user named it, for example GR IV."
+      }
+    }
+  },
+  "camerasDetailsName": "Name",
+  "@camerasDetailsName": {
+    "description": "Row on the camera details screen showing the camera's name; tapping it renames the camera."
+  },
+  "camerasDetailsPaired": "Paired",
+  "@camerasDetailsPaired": {
+    "description": "Row on the camera details screen showing the date the camera was paired."
+  },
+  "camerasDetailsSectionThisCamera": "This camera",
+  "@camerasDetailsSectionThisCamera": {
+    "description": "Section heading on the camera details screen."
+  },
+  "camerasDetailsTooltip": "Camera details",
+  "@camerasDetailsTooltip": {
+    "description": "Tooltip of the ⋯ button on the camera card that opens the camera details screen."
+  },
+  "camerasDetailsUnpairHint": "Also delete this phone under Paired Devices on the camera. While the camera still lists it, the camera refuses to pair with it again.",
+  "@camerasDetailsUnpairHint": {
+    "description": "Note under Forget camera on the camera details screen. Paired Devices is the camera's menu entry."
+  },
+  "camerasIdentityModelSerial": "{model} · No. {serial}",
+  "@camerasIdentityModelSerial": {
+    "description": "Identity line under a camera's name: model and serial number. No. abbreviates number.",
+    "placeholders": {
+      "model": {
+        "type": "String",
+        "description": "The camera model as the camera reports it, for example GR IIIx."
+      },
+      "serial": {
+        "type": "String",
+        "description": "The camera's serial number as the camera reports it, for example 1234567."
+      }
+    }
+  },
+  "camerasIdentityModelSerialFirmware": "{model} · No. {serial} · fw {firmware}",
+  "@camerasIdentityModelSerialFirmware": {
+    "description": "Identity line under a camera's name: model, serial number and firmware version. No. abbreviates number, fw firmware.",
+    "placeholders": {
+      "model": {
+        "type": "String",
+        "description": "The camera model as the camera reports it, for example GR IIIx."
+      },
+      "serial": {
+        "type": "String",
+        "description": "The camera's serial number as the camera reports it, for example 1234567."
+      },
+      "firmware": {
+        "type": "String",
+        "description": "The camera's firmware version as the camera reports it, for example 1.20."
+      }
+    }
+  },
+  "camerasIdentitySerial": "No. {serial}",
+  "@camerasIdentitySerial": {
+    "description": "Identity line under a camera's name: serial number. No. abbreviates number.",
+    "placeholders": {
+      "serial": {
+        "type": "String",
+        "description": "The camera's serial number as the camera reports it, for example 1234567."
+      }
+    }
+  },
+  "camerasIdentitySerialFirmware": "No. {serial} · fw {firmware}",
+  "@camerasIdentitySerialFirmware": {
+    "description": "Identity line under a camera's name: serial number and firmware version. No. abbreviates number, fw firmware.",
+    "placeholders": {
+      "serial": {
+        "type": "String",
+        "description": "The camera's serial number as the camera reports it, for example 1234567."
+      },
+      "firmware": {
+        "type": "String",
+        "description": "The camera's firmware version as the camera reports it, for example 1.20."
+      }
+    }
+  },
+  "camerasIdleBody": "GR Lab wasn't used for {minutes, plural, one{{minutes} minute} other{{minutes} minutes}}. Tap Library to join again.",
+  "@camerasIdleBody": {
+    "description": "Banner on the Cameras screen after GR Lab left the camera's Wi-Fi because the app was not used. Library is the camera card's button.",
+    "placeholders": {
+      "minutes": {
+        "type": "int",
+        "description": "How many minutes the app was not used before it left the Wi-Fi.",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "camerasIdleTitle": "Left {cameraName}'s Wi-Fi",
+  "@camerasIdleTitle": {
+    "description": "Title of the banner on the Cameras screen after GR Lab left the camera's Wi-Fi because the app was not used.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name as the user named it, for example GR IV."
+      }
+    }
+  },
+  "camerasLibrary": "Library",
+  "@camerasLibrary": {
+    "description": "Tooltip of the camera card's button that opens the photos on the camera."
+  },
+  "camerasLostBluetoothBody": "The camera stopped answering over Bluetooth.",
+  "@camerasLostBluetoothBody": {
+    "description": "Banner on the Cameras screen after the Bluetooth link to the camera was lost."
+  },
+  "camerasLostTitle": "Lost the connection to {cameraName}",
+  "@camerasLostTitle": {
+    "description": "Title of the banner on the Cameras screen after the link to the camera was lost.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name as the user named it, for example GR IV."
+      }
+    }
+  },
+  "camerasLostWifiBody": "The phone left the camera's Wi-Fi.",
+  "@camerasLostWifiBody": {
+    "description": "Banner on the Cameras screen after the camera's Wi-Fi was lost."
+  },
+  "camerasOtherCameras": "Other cameras",
+  "@camerasOtherCameras": {
+    "description": "Section heading on the Cameras screen above the other paired cameras."
+  },
+  "camerasPresenceAway": "Not nearby",
+  "@camerasPresenceAway": {
+    "description": "Presence line on the camera card: the last scan did not see the camera."
+  },
+  "camerasPresenceLooking": "Looking…",
+  "@camerasPresenceLooking": {
+    "description": "Presence line on the camera card: the scan is still looking for the camera."
+  },
+  "camerasPresenceNearby": "Nearby",
+  "@camerasPresenceNearby": {
+    "description": "Presence line on the camera card: the camera is nearby; whether it is on is unknown."
+  },
+  "camerasPresenceNearbyOff": "Nearby · switched off",
+  "@camerasPresenceNearbyOff": {
+    "description": "Presence line on the camera card: the camera is nearby and switched off."
+  },
+  "camerasPresenceNearbyOn": "Nearby · on",
+  "@camerasPresenceNearbyOn": {
+    "description": "Presence line on the camera card: the camera is nearby and switched on."
+  },
+  "camerasPresenceWithModelAway": "{model} · not nearby",
+  "@camerasPresenceWithModelAway": {
+    "description": "Line under a camera's name in the other cameras list: its model, and the last scan did not see the camera.",
+    "placeholders": {
+      "model": {
+        "type": "String",
+        "description": "The camera model as the camera reports it, for example GR IIIx."
+      }
+    }
+  },
+  "camerasPresenceWithModelLooking": "{model} · looking…",
+  "@camerasPresenceWithModelLooking": {
+    "description": "Line under a camera's name in the other cameras list: its model, and the scan is still looking for the camera.",
+    "placeholders": {
+      "model": {
+        "type": "String",
+        "description": "The camera model as the camera reports it, for example GR IIIx."
+      }
+    }
+  },
+  "camerasPresenceWithModelNearby": "{model} · nearby",
+  "@camerasPresenceWithModelNearby": {
+    "description": "Line under a camera's name in the other cameras list: its model, and the camera is nearby; whether it is on is unknown.",
+    "placeholders": {
+      "model": {
+        "type": "String",
+        "description": "The camera model as the camera reports it, for example GR IIIx."
+      }
+    }
+  },
+  "camerasPresenceWithModelNearbyOff": "{model} · nearby · switched off",
+  "@camerasPresenceWithModelNearbyOff": {
+    "description": "Line under a camera's name in the other cameras list: its model, and the camera is nearby and switched off.",
+    "placeholders": {
+      "model": {
+        "type": "String",
+        "description": "The camera model as the camera reports it, for example GR IIIx."
+      }
+    }
+  },
+  "camerasPresenceWithModelNearbyOn": "{model} · nearby · on",
+  "@camerasPresenceWithModelNearbyOn": {
+    "description": "Line under a camera's name in the other cameras list: its model, and the camera is nearby and switched on.",
+    "placeholders": {
+      "model": {
+        "type": "String",
+        "description": "The camera model as the camera reports it, for example GR IIIx."
+      }
+    }
+  },
+  "camerasSettings": "Settings",
+  "@camerasSettings": {
+    "description": "Tooltip of the Cameras screen button that opens Settings."
+  },
+  "camerasShoot": "Shoot",
+  "@camerasShoot": {
+    "description": "Tooltip of the camera card's button that opens remote shooting."
+  },
+  "camerasTitle": "Cameras",
+  "@camerasTitle": {
+    "description": "Title of the Cameras screen, which lists the paired cameras."
+  },
+  "camerasWelcomeBody": "Browse and download the photos on your camera, shoot from a distance and keep your Image Control looks in one place.",
+  "@camerasWelcomeBody": {
+    "description": "Welcome page text, shown before any camera is paired. Image Control is the name of the GR cameras' picture styles."
+  },
+  "camerasWelcomeHint": "Have the camera with you and switched on.",
+  "@camerasWelcomeHint": {
+    "description": "Hint under Add a camera on the welcome page."
+  },
+  "camerasWelcomeTitle": "Your GR,\non your phone",
+  "@camerasWelcomeTitle": {
+    "description": "Large title of the welcome page; the line break is part of the layout."
+  },
   "commonCancel": "Cancel",
   "@commonCancel": {
     "description": "Button that closes a dialog without doing anything."
+  },
+  "connectionFailureBluetoothDeniedBody": "Allow Bluetooth (on Android: Nearby devices) for GR Lab in the phone's settings, then try again.",
+  "@connectionFailureBluetoothDeniedBody": {
+    "description": "Body of the connection failure when GR Lab may not use Bluetooth. Nearby devices is Android's name for the permission."
+  },
+  "connectionFailureBluetoothDeniedTitle": "GR Lab can't use Bluetooth",
+  "@connectionFailureBluetoothDeniedTitle": {
+    "description": "Title of the connection failure when GR Lab may not use Bluetooth."
+  },
+  "connectionFailureBluetoothOffBody": "Turn on Bluetooth on this phone, then try again.",
+  "@connectionFailureBluetoothOffBody": {
+    "description": "Body of the connection failure when the phone's Bluetooth is off."
+  },
+  "connectionFailureBluetoothOffTitle": "Bluetooth is off",
+  "@connectionFailureBluetoothOffTitle": {
+    "description": "Title of the connection failure when the phone's Bluetooth is off."
+  },
+  "connectionFailureCheckActionMode": "Action Mode is On",
+  "@connectionFailureCheckActionMode": {
+    "description": "Check in the list under a camera that could not be reached: the camera's Action Mode setting is On."
+  },
+  "connectionFailureCheckActionModePath": "MENU → E6 → Wireless Communication",
+  "@connectionFailureCheckActionModePath": {
+    "description": "Where the camera's Action Mode setting is, as named in the camera's menus."
+  },
+  "connectionFailureCheckAllowJoin": "If the phone asks to join the camera's network, allow it",
+  "@connectionFailureCheckAllowJoin": {
+    "description": "Check in the list under a failed join of the camera's Wi-Fi."
+  },
+  "connectionFailureCheckBattery": "The camera is close and its battery isn't empty",
+  "@connectionFailureCheckBattery": {
+    "description": "Check in the list under a camera that could not be reached."
+  },
+  "connectionFailureCheckForgotten": "Camera forgot this phone?",
+  "@connectionFailureCheckForgotten": {
+    "description": "Check in the list under a camera that could not be reached; its button pairs again."
+  },
+  "connectionFailureCheckForgottenHint": "If its Paired Devices list doesn't show this phone",
+  "@connectionFailureCheckForgottenHint": {
+    "description": "Explains the camera forgot this phone check. Paired Devices is the camera's menu entry."
+  },
+  "connectionFailureCheckStayClose": "The phone stays close to the camera",
+  "@connectionFailureCheckStayClose": {
+    "description": "Check in the list under a failed join of the camera's Wi-Fi."
+  },
+  "connectionFailureDetailBluetoothDenied": "Bluetooth permission was denied",
+  "@connectionFailureDetailBluetoothDenied": {
+    "description": "Small technical line under a connection failure: the Bluetooth permission was denied."
+  },
+  "connectionFailureDetailBluetoothOff": "Bluetooth is off",
+  "@connectionFailureDetailBluetoothOff": {
+    "description": "Small technical line under a connection failure: the phone's Bluetooth is off."
+  },
+  "connectionFailureDetailError": "Error: {detail}",
+  "@connectionFailureDetailError": {
+    "description": "Small technical line under a connection failure, quoting what failed.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "description": "Untranslated technical detail from the connection, for example join failed."
+      }
+    }
+  },
+  "connectionFailureDetailLostBluetooth": "Lost the Bluetooth link",
+  "@connectionFailureDetailLostBluetooth": {
+    "description": "Small technical line under a connection failure: the Bluetooth link was lost."
+  },
+  "connectionFailureDetailLostCamera": "Lost the connection to the camera",
+  "@connectionFailureDetailLostCamera": {
+    "description": "Small technical line under a connection failure: neither the camera's Wi-Fi nor Bluetooth came back."
+  },
+  "connectionFailureDetailLostWifi": "Lost the camera's Wi-Fi",
+  "@connectionFailureDetailLostWifi": {
+    "description": "Small technical line under a connection failure: the camera's Wi-Fi was lost."
+  },
+  "connectionFailureJoinWifi": "Join Wi-Fi",
+  "@connectionFailureJoinWifi": {
+    "description": "Button under the note that the phone is not on the camera's Wi-Fi: joins it."
+  },
+  "connectionFailureNeedsPairingBody": "The camera no longer accepts this phone's pairing, so trying again won't help. To pair again:",
+  "@connectionFailureNeedsPairingBody": {
+    "description": "Body of the connection failure when the camera refuses the pairing; numbered steps follow."
+  },
+  "connectionFailureNeedsPairingTitle": "Pair {cameraName} again",
+  "@connectionFailureNeedsPairingTitle": {
+    "description": "Title of the connection failure when the camera refuses the pairing.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name as the user named it, for example GR IV."
+      }
+    }
+  },
+  "connectionFailurePairAgain": "Pair again",
+  "@connectionFailurePairAgain": {
+    "description": "Button under a connection failure that pairs the camera again."
+  },
+  "connectionFailurePairStep1": "Delete this phone from the camera's Paired Devices",
+  "@connectionFailurePairStep1": {
+    "description": "First step to pair again. Paired Devices is the camera's menu entry."
+  },
+  "connectionFailurePairStep2": "Delete the camera from this phone's Bluetooth settings",
+  "@connectionFailurePairStep2": {
+    "description": "Second step to pair again."
+  },
+  "connectionFailurePairStep3": "Open Execute Pairing on the camera and pair",
+  "@connectionFailurePairStep3": {
+    "description": "Third step to pair again. Execute Pairing is the camera's menu entry."
+  },
+  "connectionFailureTryAgain": "Try again",
+  "@connectionFailureTryAgain": {
+    "description": "Button under a connection failure that tries to connect again."
+  },
+  "connectionFailureUnreachableBody": "The camera didn't answer over Bluetooth.",
+  "@connectionFailureUnreachableBody": {
+    "description": "Body of the connection failure when the camera could not be reached."
+  },
+  "connectionFailureUnreachableTitle": "Can't reach {cameraName}",
+  "@connectionFailureUnreachableTitle": {
+    "description": "Title of the connection failure when the camera could not be reached.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name as the user named it, for example GR IV."
+      }
+    }
+  },
+  "connectionFailureWifiBody": "Bluetooth works, but the phone couldn't join or keep the camera's Wi-Fi.",
+  "@connectionFailureWifiBody": {
+    "description": "Body of the connection failure when the camera's Wi-Fi could not be joined or was lost."
+  },
+  "connectionFailureWifiDeclinedBody": "Photos come over the camera's own Wi-Fi. Join it to browse and download them.",
+  "@connectionFailureWifiDeclinedBody": {
+    "description": "Body of the note shown after the user chose not to join the camera's Wi-Fi."
+  },
+  "connectionFailureWifiDeclinedTitle": "Not on {cameraName}'s Wi-Fi",
+  "@connectionFailureWifiDeclinedTitle": {
+    "description": "Title of the note shown after the user chose not to join the camera's Wi-Fi.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name as the user named it, for example GR IV."
+      }
+    }
+  },
+  "connectionFailureWifiTitle": "Couldn't join {cameraName}'s Wi-Fi",
+  "@connectionFailureWifiTitle": {
+    "description": "Title of the connection failure when the camera's Wi-Fi could not be joined or was lost.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name as the user named it, for example GR IV."
+      }
+    }
+  },
+  "connectionPillBluetooth": "Bluetooth",
+  "@connectionPillBluetooth": {
+    "description": "Link state on the camera pill: connected over Bluetooth only."
+  },
+  "connectionPillCameraOff": "Camera off",
+  "@connectionPillCameraOff": {
+    "description": "Link state on the camera pill: the camera was switched off and is being turned back on."
+  },
+  "connectionPillConnecting": "Connecting…",
+  "@connectionPillConnecting": {
+    "description": "Link state on the camera pill: linking over Bluetooth."
+  },
+  "connectionPillConnectingWifi": "Connecting to Wi-Fi…",
+  "@connectionPillConnectingWifi": {
+    "description": "Link state on the camera pill: joining the camera's Wi-Fi."
+  },
+  "connectionPillNotConnected": "Not connected",
+  "@connectionPillNotConnected": {
+    "description": "Link state on the camera pill: connecting failed."
+  },
+  "connectionPillOffline": "Offline",
+  "@connectionPillOffline": {
+    "description": "Link state on the camera pill: no connection."
+  },
+  "connectionPillReconnecting": "Reconnecting…",
+  "@connectionPillReconnecting": {
+    "description": "Link state on the camera pill: getting a lost link back."
+  },
+  "connectionPillSemantics": "{cameraName}, {state}",
+  "@connectionPillSemantics": {
+    "description": "Accessibility label of the camera pill: the camera and its link state.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name as the user named it, for example GR IV."
+      },
+      "state": {
+        "type": "String",
+        "description": "The link state, one of the connectionPill messages, for example Bluetooth."
+      }
+    }
+  },
+  "connectionPillWifi": "Wi-Fi",
+  "@connectionPillWifi": {
+    "description": "Link state on the camera pill: connected over the camera's Wi-Fi."
+  },
+  "connectionRenameCancel": "Cancel",
+  "@connectionRenameCancel": {
+    "description": "Button of the rename dialog that keeps the old name."
+  },
+  "connectionRenameSave": "Save",
+  "@connectionRenameSave": {
+    "description": "Button of the rename dialog that saves the new name."
+  },
+  "connectionRenameTitle": "Camera name",
+  "@connectionRenameTitle": {
+    "description": "Title of the dialog that renames a camera in GR Lab."
+  },
+  "connectionSheetBattery": "Battery",
+  "@connectionSheetBattery": {
+    "description": "Tile on the camera sheet showing the camera's battery level."
+  },
+  "connectionSheetDisconnectWifi": "Disconnect Wi-Fi",
+  "@connectionSheetDisconnectWifi": {
+    "description": "Button on the camera sheet that leaves the camera's Wi-Fi; Bluetooth stays."
+  },
+  "connectionSheetLink": "Link",
+  "@connectionSheetLink": {
+    "description": "Tile on the camera sheet showing how the phone is connected to the camera."
+  },
+  "connectionSheetLinkWifi": "Wi-Fi",
+  "@connectionSheetLinkWifi": {
+    "description": "Caption of the link tile on the camera sheet: connected over Wi-Fi."
+  },
+  "connectionSheetName": "Name",
+  "@connectionSheetName": {
+    "description": "Row on the camera sheet showing the camera's name; tapping it renames the camera."
+  },
+  "connectionSheetNotConnected": "Not connected.",
+  "@connectionSheetNotConnected": {
+    "description": "Camera sheet text while the camera is not connected."
+  },
+  "connectionSheetSectionCamera": "Camera",
+  "@connectionSheetSectionCamera": {
+    "description": "Section heading on the camera sheet above the camera name row."
+  },
+  "connectionSheetShotsLeft": "shots left",
+  "@connectionSheetShotsLeft": {
+    "description": "Caption of the storage tile on the camera sheet, under the number of photos that still fit."
+  },
+  "connectionSheetStorage": "Storage",
+  "@connectionSheetStorage": {
+    "description": "Tile on the camera sheet showing how many photos still fit on each storage."
+  },
+  "connectionSheetStorageInternal": "Internal",
+  "@connectionSheetStorageInternal": {
+    "description": "Label of the camera's internal memory on the storage tile."
+  },
+  "connectionSheetStorageSd": "SD",
+  "@connectionSheetStorageSd": {
+    "description": "Label of the camera's SD card on the storage tile."
+  },
+  "connectionSheetStorageUnnamed": "Storage",
+  "@connectionSheetStorageUnnamed": {
+    "description": "Label on the storage tile of a storage the camera did not name."
+  },
+  "connectionStepBluetoothConnected": "Connected via Bluetooth",
+  "@connectionStepBluetoothConnected": {
+    "description": "Step of the connection progress on the camera card: the Bluetooth link is up."
+  },
+  "connectionStepBluetoothConnecting": "Connecting via Bluetooth",
+  "@connectionStepBluetoothConnecting": {
+    "description": "Step of the connection progress on the camera card: linking over Bluetooth."
+  },
+  "connectionStepWifi": "Connecting to Wi-Fi",
+  "@connectionStepWifi": {
+    "description": "Step of the connection progress on the camera card: joining the camera's Wi-Fi."
+  },
+  "connectionWifiConsentAgainBody": "Android needs you to choose the camera's network in its list again. It asks after that network was disconnected in Wi-Fi settings. Choose \"{ssid}\" once and GR Lab joins it by itself again.",
+  "@connectionWifiConsentAgainBody": {
+    "description": "Body of the dialog shown before Android's network list appears again for a camera network it had approved.",
+    "placeholders": {
+      "ssid": {
+        "type": "String",
+        "description": "The camera's Wi-Fi network name as the camera reports it."
+      }
+    }
+  },
+  "connectionWifiConsentAgainTitle": "Choose \"{ssid}\"",
+  "@connectionWifiConsentAgainTitle": {
+    "description": "Title of the dialog shown before Android's network list appears again for a camera network it had approved.",
+    "placeholders": {
+      "ssid": {
+        "type": "String",
+        "description": "The camera's Wi-Fi network name as the camera reports it."
+      }
+    }
+  },
+  "connectionWifiConsentBody": "Photos come over the camera's own Wi-Fi network, \"{ssid}\". Android asks you to approve it once; after that GR Lab joins it by itself.",
+  "@connectionWifiConsentBody": {
+    "description": "Body of the dialog shown before the first join of a camera's Wi-Fi.",
+    "placeholders": {
+      "ssid": {
+        "type": "String",
+        "description": "The camera's Wi-Fi network name as the camera reports it."
+      }
+    }
+  },
+  "connectionWifiConsentContinue": "Continue",
+  "@connectionWifiConsentContinue": {
+    "description": "Button of the Wi-Fi dialog that joins the camera's network."
+  },
+  "connectionWifiConsentNotNow": "Not now",
+  "@connectionWifiConsentNotNow": {
+    "description": "Button of the Wi-Fi dialog that does not join the camera's network."
+  },
+  "connectionWifiConsentTitle": "Join {cameraName}'s Wi-Fi?",
+  "@connectionWifiConsentTitle": {
+    "description": "Title of the dialog shown before the first join of a camera's Wi-Fi.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name as the user named it, for example GR IV."
+      }
+    }
+  },
+  "connectionWifiConsentTryAgain": "Try again",
+  "@connectionWifiConsentTryAgain": {
+    "description": "Button of the Wi-Fi dialog that tries joining the camera's network again."
   },
   "debugLogClear": "Clear log",
   "@debugLogClear": {
