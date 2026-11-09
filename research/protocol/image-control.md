@@ -2,6 +2,8 @@
 
 What the Image Control blob in the Custom 1–3 slots and `/imgctrl` holds, which parameters each base image has, what their values mean, and the rules for slot names. The wire layout itself is in [ble.md § Image Control blob](ble.md#image-control-blob); the HTTP read is in [http-api.md §4.3](http-api.md). Researched 2026-11-08 from GR WORLD 2.0.0 and GR IV firmware 1.20, and on 2026-11-09 with REA (Ghidra) on the GR IV 1.20 and GR III 2.20 `bled`, `libcamera-controller` and `webapid` and a byte scan of the GR III, GR IIIx and GR IV `rtos.bin`. The hardware results so far, all from a GR IV HDF on firmware 1.20 on 2026-11-09, are the blob length (ble.md) and the `effectList` in §3; nothing else here has been tried on a camera yet.
 
+What the camera does to the image for each base and parameter, and the finding that Image Control changes processing only, never the capture, is in [image-control-processing.md](../image-control-processing.md).
+
 Evidence tags:
 - `[code 0x…]`: address in GR WORLD's Dart AOT disassembly (`work/dis/dis.txt`).
 - `[pp+0x…]`: object pool entry (`work/cs/blutter_out/pp.txt`).
@@ -90,14 +92,14 @@ GR WORLD decodes each value as a signed byte [code 0xd8e504]. Its formatter [cod
 | toningBleachBypass 09 | Toning | GR WORLD names 0 Off, 1 Normal, 2 Cool, 3 Warm; the camera uses 1..3 **[inferred]** | **[unknown]** | [code 0x95af9c–0x95b0a0]; `[fw3x]` `Normal=1 Cool=2 Warm=3` (a stored setting, not the blob) |
 | toningRetro 0a | Toning | −4..+4 **[inferred]** | 0 | shown as a number; `[fw3x]` `M4…P4` |
 | toningHdr 0b | Toning | 0 Off, 1 Black & White, 2 Sepia | 0 **[inferred]** | [code 0x95b158–0x95b214]; `[fw3x]` agrees |
-| filterEffect 0c | Filter Effect | 0 Off, anything else On; 1–4 selecting custom filter 1–4 is **[inferred]** | 0 **[inferred]** | [code 0x95b2cc–0x95b350] tells only zero from non-zero; `[fw3x]` `OFF=0 Custom1..4`; `[fw]` `FilterEffect{R,G,B}Custom1..4` |
-| filter R/G/B, high byte 0d/0f/11, low byte 0e/10/12 | rows R, G, B | each channel a signed 16-bit value split over two parameters: `(hi << 8) \| (lo & 0xff)`, minus 0x10000 from 0x8000; range **[unknown]** | **[unknown]** | [code 0x834800–0x83489c]; hidden while 0c is 0 [code 0x95a02c, 0x834c4c] |
+| filterEffect 0c | Filter Effect | 0 Off, anything else On; 1–4 selecting custom filter 1–4 is **[inferred]**. The GR IV and GR III image processing applies the filter only when the stored value is exactly 1, using the R, G and B values stored with the look ([image-control-processing.md §6.1](../image-control-processing.md)) | 0 **[inferred]** | [code 0x95b2cc–0x95b350] tells only zero from non-zero; `[fw3x]` `OFF=0 Custom1..4`; `[fw]` `FilterEffect{R,G,B}Custom1..4`; GR IV `rtos.bin` 0x5393a9e0 |
+| filter R/G/B, high byte 0d/0f/11, low byte 0e/10/12 | rows R, G, B | each channel a signed 16-bit value split over two parameters: `(hi << 8) \| (lo & 0xff)`, minus 0x10000 from 0x8000. The image processing reads them as percent weights of a black-and-white mix (×8192/100); the four factory custom sets are 10/70/20, 40/50/10, 90/20/−10 and 120/−10/−10, each summing to 100. That the blob values are those same weights is **[inferred]**; the accepted range is **[unknown]** | **[unknown]** | [code 0x834800–0x83489c]; hidden while 0c is 0 [code 0x95a02c, 0x834c4c]; GR IV `rtos.bin` 0x5393a9e0, defaults 0x53547fe4 |
 | grain 15 | Grain Effect | 0 Off, anything else On; that On is 1 is **[inferred]**. The GR IIIx kept one setting (`Off=0 High=1 Mid=2 Low=3`); the GR IV splits it into 15–17 | 0 **[inferred]** | [code 0x95b2dc–0x95b350]; size and intensity hidden while 0 [code 0x834c0c] |
 | grainSize 16 | Size | 0 Small, 1 Medium, 2 Large | **[unknown]** | [code 0x95b408–0x95b4c8] |
 | grainStrength 17 | Intensity | 0 Low, 1 Medium, 2 High | **[unknown]** | [code 0x95ae28] |
 | hdrStrength 18 | HDR Tone Level | GR WORLD names 0 Off, 1 Low, 2 Medium, 3 High; the camera uses 1..3 **[inferred]** | **[unknown]** | [code 0x95b580–0x95b678]; `[fw3x]` `Low=1 Mid=2 High=3` |
 | crossProcess 19 | Color Tone | 0 Basic, 1 Magenta, 2 Yellow | **[unknown]** | [code 0x95b730–0x95b7f8] |
-| solarizationType 23 | Solarization Type | shown as a number; range **[unknown]** | **[unknown]** | no case in [code 0x95a34c] |
+| solarizationType 23 | Solarization Type | shown as a number; the GR IV firmware has three solarization curves, for 0, 1 and 2, and uses the type-0 curve for any other value | **[unknown]** | no case in [code 0x95a34c]; GR IV `rtos.bin` 0x5393a9e0 ([image-control-processing.md §6.3](../image-control-processing.md)) |
 | baseColor 1a, whitePoint 1b, blackPoint 1c, RGB tone 1d–22 | Japanese labels only | shown as numbers; range **[unknown]** | **[unknown]** | [code 0x95baf0] |
 
 ## 5. How GR WORLD shows a look
@@ -126,6 +128,6 @@ These are GR Lab's choices **[design]**, in `packages/gr_camera/lib/src/looks/`:
 ## 7. Open questions
 
 - The version byte and byte 1 for a blob the camera did not produce, and the meaning of byte 1.
-- The GR IV's numeric ranges (±4 comes from the GR IIIx), the ranges of the solarization type, the custom filter values and the GR IVx parameters, and the camera's defaults for the enumerated parameters.
+- The GR IV's numeric ranges (±4 comes from the GR IIIx), the accepted range of the custom filter values, the GR IVx parameters, and the camera's defaults for the enumerated parameters.
 - Whether the camera rejects, clamps or keeps out-of-range values, unknown ids, a base its body does not offer or a parameter set that does not match the base. The checks, if any, are in the RTOS handler of IPC command 0x16 (§1); bled and `libcamera-controller` check nothing. That handler was not decompiled: Ghidra's analysis of the 21 MB GR IV `rtos.bin` (raw ARM at 0x53000000) did not finish within the MCP client's 30 s deadline, and its strings are reached through movw/movt pairs, so no plain pointers lead to them. Its assertion strings include `GetImageControlModel()->IsValid(imageControl)` and `indexValue < GetImageControlValueCount()`.
 - The GR IV Monochrome's and GR IVx's `effectList` (§3).
