@@ -20,6 +20,8 @@ Photos and videos you download are saved to your phone's photo library: on iOS i
 
 The demo version of GR Lab uses a simulated camera with sample photos included in the app. It keeps its data apart from that of real cameras.
 
+Your phone's own backup can include what GR Lab keeps, except the cache: your settings, paired cameras, download record and the debug log. On Android this is Android's backup to your Google account and its transfer to a new phone; on iOS it is your iCloud or computer backup. Your phone makes and restores these backups under your Google or Apple account settings, not GR Lab, and a restored backup puts this data on the new phone.
+
 ## What GR Lab sends, and to whom
 
 GR Lab communicates only with your camera:
@@ -35,7 +37,7 @@ The debug log helps find bugs. While it is on, GR Lab records every exchange wit
 
 Debug logging is off unless you turn it on, under Settings, Debug log, Enable debug logging. It is on by default only in GR Lab Dev, the test version of the app. The log is limited to about 50 MB; the oldest entries are deleted first.
 
-The log stays on your phone. On iOS it is in GR Lab's app storage. On Android it is in GR Lab's folder under Android/data, which developer tools on a computer connected to the phone can also read. The log leaves your phone only if you tap Export log and choose where to send it in the share sheet; the app you choose then handles it under its own terms. Because the log contains your camera's Wi-Fi password, share it only with someone you trust, such as the developer when you report a bug.
+GR Lab keeps the log on your phone. On iOS it is in GR Lab's app storage. On Android it is in GR Lab's folder under Android/data, which developer tools on a computer connected to the phone can also read. GR Lab itself sends the log nowhere: it leaves your phone through GR Lab only if you tap Export log and choose where to send it in the share sheet, and the app you choose then handles it under its own terms. Your phone's backup can also copy it, as described above, so turn debug logging off and clear the log if you don't want the password in your backups. Because the log contains your camera's Wi-Fi password, share it only with someone you trust, such as the developer when you report a bug.
 
 ## Permissions
 
