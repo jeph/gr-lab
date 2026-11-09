@@ -82,6 +82,8 @@ Never send firmware upload/prepare, `/v1/debug/*`, factory USB ops, or `POST /v1
 
 ## 4. Results log
 
+The test camera's serial number (here `1234567`, advertised as `87 D6 12 00`), Bluetooth address and Wi-Fi name are replaced with synthetic or masked values; the real ones are in the local captures.
+
 | Date | Camera / FW | Phone / OS | Test | Result | Capture file |
 |---|---|---|---|---|---|
 | 2026-11-07 | GR IV HDF / not read | Mac (macOS 27), GR Lab + `universal_ble` 3.2.0 | Passive BLE scan, camera powered off | Local name `GR_Hxxxxxx`; advertised service `0F291746-0C80-4726-87A7-3C501FD3B4B6` (Client Registration); company `0x065F` payload `DA 01 08 02 87 D6 12 00 03 00` = model code 8 (GR IV HDF), serial 1234567, tag `03` = `00` (off). Matches [camera models §4.1](camera-models.md#41-before-connecting-ble-advertising-recommended) and confirms GR WORLD's off-state service UUID ([BLE](protocol/ble.md) §Identifying a camera in the scan). Seen in both scans, RSSI −56 to −61 dBm | `trace-2026-11-07T22-40-31-655829Z.jsonl` (GR Lab traces folder) |

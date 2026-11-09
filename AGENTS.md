@@ -21,7 +21,7 @@ GR Lab talks to Ricoh GR cameras over a protocol that was reverse-engineered, no
 - Update it in the same change whenever you discover something new or notice drift: the camera, a firmware version or Ricoh's apps behaving differently from what the notes say, or the code relying on behaviour the notes don't describe. Correct the wrong text rather than appending a contradiction, and say what was seen, on which body and firmware, and when.
 - Mark every fact as observed (on hardware, with date, body and firmware), found in code (with its source), inferred or unknown, as the files already do.
 - Paths such as `firmware/evidence/…`, `work/…` and `apk/…` refer to the local research workspace (`../gr`), which holds Ricoh's APKs, their decompilation and the extracted firmware. Those are Ricoh's copyrighted files: never add them, or large excerpts of decompiled code, to this repository.
-- Keep personal data out: no Wi-Fi passphrases, no home network names, no Bluetooth or Wi-Fi addresses of a particular camera or phone (mask them, `F0:3E:05:xx:xx:xx`), no keys or tokens taken from Ricoh's apps.
+- Keep personal data out: no Wi-Fi passphrases, no home network names, no serial numbers, Bluetooth or Wi-Fi addresses of a particular camera or phone (use a synthetic serial such as `1234567` and mask addresses, `F0:3E:05:xx:xx:xx`), no keys or tokens taken from Ricoh's apps.
 
 ## Camera layer
 
