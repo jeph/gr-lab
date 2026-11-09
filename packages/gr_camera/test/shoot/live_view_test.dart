@@ -176,6 +176,29 @@ void main() {
     expect(live.props!.setting('tv')!.options!.length, greaterThan(1));
   });
 
+  test('the orientation comes with the settings and follows the camera as '
+      'it turns, without waiting for a poll', () async {
+    rig = await ShootRig.start(wifi: true);
+    final live = rig.liveView;
+    rig.camera.orientation = GrCameraOrientation.verticalLeft;
+    await rig.startLiveView();
+    expect(live.orientation, GrCameraOrientation.verticalLeft);
+
+    rig.camera.orientation = GrCameraOrientation.positive;
+    await until(
+      () => live.orientation == GrCameraOrientation.positive,
+      reason: 'turned level',
+    );
+    expect(rig.events('shoot.orientation').last, {
+      'from': 'vertical_left',
+      'to': 'positive',
+      'reason': 'cameraDirect',
+    });
+
+    live.stop();
+    expect(live.orientation, isNull, reason: 'read again on the next start');
+  });
+
   test('a picture taken while live view runs becomes the last shot', () async {
     rig = await ShootRig.start(wifi: true);
     final live = rig.liveView;

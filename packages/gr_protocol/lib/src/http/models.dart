@@ -61,6 +61,51 @@ final class GrSetting {
   };
 }
 
+/// How the camera is held: `cameraOrientation` in `/v1/props` and in the
+/// `cameraDirect` change, which the GR IV sends when it changes
+/// (remote-shooting.md §1.5). Live view frames stay in the sensor's
+/// landscape layout whichever way the camera is held \[inferred\]: Image
+/// Sync turns them itself.
+enum GrCameraOrientation {
+  /// No orientation; when the camera reports it is \[unknown\]. Image Sync
+  /// shows the frame unturned.
+  none('none', 0),
+
+  /// Held level, the usual way up.
+  positive('positive', 0),
+
+  /// Upside down.
+  reverse('reverse', 2),
+
+  /// Held upright one way: the frame shows upright after a quarter turn
+  /// clockwise. Which way the camera is turned is \[unknown\].
+  verticalRight('vertical_right', 1),
+
+  /// Upright the other way: the frame shows upright after a quarter turn
+  /// counter-clockwise.
+  verticalLeft('vertical_left', 3);
+
+  new(this.wire, this.quarterTurns);
+
+  /// The camera's text for it.
+  final String wire;
+
+  /// Clockwise quarter turns that show a live view frame upright, as Image
+  /// Sync turns it (`m.a.f`: 0°, 90°, 180°, 270°).
+  final int quarterTurns;
+
+  /// Held upright: a turned frame is taller than wide.
+  bool get upright => quarterTurns.isOdd;
+
+  /// The orientation the camera calls [wire]; null for other text.
+  static GrCameraOrientation? parse(String? wire) {
+    for (final o in values) {
+      if (o.wire == wire) return o;
+    }
+    return null;
+  }
+}
+
 /// `GET /v1/props` (also the response shape of `PUT /v1/params/camera`).
 ///
 /// Keys follow Image Sync's `BeanProps` and GR WORLD's props parser
@@ -170,8 +215,10 @@ final class GrProps extends GrEnvelope {
   /// `capture`, `playback`, `bleStartup`, `powerOffTransfer` or `other`.
   String? get operationMode => fields.string('operationMode');
 
-  /// Camera orientation; values not established.
-  String? get cameraOrientation => fields.string('cameraOrientation');
+  /// How the camera is held (`cameraOrientation`); null when absent or
+  /// not a known value (remote-shooting.md §1.5).
+  GrCameraOrientation? get cameraOrientation =>
+      GrCameraOrientation.parse(fields.string('cameraOrientation'));
 
   /// Camera clock as text; format not established.
   String? get datetime => fields.string('datetime');

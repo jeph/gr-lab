@@ -112,7 +112,9 @@ class _ShootScreenState extends State<ShootScreen> {
 }
 
 /// A remote control, not a viewfinder: the camera's mode, shots left and
-/// battery, one large shutter, the self-timer and the drive.
+/// battery, one large shutter, the self-timer and the drive. In a window
+/// too short for all of it (landscape) the shutter shrinks and the page
+/// scrolls.
 class _RemoteView extends StatelessWidget {
   const new({required this.model});
 
@@ -130,104 +132,128 @@ class _RemoteView extends StatelessWidget {
     final exposure = model.exposure;
     final shotsLeft = model.shotsLeft;
     final battery = model.battery;
+    final top = Column(
+      children: [
+        const CameraTopBar(),
+        const SizedBox(height: 14),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ShootModeSwitch(
+            mode: model.mode,
+            onChanged: (m) => model.mode = m,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: _Stat(
+                  key: const Key('shoot-stat-mode'),
+                  label: l10n.shootStatMode,
+                  value: exposure == null ? '—' : exposureLabel(l10n, exposure),
+                  color: c.accent,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _Stat(
+                  key: const Key('shoot-stat-shots'),
+                  label: l10n.shootStatShotsLeft,
+                  value: shotsLeft == null
+                      ? '—'
+                      : NumberFormat.decimalPattern(locale).format(shotsLeft),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _Stat(
+                  key: const Key('shoot-stat-battery'),
+                  label: l10n.shootStatBattery,
+                  value: battery == null
+                      ? '—'
+                      : formatBattery(context, battery),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    final bottom = Column(
+      children: [
+        SectionLabel(l10n.shootSelfTimer),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: ShootSegmented<ShootTimer>(
+            key: const Key('shoot-timer'),
+            values: ShootTimer.values,
+            selected: timer,
+            label: (t) => t.label(l10n),
+            // Continuous drive has no self-timer.
+            enabled: ready && drive != ShootDrive.continuous,
+            onSelect: (t) => unawaited(model.setTimer(t)),
+          ),
+        ),
+        GroupBox(
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          children: [
+            GroupRow(
+              key: const Key('shoot-drive'),
+              icon: Icons.burst_mode_outlined,
+              title: l10n.shootDrive,
+              trailing: Text(
+                drive?.label(l10n) ??
+                    (model.drive == null ? '—' : '${model.drive}'),
+                style: TextStyle(fontSize: 15, color: c.t2),
+              ),
+              chevron: true,
+              onTap: ready
+                  ? () => unawaited(showDrivePicker(context, model))
+                  : null,
+            ),
+          ],
+        ),
+      ],
+    );
     return Scaffold(
       key: const Key('shoot-remote'),
       body: SafeArea(
-        child: Column(
-          children: [
-            const CameraTopBar(),
-            const SizedBox(height: 14),
-            ShootModeSwitch(mode: model.mode, onChanged: (m) => model.mode = m),
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _Stat(
-                      key: const Key('shoot-stat-mode'),
-                      label: l10n.shootStatMode,
-                      value: exposure == null
-                          ? '—'
-                          : exposureLabel(l10n, exposure),
-                      color: c.accent,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _Stat(
-                      key: const Key('shoot-stat-shots'),
-                      label: l10n.shootStatShotsLeft,
-                      value: shotsLeft == null
-                          ? '—'
-                          : NumberFormat.decimalPattern(locale)
-                                .format(shotsLeft),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _Stat(
-                      key: const Key('shoot-stat-battery'),
-                      label: l10n.shootStatBattery,
-                      value: battery == null
-                          ? '—'
-                          : formatBattery(context, battery),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
+        child: LayoutBuilder(
+          builder: (context, box) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: box.maxHeight),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                // The shutter sits in the middle of the room the rest
+                // leaves.
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  ShutterButton(
-                    model: model,
-                    size: 168,
-                    color: c.accent,
-                    ringGap: 10,
-                  ),
-                  const SizedBox(height: 18),
+                  top,
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: ShootPowerLine(model: model),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Column(
+                      children: [
+                        ShutterButton(
+                          model: model,
+                          // The rest takes about 400 \[design\].
+                          size: (box.maxHeight - 400).clamp(96.0, 168.0),
+                          color: c.accent,
+                          ringGap: 10,
+                        ),
+                        const SizedBox(height: 18),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: ShootPowerLine(model: model),
+                        ),
+                      ],
+                    ),
                   ),
+                  bottom,
                 ],
               ),
             ),
-            SectionLabel(l10n.shootSelfTimer),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ShootSegmented<ShootTimer>(
-                key: const Key('shoot-timer'),
-                values: ShootTimer.values,
-                selected: timer,
-                label: (t) => t.label(l10n),
-                // Continuous drive has no self-timer.
-                enabled: ready && drive != ShootDrive.continuous,
-                onSelect: (t) => unawaited(model.setTimer(t)),
-              ),
-            ),
-            GroupBox(
-              margin: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              children: [
-                GroupRow(
-                  key: const Key('shoot-drive'),
-                  icon: Icons.burst_mode_outlined,
-                  title: l10n.shootDrive,
-                  trailing: Text(
-                    drive?.label(l10n) ??
-                        (model.drive == null ? '—' : '${model.drive}'),
-                    style: TextStyle(fontSize: 15, color: c.t2),
-                  ),
-                  chevron: true,
-                  onTap: ready
-                      ? () => unawaited(showDrivePicker(context, model))
-                      : null,
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );

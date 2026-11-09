@@ -70,6 +70,39 @@ void main() {
       expect(done.movieCaptureComplete, isTrue);
     });
 
+    test('cameraDirect orientation: the turns Image Sync shows each one '
+        'with; other text is no orientation', () {
+      GrCameraOrientation? held(Object? value) => (parse(
+        jsonEncode({
+          'errCode': 200,
+          'changed': 'cameraDirect',
+          'cameraOrientation': value,
+        }),
+      ) as GrCameraDirectChange).cameraOrientation;
+      expect(
+        {
+          for (final wire in [
+            'none',
+            'positive',
+            'vertical_right',
+            'reverse',
+            'vertical_left',
+          ])
+            wire: held(wire)?.quarterTurns,
+        },
+        {
+          'none': 0,
+          'positive': 0,
+          'vertical_right': 1,
+          'reverse': 2,
+          'vertical_left': 3,
+        },
+      );
+      expect(held('sideways'), isNull);
+      expect(held(1), isNull);
+      expect(held(null), isNull);
+    });
+
     test('lens, capture and transfer payloads', () {
       final lens = parse(
         '{"errCode":200,"changed":"lens","captureId":5,"focused":true}',

@@ -24,6 +24,7 @@ export 'package:gr_protocol/gr_protocol.dart'
         GrBatteryChange,
         GrCameraChange,
         GrCameraDirectChange,
+        GrCameraOrientation,
         GrCaptureChange,
         GrChangeEvent,
         GrHttpException,

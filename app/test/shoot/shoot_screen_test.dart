@@ -244,6 +244,65 @@ void main() {
       await app.dispose();
     });
 
+    testWidgets('the picture turns upright with the camera, and a tap '
+        'focuses at that point of the frame as the camera sends it', (
+      tester,
+    ) async {
+      final app = await inLiveView(tester);
+      final level = tester.getRect(find.byKey(const Key('live-turned-0')));
+      expect(level.width, greaterThan(level.height));
+
+      app.camera.orientation = GrCameraOrientation.verticalRight;
+      await pumpUntilFound(tester, find.byKey(const Key('live-turned-1')));
+      final upright = tester.getRect(find.byKey(const Key('live-turned-1')));
+      expect(upright.height, greaterThan(upright.width));
+
+      // A quarter turn clockwise puts the frame's left edge at the top.
+      await tester.tapAt(
+        upright.topLeft + Offset(upright.width * .5, upright.height * .2),
+      );
+      await pumpUntil(
+        tester,
+        () => app.camera.focusPoints.isNotEmpty,
+        reason: 'focus sent',
+      );
+      expect(app.camera.focusPoints.single, (20, 50));
+      await app.dispose();
+    });
+
+    testWidgets('fits a narrow screen with large text and landscape screens, '
+        'in Remote and in live view', (tester) async {
+      final screens = [
+        // A foldable's cover screen, text at 130 %.
+        (const Size(904, 2316), 2.625, 1.3),
+        (const Size(2316, 904), 2.625, 1.0),
+        (const Size(2532, 1170), 3.0, 1.0),
+      ];
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      Future<void> expectFits(Finder visible) async {
+        for (final (size, ratio, text) in screens) {
+          tester.view
+            ..physicalSize = size
+            ..devicePixelRatio = ratio;
+          tester.platformDispatcher.textScaleFactorTestValue = text;
+          await pumpRounds(tester, 3);
+          expect(tester.takeException(), isNull, reason: '$size × $text');
+          expect(visible.hitTestable(), findsOneWidget, reason: '$size');
+        }
+      }
+
+      final app = await _inShoot(tester);
+      await _untilReady(tester);
+      await expectFits(find.byKey(const Key('shoot-mode')));
+      tester.view.reset();
+      tester.platformDispatcher.clearTextScaleFactorTestValue();
+      await tester.tap(find.byKey(const Key('shoot-mode-liveView')));
+      await pumpUntilFound(tester, find.byKey(const Key('live-picture')));
+      await expectFits(find.byKey(const Key('live-picture')));
+      expect(find.byKey(const Key('shoot-shutter')).hitTestable(), findsOne);
+      await app.dispose();
+    });
+
     testWidgets('quick taps run one focus at a time: the first, then the '
         'newest tap once it ends', (tester) async {
       final app = await inLiveView(tester);

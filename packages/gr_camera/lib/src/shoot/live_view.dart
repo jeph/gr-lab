@@ -26,7 +26,8 @@ final class FocusMark {
   /// A mark at [at] in [state].
   const new(this.at, this.state);
 
-  /// 0..1 of the picture, origin top-left.
+  /// 0..1 of the frame as the camera sends it (before any turn for
+  /// [CameraLiveView.orientation]), origin top-left.
   final Offset at;
 
   /// How the focus at [at] went.
@@ -114,6 +115,17 @@ final class CameraLiveView extends ChangeNotifier {
   /// again once the camera reports that file deleted.
   Uint8List? get lastShot => _lastShot;
 
+  /// How the camera is held, from `/v1/props` and the `cameraDirect`
+  /// change (remote-shooting.md §1.5); null until the settings are read,
+  /// and when the camera does not say. [frame]s come as the sensor sees
+  /// them; turned by [GrCameraOrientation.quarterTurns] they show upright.
+  GrCameraOrientation? get orientation => _orientation;
+  GrCameraOrientation? _orientation;
+
+  /// Counts `cameraDirect` orientations, so that a settings read started
+  /// before one does not put the older orientation back.
+  int _orientationChanges = 0;
+
   /// Whether [setSetting] can send a change now: live view runs and has
   /// read the settings.
   bool get canChangeSettings => _http != null && _settings.props != null;
@@ -147,8 +159,10 @@ final class CameraLiveView extends ChangeNotifier {
     if (!_closed) notifyListeners();
   }
 
-  /// Focuses on [at] (0..1 of the picture), one focus at a time. The GR IV
-  /// holds a focus sent while one runs until that one ends, and live view
+  /// Focuses on [at] (0..1 of the frame as sent, see [FocusMark.at]: Image
+  /// Sync sends the point in the frame's own layout, remote-shooting.md
+  /// §3.2), one focus at a time. The GR IV holds a focus sent while one
+  /// runs until that one ends, and live view
   /// stalls through all of them (GR IV HDF, 2026-11-08: a 0.9-2 s gap per
   /// focus, 8.8 s after a quick series of taps). A tap meanwhile moves the
   /// mark and is sent when the running focus ends; only the newest one.
@@ -296,8 +310,12 @@ final class CameraLiveView extends ChangeNotifier {
       // that answers props is up for the stream too.
       if (_settings.props == null) {
         final since = _settings.startRead();
+        final changes = _orientationChanges;
         final props = await http.props();
         _session.recordProps(props);
+        if (changes == _orientationChanges) {
+          _setOrientation(props.cameraOrientation, 'props');
+        }
         // Image Sync honours a tap only in AF and inside
         // `focusEffectiveArea` (remote-shooting.md §3.1-3.2).
         _log('props.focus', {
@@ -387,6 +405,7 @@ final class CameraLiveView extends ChangeNotifier {
     // (mode dial, or another session).
     _settings.clear();
     _focus = null;
+    _orientation = null;
     _focusRun++;
     _focusWait?.cancel();
     _focusWait = null;
@@ -414,6 +433,11 @@ final class CameraLiveView extends ChangeNotifier {
       case GrCameraChange():
         _log('change', {'changed': 'camera'});
         unawaited(_refreshProps(http, 'cameraChange'));
+      case GrCameraDirectChange(:final cameraOrientation?):
+        _orientationChanges++;
+        if (_setOrientation(cameraOrientation, 'cameraDirect')) {
+          notifyListeners();
+        }
       case GrLensChange(:final focused?, :final captureId):
         _log('lens', {'captureId': captureId, 'focused': focused});
         // `"0"` is not a client's focus (Image Sync ignores it,
@@ -481,10 +505,14 @@ final class CameraLiveView extends ChangeNotifier {
   /// Reads the settings; false when the camera did not answer.
   Future<bool> _refreshProps(GrHttpClient http, String reason) async {
     final since = _settings.startRead();
+    final changes = _orientationChanges;
     try {
       final props = await http.props();
       if (_closed) return true;
       _session.recordProps(props);
+      if (changes == _orientationChanges) {
+        _setOrientation(props.cameraOrientation, reason);
+      }
       final summary = {
         'exposureMode': props.exposureMode,
         for (final key in const ['av', 'tv', 'sv', 'xv']) ...{
@@ -506,6 +534,18 @@ final class CameraLiveView extends ChangeNotifier {
       // The next change or setting tries again.
       return false;
     }
+  }
+
+  /// Takes [value] as how the camera is held; true when that changed it.
+  bool _setOrientation(GrCameraOrientation? value, String reason) {
+    if (value == _orientation) return false;
+    _log('orientation', {
+      'from': _orientation?.wire,
+      'to': value?.wire,
+      'reason': reason,
+    });
+    _orientation = value;
+    return true;
   }
 
   Future<void> _loadThumb(

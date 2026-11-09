@@ -121,9 +121,21 @@ The client is **marker-driven and ignores the multipart boundary entirely** (`im
 
 ### 1.5 Orientation
 
-- Frames are used as delivered in the landscape layout.
-- In the portrait layout the app rotates the bitmap +90° (or −90° depending on device rotation) before display (`m/e4.java:118-124,181-185`).
-- The camera's `cameraOrientation` prop (`none|positive|reverse|vertical_right|vertical_left`, `res/raw/capture_ricoh_gr_iii.yaml:424-431`) is parsed but never referenced by the app (rg on `CameraOrientation.` in the app = 0 hits).
+The camera reports how it is held, and Image Sync turns the live view picture to match. The frames themselves stay in the sensor's landscape layout **[inferred]**: Image Sync turns them itself, and the GR IV webapid's only built-in frames (the black busy frames, §1.3) are 720×480 and 1080×720.
+
+**The value.** `cameraOrientation` is one of `none|positive|reverse|vertical_right|vertical_left` (Image Sync `api/setting/capture/CameraOrientation.java`, `res/raw/capture_ricoh_gr_iii.yaml:424-431`; the same five strings in GR IV webapid rodata 0xbb3e0–0xbb40c).
+- A GR IV HDF (fw 1.20) reported `"cameraOrientation": "positive"` in `/v1/props` **[observed, 2026-11-07]**.
+- GR IV webapid 1.20 **[found in code]**: `camera_orientation::GetCurrentValue` (0xb1538) reads camera property `0x7f`. Two places read it: `CameraParams::Fetch` (0x9d888; `CameraParams` is part of `/v1/props` and of the `PUT /v1/params/camera` answer) and `CameraDirect::Fetch` (`fw/gr4-camera-direct-fetch-0xaa988.c`). `CameraDirect::Serialize` (`fw/gr4-camera-direct-serialize-0xaa4e4.c`) writes it as `cameraOrientation` into the `cameraDirect` change, after `capturing`, `stateStill`, `stateMovie`, `countDown`, `onePushBracket`, `shotsTotal` and `shotsCurrent`.
+- **The camera pushes it when it changes [found in code].** `PropertyEventHandler::Setup` (`fw/gr4-property-handler-setup-0x8c29c.c`) subscribes to changes of properties `0x2d 0x2e 0x2f 0x30 0x33 0x37 0x38 0x39 0x7f` (the list built in `_INIT_17`, `fw/gr4-property-list-init-0x8c6ac.c`). `PropertyEventHandler::PropertyChanged` (`fw/gr4-property-changed-0x8c3b0.c`) sends a `cameraDirect` change to the WebSocket when a changed property is in that list, so turning the camera should send one with the new orientation. Not yet seen on hardware.
+- Which physical way round `vertical_right` and `vertical_left` are, and when the camera says `none` (pointing up or down, perhaps), are **[unknown]**.
+
+**What Image Sync does** (2.1.32):
+- It reads `CameraOrientation` with the other capture settings (`app/ShootingActivity.java:1897,1906`) and again on every settings poll (`m/r4.java:394-399`). It follows the camera only when the setting `SHARED_PREFERENCE_KEY_LIVE_VIEW_CAMERA_ORIENTATION_FOLLOW` is on (`p/a.java:139`) and its model gate `s/g.J` passes (decompiled badly; it returns true for every model reached).
+- `m/a.a` turns the value into 1 `positive`, 2 `vertical_left`, 3 `reverse`, 4 `vertical_right`; anything else, `none` included, is 1. `m/a.f` gives the picture's clockwise turn: 0°, 270°, 180°, 90° (`View.setRotation`, `app/ShootingActivity.java:1366-1378`).
+- With the phone upright and the camera upright, the bitmap is turned +90° (`m/e4.java:118-124`) and its view `f(d(A1))`: 0° for `vertical_right`, 180° for `vertical_left`. In total the frame turns 90° clockwise for `vertical_right` and 90° counter-clockwise for `vertical_left`, the same as `m/a.f`.
+- Touch focus undoes the turn before normalising the point (`app/ShootingActivity.java:1029-1123`), so `pos` stays in the frame's own landscape layout (§3.2).
+
+**What GR Lab does:** it takes `cameraOrientation` from `/v1/props` and from `cameraDirect`, shows the frame turned by Image Sync's angles, maps taps back into the frame's layout for `pos`, and lays the controls out around the turned picture. Whether a GR IV pushes `cameraDirect` on a turn and keeps its frames landscape is to be confirmed on hardware ([hardware validation](../hardware-validation.md) session C).
 
 ### 1.6 When the app refuses live view and touch (GR III family)
 
@@ -183,7 +195,7 @@ GR III `stop()` for MOVIE does not return after the movie-stop POST. It falls in
 
 | `changed` | Keys read | Effect | Evidence |
 |---|---|---|---|
-| `cameraDirect` | `stateStill`, `stateMovie`, `countDown` (`idle\|busy2s\|busy10s\|busy12s\|time`), `capturing`, `shotsCurrent`, `shotsTotal` | GR III: capture COMPLETE when (movie and `stateMovie=="idle"`) or (`stateStill` ∈ {`idle`,`continuous`} and `countDown=="idle"` and `!capturing`). A self-timer back to idle early means CANCELLED. | `impl/UpdateChanged.java:26-33,104-165` |
+| `cameraDirect` | `stateStill`, `stateMovie`, `countDown` (`idle\|busy2s\|busy10s\|busy12s\|time`), `capturing`, `shotsCurrent`, `shotsTotal`; `cameraOrientation` comes from the settings poll instead (§1.5) | GR III: capture COMPLETE when (movie and `stateMovie=="idle"`) or (`stateStill` ∈ {`idle`,`continuous`} and `countDown=="idle"` and `!capturing`). A self-timer back to idle early means CANCELLED. GR IV webapid also sends `onePushBracket` and `cameraOrientation` in it (§1.5) | `impl/UpdateChanged.java:26-33,104-165` |
 | `lens` | `captureId`, `focused` | `captureId=="0"` is ignored. For a pending shoot → `focusComplete(ok/err)` event. Otherwise the result is stored for `focus()` waiters. | `impl/UpdateCaptureIdForLens.java:22-52` |
 | `capture` | `captureId` | Removes the pending shoot entry | `impl/UpdateCaptureIdForCapture.java:17-30` |
 | `storage` | `action`, `filepath`, `storage`, `captureId` | On `action=="add"` (and `captureId != "0"`), remembers the path → `latestCaptureImageChanged`. Also triggers an image-list resync and `imageStored`/`captureComplete` counting. | `impl/UpdateLatestCaptureImage.java:22-39`; `impl/UpdateCameraImage.java:200-272` |
@@ -387,5 +399,6 @@ Option flags are `Option(still, stillWithFocus, movie, focus, changeCaptureMetho
 - `pos` units and range as validated by `focus_pos` (Image Sync sends 0..100 integer percent).
 - `reso` syntax and allowed values. The default live-view resolution on III/IV (720×480 reported externally).
 - Whether III/IV firmware URL-decodes bodies. Image Sync's literal `+` in `xv=+0.3` implies it must not decode `+` as space **[inferred]**.
-- Whether GR IV firmware emits WS `lens`/`capture`/`cameraDirect` with the same payloads. The strings are present, but runtime behavior is unverified.
+- Whether GR IV firmware sends WS `capture` and `cameraDirect` at runtime. Its `lens` change is observed (§3.2) and the `cameraDirect` payload is known from webapid (§1.5), including a push when the camera is turned, but neither has been seen on hardware.
+- Whether GR IV live view frames stay landscape when the camera is held upright, which physical way round `vertical_right` and `vertical_left` are, and when the camera reports `none` (§1.5).
 - Exact HTTP status codes accompanying non-200 `errCode`s on III/IV (Image Sync ignores the HTTP status).

@@ -96,6 +96,9 @@ final class LiveViewController extends ChangeNotifier {
   /// Thumbnail of the newest picture taken while live view is on.
   Uint8List? get lastShot => _live?.lastShot;
 
+  /// How the camera is held; see [CameraLiveView.orientation].
+  GrCameraOrientation? get orientation => _live?.orientation;
+
   /// Whether [CameraLiveView.modeSettings] are as the camera reported them
   /// for the current mode dial position.
   bool get modeSettled => _live?.modeSettled ?? false;
@@ -117,7 +120,8 @@ final class LiveViewController extends ChangeNotifier {
     unawaited(connection.joinWifi());
   }
 
-  /// Focuses on [at] (0..1 of the picture); see [CameraLiveView.focusAt].
+  /// Focuses on [at] (0..1 of the frame as the camera sends it); see
+  /// [CameraLiveView.focusAt].
   Future<void> focusAt(Offset at) async {
     await _live?.focusAt(at);
   }

@@ -124,6 +124,7 @@ final class FakeGrCamera {
   BleCountdown _countdown = BleCountdown.none;
   Timer? _releaseTimer;
   int _captureIds = 0;
+  GrCameraOrientation _orientation = GrCameraOrientation.positive;
 
   /// Ends when the running focus does (see `_focus`).
   Future<void> _focusEnd = Future.value();
@@ -251,6 +252,17 @@ final class FakeGrCamera {
   /// dial changes either (2026-11-08); whether it pushes one for its own
   /// exposure is \[unknown\].
   void cameraSets(String key, String value) => _settings[key] = value;
+
+  /// How the camera is held: `/v1/props` `cameraOrientation`. Turning it
+  /// pushes a `cameraDirect` change, as GR IV webapid sends one whenever
+  /// the orientation changes (remote-shooting.md §1.5).
+  GrCameraOrientation get orientation => _orientation;
+
+  set orientation(GrCameraOrientation value) {
+    if (value == _orientation) return;
+    _orientation = value;
+    _pushCameraDirect();
+  }
 
   /// The card, in insertion order.
   List<FakePhoto> get photos => List.unmodifiable(_photos);

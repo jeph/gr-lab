@@ -296,7 +296,8 @@ extension on FakeGrCamera {
     _pushCameraDirect();
   }
 
-  /// Image Sync's capture-state event (remote-shooting.md §2.3).
+  /// Image Sync's capture-state event (remote-shooting.md §2.3), with the
+  /// orientation GR IV webapid adds (`CameraDirect::Serialize`, §1.5).
   void _pushCameraDirect() => _push({
     'errCode': 200,
     'changed': 'cameraDirect',
@@ -305,6 +306,7 @@ extension on FakeGrCamera {
     'countDown': _countDownText,
     'capturing': _capturing,
     'shootMode': _shootMode,
+    'cameraOrientation': _orientation.wire,
   });
 
   /// The next file on the active storage: the newest directory, the next

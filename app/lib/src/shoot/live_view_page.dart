@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -127,6 +128,52 @@ class _LiveLayoutState extends State<_LiveLayout> {
     if (picked != null) await _model.setTimer(picked);
   }
 
+  /// Width of the controls beside the picture in [_sideBySide], for a
+  /// window [width] wide \[design\].
+  static double _panelWidth(double width) => (width * .4).clamp(260.0, 360.0);
+
+  /// Height of the controls above and below the picture when they are
+  /// stacked, the picture's margins included: 376-388 measured at text
+  /// size 100 % and 512 at 200 %, so 132 of it grows with the text.
+  static double _stackedControlsHeight(TextScaler text) =>
+      256 + text.scale(132);
+
+  /// Stacking needs this much room left for the picture, which covers
+  /// [_stackedControlsHeight] coming out a little short \[design\].
+  static const _minStackedPicture = 48.0;
+
+  /// Width over height of the picture as shown: the frame, turned upright
+  /// when the camera is held upright. A GR IV sends 3:2 frames.
+  double get _pictureAspect {
+    final d = _live.frame.value?.dimensions;
+    final aspect = d == null || d.width == 0 || d.height == 0
+        ? 3 / 2
+        : d.width / d.height;
+    return _live.orientation?.upright ?? false ? 1 / aspect : aspect;
+  }
+
+  /// Whether the controls go beside the picture rather than above and
+  /// below it, in a window of [size]: when stacking them does not fit, or
+  /// beside them the picture comes out larger (a landscape window, or a
+  /// squarish one with the camera held upright).
+  bool _sideBySide(Size size) {
+    final stackedHeight =
+        size.height - _stackedControlsHeight(MediaQuery.textScalerOf(context));
+    if (stackedHeight < _minStackedPicture) return true;
+    final aspect = _pictureAspect;
+    double area(Size box) {
+      if (box.width <= 0 || box.height <= 0) return 0;
+      final width = math.min(box.width, box.height * aspect);
+      return width * width / aspect;
+    }
+
+    final stacked = area(Size(size.width, stackedHeight));
+    final beside = area(
+      Size(size.width - _panelWidth(size.width) - 16, size.height - 16),
+    );
+    return beside > stacked;
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
@@ -136,161 +183,207 @@ class _LiveLayoutState extends State<_LiveLayout> {
     final dialKey = _dialKey != null && _editable(_dialKey!) != null
         ? _dialKey
         : null;
-    return Stack(
-      fit: StackFit.expand,
+    final topBar = Row(
       children: [
-        _Picture(model: _model),
-        SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
-                child: Row(
-                  children: [
-                    _RoundButton(
-                      key: const Key('live-close'),
-                      icon: Icons.close_rounded,
-                      label: l10n.liveViewBackToRemote,
-                      onTap: () => _model.mode = ShootMode.remote,
-                    ),
-                    const SizedBox(width: 8),
-                    const Expanded(
-                      child: Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: CameraPill(),
-                      ),
-                    ),
-                    if (exposure != null)
-                      Container(
-                        key: const Key('live-exposure'),
-                        height: 36,
-                        constraints: const BoxConstraints(minWidth: 36),
-                        padding: const EdgeInsets.symmetric(horizontal: 9),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: c.s2.withValues(alpha: .8),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: c.line2),
-                        ),
-                        child: Text(
-                          exposureLabel(l10n, exposure),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: c.accent,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              ShootModeSwitch(
-                mode: _model.mode,
-                onChanged: (m) => _model.mode = m,
-              ),
-              const SizedBox(height: 12),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    _Chip(
-                      key: const Key('live-chip-drive'),
-                      icon: Icons.burst_mode_outlined,
-                      label: split?.$1.label(l10n) ?? '—',
-                      onTap: _model.canShoot
-                          ? () => unawaited(showDrivePicker(context, _model))
-                          : null,
-                    ),
-                    _Chip(
-                      key: const Key('live-chip-timer'),
-                      icon: Icons.timer_outlined,
-                      label: split?.$2.label(l10n) ?? '—',
-                      onTap:
-                          _model.canShoot && split?.$1 != ShootDrive.continuous
-                          ? () => unawaited(_pickTimer())
-                          : null,
-                    ),
-                    for (final (key, icon, title) in [
-                      (
-                        'meteringMode',
-                        Icons.filter_center_focus,
-                        l10n.liveViewMetering,
-                      ),
-                      ('effect', Icons.tune_rounded, l10n.liveViewImageControl),
-                    ])
-                      if (_live.props?.setting(key)?.current case final v?)
-                        _Chip(
-                          key: Key('live-chip-$key'),
-                          icon: icon,
-                          label: settingLabel(l10n, key, v),
-                          onTap: _editable(key) == null
-                              ? null
-                              : () => unawaited(_pick(key, title)),
-                        ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              _Readouts(
-                live: _live,
-                readouts: _readouts,
-                selected: dialKey,
-                editable: (k) => _editable(k) != null,
-                onTap: (k) =>
-                    setState(() => _dialKey = dialKey == k ? null : k),
-              ),
-              // The dial's room is kept when it is closed, so opening it
-              // does not push the readouts up.
-              SizedBox(
-                height: _Dial.slotHeight,
-                child: dialKey == null
-                    ? null
-                    : _Dial(
-                        key: Key('live-dial-$dialKey'),
-                        setting: _editable(dialKey)!,
-                        onSelect: (v) => unawaited(_set(dialKey, v)),
-                      ),
-              ),
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: Row(
-                  children: [
-                    _LastShot(bytes: _live.lastShot),
-                    Expanded(
-                      child: Center(
-                        child: ShutterButton(
-                          model: _model,
-                          size: 80,
-                          color: const Color(0xFFF6F4EF),
-                          ringGap: 5,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 56),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                volumeShutter
-                    ? l10n.liveViewTapToFocusVolume
-                    : l10n.liveViewTapToFocus,
-                style: TextStyle(fontSize: 11.5, color: c.t2),
-              ),
-              const SizedBox(height: 8),
-            ],
+        _RoundButton(
+          key: const Key('live-close'),
+          icon: Icons.close_rounded,
+          label: l10n.liveViewBackToRemote,
+          onTap: () => _model.mode = ShootMode.remote,
+        ),
+        const SizedBox(width: 8),
+        const Expanded(
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: CameraPill(),
           ),
         ),
+        if (exposure != null)
+          Container(
+            key: const Key('live-exposure'),
+            height: 36,
+            constraints: const BoxConstraints(minWidth: 36),
+            padding: const EdgeInsets.symmetric(horizontal: 9),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: c.s2.withValues(alpha: .8),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: c.line2),
+            ),
+            child: Text(
+              exposureLabel(l10n, exposure),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: c.accent,
+              ),
+            ),
+          ),
       ],
+    );
+    final chips = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          _Chip(
+            key: const Key('live-chip-drive'),
+            icon: Icons.burst_mode_outlined,
+            label: split?.$1.label(l10n) ?? '—',
+            onTap: _model.canShoot
+                ? () => unawaited(showDrivePicker(context, _model))
+                : null,
+          ),
+          _Chip(
+            key: const Key('live-chip-timer'),
+            icon: Icons.timer_outlined,
+            label: split?.$2.label(l10n) ?? '—',
+            onTap: _model.canShoot && split?.$1 != ShootDrive.continuous
+                ? () => unawaited(_pickTimer())
+                : null,
+          ),
+          for (final (key, icon, title) in [
+            ('meteringMode', Icons.filter_center_focus, l10n.liveViewMetering),
+            ('effect', Icons.tune_rounded, l10n.liveViewImageControl),
+          ])
+            if (_live.props?.setting(key)?.current case final v?)
+              _Chip(
+                key: Key('live-chip-$key'),
+                icon: icon,
+                label: settingLabel(l10n, key, v),
+                onTap: _editable(key) == null
+                    ? null
+                    : () => unawaited(_pick(key, title)),
+              ),
+        ],
+      ),
+    );
+    final above = [
+      Padding(padding: const EdgeInsets.fromLTRB(18, 6, 18, 0), child: topBar),
+      const SizedBox(height: 14),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: ShootModeSwitch(
+          mode: _model.mode,
+          onChanged: (m) => _model.mode = m,
+        ),
+      ),
+      const SizedBox(height: 12),
+      chips,
+    ];
+    List<Widget> below({required double shutterInset}) => [
+      _Readouts(
+        live: _live,
+        readouts: _readouts,
+        selected: dialKey,
+        editable: (k) => _editable(k) != null,
+        onTap: (k) => setState(() => _dialKey = dialKey == k ? null : k),
+      ),
+      // The dial's room is kept when it is closed, so opening it does not
+      // push the readouts up.
+      SizedBox(
+        height: _Dial.slotHeight,
+        child: dialKey == null
+            ? null
+            : _Dial(
+                key: Key('live-dial-$dialKey'),
+                setting: _editable(dialKey)!,
+                onSelect: (v) => unawaited(_set(dialKey, v)),
+              ),
+      ),
+      const SizedBox(height: 16),
+      Padding(
+        padding: EdgeInsets.symmetric(horizontal: shutterInset),
+        child: Row(
+          children: [
+            _LastShot(bytes: _live.lastShot),
+            Expanded(
+              child: Center(
+                child: ShutterButton(
+                  model: _model,
+                  size: 80,
+                  color: const Color(0xFFF6F4EF),
+                  ringGap: 5,
+                ),
+              ),
+            ),
+            const SizedBox(width: 56),
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Text(
+          volumeShutter
+              ? l10n.liveViewTapToFocusVolume
+              : l10n.liveViewTapToFocus,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 11.5, color: c.t2),
+        ),
+      ),
+      const SizedBox(height: 8),
+    ];
+    return SafeArea(
+      child: LayoutBuilder(
+        builder: (context, box) {
+          final picture = _Picture(model: _model);
+          if (!_sideBySide(box.biggest)) {
+            return Column(
+              children: [
+                ...above,
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: picture,
+                  ),
+                ),
+                ...below(shutterInset: 40),
+              ],
+            );
+          }
+          return Row(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: picture,
+                ),
+              ),
+              SizedBox(
+                width: _panelWidth(box.maxWidth),
+                child: LayoutBuilder(
+                  builder: (context, panel) => SingleChildScrollView(
+                    key: const Key('live-panel'),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: panel.maxHeight),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(children: above),
+                          Column(
+                            children: [
+                              const SizedBox(height: 12),
+                              ...below(shutterInset: 16),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
 
-/// The picture, whole and centred, with the focus mark; or, until frames
-/// come, the steps of joining the camera's Wi-Fi or why it failed.
+/// The picture, whole and centred, turned upright as the camera is held,
+/// with the focus mark; or, until frames come, the steps of joining the
+/// camera's Wi-Fi or why it failed.
 class _Picture extends StatelessWidget {
   const new({required this.model});
 
@@ -344,45 +437,64 @@ class _Picture extends StatelessWidget {
           ],
         );
       }
-      return Center(
-        child: Padding(
-          key: Key('live-${phase.name}'),
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: content,
+      // The picture's room may be short (a landscape window): the steps
+      // scroll then.
+      return LayoutBuilder(
+        builder: (context, box) => SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: box.maxHeight),
+            child: Center(
+              child: Padding(
+                key: Key('live-${phase.name}'),
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: content,
+              ),
+            ),
+          ),
         ),
       );
     }
+    final turns = live.orientation?.quarterTurns ?? 0;
     return ValueListenableBuilder<LiveViewFrame?>(
       valueListenable: live.frame,
       builder: (context, frame, _) {
         if (frame == null) return const SizedBox.shrink();
         final d = frame.dimensions;
-        final aspect = d == null || d.height == 0 ? 3 / 2 : d.width / d.height;
+        final aspect = d == null || d.width == 0 || d.height == 0
+            ? 3 / 2
+            : d.width / d.height;
         return Center(
           child: AspectRatio(
-            aspectRatio: aspect,
-            child: LayoutBuilder(
-              builder: (context, box) => GestureDetector(
-                key: const Key('live-picture'),
-                onTapUp: (t) => unawaited(
-                  live.focusAt(
-                    Offset(
-                      t.localPosition.dx / box.maxWidth,
-                      t.localPosition.dy / box.maxHeight,
+            aspectRatio: turns.isOdd ? 1 / aspect : aspect,
+            // Turned as a whole: taps and the focus mark stay in the
+            // frame's own layout, which is how the camera takes a focus
+            // point (remote-shooting.md §3.2).
+            child: RotatedBox(
+              key: Key('live-turned-$turns'),
+              quarterTurns: turns,
+              child: LayoutBuilder(
+                builder: (context, box) => GestureDetector(
+                  key: const Key('live-picture'),
+                  onTapUp: (t) => unawaited(
+                    live.focusAt(
+                      Offset(
+                        t.localPosition.dx / box.maxWidth,
+                        t.localPosition.dy / box.maxHeight,
+                      ),
                     ),
                   ),
-                ),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.memory(
-                      frame.jpeg,
-                      gaplessPlayback: true,
-                      fit: BoxFit.fill,
-                    ),
-                    if (live.focus case final f?)
-                      _FocusMark(mark: f, size: box.biggest),
-                  ],
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.memory(
+                        frame.jpeg,
+                        gaplessPlayback: true,
+                        fit: BoxFit.fill,
+                      ),
+                      if (live.focus case final f?)
+                        _FocusMark(mark: f, size: box.biggest),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -466,35 +578,46 @@ class _Readouts extends StatelessWidget {
                 key: Key('live-readout-$key'),
                 behavior: HitTestBehavior.opaque,
                 onTap: editable(key) ? () => onTap(key) : null,
-                child: Column(
-                  children: [
-                    Text(
-                      _readoutLabel(l10n, key).toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: .6,
-                        color: c.t2,
+                // A narrow window shrinks the text rather than wrapping
+                // a value over two lines.
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: Column(
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          _readoutLabel(l10n, key).toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: .6,
+                            color: c.t2,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      switch (props?.setting(key)?.current) {
-                        final v? => settingLabel(l10n, key, v),
-                        null => '—',
-                      },
-                      style: GrFonts.monoStyle(
-                        context,
-                        size: 17,
-                        weight: FontWeight.w500,
-                        color: key == selected
-                            ? c.accent
-                            : editable(key)
-                            ? c.t1
-                            : c.t2,
+                      const SizedBox(height: 3),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          switch (props?.setting(key)?.current) {
+                            final v? => settingLabel(l10n, key, v),
+                            null => '—',
+                          },
+                          style: GrFonts.monoStyle(
+                            context,
+                            size: 17,
+                            weight: FontWeight.w500,
+                            color: key == selected
+                                ? c.accent
+                                : editable(key)
+                                ? c.t1
+                                : c.t2,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

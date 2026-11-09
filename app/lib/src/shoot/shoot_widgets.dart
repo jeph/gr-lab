@@ -10,6 +10,7 @@ import 'package:grlab/src/theme/tokens.dart';
 import 'package:intl/intl.dart';
 
 /// Remote / Live view, at the top of Shoot in both modes (mock `.modeseg`).
+/// Shrinks to fit a narrow window or large text rather than overflowing.
 class ShootModeSwitch extends StatelessWidget {
   const new({required this.mode, required this.onChanged, super.key});
 
@@ -20,57 +21,60 @@ class ShootModeSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
-    return Container(
-      key: const Key('shoot-mode'),
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: c.s2.withValues(alpha: .8),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: c.line),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final (m, icon, label) in [
-            (ShootMode.remote, Icons.bluetooth_rounded, l10n.shootModeRemote),
-            (ShootMode.liveView, Icons.wifi_rounded, l10n.shootModeLiveView),
-          ])
-            Semantics(
-              button: true,
-              selected: m == mode,
-              excludeSemantics: true,
-              label: label,
-              child: GestureDetector(
-                key: Key('shoot-mode-${m.name}'),
-                behavior: HitTestBehavior.opaque,
-                onTap: () => onChanged(m),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  height: 32,
-                  padding: const EdgeInsets.symmetric(horizontal: 15),
-                  decoration: BoxDecoration(
-                    color: m == mode ? c.s4 : Colors.transparent,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(icon, size: 15, color: m == mode ? c.t1 : c.t2),
-                      const SizedBox(width: 7),
-                      Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                          color: m == mode ? c.t1 : c.t2,
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Container(
+        key: const Key('shoot-mode'),
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: c.s2.withValues(alpha: .8),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: c.line),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final (m, icon, label) in [
+              (ShootMode.remote, Icons.bluetooth_rounded, l10n.shootModeRemote),
+              (ShootMode.liveView, Icons.wifi_rounded, l10n.shootModeLiveView),
+            ])
+              Semantics(
+                button: true,
+                selected: m == mode,
+                excludeSemantics: true,
+                label: label,
+                child: GestureDetector(
+                  key: Key('shoot-mode-${m.name}'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onChanged(m),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    height: 32,
+                    padding: const EdgeInsets.symmetric(horizontal: 15),
+                    decoration: BoxDecoration(
+                      color: m == mode ? c.s4 : Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(icon, size: 15, color: m == mode ? c.t1 : c.t2),
+                        const SizedBox(width: 7),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: m == mode ? c.t1 : c.t2,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

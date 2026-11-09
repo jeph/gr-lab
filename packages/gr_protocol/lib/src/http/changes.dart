@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:gr_protocol/src/camera_address.dart';
 import 'package:gr_protocol/src/http/json.dart';
+import 'package:gr_protocol/src/http/models.dart';
 import 'package:gr_protocol/src/http/request.dart';
 import 'package:gr_protocol/src/trace.dart';
 
@@ -108,7 +109,9 @@ final class GrCameraChange extends GrChangeEvent {
   new(super.raw, super.receivedAt);
 }
 
-/// `changed:"cameraDirect"`: capture state (remote-shooting.md §2.3 table).
+/// `changed:"cameraDirect"`: capture state and how the camera is held
+/// (remote-shooting.md §2.3 table). The GR IV sends it when one of them
+/// changes (§1.5).
 final class GrCameraDirectChange extends GrChangeEvent {
   /// Wraps a parsed `cameraDirect` message.
   new(super.raw, super.receivedAt);
@@ -136,6 +139,10 @@ final class GrCameraDirectChange extends GrChangeEvent {
   /// Drive mode, e.g. `single`, `continuous`, `self2s` (the `/v1/props`
   /// `shootMode` values).
   String? get shootMode => fields.string('shootMode');
+
+  /// How the camera is held; null when absent or not a known value.
+  GrCameraOrientation? get cameraOrientation =>
+      GrCameraOrientation.parse(fields.string('cameraOrientation'));
 
   /// Image Sync's GR III still-capture completion rule: `stateStill` in
   /// {idle, continuous}, `countDown == idle` and not `capturing`.

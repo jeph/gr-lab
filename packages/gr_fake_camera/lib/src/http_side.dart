@@ -173,6 +173,7 @@ extension on FakeGrCamera {
     'countDown': _countDownText,
     'stateStill': _capturing ? 'busy' : 'idle',
     'stateMovie': 'idle',
+    'cameraOrientation': _orientation.wire,
   };
 
   Future<String> _body(HttpRequest request) =>
