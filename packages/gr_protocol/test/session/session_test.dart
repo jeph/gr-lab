@@ -46,6 +46,9 @@ final class BondedCamera implements BleTransport {
   /// While set, a WLAN write waits for it before it lands.
   Completer<void>? holdWlanWrite;
 
+  /// While set, a WLAN Security read that does not fail waits for it.
+  Completer<void>? holdSecurityRead;
+
   /// While set, a read of the Wi-Fi SSID waits for it.
   Completer<void>? holdSsidRead;
 
@@ -166,6 +169,7 @@ final class _Link implements BleConnection {
         camera.securityReadFailures--;
         throw const BleException(BleErrorCode.gatt, 'read failed');
       }
+      await camera.holdSecurityRead?.future;
       return Uint8List.fromList([camera.security]);
     }
     final values = {
@@ -896,8 +900,8 @@ void main() {
         expect(
           events.map((e) => e.kind),
           containsAllInOrder([
-            'wifi.securityReadFailed',
             'wifi.securityUnknown',
+            'wifi.securityReadFailed',
             'wifi.join',
             'wifi.joinRetry',
             'wifi.join',
@@ -919,6 +923,36 @@ void main() {
         await s.close();
       },
     );
+
+    test('a slow second security read of a camera the start turned on runs '
+        'in the joining phase, so WLAN-on is written again', () async {
+      final camera = BondedCamera(
+        operationMode: 2,
+        security: 1,
+        securityReadFailures: 1,
+      )..holdSecurityRead = Completer<void>();
+      final wifi = SecuredApWifi(WifiSecurity.wpa3);
+      final s = wifiSession(camera, wifi, await CameraServer.start());
+      final kinds = <String>[];
+      s.events.listen((e) => kinds.add(e.kind));
+      final connected = s.connect(deviceId: 'cam');
+      final watch = Stopwatch()..start();
+      while (camera.ops.where((o) => o == 'read security').length < 2) {
+        if (watch.elapsed > const Duration(seconds: 5)) fail('no reread');
+        await Future<void>.delayed(const Duration(milliseconds: 1));
+      }
+      // Well past wakeSettle (20 ms) with the read still pending: the
+      // wake's watch finds a join in progress.
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      expect(s.phase, GrSessionPhase.joining);
+      camera.holdSecurityRead!.complete();
+      await connected;
+      expect(s.phase, GrSessionPhase.connected);
+      expect(kinds, contains('wlan.again'));
+      expect(camera.ops.where((o) => o == 'write wlan 1'), hasLength(2));
+      expect(wifi.joins, [WifiSecurity.wpa3]);
+      await s.close();
+    });
   });
 
   group('wake', () {

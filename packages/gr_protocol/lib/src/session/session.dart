@@ -350,9 +350,9 @@ final class GrSession {
   GrBleIdentity? _identity;
   GrWifiCredentials? _credentials;
 
-  /// Security the joins use: the credentials', else what [_wlanOn] read
-  /// again, else the one a join with unknown security got through with;
-  /// null while unknown ([_joinAndVerify]).
+  /// Security the joins use: the credentials', else what [_joinAndVerify]
+  /// read again, else the one a join with unknown security got through
+  /// with; null while unknown.
   WifiSecurity? _joinSecurity;
   GrHttpClient? _http;
   GrProps? _props;
@@ -1028,8 +1028,6 @@ final class GrSession {
   }
 
   /// Reads the Wi-Fi credentials (once per session) and writes WLAN-on.
-  /// Security the credentials left unknown is read once more after
-  /// WLAN-on, while the AP comes up ([_readSecurityAgain]).
   Future<void> _wlanOn() async {
     final ble = _link(GrSessionPhase.wlanOn);
     final credentials =
@@ -1057,13 +1055,17 @@ final class GrSession {
       'WLAN-on write',
       () => ble.setWlan(on: true),
     );
-    _joinSecurity ??= credentials.wifiSecurity ?? await _readSecurityAgain(ble);
   }
 
   /// Reads WLAN Security again for credentials that had it present but
-  /// unreadable or undocumented (GrWifiCredentials.wifiSecurity null); a
-  /// read that fails or decodes no known value returns null.
-  Future<WifiSecurity?> _readSecurityAgain(GrBleClient ble) async {
+  /// unreadable or undocumented (GrWifiCredentials.wifiSecurity null); no
+  /// link, a failed read or no known value returns null.
+  Future<WifiSecurity?> _readSecurityAgain() async {
+    final ble = _ble;
+    if (ble == null) {
+      _emit('wifi.securityReadFailed', {'error': 'the Bluetooth link dropped'});
+      return null;
+    }
     try {
       final decoded = await ble.read(GrBleCatalog.wlanSecurity);
       final security = decoded.value?.known?.wifiSecurity;
@@ -1315,26 +1317,34 @@ final class GrSession {
   /// twice. Transition-mode APs accept WPA2, which is what GR WORLD's
   /// approval on a test phone records (GR IV HDF, 2026-11-08).
   ///
-  /// Security still unknown after [_wlanOn] read it again (the camera has
-  /// the characteristic, but it could not be read or decoded) is tried both
-  /// ways \[design\]: WPA2 for the first half of
-  /// [GrSessionOptions.joinTimeout], then WPA3 for the rest, each attempt
-  /// traced with its security. WPA2 first because GR WORLD joins an unknown
-  /// security type with WPA2 (research/protocol/connection-lifecycle.md
-  /// §3), the GR IV's hostapd generator takes its WPA2 branch when its
-  /// security property cannot be read or holds an unknown value, and WPA2
-  /// joins a transition-mode AP (research/firmware-network-config.md §2);
-  /// WPA3 then reaches a WPA3-only AP, whose SAE-only, PMF-required
-  /// configuration a WPA2 join cannot use. Only this case may ask for
-  /// approval twice. The security that got through is kept for later joins.
+  /// Security the credentials left unknown (the camera has the
+  /// characteristic, but it could not be read or decoded) is read once
+  /// more in the joining phase, so a wake's [_settleAfterWake] can still
+  /// write WLAN-on again meanwhile; the read counts against
+  /// [GrSessionOptions.joinTimeout]. Still unknown, it is tried both ways
+  /// \[design\]: WPA2 for the first half of the join time left, then WPA3
+  /// for the rest, each attempt traced with its security. WPA2 first
+  /// because GR WORLD joins an unknown security type with WPA2
+  /// (research/protocol/connection-lifecycle.md §3), the GR IV's hostapd
+  /// generator takes its WPA2 branch when its security property cannot be
+  /// read or holds an unknown value, and WPA2 joins a transition-mode AP
+  /// (research/firmware-network-config.md §2); WPA3 then reaches a
+  /// WPA3-only AP, whose SAE-only, PMF-required configuration a WPA2 join
+  /// cannot use. Only this case may ask for approval twice. The security
+  /// that got through is kept for later joins.
   Future<void> _joinAndVerify() async {
     final c = _credentials!;
-    final now = DateTime.now();
-    final deadline = now.add(options.joinTimeout);
+    final deadline = DateTime.now().add(options.joinTimeout);
+    _joinSecurity ??= c.wifiSecurity;
+    if (_joinSecurity == null) {
+      _set(_joiningPhase, 'wifi.securityUnknown');
+      _joinSecurity = await _readSecurityAgain();
+      _checkWifiStopped(GrSessionPhase.joining);
+    }
     final known = _joinSecurity;
     final tries = known == null
         ? [
-            (WifiSecurity.wpa2, now.add(options.joinTimeout ~/ 2)),
+            (WifiSecurity.wpa2, _halfwayTo(deadline)),
             (WifiSecurity.wpa3, deadline),
           ]
         : [
@@ -1345,11 +1355,6 @@ final class GrSession {
               deadline,
             ),
           ];
-    if (known == null) {
-      _emit('wifi.securityUnknown', {
-        'tries': [for (final (security, _) in tries) security.name],
-      });
-    }
     for (final (index, (security, until)) in tries.indexed) {
       final last = index == tries.length - 1;
       if (!await _join(c, security, until, last: last)) continue;
@@ -1360,6 +1365,16 @@ final class GrSession {
     }
   }
 
+  /// Halfway between now and [deadline].
+  static DateTime _halfwayTo(DateTime deadline) {
+    final now = DateTime.now();
+    return now.add(deadline.difference(now) ~/ 2);
+  }
+
+  /// The phase of a join: recovery keeps its own.
+  GrSessionPhase get _joiningPhase =>
+      _phase == GrSessionPhase.recovering ? _phase : GrSessionPhase.joining;
+
   /// Joins [c]'s network with [security] until [until]. False when that
   /// passed without a join and another security follows; throws when this
   /// was the [last].
@@ -1369,11 +1384,10 @@ final class GrSession {
     DateTime until, {
     required bool last,
   }) async {
-    _set(
-      _phase == GrSessionPhase.recovering ? _phase : GrSessionPhase.joining,
-      'wifi.join',
-      {'ssid': c.ssid, 'security': security.name},
-    );
+    _set(_joiningPhase, 'wifi.join', {
+      'ssid': c.ssid,
+      'security': security.name,
+    });
     // The AP comes up several seconds after WLAN-on (GR IV HDF: a join at
     // 0 s found no network, one at 16 s succeeded), so retry until [until].
     var attempt = 0;
