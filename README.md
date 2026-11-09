@@ -58,10 +58,11 @@ The analyzer uses `very_good_analysis` with infos treated as errors. Android and
 (cd packages/gr_fake_camera && dart test)
 (cd packages/gr_camera && flutter test)
 (cd app && flutter test)
-(cd app && flutter test integration_test --dart-define=GR_DEMO=true -d <device>)
+(cd app && flutter build apk --debug --flavor dev --dart-define=GR_DEMO=true)
+(cd app && flutter test integration_test --flavor dev --dart-define=GR_DEMO=true -d <device>)
 ```
 
-The integration test runs the whole demo flow (pair, connect, browse, download two shots) on a device, emulator or simulator. A debug build needs about 400 MB free on the emulator.
+The integration test runs the whole demo flow (pair, connect, browse, download two shots) on a device, emulator or simulator. A debug build needs about 400 MB free on the emulator. On Android, `flutter test` takes neither the default flavor nor the app's ID from the project, so it needs `--flavor dev` and an APK built beforehand; without them it stops with "No application found".
 
 On the iOS simulator, the app must be installed when Photos access is granted, and `flutter test` uninstalls it afterwards, which deletes the grant. Grant it before every run:
 
