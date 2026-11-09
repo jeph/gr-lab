@@ -37,13 +37,13 @@ Future<void> openLookEditor(
   ),
 );
 
-/// Opens the editor on a new look: the first base image the camera
-/// offers, with every adjustment neutral. Does nothing without
-/// [LooksModel.template].
+/// Opens the editor on a new look: the first base image it can be given
+/// ([LooksModel.basesFor]), with every adjustment neutral. Does nothing
+/// without [LooksModel.template].
 Future<void> openNewLook(BuildContext context, LooksModel model) async {
   final template = model.template;
   if (template == null) return;
-  final base = lookBases(model.body).first;
+  final base = model.basesFor(template).first;
   await openLookEditor(
     context,
     model: model,
@@ -55,7 +55,7 @@ Future<void> openNewLook(BuildContext context, LooksModel model) async {
 
 /// The look editor (mock `b-look-edit`): before and an approximate preview,
 /// the base image, its parameters grouped as Tone, Colour, Detail and
-/// Effects, then Save and Load into the slot.
+/// Effects, then Save and, on a camera's Looks page, Load into the slot.
 class LookEditor extends StatefulWidget {
   const new({
     required this.model,
@@ -199,9 +199,8 @@ class _LookEditorState extends State<LookEditor> {
           if (params.any((p) => groupOf(p) == g)) g,
       ];
       final group = groups.contains(_group) ? _group! : groups.firstOrNull;
-      final offered = _look.offeredBy(_model.body);
-      final canLoad =
-          offered && _model.state == SlotsState.ready && _model.loading == null;
+      final canLoad = _model.canLoad(_look);
+      final save = _unsaved ? () => unawaited(_save()) : null;
       return Scaffold(
         key: const Key('look-editor'),
         appBar: AppBar(
@@ -218,16 +217,17 @@ class _LookEditorState extends State<LookEditor> {
                   value: _EditorAction.rename,
                   child: Text(l10n.looksRename),
                 ),
-                for (final (n, a) in const [
-                  (1, _EditorAction.load1),
-                  (2, _EditorAction.load2),
-                  (3, _EditorAction.load3),
-                ])
-                  PopupMenuItem(
-                    value: a,
-                    enabled: canLoad,
-                    child: Text(l10n.looksLoadInto(n)),
-                  ),
+                if (_model.onCamera)
+                  for (final (n, a) in const [
+                    (1, _EditorAction.load1),
+                    (2, _EditorAction.load2),
+                    (3, _EditorAction.load3),
+                  ])
+                    PopupMenuItem(
+                      value: a,
+                      enabled: canLoad,
+                      child: Text(l10n.looksLoadInto(n)),
+                    ),
                 if (_saved != null)
                   PopupMenuItem(
                     value: _EditorAction.delete,
@@ -272,7 +272,7 @@ class _LookEditorState extends State<LookEditor> {
                 height: 40,
                 child: Row(
                   children: [
-                    for (final b in lookBases(_model.body))
+                    for (final b in _model.basesFor(_look))
                       Padding(
                         key: b == widget.look.base ? _openedBase : null,
                         padding: const EdgeInsets.only(right: 8),
@@ -323,7 +323,7 @@ class _LookEditorState extends State<LookEditor> {
                 ],
               ),
             ),
-            if (!offered)
+            if (_model.onCamera && !_look.offeredBy(_model.body))
               Padding(
                 key: const Key('look-not-offered'),
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
@@ -336,37 +336,47 @@ class _LookEditorState extends State<LookEditor> {
               top: false,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 5,
-                      child: OutlinedButton(
-                        key: const Key('look-save'),
-                        onPressed: _unsaved ? () => unawaited(_save()) : null,
-                        child: Text(l10n.looksSave),
+                child: _model.onCamera
+                    ? Row(
+                        children: [
+                          Expanded(
+                            flex: 5,
+                            child: OutlinedButton(
+                              key: const Key('look-save'),
+                              onPressed: save,
+                              child: Text(l10n.looksSave),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 8,
+                            child: FilledButton.icon(
+                              key: const Key('look-load'),
+                              onPressed: canLoad
+                                  ? () => unawaited(_load(_target))
+                                  : null,
+                              icon: _model.loading == _target
+                                  ? const SizedBox.square(
+                                      dimension: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.upload_rounded, size: 18),
+                              label: Text(l10n.looksLoadInto(_target)),
+                            ),
+                          ),
+                        ],
+                      )
+                    // Saving is all a look can do away from a camera.
+                    : SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          key: const Key('look-save'),
+                          onPressed: save,
+                          child: Text(l10n.looksSave),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      flex: 8,
-                      child: FilledButton.icon(
-                        key: const Key('look-load'),
-                        onPressed: canLoad
-                            ? () => unawaited(_load(_target))
-                            : null,
-                        icon: _model.loading == _target
-                            ? const SizedBox.square(
-                                dimension: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.upload_rounded, size: 18),
-                        label: Text(l10n.looksLoadInto(_target)),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
           ],

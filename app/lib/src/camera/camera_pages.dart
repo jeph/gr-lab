@@ -8,11 +8,13 @@ import 'package:grlab/src/looks/looks_model.dart';
 import 'package:grlab/src/looks/looks_screen.dart';
 import 'package:grlab/src/shoot/shoot_model.dart';
 import 'package:grlab/src/shoot/shoot_screen.dart';
+import 'package:grlab/src/widgets/dock.dart';
 
-/// The camera's pages, Library, Shoot and Looks, switched with the
-/// floating tab bar ([ConnectionController.tab]). A page is built the first
-/// time it is shown and kept while the pages are open, so switching keeps
-/// the Library's scroll position and Shoot's state.
+/// The camera's pages, Library, Shoot and Looks (when the camera has
+/// Custom slots to load looks into, [ConnectionController.tabs]), switched
+/// with the floating tab bar ([ConnectionController.tab]). A page is built
+/// the first time it is shown and kept while the pages are open, so
+/// switching keeps the Library's scroll position and Shoot's state.
 class CameraPages extends StatefulWidget {
   const new({super.key});
 
@@ -26,7 +28,7 @@ class _CameraPagesState extends State<CameraPages> {
     connection: _app.connection,
     settings: _app.settings,
   );
-  late final LooksModel _looks = LooksModel(
+  late final LooksModel _looks = LooksModel.camera(
     connection: _app.connection,
     store: _app.looks,
   );
@@ -70,54 +72,35 @@ class _CameraPagesState extends State<CameraPages> {
       // Live view is laid out like a camera app: the bar steps aside.
       final bar =
           !(_tab == CameraTab.shoot && _shoot.mode == ShootMode.liveView);
-      final media = MediaQuery.of(context);
-      final pages = IndexedStack(
-        index: _tab.index,
-        children: [
-          for (final tab in CameraTab.values)
-            TickerMode(
-              enabled: tab == _tab,
-              child: !_built.contains(tab)
-                  ? const SizedBox.shrink()
-                  : switch (tab) {
-                      CameraTab.library => const LibraryScreen(),
-                      CameraTab.shoot => ShootScreen(model: _shoot),
-                      CameraTab.looks => LooksScreen(model: _looks),
-                    },
-            ),
-        ],
-      );
-      return Stack(
-        children: [
-          // Pages keep their content above the bar, and so do floating snack
-          // bars, which Scaffold places above the view padding.
-          MediaQuery(
-            data: bar
-                ? media.copyWith(
-                    padding: media.padding.copyWith(
-                      bottom: media.padding.bottom + CameraTabBar.height + 8,
-                    ),
-                    viewPadding: media.viewPadding.copyWith(
-                      bottom:
-                          media.viewPadding.bottom + CameraTabBar.height + 8,
-                    ),
-                  )
-                : media,
-            child: pages,
-          ),
-          if (bar)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: media.padding.bottom + 12,
-              child: Center(
-                child: CameraTabBar(
-                  tab: _tab,
-                  onSelect: _app.connection.selectTab,
+      return DockLayout(
+        dock: bar
+            ? CameraTabBar(
+                tabs: _app.connection.tabs,
+                tab: _tab,
+                onSelect: _app.connection.selectTab,
+              )
+            : null,
+        child: IndexedStack(
+          index: _tab.index,
+          children: [
+            for (final tab in CameraTab.values)
+              // Every built page's Scaffold shows the same snack bar; only
+              // the one in front may take part in a route's hero flight.
+              HeroMode(
+                enabled: tab == _tab,
+                child: TickerMode(
+                  enabled: tab == _tab,
+                  child: !_built.contains(tab)
+                      ? const SizedBox.shrink()
+                      : switch (tab) {
+                          CameraTab.library => const LibraryScreen(),
+                          CameraTab.shoot => ShootScreen(model: _shoot),
+                          CameraTab.looks => LooksScreen(model: _looks),
+                        },
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       );
     },
   );

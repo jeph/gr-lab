@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/camera/camera_pages.dart';
-import 'package:grlab/src/cameras/cameras_screen.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/connection/idle_disconnect.dart';
 import 'package:grlab/src/connection/wifi_consent_dialog.dart';
+import 'package:grlab/src/home/home_pages.dart';
 import 'package:grlab/src/theme/tokens.dart';
 
 class GrLabApp extends StatelessWidget {
@@ -38,14 +38,13 @@ class GrLabApp extends StatelessWidget {
   );
 }
 
-/// The Cameras screen, with the camera's pages (Library and Shoot) pushed
-/// over it while [ConnectionController.tab] is set and the camera is
-/// linked. Going back from them closes them
-/// ([ConnectionController.closeCamera]); the session ending pops back to
-/// the Cameras screen, closing whatever was open over them. Also tells the
-/// connection whether
-/// the app is in front, and asks before the first join of a camera's
-/// Wi-Fi when the platform needs it.
+/// The home pages (the Cameras screen and the saved looks), with the
+/// camera's pages (Library, Shoot and Looks) pushed over them while
+/// [ConnectionController.tab] is set and the camera is linked. Going back
+/// from them closes them ([ConnectionController.closeCamera]); the session
+/// ending pops back to the home pages, closing whatever was open over
+/// them. Also tells the connection whether the app is in front, and asks
+/// before the first join of a camera's Wi-Fi when the platform needs it.
 class RootScreen extends StatefulWidget {
   const new({super.key});
 
@@ -155,6 +154,6 @@ class _RootScreenState extends State<RootScreen> {
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: _models.connection,
-    builder: (context, _) => CamerasScreen(autoConnect: _autoConnect),
+    builder: (context, _) => HomePages(autoConnect: _autoConnect),
   );
 }

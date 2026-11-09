@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 
+import 'package:grlab/src/camera/camera_pages.dart';
+
 import '../support/test_app.dart';
 
 const _quietLiveness = GrSessionOptions(
@@ -14,13 +16,14 @@ const _quietLiveness = GrSessionOptions(
 );
 
 /// The whole app with the fake camera ([model], a GR IV by default, on
-/// [firmware]) paired and off, on the Looks tab. [saveModel] false saves it
-/// without its model; the camera fails reads of the [unreadable]
+/// [firmware]) off, paired unless [saveCamera] is false. [saveModel] false
+/// saves it without its model; the camera fails reads of the [unreadable]
 /// characteristics.
-Future<TestApp> _inLooks(
+Future<TestApp> _start(
   WidgetTester tester, {
   String model = 'RICOH GR IV',
   String firmware = '1.20',
+  bool saveCamera = true,
   bool saveModel = true,
   Set<String> unreadable = const {},
 }) async {
@@ -37,12 +40,30 @@ Future<TestApp> _inLooks(
         firmware: firmware,
         unreadable: unreadable,
       ),
-      saveCamera: true,
+      saveCamera: saveCamera,
       saveModel: saveModel,
       sessionOptions: _quietLiveness,
     ),
   ))!;
   await app.pumpApp(tester);
+  return app;
+}
+
+/// [_start], on the camera's Looks tab.
+Future<TestApp> _inLooks(
+  WidgetTester tester, {
+  String model = 'RICOH GR IV',
+  String firmware = '1.20',
+  bool saveModel = true,
+  Set<String> unreadable = const {},
+}) async {
+  final app = await _start(
+    tester,
+    model: model,
+    firmware: firmware,
+    saveModel: saveModel,
+    unreadable: unreadable,
+  );
   await tapWhenReady(tester, find.byKey(const Key('camera-card-shoot')));
   await tapWhenReady(tester, find.byKey(const Key('camera-tab-looks')));
   await pumpUntilFound(tester, find.byKey(const Key('looks')));
@@ -148,17 +169,16 @@ void main() {
     expect(app.camera.lookSlot(1).data, isNot(held));
   });
 
-  testWidgets('a GR III has no slots to show and is not turned on for them', (
-    tester,
-  ) async {
-    final app = await _inLooks(tester, model: 'RICOH GR III');
-    await pumpUntilFound(
-      tester,
-      find.text(
-        "GR Lab can load looks into the GR IV family only. This camera's "
-        "Custom slots can't be reached over Bluetooth.",
-      ),
-    );
+  testWidgets("a GR III's card and pages offer no Looks, so it is not turned "
+      'on for them', (tester) async {
+    final app = await _start(tester, model: 'RICOH GR III');
+    await pumpUntilFound(tester, find.byKey(const Key('camera-card-shoot')));
+    expect(find.byKey(const Key('camera-card-looks')), findsNothing);
+
+    await tapWhenReady(tester, find.byKey(const Key('camera-card-shoot')));
+    await pumpUntilFound(tester, find.byKey(const Key('camera-tabs')));
+    expect(find.byKey(const Key('camera-tab-shoot')), findsOneWidget);
+    expect(find.byKey(const Key('camera-tab-looks')), findsNothing);
     await pumpUntil(
       tester,
       () => app.models.connection.bleLinked,
@@ -222,6 +242,90 @@ void main() {
       reason: 'linked',
     );
     expect(app.camera.poweredOn, isFalse);
+    await app.dispose();
+  });
+
+  testWidgets('looks saved from a camera stay on the phone once it is '
+      "forgotten, on the home dock's Looks", (tester) async {
+    final app = await _inLooks(tester);
+    final looks = app.models.looks;
+    await tapWhenReady(tester, _inSlot(2, 'Daido'));
+    await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
+    await tapWhenReady(tester, find.byKey(const Key('look-save')));
+    await tapWhenReady(tester, find.byKey(const Key('looks-name-ok')));
+    await pumpUntilFound(tester, find.text('Saved Daido'));
+    final street = (await tester.runAsync(
+      () => looks.add(
+        name: 'Street',
+        data: Uint8List.fromList(app.camera.lookSlot(1).data),
+        source: 'R0001234.JPG',
+        photo: Uint8List.fromList([0xff, 0xd8, 0xff, 0xd9]),
+      ),
+    ))!;
+
+    await tester.pageBack();
+    await tapWhenReady(tester, find.byKey(const Key('camera-back')));
+    await pumpUntil(
+      tester,
+      () => find.byType(CameraPages, skipOffstage: false).evaluate().isEmpty,
+      reason: 'camera pages closed',
+    );
+    await tapWhenReady(tester, find.byKey(const Key('camera-card-more')));
+    await tapWhenReady(tester, find.byKey(const Key('camera-forget')));
+    await tapWhenReady(tester, find.byKey(const Key('camera-forget-confirm')));
+    await pumpUntilFound(tester, find.byKey(const Key('cameras-welcome')));
+
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+    await pumpUntilFound(tester, find.text('From C2'));
+    expect(find.text('From R0001234.JPG'), findsOneWidget);
+    expect(looks.looks.map((l) => l.name), ['Street', 'Daido']);
+    expect(looks.photoOf(street), isNotNull);
+    await app.dispose();
+  });
+
+  testWidgets("the phone's Looks edits a look with no camera: no slots or "
+      'loading, and the bases of its own kind', (tester) async {
+    final app = await _start(tester, saveCamera: false);
+    final looks = app.models.looks;
+    final mono = Look.fromBytes(
+      Uint8List.fromList(app.camera.lookSlot(2).data),
+    )!.withBase(LookBase.solid);
+    final saved = (await tester.runAsync(
+      () => looks.add(name: 'Solid', data: mono.toBytes()),
+    ))!;
+
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+    await pumpUntilFound(tester, find.byKey(ValueKey('look:${saved.id}')));
+    expect(find.byKey(const Key('looks-slot-1')), findsNothing);
+    expect(find.text('Saved'), findsNothing, reason: 'no slots to tag');
+
+    await tapWhenReady(tester, find.byKey(Key('look-menu:${saved.id}')));
+    await pumpUntilFound(tester, find.text('Rename'));
+    expect(find.text('Load into C1'), findsNothing);
+    await tester.tapAt(Offset.zero);
+    await pumpUntil(tester, () => find.text('Rename').evaluate().isEmpty);
+
+    await tapWhenReady(tester, find.byKey(ValueKey('look:${saved.id}')));
+    await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
+    expect(find.byKey(const Key('look-load')), findsNothing);
+    expect(find.byKey(const Key('look-not-offered')), findsNothing);
+    expect(find.byKey(const ValueKey('look-base:vivid')), findsNothing);
+    await tapWhenReady(
+      tester,
+      find.byKey(const ValueKey('look-base:standardMono')),
+    );
+    await tapWhenReady(tester, find.byKey(const Key('look-save')));
+    await pumpUntilFound(tester, find.text('Saved Solid'));
+    expect(looks.looks.single.look!.base, LookBase.standardMono);
+
+    await tester.pageBack();
+    await tapWhenReady(tester, find.byKey(const Key('looks-new')));
+    await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
+    expect(
+      find.byKey(const ValueKey('look-base:standardMono')),
+      findsOneWidget,
+      reason: 'a new look starts on the bases of the look it copies',
+    );
     await app.dispose();
   });
 

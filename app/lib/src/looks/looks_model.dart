@@ -9,7 +9,8 @@ import 'package:grlab/src/shoot/camera_error_code.dart';
 
 /// Where reading the camera's Custom slots stands.
 enum SlotsState {
-  /// Waiting for the Bluetooth link, or for the Looks tab to show.
+  /// Waiting for the Bluetooth link, or for the Looks tab to show; always,
+  /// away from a camera.
   idle,
 
   /// Turning the camera on and reading C1–C3.
@@ -20,10 +21,6 @@ enum SlotsState {
 
   /// Turning the camera on or reading the slots failed.
   failed,
-
-  /// The camera's model has no Custom slots GR Lab can reach
-  /// ([CameraFeature.lookSlots]).
-  unsupported,
 
   /// The camera's model has the Custom slots from a firmware version newer
   /// than the one it runs ([LooksModel.slotsFirmware]).
@@ -41,20 +38,33 @@ final class LoadRefusal {
   final String? code;
 }
 
-/// The Looks tab's state: the camera's Custom slots C1–C3 for this visit,
-/// matched against the user's saved looks ([LooksStore]).
+/// A Looks page's state: the user's saved looks ([LooksStore]) and, on a
+/// camera's page, the camera's Custom slots C1–C3 for this visit, matched
+/// against them.
 ///
-/// Showing the tab turns the camera on, as GR WORLD's Remote does for
-/// shooting, because a camera that is off does not serve its slots
+/// Showing a camera's page turns the camera on, as GR WORLD's Remote does
+/// for shooting, because a camera that is off does not serve its slots
 /// \[inferred\]; then C1–C3 are read, once per visit.
 final class LooksModel extends ChangeNotifier {
-  new({required this.connection, required this.store}) {
-    connection.addListener(_sync);
+  /// The Looks page of [connection]'s camera, which has Custom slots
+  /// ([CameraFeature.lookSlots], `ConnectionController.tabs`).
+  factory camera({
+    required ConnectionController connection,
+    required LooksStore store,
+  }) => LooksModel._(connection, store);
+
+  /// The looks saved on the phone, away from any camera: nothing to load
+  /// them into.
+  factory phone({required LooksStore store}) => LooksModel._(null, store);
+
+  new _(this.connection, this.store) {
+    connection?.addListener(_sync);
     store.addListener(_onChange);
     _sync();
   }
 
-  final ConnectionController connection;
+  /// The connection to the camera whose page this is; null on the phone's.
+  final ConnectionController? connection;
   final LooksStore store;
 
   final _refusals = StreamController<LoadRefusal>.broadcast();
@@ -71,13 +81,15 @@ final class LooksModel extends ChangeNotifier {
   /// A load the camera refused, for a snack bar.
   Stream<LoadRefusal> get refusals => _refusals.stream;
 
-  SlotsState get state {
-    final body = this.body;
-    if (body.supports(CameraFeature.lookSlots)) return _state;
-    return body.minimumFirmware(CameraFeature.lookSlots) == null
-        ? SlotsState.unsupported
-        : SlotsState.needsFirmware;
-  }
+  /// Whether this is a camera's Looks page, with its slots to load into.
+  bool get onCamera => connection != null;
+
+  /// A camera's page is shown only for a model with Custom slots
+  /// (`ConnectionController.tabs`); one on a firmware without them waits
+  /// for an update.
+  SlotsState get state => !onCamera || body.supports(CameraFeature.lookSlots)
+      ? _state
+      : SlotsState.needsFirmware;
 
   /// The firmware version the camera needs for its slots; null when no
   /// version of its model has them.
@@ -93,12 +105,8 @@ final class LooksModel extends ChangeNotifier {
   int? get loading => _loading;
 
   /// The camera's model and firmware, for the slots and base images it
-  /// offers: the session's (`CameraSession.body`, which fills what a link
-  /// did not read from the saved camera), else as last saved.
-  CameraBody get body =>
-      connection.cameraSession?.body ??
-      connection.camera?.body ??
-      CameraBody.unknown;
+  /// offers ([ConnectionController.body]); unknown away from a camera.
+  CameraBody get body => connection?.body ?? CameraBody.unknown;
 
   /// A look the camera produced, whose header a new look copies
   /// (`Look.onBase`): a slot's look, else a saved look's; null when there
@@ -112,6 +120,21 @@ final class LooksModel extends ChangeNotifier {
     }
     return null;
   }
+
+  /// The base images [look] can be given in the editor: the camera's
+  /// ([lookBases]) on its page, else those of the bodies that offer the
+  /// look's own base ([lookBasesWith]).
+  List<LookBase> basesFor(Look look) =>
+      onCamera ? lookBases(body) : lookBasesWith(look.base);
+
+  /// Whether [look] can be loaded into a slot now: on the camera's page,
+  /// with its slots read, no other load running and a base the camera
+  /// offers.
+  bool canLoad(Look look) =>
+      onCamera &&
+      look.offeredBy(body) &&
+      state == SlotsState.ready &&
+      _loading == null;
 
   /// Whether the Looks tab is showing. Showing it turns the camera on and
   /// reads C1–C3 (once per visit).
@@ -145,7 +168,7 @@ final class LooksModel extends ChangeNotifier {
     return same;
   }
 
-  /// The slots (1–3) holding [look].
+  /// The slots (1–3) holding [look]; none away from a camera.
   List<int> slotsHolding(SavedLook look) => [
     for (final s in slots ?? const <LookSlot>[])
       if (savedLookIn(s)?.id == look.id) s.number,
@@ -175,7 +198,8 @@ final class LooksModel extends ChangeNotifier {
   }
 
   void _sync() {
-    if (_disposed) return;
+    final connection = this.connection;
+    if (_disposed || connection == null) return;
     final session = connection.cameraSession;
     if (!identical(session, _session)) _attach(session);
     final looks = _looks;
@@ -224,7 +248,7 @@ final class LooksModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    connection.removeListener(_sync);
+    connection?.removeListener(_sync);
     store.removeListener(_onChange);
     _looks?.removeListener(_onChange);
     unawaited(_refusals.close());

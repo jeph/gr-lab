@@ -21,16 +21,21 @@ import 'package:grlab/src/widgets/group.dart';
 
 /// Where the app opens and where it returns whenever no camera is
 /// connected (mock `b-home` … `b-home-lost`, and `b-welcome` before any
-/// camera is paired). The camera used last is on a card with a drawing
-/// of it, its link and power, and its pages; the others are listed below
-/// it. While the screen is in front it scans, so each camera says whether
-/// it is nearby and switched on. One camera is connected at a time.
+/// camera is paired), on the home dock beside the saved looks. The camera
+/// used last is on a card with a drawing of it, its link and power, and
+/// its pages; the others are listed below it. While the screen is in front
+/// it scans, so each camera says whether it is nearby and switched on. One
+/// camera is connected at a time.
 class CamerasScreen extends StatefulWidget {
-  const new({super.key, this.autoConnect = false});
+  const new({super.key, this.autoConnect = false, this.shown = true});
 
   /// Connect to the camera used last as soon as the scan sees it nearby
   /// (once, when the app opens).
   final bool autoConnect;
+
+  /// The home dock shows this screen rather than the saved looks. Hidden,
+  /// it neither scans nor connects by itself.
+  final bool shown;
 
   @override
   State<CamerasScreen> createState() => _CamerasScreenState();
@@ -116,13 +121,24 @@ class _CamerasScreenState extends State<CamerasScreen> with RouteAware {
     _update();
   }
 
+  @override
+  void didUpdateWidget(CamerasScreen old) {
+    super.didUpdateWidget(old);
+    if (widget.shown == old.shown) return;
+    if (!widget.shown) _forgetDenial();
+    _update();
+  }
+
+  /// Shown on the home dock, with no other route over it.
+  bool get _inFront => widget.shown && !_covered;
+
   /// Scans while the screen is in front and the app visible, a camera is
   /// paired and no connection attempt needs Bluetooth for itself.
   void _update() {
     if (!mounted) return;
     final want =
         _visible &&
-        !_covered &&
+        _inFront &&
         _models.cameras.cameras.isNotEmpty &&
         _models.connection.status != ConnectionStatus.connecting;
     if (!want) {
@@ -158,7 +174,7 @@ class _CamerasScreenState extends State<CamerasScreen> with RouteAware {
     final current = _models.cameras.current;
     if (widget.autoConnect &&
         !_autoConnected &&
-        !_covered &&
+        _inFront &&
         current != null &&
         _models.connection.status == ConnectionStatus.offline &&
         _presence.of(current) != Presence.away) {
@@ -369,7 +385,10 @@ class _CameraList extends StatelessWidget {
       bottom: false,
       child: ListView(
         key: const Key('cameras'),
-        padding: const EdgeInsets.only(bottom: 32),
+        // Above the home dock.
+        padding: EdgeInsets.only(
+          bottom: 32 + MediaQuery.paddingOf(context).bottom,
+        ),
         children: [
           PageTitle(
             context.l10n.camerasTitle,
@@ -441,7 +460,7 @@ class _CameraList extends StatelessWidget {
 
 /// The camera used last (mock `.ccard`, drawing after mock direction H):
 /// a drawing of the camera, an icon for its link, its power button and
-/// buttons to its Library, Shoot and Looks pages; or the steps while
+/// buttons to its pages ([ConnectionController.tabs]); or the steps while
 /// connecting, or why the last attempt failed.
 class _CameraCard extends StatelessWidget {
   const new({
@@ -584,17 +603,17 @@ class _CameraCard extends StatelessWidget {
       const SizedBox(height: 16),
       Row(
         children: [
-          for (final (i, (tab, label)) in [
-            (CameraTab.library, l10n.camerasLibrary),
-            (CameraTab.shoot, l10n.camerasShoot),
-            (CameraTab.looks, l10n.camerasLooks),
-          ].indexed) ...[
+          for (final (i, tab) in connection.tabs.indexed) ...[
             if (i > 0) const SizedBox(width: 8),
             Expanded(
               child: _PageButton(
                 key: Key('camera-card-${tab.name}'),
                 icon: CameraTabBar.icon(tab),
-                label: label,
+                label: switch (tab) {
+                  CameraTab.library => l10n.camerasLibrary,
+                  CameraTab.shoot => l10n.camerasShoot,
+                  CameraTab.looks => l10n.camerasLooks,
+                },
                 onPressed: () => unawaited(connection.openCamera(tab)),
               ),
             ),

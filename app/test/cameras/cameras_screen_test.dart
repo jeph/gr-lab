@@ -133,6 +133,21 @@ void main() {
     await app.dispose();
   });
 
+  testWidgets('stops scanning while the home dock shows the saved looks', (
+    tester,
+  ) async {
+    final app = await _start(tester, config: _unreachable);
+    await pumpUntil(tester, () => app.ble.scanning == 1, reason: 'scanning');
+
+    await _tap(tester, const Key('home-tab-looks'));
+    await pumpUntil(tester, () => app.ble.scanning == 0, reason: 'stopped');
+
+    await _tap(tester, const Key('home-tab-cameras'));
+    await pumpUntil(tester, () => app.ble.scanning == 1, reason: 'resumed');
+
+    await app.dispose();
+  });
+
   group('a Bluetooth permission denied at first', () {
     Future<TestApp> denied(WidgetTester tester) async {
       final app = await _start(
@@ -287,7 +302,11 @@ void main() {
 
       await _tap(tester, const Key('connect-retry'));
       expect(app.models.connection.status, ConnectionStatus.connecting);
-      expect(find.byKey(const Key('camera-card-connecting')), findsOneWidget);
+      // The card shrinks to the steps, and the list scrolls back to it.
+      await pumpUntilFound(
+        tester,
+        find.byKey(const Key('camera-card-connecting')),
+      );
       await _untilStatus(tester, app, ConnectionStatus.failed);
 
       await app.dispose();

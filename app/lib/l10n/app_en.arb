@@ -52,7 +52,7 @@
   "@camerasDetailsForgetConfirm": {
     "description": "Button of the forget-camera confirmation that removes the camera."
   },
-  "camerasDetailsForgetMessage": "GR Lab stops connecting to this camera and deletes its file list, thumbnails, previews, videos and download history from this phone. Photos already saved to your photo library stay there.",
+  "camerasDetailsForgetMessage": "GR Lab stops connecting to this camera and deletes its file list, thumbnails, previews, videos and download history from this phone. Photos already saved to your photo library stay there, and so do your saved looks.",
   "@camerasDetailsForgetMessage": {
     "description": "Body of the forget-camera confirmation."
   },
@@ -961,6 +961,14 @@
   "@downloadStateRunning": {
     "description": "Status of a download in the queue while it runs."
   },
+  "homeBarCameras": "Cameras",
+  "@homeBarCameras": {
+    "description": "Tab of the home dock, shown while no camera's pages are open: the paired cameras, to connect to one."
+  },
+  "homeBarLooks": "Looks",
+  "@homeBarLooks": {
+    "description": "Tab of the home dock: the Image Control looks saved on this phone, whichever camera they came from."
+  },
   "libraryCancelSelection": "Cancel selection",
   "@libraryCancelSelection": {
     "description": "Tooltip of the button that ends selecting shots."
@@ -1826,10 +1834,6 @@
         "description": "The oldest firmware version that works, as the camera writes it, for example 1.04."
       }
     }
-  },
-  "looksSlotsUnsupported": "GR Lab can load looks into the GR IV family only. This camera's Custom slots can't be reached over Bluetooth.",
-  "@looksSlotsUnsupported": {
-    "description": "Shown instead of the slots for a camera whose model has no Custom slots GR Lab can reach (GR III family)."
   },
   "looksSummaryValue": "{parameter} {value}",
   "@looksSummaryValue": {

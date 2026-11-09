@@ -35,8 +35,9 @@ enum CameraTab {
   /// Remote over Bluetooth, or live view over Wi-Fi.
   shoot,
 
-  /// The camera's Image Control Custom slots and the saved looks; over
-  /// Bluetooth.
+  /// The camera's Image Control Custom slots and the saved looks, to load
+  /// into them; over Bluetooth. Only on a camera with
+  /// [CameraFeature.lookSlots] ([ConnectionController.tabs]).
   looks,
 }
 
@@ -323,6 +324,22 @@ final class ConnectionController extends ChangeNotifier {
 
   /// The camera this controller connects to.
   SavedCamera? get camera => cameras.current;
+
+  /// [camera]'s model and firmware, for what it supports: the session's
+  /// (`CameraSession.body`, which fills what a link did not read from the
+  /// saved camera), else as last saved.
+  CameraBody get body => _session?.body ?? camera?.body ?? CameraBody.unknown;
+
+  /// The tabs of [camera]'s pages: Looks only on a model GR Lab can load
+  /// looks into ([CameraFeature.lookSlots]). A camera whose firmware is too
+  /// old for it keeps the tab, which asks for the update.
+  List<CameraTab> get tabs {
+    final slots = body.minimumFirmware(CameraFeature.lookSlots) != null;
+    return [
+      for (final tab in CameraTab.values)
+        if (tab != CameraTab.looks || slots) tab,
+    ];
+  }
 
   /// The camera layer's session for [camera], from the Bluetooth attempt
   /// until the session ends.

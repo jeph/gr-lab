@@ -18,9 +18,11 @@ import 'package:grlab/src/widgets/group.dart';
 /// Which saved looks the list shows.
 enum LooksFilter { all, mono, colour }
 
-/// The Looks page (mock `b-looks`): the camera's Custom slots C1–C3 on top,
-/// the user's saved looks below. A look is dragged onto a slot, or loaded
-/// from its menu.
+/// A Looks page (mock `b-looks`): the user's saved looks, stored on the
+/// phone whichever camera they came from. On a camera's page the camera's
+/// Custom slots C1–C3 are on top, and a look is dragged onto a slot or
+/// loaded from its menu; on the phone's page (the home dock) the looks are
+/// only kept and edited.
 class LooksScreen extends StatefulWidget {
   const new({required this.model, super.key});
 
@@ -84,9 +86,10 @@ class _LooksScreenState extends State<LooksScreen> {
             bottom: false,
             child: CustomScrollView(
               slivers: [
-                const SliverToBoxAdapter(
-                  child: CameraTopBar(showSettings: false),
-                ),
+                if (_model.onCamera)
+                  const SliverToBoxAdapter(
+                    child: CameraTopBar(showSettings: false),
+                  ),
                 SliverToBoxAdapter(
                   child: PageTitle(
                     l10n.looksTitle,
@@ -103,7 +106,8 @@ class _LooksScreenState extends State<LooksScreen> {
                     ],
                   ),
                 ),
-                SliverToBoxAdapter(child: _SlotsSection(model: _model)),
+                if (_model.onCamera)
+                  SliverToBoxAdapter(child: _SlotsSection(model: _model)),
                 SliverToBoxAdapter(
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -179,9 +183,7 @@ class _SlotsSection extends StatelessWidget {
     final l10n = context.l10n;
     final slots = model.slots;
     final Widget body;
-    if (model.state == SlotsState.unsupported) {
-      body = _SlotsNote(text: l10n.looksSlotsUnsupported);
-    } else if (model.state == SlotsState.needsFirmware) {
+    if (model.state == SlotsState.needsFirmware) {
       body = _SlotsNote(
         text: l10n.looksSlotsNeedFirmware(model.slotsFirmware!),
       );
@@ -291,10 +293,10 @@ class _SlotCard extends StatelessWidget {
     final loading = model.loading == number;
     final reading = slot == null;
     return DragTarget<SavedLook>(
-      onWillAcceptWithDetails: (d) =>
-          !reading &&
-          model.loading == null &&
-          (d.data.look?.offeredBy(model.body) ?? false),
+      onWillAcceptWithDetails: (d) {
+        final look = d.data.look;
+        return !reading && look != null && model.canLoad(look);
+      },
       onAcceptWithDetails: (d) {
         final look = d.data.look;
         if (look == null) return;
@@ -437,10 +439,27 @@ class _LookRow extends StatelessWidget {
       saved: saved,
       look: look,
       photo: photo,
-      inSlots: inSlots,
+      inSlots: model.onCamera ? inSlots : null,
       menu: _LookMenu(model: model, saved: saved),
     );
     if (look == null) return row;
+    final open = InkWell(
+      onTap: () => unawaited(
+        openLookEditor(
+          context,
+          model: model,
+          name: saved.name,
+          look: look,
+          saved: saved,
+          target: inSlots.firstOrNull ?? 1,
+        ),
+      ),
+      child: model.onCamera
+          ? Semantics(hint: l10n.looksDragHint, child: row)
+          : row,
+    );
+    // Away from a camera there is no slot to drop it on.
+    if (!model.onCamera) return open;
     return LongPressDraggable<SavedLook>(
       data: saved,
       feedback: Material(
@@ -457,19 +476,7 @@ class _LookRow extends StatelessWidget {
         ),
       ),
       childWhenDragging: Opacity(opacity: .4, child: row),
-      child: InkWell(
-        onTap: () => unawaited(
-          openLookEditor(
-            context,
-            model: model,
-            name: saved.name,
-            look: look,
-            saved: saved,
-            target: inSlots.firstOrNull ?? 1,
-          ),
-        ),
-        child: Semantics(hint: l10n.looksDragHint, child: row),
-      ),
+      child: open,
     );
   }
 }
@@ -486,7 +493,10 @@ class _LookRowBody extends StatelessWidget {
   final SavedLook saved;
   final Look? look;
   final File? photo;
-  final List<int> inSlots;
+
+  /// The slots holding the look, tagged on a camera's page; null on the
+  /// phone's, which has no slots to tag.
+  final List<int>? inSlots;
   final Widget menu;
 
   @override
@@ -495,6 +505,7 @@ class _LookRowBody extends StatelessWidget {
     final l10n = context.l10n;
     final look = this.look;
     final source = saved.source;
+    final inSlots = this.inSlots;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
       child: Row(
@@ -530,14 +541,16 @@ class _LookRowBody extends StatelessWidget {
                 const SizedBox(height: 5),
                 Row(
                   children: [
-                    if (inSlots.isEmpty)
-                      MiniTag(l10n.looksTagSaved)
-                    else
-                      for (final n in inSlots) ...[
-                        MiniTag(l10n.looksTagInSlot(n), accent: true),
-                        const SizedBox(width: 4),
-                      ],
-                    const SizedBox(width: 6),
+                    if (inSlots != null) ...[
+                      if (inSlots.isEmpty)
+                        MiniTag(l10n.looksTagSaved)
+                      else
+                        for (final n in inSlots) ...[
+                          MiniTag(l10n.looksTagInSlot(n), accent: true),
+                          const SizedBox(width: 4),
+                        ],
+                      const SizedBox(width: 6),
+                    ],
                     Expanded(
                       child: Text(
                         source == null
@@ -573,11 +586,7 @@ class _LookMenu extends StatelessWidget {
     final c = GrColors.of(context);
     final l10n = context.l10n;
     final look = saved.look;
-    final canLoad =
-        look != null &&
-        look.offeredBy(model.body) &&
-        model.state == SlotsState.ready &&
-        model.loading == null;
+    final canLoad = look != null && model.canLoad(look);
     return PopupMenuButton<_LookAction>(
       key: Key('look-menu:${saved.id}'),
       icon: Icon(Icons.more_horiz_rounded, color: c.t3, size: 20),
@@ -586,16 +595,17 @@ class _LookMenu extends StatelessWidget {
       itemBuilder: (context) => [
         if (look != null)
           PopupMenuItem(value: _LookAction.edit, child: Text(l10n.looksEdit)),
-        for (final (n, a) in const [
-          (1, _LookAction.load1),
-          (2, _LookAction.load2),
-          (3, _LookAction.load3),
-        ])
-          PopupMenuItem(
-            value: a,
-            enabled: canLoad,
-            child: Text(l10n.looksLoadInto(n)),
-          ),
+        if (model.onCamera)
+          for (final (n, a) in const [
+            (1, _LookAction.load1),
+            (2, _LookAction.load2),
+            (3, _LookAction.load3),
+          ])
+            PopupMenuItem(
+              value: a,
+              enabled: canLoad,
+              child: Text(l10n.looksLoadInto(n)),
+            ),
         PopupMenuItem(value: _LookAction.rename, child: Text(l10n.looksRename)),
         PopupMenuItem(
           value: _LookAction.delete,

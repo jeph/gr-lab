@@ -369,9 +369,18 @@ const List<LookBase> _monochromeBases = [
 /// GR IV manual's (p.94), and a GR IV HDF on firmware 1.20 offered exactly
 /// it in its `/v1/props` effectList (observed 2026-11-09). GR WORLD adds
 /// Palette for the GR IVx; it is left out here because its parameters are
-/// \[unknown\]. Cameras without [CameraFeature.lookSlots] get the colour
-/// list only for editing saved looks.
+/// \[unknown\]. Cameras without [CameraFeature.lookSlots] have no slots to
+/// load into, so GR Lab edits looks for them only away from a camera
+/// ([lookBasesWith]).
 List<LookBase> lookBases(CameraBody camera) =>
     camera.supports(CameraFeature.monochromeLooks)
     ? _monochromeBases
     : _colourBases;
+
+/// The base images a look on [base] is edited among away from a camera:
+/// the list of the bodies that offer [base] ([lookBases]), the monochrome
+/// one for a monochrome base and the colour one otherwise, so an edit
+/// never moves a look off the bodies it was loadable into \[design\]. A
+/// base on neither list, or none, gets the colour list.
+List<LookBase> lookBasesWith(LookBase? base) =>
+    _monochromeBases.contains(base) ? _monochromeBases : _colourBases;

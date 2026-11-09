@@ -187,6 +187,16 @@ void main() {
     expect(lookBases(_body(GrModel.gr4x)), isNot(contains(LookBase.palette)));
   });
 
+  test('a look edited away from a camera keeps to the bases of the bodies '
+      'that offer its base', () {
+    final mono = lookBases(_body(GrModel.gr4Monochrome));
+    final colour = lookBases(_body(GrModel.gr4));
+    expect(lookBasesWith(LookBase.solid), mono);
+    expect(lookBasesWith(LookBase.vivid), colour);
+    expect(lookBasesWith(LookBase.pictorialist), colour);
+    expect(lookBasesWith(null), colour);
+  });
+
   test("a look is offered by a body whose bases include the look's", () {
     final positive = _preset(0);
     expect(positive.offeredBy(_body(GrModel.gr4)), isTrue);

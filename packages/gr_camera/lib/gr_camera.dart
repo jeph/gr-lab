@@ -101,6 +101,7 @@ export 'src/looks/image_control.dart'
         LookRange,
         LookValueKind,
         lookBases,
+        lookBasesWith,
         lookChoices,
         lookParameters,
         lookRange;

@@ -61,7 +61,7 @@ GR Lab does not use your location, camera, microphone, contacts or notifications
 
 ## Deleting your data
 
-- Forget camera, on the camera's page under Cameras, removes the camera from GR Lab's paired cameras and deletes what GR Lab keeps about it: the cached file list, thumbnails, previews and videos of that camera, its downloads still waiting and the record of its files you saved. Photos and videos you saved to your photo library stay there. The debug log is not changed; Clear log deletes it. Your phone's Bluetooth settings may still list the camera, and the camera may still list your phone; you can remove those entries in the phone's Bluetooth settings and on the camera.
+- Forget camera, on the camera's page under Cameras, removes the camera from GR Lab's paired cameras and deletes what GR Lab keeps about it: the cached file list, thumbnails, previews and videos of that camera, its downloads still waiting and the record of its files you saved. Photos and videos you saved to your photo library stay there, and so do your saved looks, including those saved from that camera. The debug log is not changed; Clear log deletes it. Your phone's Bluetooth settings may still list the camera, and the camera may still list your phone; you can remove those entries in the phone's Bluetooth settings and on the camera.
 - Delete, in a saved look's menu under Looks, removes the look and its copy of the photo from your phone. Looks you loaded into the camera's Custom slots stay on the camera.
 - Clear log, under Settings, Debug log, deletes the debug log from your phone.
 - Uninstalling GR Lab deletes everything GR Lab keeps on your phone, including the debug log. Photos and videos you saved to your photo library stay there.
