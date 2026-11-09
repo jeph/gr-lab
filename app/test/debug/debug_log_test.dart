@@ -183,6 +183,31 @@ void main() {
     expect(reopened.sizeBytes, 2 * lineBytes);
   });
 
+  test('a half-written record is cut off even when the next one starts a '
+      'new file', () async {
+    // Two lines fill a file: the next record goes to a new one.
+    final log = await open(maxFileBytes: 2 * lineBytes);
+    log
+      ..sink(event(0))
+      ..sink(event(1));
+    await log.close();
+    final torn = jsonEncode(event(2).toJson()).substring(0, 20);
+    await File('${logDir.path}/trace-000001.jsonl')
+        .writeAsString(torn, mode: FileMode.append);
+
+    final reopened = await open(maxFileBytes: 2 * lineBytes);
+    reopened.sink(event(3));
+    expect(await reopened.export(), isTrue);
+    expect(
+      [for (final f in shared.single) kinds(await f.readAsString())],
+      [
+        ['e00', 'e01'],
+        ['e03'],
+      ],
+    );
+    expect(reopened.sizeBytes, 3 * lineBytes);
+  });
+
   for (final enabled in [true, false]) {
     test('a log folder that cannot be opened leaves the log unavailable, '
         'not failing (logging ${enabled ? 'on' : 'off'})', () async {

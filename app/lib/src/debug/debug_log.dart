@@ -295,6 +295,9 @@ final class DebugLog extends ChangeNotifier {
     final lines = List.of(_pending);
     _pending.clear();
     try {
+      // Opening cuts off a half-written record before the size decides
+      // whether this batch starts a new file, which would leave it behind.
+      _current ??= await _openCurrent();
       final chunk = BytesBuilder(copy: false);
       for (final line in lines) {
         final bytes = utf8.encode(line);
