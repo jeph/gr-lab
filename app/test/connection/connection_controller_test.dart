@@ -1,10 +1,20 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart'
-    show WifiJoinDeclined, WifiNetworkControl, WifiSecurity;
+    show
+        BleAdapterState,
+        BleAdvertisement,
+        BleConnection,
+        BleDisconnect,
+        BleServiceInfo,
+        BleTransport,
+        WifiJoinDeclined,
+        WifiNetworkControl,
+        WifiSecurity;
 import 'package:grlab/src/connection/camera_pill.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/data/cameras.dart';
@@ -65,6 +75,104 @@ void main() {
 
       await connection.openCamera(CameraTab.library);
       expect(connection.status, ConnectionStatus.connected);
+    });
+  });
+
+  group('Wi-Fi asked for while Bluetooth links', () {
+    /// A paired camera that is off, behind a transport whose connect waits
+    /// for the test.
+    Future<(TestApp, _GatedTransport)> gated() async {
+      late _GatedTransport ble;
+      final app = await createTestApp(
+        config: const FakeCameraConfig(bonded: true, poweredOn: false),
+        saveCamera: true,
+        transport: (camera) => ble = _GatedTransport(camera),
+      );
+      addTearDown(app.dispose);
+      ble.linkGate = Completer<void>();
+      return (app, ble);
+    }
+
+    /// Records whether a Wi-Fi start ever began.
+    bool Function() watchWifiStart(ConnectionController connection) {
+      var started = false;
+      void listener() => started |= connection.step == ConnectStep.wifi;
+      connection.addListener(listener);
+      addTearDown(() => connection.removeListener(listener));
+      return () => started;
+    }
+
+    test('closing the pages before the link is up cancels the Library '
+        'join', () async {
+      final (app, ble) = await gated();
+      final connection = app.models.connection;
+      final wifiStarted = watchWifiStart(connection);
+
+      final opening = connection.openCamera(CameraTab.library);
+      await ble.connectCalled.future;
+      await connection.closeCamera();
+      ble.linkGate!.complete();
+      await opening;
+
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(connection.tab, isNull);
+      expect(wifiStarted(), isFalse);
+      expect(app.camera.poweredOn, isFalse);
+      expect(app.camera.wlanOn, isFalse);
+      expect(await app.camera.wifi.currentSsid(), isNull);
+    });
+
+    test('opening the Library again after closing it still joins', () async {
+      final (app, ble) = await gated();
+      final connection = app.models.connection;
+
+      final first = connection.openCamera(CameraTab.library);
+      await ble.connectCalled.future;
+      await connection.closeCamera();
+      final again = connection.openCamera(CameraTab.library);
+      ble.linkGate!.complete();
+      await Future.wait([first, again]);
+
+      expect(connection.status, ConnectionStatus.connected);
+      expect(connection.tab, CameraTab.library);
+    });
+
+    test('switching to the Library joins once the link is up', () async {
+      final (app, ble) = await gated();
+      final connection = app.models.connection;
+
+      final opening = connection.openCamera(CameraTab.shoot);
+      await ble.connectCalled.future;
+      connection.selectTab(CameraTab.library);
+      final up = connection.wifiUp.first;
+      ble.linkGate!.complete();
+      await opening;
+      expect(connection.status, ConnectionStatus.connecting);
+      expect(connection.step, ConnectStep.wifi);
+
+      await up;
+      expect(connection.status, ConnectionStatus.connected);
+      expect(connection.tab, CameraTab.library);
+    });
+
+    test('switching away again before the link is up cancels that '
+        'join', () async {
+      final (app, ble) = await gated();
+      final connection = app.models.connection;
+      final wifiStarted = watchWifiStart(connection);
+
+      final opening = connection.openCamera(CameraTab.shoot);
+      await ble.connectCalled.future;
+      connection
+        ..selectTab(CameraTab.library)
+        ..selectTab(CameraTab.shoot);
+      ble.linkGate!.complete();
+      await opening;
+
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(connection.tab, CameraTab.shoot);
+      expect(wifiStarted(), isFalse);
+      expect(app.camera.wlanOn, isFalse);
     });
   });
 
@@ -459,6 +567,108 @@ final class _ListWifi implements WifiNetworkControl {
 
   @override
   Stream<void> get lost => _camera.lost;
+}
+
+/// The camera's transport, with gates the test opens: [connect] waits for
+/// [linkGate], and a link's disconnect for [closeGate].
+final class _GatedTransport implements BleTransport {
+  new(this._camera);
+
+  final BleTransport _camera;
+  Completer<void>? linkGate;
+  Completer<void>? closeGate;
+  final connectCalled = Completer<void>();
+  final disconnectCalled = Completer<void>();
+
+  /// Adapter state reads: each Bluetooth attempt starts with one.
+  int adapterChecks = 0;
+
+  @override
+  Future<BleAdapterState> adapterState() {
+    adapterChecks++;
+    return _camera.adapterState();
+  }
+
+  @override
+  Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) =>
+      _camera.scan(serviceUuids: serviceUuids);
+
+  @override
+  Future<BleConnection> connect(
+    String deviceId, {
+    required Duration timeout,
+  }) async {
+    if (!connectCalled.isCompleted) connectCalled.complete();
+    await linkGate?.future;
+    return _GatedLink(await _camera.connect(deviceId, timeout: timeout), this);
+  }
+
+  @override
+  Future<void> close() => _camera.close();
+}
+
+final class _GatedLink implements BleConnection {
+  new(this._link, this._transport);
+
+  final BleConnection _link;
+  final _GatedTransport _transport;
+
+  @override
+  String get deviceId => _link.deviceId;
+
+  @override
+  int? get maximumWriteLength => _link.maximumWriteLength;
+
+  @override
+  Future<List<BleServiceInfo>> discover() => _link.discover();
+
+  @override
+  Future<Uint8List> read(
+    String serviceUuid,
+    String characteristicUuid, {
+    Duration? timeout,
+  }) => _link.read(serviceUuid, characteristicUuid, timeout: timeout);
+
+  @override
+  Future<void> write(
+    String serviceUuid,
+    String characteristicUuid,
+    Uint8List value, {
+    bool withResponse = true,
+    Duration? timeout,
+  }) => _link.write(
+    serviceUuid,
+    characteristicUuid,
+    value,
+    withResponse: withResponse,
+    timeout: timeout,
+  );
+
+  @override
+  Stream<Uint8List> subscribe(String serviceUuid, String characteristicUuid) =>
+      _link.subscribe(serviceUuid, characteristicUuid);
+
+  @override
+  Future<void> pair({
+    required String probeServiceUuid,
+    required String probeCharacteristicUuid,
+    required Duration timeout,
+  }) => _link.pair(
+    probeServiceUuid: probeServiceUuid,
+    probeCharacteristicUuid: probeCharacteristicUuid,
+    timeout: timeout,
+  );
+
+  @override
+  Future<BleDisconnect> get disconnected => _link.disconnected;
+
+  @override
+  Future<void> disconnect() async {
+    final called = _transport.disconnectCalled;
+    if (!called.isCompleted) called.complete();
+    await _transport.closeGate?.future;
+    await _link.disconnect();
+  }
 }
 
 Future<void> _until(

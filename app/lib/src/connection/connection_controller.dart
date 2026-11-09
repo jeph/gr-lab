@@ -167,7 +167,18 @@ final class ConnectionController extends ChangeNotifier {
 
   /// Bumped for every Wi-Fi start and [closeCamera].
   int _wifiRun = 0;
+
+  /// The Library (or live view) asked for the camera's Wi-Fi while
+  /// Bluetooth was still being linked; [joinWifi] starts it once the link
+  /// is up. Closing the pages, leaving the Wi-Fi, switching tabs away and
+  /// ending the session cancel the request; the latest of these and a new
+  /// request wins.
+  bool _wifiWanted = false;
   final _wifiUp = StreamController<void>.broadcast();
+
+  /// The Bluetooth attempt [connect] started last; [joinWifi] waits for it.
+  Future<void> _linking = Future.value();
+
   Future<void> _closing = Future.value();
   Future<void> _stoppingWifi = Future.value();
 
@@ -268,7 +279,7 @@ final class ConnectionController extends ChangeNotifier {
         _status != ConnectionStatus.failed) {
       return Future.value();
     }
-    return _connectBluetooth();
+    return _linking = _connectBluetooth();
   }
 
   /// Makes the paired camera [serial] the current one and links it;
@@ -290,21 +301,30 @@ final class ConnectionController extends ChangeNotifier {
 
   /// Switches the open camera pages to [tab]. The Library joins the
   /// camera's Wi-Fi unless it is up or the last join failed; that failure
-  /// is shown with Try again instead.
+  /// is shown with Try again instead. While Bluetooth is still being
+  /// linked, the join waits for it, and switching away again cancels it.
   void selectTab(CameraTab tab) {
     if (_tab == null || _tab == tab) return;
     _tab = tab;
     notifyListeners();
-    if (tab == CameraTab.library &&
-        _status == ConnectionStatus.bluetooth &&
-        _failure == null) {
+    if (tab != CameraTab.library) {
+      _wifiWanted = false;
+      return;
+    }
+    final linking =
+        _status == ConnectionStatus.connecting &&
+        _step == ConnectStep.bluetooth;
+    if (linking ||
+        (_status == ConnectionStatus.bluetooth && _failure == null)) {
       unawaited(joinWifi());
     }
   }
 
   /// Joins the camera's Wi-Fi for the Library or live view, linking
-  /// Bluetooth first when needed. Does nothing while Wi-Fi is up or being
-  /// joined, except that it cuts short the wait before a quiet rejoin.
+  /// Bluetooth first when needed (or waiting for the link being made).
+  /// Does nothing while Wi-Fi is up or being joined, except that it cuts
+  /// short the wait before a quiet rejoin. Leaving the Wi-Fi or the pages
+  /// before Bluetooth is up cancels the join.
   Future<void> joinWifi() async {
     final waitingToRedial = _redialTimer != null || _redialOnResume;
     if (_status == ConnectionStatus.connected ||
@@ -313,15 +333,19 @@ final class ConnectionController extends ChangeNotifier {
             !waitingToRedial)) {
       return;
     }
-    if (_status == ConnectionStatus.connecting &&
-        _step == ConnectStep.bluetooth) {
-      return;
-    }
-    if (_status == ConnectionStatus.offline ||
+    final linking =
+        _status == ConnectionStatus.connecting &&
+        _step == ConnectStep.bluetooth;
+    if (linking ||
+        _status == ConnectionStatus.offline ||
         _status == ConnectionStatus.failed) {
-      await connect();
-      if (_status != ConnectionStatus.bluetooth) return;
+      _wifiWanted = true;
+      await (linking ? _linking : connect());
+      // Cancelled meanwhile, already started by another request, or the
+      // link did not come up.
+      if (!_wifiWanted || _status != ConnectionStatus.bluetooth) return;
     }
+    _wifiWanted = false;
     _cancelRedial();
     _redials = 0;
     return await _startWifi(quiet: false);
@@ -348,6 +372,7 @@ final class ConnectionController extends ChangeNotifier {
     Duration? idleFor,
     bool changed = false,
   }) async {
+    _wifiWanted = false;
     final session = _session;
     final onWifi =
         _status == ConnectionStatus.connected ||
@@ -491,6 +516,7 @@ final class ConnectionController extends ChangeNotifier {
   Future<void> disconnect() {
     _generation++;
     _wifiRun++;
+    _wifiWanted = false;
     _cancelRedial();
     _tab = null;
     _status = ConnectionStatus.offline;
@@ -701,6 +727,7 @@ final class ConnectionController extends ChangeNotifier {
   void _fail(int generation, ConnectFailure failure) {
     if (generation != _generation) return;
     _tab = null;
+    _wifiWanted = false;
     _status = ConnectionStatus.failed;
     _failure = failure;
     _step = null;
