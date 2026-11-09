@@ -110,6 +110,17 @@ final class AppModels {
   /// Lets screens know when another route covers them (the Cameras screen
   /// stops scanning then).
   final routes = RouteObserver<ModalRoute<void>>();
+
+  /// Removes [serial]'s camera from the app with everything kept about it:
+  /// its pairing, cached listing, images and movies, downloads waiting and
+  /// the record of its files saved to the phone. The photos themselves
+  /// stay in the photo library. Forgetting the current camera also ends
+  /// its connection.
+  Future<void> forgetCamera(String serial) => Future.wait([
+    cameras.remove(serial),
+    library.forgetCamera(serial),
+    downloads.forgetCamera(serial),
+  ]);
 }
 
 class AppScope extends InheritedWidget {

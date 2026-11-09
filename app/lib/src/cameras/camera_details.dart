@@ -233,7 +233,6 @@ class _ForgetRow extends StatelessWidget {
     );
     if (confirmed != true) return;
     navigator.pop();
-    // Forgetting the current camera also ends its connection attempt.
-    await models.cameras.remove(camera.serial);
+    await models.forgetCamera(camera.serial);
   }
 }

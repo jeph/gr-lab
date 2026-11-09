@@ -86,6 +86,24 @@ final class DiskBudget {
     if (length != null) _bytes -= length;
   });
 
+  /// Deletes [camera]'s folder in the cache, with every cache's files in
+  /// it, held ones included: the camera was removed from the app.
+  /// Completes once it is gone.
+  Future<void> forgetCamera(String camera) {
+    _run(() async {
+      final dir = Directory('${cacheDir.path}/$camera');
+      for (final path in _files.keys.toList()) {
+        if (path.startsWith('${dir.path}/')) _bytes -= _files.remove(path)!;
+      }
+      try {
+        if (dir.existsSync()) await dir.delete(recursive: true);
+      } on FileSystemException {
+        // A file written meanwhile; its writer forgets the camera again.
+      }
+    });
+    return _work;
+  }
+
   /// Keeps [file] from being deleted until the hold is released, also when
   /// it is written only later: something reads it from disk, as a player
   /// does. Releasing trims the cache again.

@@ -614,6 +614,42 @@ void main() {
       await next.diskSettled;
       expect(kept([a, c]), [true, false]);
     });
+
+    test('forgetting a camera deletes its folder and its images in memory, '
+        'keeps an image fetched meanwhile off disk, and leaves other '
+        "cameras' images", () async {
+      link.value = connected();
+      final loader = images();
+      final thumb = await loader.load(serial, file, GrImageSize.thumb).future;
+      final listing = File('${cache.path}/$serial/library.json')
+        ..writeAsStringSync('{}');
+      final other = CameraImages.diskFile(
+        cache,
+        '1111111',
+        file,
+        GrImageSize.thumb,
+      );
+      await other.parent.create(recursive: true);
+      await other.writeAsBytes(thumb!);
+      final raw = CameraFile(
+        GrStorageId.sd,
+        GrPhotoPath('100RICOH', 'R0000001.DNG'),
+      );
+      stallThumbs = 1;
+      final inFlight = loader.load(serial, raw, GrImageSize.thumb);
+      await until(() => requests == 2, reason: 'second thumbnail asked');
+
+      await loader.forgetCamera(serial);
+      expect(Directory('${cache.path}/$serial').existsSync(), isFalse);
+      expect(listing.existsSync(), isFalse);
+      expect(loader.cached(serial, file, GrImageSize.thumb), isNull);
+      hang.complete();
+      expect(await inFlight.future, isNotNull, reason: 'still shown');
+      await loader.diskSettled;
+      expect(Directory('${cache.path}/$serial').existsSync(), isFalse);
+      expect(loader.cached(serial, raw, GrImageSize.thumb), isNull);
+      expect(other.existsSync(), isTrue);
+    });
   });
 
   group('MovieCache', () {
@@ -666,6 +702,35 @@ void main() {
         isEmpty,
         reason: 'no partial file left behind',
       );
+    });
+
+    test('a copy running while its camera is forgotten is not kept', () async {
+      await camera.close();
+      camera = FakeGrCamera(
+        config: FakeCameraConfig(
+          httpLatency: Duration.zero,
+          photos: card(),
+          downloadBytesPerSecond: 64 * 1024,
+        ),
+        media: syntheticMedia(movieBytes: 128 * 1024),
+      );
+      await camera.startHttp();
+      http.close(force: true);
+      http = camera.httpClient('127.0.0.1', null);
+      final movies = MovieCache(cacheDir: cache);
+      final download = movies.download(connected(), movie);
+      await until(
+        () => (download.progress.value ?? 0) > 0,
+        reason: 'copy started',
+      );
+
+      await movies.forgetCamera(serial);
+      await expectLater(download.done, throwsA(isA<MovieDownloadCancelled>()));
+      await until(
+        () => !Directory('${cache.path}/$serial').existsSync(),
+        reason: 'folder deleted again',
+      );
+      expect(movies.cached(serial, movie), isNull);
     });
 
     test('cancelling a stalled copy closes its connection at once', () async {

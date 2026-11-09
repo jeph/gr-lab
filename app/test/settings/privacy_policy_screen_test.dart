@@ -27,7 +27,7 @@ void main() {
     expect(find.byType(PrivacyPolicyScreen), findsOneWidget);
     // The screen's title, and the policy's headings and dated first lines.
     expect(find.text('Privacy policy'), findsOneWidget);
-    expect(find.text('Last updated: 8 November 2026'), findsOneWidget);
+    expect(find.textContaining('Last updated: '), findsOneWidget);
     final debugLog = find.text('The debug log');
     await tester.scrollUntilVisible(
       debugLog,

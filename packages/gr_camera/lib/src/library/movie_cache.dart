@@ -77,6 +77,10 @@ final class MovieCache {
   /// Per path, the link the copy there was made from.
   final _copiedFrom = <String, CameraLibrary>{};
 
+  /// Per serial, how often [forgetCamera] dropped the camera, so a copy
+  /// begun before is not kept.
+  final _forgottenCameras = <String, int>{};
+
   /// The copy [cached] or [download] handed out last.
   String? _lastUsed;
 
@@ -114,7 +118,10 @@ final class MovieCache {
   /// that is still unwinding cannot delete or overwrite a retry's data.
   MovieDownload download(CameraLibrary library, CameraFile f) {
     final download = MovieDownload._();
-    final file = fileFor(library.serial, f);
+    final serial = library.serial;
+    final file = fileFor(serial, f);
+    final cameraForgotten = _forgottenCameras[serial];
+    bool cameraDropped() => _forgottenCameras[serial] != cameraForgotten;
     final key = file.path;
     final previous = _latest[key];
     final staging = File('${file.path}.${_attempts++}.download');
@@ -135,11 +142,15 @@ final class MovieCache {
               total == null || total == 0 ? null : received / total,
           abort: download._cancel.future,
         );
-        if (download._cancelled) throw const MovieDownloadCancelled();
+        if (download._cancelled || cameraDropped()) {
+          throw const MovieDownloadCancelled();
+        }
         await staging.rename(file.path);
         _copiedFrom[file.path] = library;
       } catch (_) {
         if (staging.existsSync()) await staging.delete();
+        // The camera was forgotten meanwhile, its folder deleted.
+        if (cameraDropped()) throw const MovieDownloadCancelled();
         rethrow;
       }
       _lastUsed = file.path;
@@ -151,8 +162,10 @@ final class MovieCache {
     final settled = download.done.then<void>((_) {}, onError: (Object _) {});
     _latest[key] = settled;
     unawaited(
-      settled.whenComplete(() {
+      settled.whenComplete(() async {
         if (identical(_latest[key], settled)) unawaited(_latest.remove(key));
+        // Its folder may have been written again after it was deleted.
+        if (cameraDropped()) await _disk.forgetCamera(serial);
       }),
     );
     return download;
@@ -183,6 +196,18 @@ final class MovieCache {
     if (!file.existsSync()) return false;
     forget(current.serial, f);
     return true;
+  }
+
+  /// Deletes every copy of [serial]'s camera, with the rest of its folder
+  /// in [cacheDir]: the camera was removed from the app. A copy still in
+  /// progress for it is not kept: it ends with [MovieDownloadCancelled].
+  /// Completes once the folder is gone.
+  Future<void> forgetCamera(String serial) {
+    _forgottenCameras[serial] = (_forgottenCameras[serial] ?? 0) + 1;
+    final prefix = '${cacheDir.path}/$serial/';
+    _copiedFrom.removeWhere((path, _) => path.startsWith(prefix));
+    if (_lastUsed?.startsWith(prefix) ?? false) _lastUsed = null;
+    return _disk.forgetCamera(serial);
   }
 
   /// Completes when the disk budget has caught up with every copy made or

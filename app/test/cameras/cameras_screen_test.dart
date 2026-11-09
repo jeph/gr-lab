@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -411,6 +412,49 @@ void main() {
     await pumpUntilFound(tester, find.byKey(const Key('cameras-welcome')));
     expect(app.models.cameras.cameras, isEmpty);
     expect(app.models.connection.status, ConnectionStatus.offline);
+
+    await app.dispose();
+  });
+
+  testWidgets('forgetting the only camera returns to Welcome and deletes its '
+      'cached listing, images and download records', (tester) async {
+    final app = await _start(tester);
+    final serial = app.models.cameras.current!.serial;
+    final folder = Directory('${app.models.services.cacheDir.path}/$serial');
+    final downloads = app.models.downloads;
+    await _tap(tester, const Key('camera-card-library'));
+    await pumpUntilFound(tester, find.byType(LibraryScreen));
+    final library = app.models.library.model;
+    await pumpUntil(
+      tester,
+      () => library.shots?.isNotEmpty ?? false,
+      reason: 'listing',
+    );
+    final shot = library.shots!.first;
+    unawaited(downloads.enqueue(serial, [shot]));
+    await pumpUntil(
+      tester,
+      () => downloads.isShotDownloaded(serial, shot),
+      reason: 'downloaded',
+    );
+    await pumpUntil(
+      tester,
+      () =>
+          File('${folder.path}/library.json').existsSync() &&
+          folder.listSync(recursive: true).any((e) => e.path.endsWith('.jpg')),
+      reason: 'listing and images cached',
+    );
+
+    await _tap(tester, const Key('camera-back'));
+    await _tap(tester, const Key('camera-card-more'));
+    await _tap(tester, const Key('camera-forget'));
+    await _tap(tester, const Key('camera-forget-confirm'));
+
+    await pumpUntilFound(tester, find.byKey(const Key('cameras-welcome')));
+    expect(find.byKey(const Key('cameras-add')), findsOneWidget);
+    await pumpUntil(tester, () => !folder.existsSync(), reason: 'deleted');
+    expect(downloads.isShotDownloaded(serial, shot), isFalse);
+    expect(library.shots, isNull);
 
     await app.dispose();
   });

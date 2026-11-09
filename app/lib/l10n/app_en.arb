@@ -52,7 +52,7 @@
   "@camerasDetailsForgetConfirm": {
     "description": "Button of the forget-camera confirmation that removes the camera."
   },
-  "camerasDetailsForgetMessage": "GR Lab stops connecting to this camera. Photos already downloaded stay on this phone.",
+  "camerasDetailsForgetMessage": "GR Lab stops connecting to this camera and deletes its file list, thumbnails, previews, videos and download history from this phone. Photos already saved to your photo library stay there.",
   "@camerasDetailsForgetMessage": {
     "description": "Body of the forget-camera confirmation."
   },

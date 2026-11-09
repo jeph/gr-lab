@@ -510,6 +510,22 @@ final class DownloadEngine extends ChangeNotifier {
     _changed();
   }
 
+  /// Forgets [serial]'s camera, removed from the app: its jobs go, a
+  /// running one stops, and so do the records of its files saved to the
+  /// phone. A shot the photo library is already saving still lands there.
+  Future<void> forgetCamera(String serial) async {
+    await _ready;
+    final running = _current;
+    for (final j in _jobs.toList()) {
+      if (j.serial == serial) cancel(j);
+    }
+    // A job being saved records its files once the save ends.
+    if (running?.serial == serial) await whenIdle();
+    if (_downloaded.remove(serial) == null) return;
+    _save();
+    _notify();
+  }
+
   /// Queues a failed [job] again.
   void retry(DownloadJob job) {
     if (job.state != DownloadState.failed || !_jobs.contains(job)) return;

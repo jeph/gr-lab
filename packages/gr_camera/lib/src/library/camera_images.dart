@@ -130,6 +130,10 @@ final class CameraImages {
   /// images, so a disk read begun before is not kept.
   final _forgotten = <String, int>{};
 
+  /// Per serial, how often [forgetCamera] dropped the camera, so a load
+  /// begun before keeps its image off disk.
+  final _forgottenCameras = <String, int>{};
+
   /// Per disk path, the link its image was last fetched from, so one cached
   /// on an earlier link can be told apart ([forgetUnlessFrom]).
   final _fetchedFrom = <String, CameraLibrary>{};
@@ -193,14 +197,17 @@ final class CameraImages {
     final request = ImageRequest._();
     final id = '$serial|${f.key}';
     final forgotten = _forgotten[id];
+    final cameraForgotten = _forgottenCameras[serial];
+    bool cameraDropped() => _forgottenCameras[serial] != cameraForgotten;
     Future<Uint8List?> run() async {
       final file = _file(serial, f, size);
       if (_onDisk(size)) {
         try {
           if (file.existsSync()) {
             final bytes = await file.readAsBytes();
-            // A copy [forget] dropped while it was read is never shown.
-            final kept = _forgotten[id] == forgotten;
+            // A copy [forget] or [forgetCamera] dropped while it was read is
+            // never shown.
+            final kept = _forgotten[id] == forgotten && !cameraDropped();
             if (kept && isJpeg(bytes)) {
               _disk.used(file);
               return _remember(size, key, bytes);
@@ -221,7 +228,7 @@ final class CameraImages {
       final ticket = _requests.join(
         key,
         current,
-        (signal) => _fetch(current, f, size, file, key, signal),
+        (signal) => _fetch(current, f, size, file, key, signal, cameraDropped),
         timeout: timeouts[size]!,
         background: background,
         abortWhenUnwanted: size == GrImageSize.full,
@@ -250,6 +257,8 @@ final class CameraImages {
     return request;
   }
 
+  /// [cameraDropped] says [forgetCamera] dropped the camera while it was
+  /// fetched; the image is then kept neither on disk nor in memory.
   Future<Uint8List> _fetch(
     CameraLibrary library,
     CameraFile f,
@@ -257,6 +266,7 @@ final class CameraImages {
     File file,
     String key,
     RequestSignal signal,
+    bool Function() cameraDropped,
   ) async {
     // Into memory rather than through `<file>.part`: a run that missed its
     // deadline may still be writing when the next attempt starts.
@@ -278,8 +288,14 @@ final class CameraImages {
       throw NotAnImageException(bytes.length);
     }
     if (signal.abandoned) throw const RequestCancelled();
+    if (cameraDropped()) return bytes;
     if (!_onDisk(size)) return _remember(size, key, bytes);
     final stored = await _store(file, bytes);
+    if (cameraDropped()) {
+      // Forgotten while it was written.
+      await _disk.forgetCamera(library.serial);
+      return bytes;
+    }
     _fetchedFrom[key] = library;
     // Remembered before the disk budget hears of it, so it counts as shown.
     _remember(size, key, bytes);
@@ -390,6 +406,26 @@ final class CameraImages {
     _views.clear();
     _full.clear();
     _viewBytes = 0;
+  }
+
+  /// Forgets every image of [serial]'s camera, in memory and on disk, with
+  /// the rest of its folder in [cacheDir]: the camera was removed from the
+  /// app. A load still running for it keeps its image off disk. Completes
+  /// once the folder is gone.
+  Future<void> forgetCamera(String serial) {
+    _forgottenCameras[serial] = (_forgottenCameras[serial] ?? 0) + 1;
+    _forgotten.removeWhere((id, _) => id.startsWith('$serial|'));
+    final prefix = '${cacheDir.path}/$serial/';
+    bool ofCamera(String key) => key.startsWith(prefix);
+    _fetchedFrom.removeWhere((key, _) => ofCamera(key));
+    _thumbs.removeWhere((key, _) => ofCamera(key));
+    _full.removeWhere((key, _) => ofCamera(key));
+    _views.removeWhere((key, bytes) {
+      if (!ofCamera(key)) return false;
+      _viewBytes -= bytes.length;
+      return true;
+    });
+    return _disk.forgetCamera(serial);
   }
 
   /// Completes when the disk budget has caught up with every image written,

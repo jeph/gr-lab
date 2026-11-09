@@ -86,6 +86,17 @@ final class LibraryContext {
     }
   }
 
+  /// Deletes what the library keeps of [serial]'s camera, removed from the
+  /// app: its cached listing, images and movies. Waits first for the
+  /// listing to switch away from it, which writes its listing a last time.
+  Future<void> forgetCamera(String serial) async {
+    await model.switched;
+    await Future.wait([
+      images.forgetCamera(serial),
+      movies.forgetCamera(serial),
+    ]);
+  }
+
   void dispose() {
     engine.removeListener(_holdWhileDownloading);
     _release?.call();

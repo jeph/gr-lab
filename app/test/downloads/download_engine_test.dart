@@ -435,6 +435,50 @@ void main() {
       await engine.whenIdle();
       expect(h.saved, isEmpty);
     });
+
+    test('forgetting a camera while a shot of it is saved drops its queue '
+        "and every record of it, that shot's included, keeping other "
+        "cameras' records", () async {
+      h = await Harness.start(
+        config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
+      );
+      final single = h.shot('R0000002').jpeg!;
+      await h.data.create(recursive: true);
+      await File('${h.data.path}/downloads.json').writeAsString(
+        jsonEncode({
+          'version': 2,
+          'jobs': <Object?>[],
+          'downloaded': {
+            'other-camera': {single.key: null},
+          },
+        }),
+      );
+      final engine = h.engine();
+      await engine.enqueue(serial, [h.shot('R0000002')]);
+      await engine.whenIdle();
+      h.media.gate = Completer<void>();
+      await engine.enqueue(serial, [h.shot('R0000003'), h.shot('R0000001')]);
+      await until(() => h.media.held == 1, reason: 'saving');
+
+      final forgotten = engine.forgetCamera(serial);
+      h.media.gate!.complete();
+      await forgotten;
+      expect(h.saved, [
+        ['R0000002.JPG'],
+        ['R0000003.DNG'],
+      ]);
+      expect(engine.jobs, isEmpty);
+      await engine.flush();
+      final restarted = h.engine();
+      await restarted.ready;
+      for (final e in [engine, restarted]) {
+        expect(e.jobs, isEmpty);
+        for (final base in ['R0000001', 'R0000002', 'R0000003']) {
+          expect(e.isShotDownloaded(serial, h.shot(base)), isFalse);
+        }
+        expect(e.isFileDownloaded('other-camera', single), isTrue);
+      }
+    });
   });
 
   group('failure', () {
