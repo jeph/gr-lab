@@ -58,7 +58,17 @@ export 'src/library/camera_file.dart' show CameraFile, FileInfo;
 export 'src/library/camera_images.dart'
     show CameraImages, ImageRequest, NotAnImageException;
 export 'src/library/camera_library.dart'
-    show CameraLibrary, describeTransferError, isConnectionError;
+    show
+        CameraLibrary,
+        TransferConnectionLost,
+        TransferCutOff,
+        TransferFailure,
+        TransferHttpStatus,
+        TransferOtherError,
+        TransferRefused,
+        TransferStalled,
+        TransferWriteFailed,
+        isConnectionError;
 export 'src/library/listing_cache.dart'
     show CachedListing, readCachedListing, writeCachedListing;
 export 'src/library/movie_cache.dart'

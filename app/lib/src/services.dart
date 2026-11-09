@@ -12,17 +12,32 @@ abstract interface class MediaSaver {
   Future<void> saveShot(List<File> files, {required String album});
 }
 
+/// Why the photo library did not take a shot.
+enum MediaSaveFailure {
+  /// The user has not allowed GR Lab to add to the photo library.
+  permissionDenied,
+
+  /// The files are not one shot GR Lab can save, or the platform cannot
+  /// save to its photo library.
+  unsupported,
+
+  /// The platform failed to save.
+  failed,
+}
+
 final class MediaSaveException implements Exception {
-  const new(this.code, this.message);
+  const new(this.failure, [this.detail]);
 
-  /// `permissionDenied`, `unsupported` or `failed`.
-  final String code;
-  final String message;
+  final MediaSaveFailure failure;
 
-  bool get permissionDenied => code == 'permissionDenied';
+  /// What went wrong, for the debug log. Never shown to the user: the app
+  /// describes [failure].
+  final String? detail;
+
+  bool get permissionDenied => failure == MediaSaveFailure.permissionDenied;
 
   @override
-  String toString() => 'MediaSaveException($code): $message';
+  String toString() => 'MediaSaveException(${failure.name}): $detail';
 }
 
 /// Hands camera trace events to the debug log once it is open: the camera

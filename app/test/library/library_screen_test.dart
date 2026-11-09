@@ -4,6 +4,7 @@ import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:grlab/src/library/library_screen.dart';
 import 'package:grlab/src/library/shot.dart' show Shot;
 import 'package:grlab/src/library/viewer.dart';
+import 'package:grlab/src/services.dart';
 
 import '../support/test_app.dart';
 
@@ -217,6 +218,48 @@ void main() {
       () => find.text('R0000268.JPG + R0000268.DNG').evaluate().isEmpty,
       reason: 'viewer closed',
     );
+
+    await app.dispose();
+  });
+
+  testWidgets('a failed download says why in the queue and downloads on '
+      'retry', (tester) async {
+    final app = (await tester.runAsync(
+      () => createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+      ),
+    ))!;
+    app.media.failWith = const MediaSaveException(
+      MediaSaveFailure.failed,
+      'disk full',
+    );
+    await app.pumpApp(tester);
+    await _openLibrary(tester);
+    const jpeg = 'sd1|101RICOH/R0000270';
+    await pumpUntilFound(tester, _cell(jpeg));
+    await tester.longPress(_cell(jpeg));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('selection-download:jpeg')));
+    await tester.pump();
+    await pumpUntilFound(tester, find.text('1 download failed'));
+    expect(find.text('Tap to see why'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('download-bar')));
+    await pumpUntilFound(
+      tester,
+      find.text("JPEG · SD · Couldn't save to the photo library"),
+    );
+
+    app.media.failWith = null;
+    await tapWhenReady(tester, find.text('Retry failed'));
+    await pumpUntil(
+      tester,
+      () => app.media.shots.isNotEmpty,
+      reason: 'saved on retry',
+    );
+    expect(app.media.shots.single.names, ['R0000270.JPG']);
+    await pumpUntilFound(tester, find.text('Nothing to download'));
 
     await app.dispose();
   });

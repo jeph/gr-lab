@@ -138,18 +138,3 @@ int _compareNatural(String a, String b) {
   }
   return a.compareTo(b);
 }
-
-/// `in` → Internal, `sd1` → SD.
-String? storageLabel(String? storage) => switch (storage) {
-  null => null,
-  GrStorageId.internal => 'Internal',
-  GrStorageId.sd => 'SD',
-  final s => s.toUpperCase(),
-};
-
-String formatLabel(ShotFormat f) => switch (f) {
-  ShotFormat.jpeg => 'JPEG',
-  ShotFormat.raw => 'RAW',
-  ShotFormat.rawJpeg => 'RAW+JPEG',
-  ShotFormat.video => 'Video',
-};

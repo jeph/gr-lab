@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/camera/camera_top_bar.dart';
 import 'package:grlab/src/connection/connect_failure_view.dart';
@@ -256,7 +257,7 @@ class _LibraryViewState extends State<_LibraryView> {
         slivers.add(
           SliverToBoxAdapter(
             child: _DayLabel(
-              title: formatDay(section.day!, now),
+              title: formatDay(context, section.day!, now),
               shots: section.shots,
             ),
           ),
@@ -308,22 +309,18 @@ class _LibraryViewState extends State<_LibraryView> {
 /// Explains how to allow photo-library access after the OS refused it.
 Future<void> showPermissionGuidance(BuildContext context) {
   final ios = Theme.of(context).platform == TargetPlatform.iOS;
+  final l10n = context.l10n;
   return showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Allow access to Photos'),
+      title: Text(l10n.libraryPhotoAccessTitle),
       content: Text(
-        ios
-            ? 'GR Lab needs permission to add photos. Open Settings › GR Lab › '
-                  'Photos, allow access, then retry the downloads.'
-            : 'GR Lab needs permission to save photos and videos. Open '
-                  'Settings › Apps › GR Lab › Permissions, allow Photos and '
-                  'videos, then retry the downloads.',
+        ios ? l10n.libraryPhotoAccessIos : l10n.libraryPhotoAccessAndroid,
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('OK'),
+          child: Text(l10n.libraryOk),
         ),
       ],
     ),
@@ -335,9 +332,9 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [CameraTopBar(), PageTitle('Library')],
+      children: [const CameraTopBar(), PageTitle(context.l10n.libraryTitle)],
     );
   }
 }
@@ -353,6 +350,7 @@ class _StatusLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     if (model.shots == null) return const SizedBox.shrink();
     final style = TextStyle(fontSize: 13, color: c.t2);
     final Widget content;
@@ -365,7 +363,10 @@ class _StatusLine extends StatelessWidget {
             child: CircularProgressIndicator(strokeWidth: 1.6, color: c.t2),
           ),
           const SizedBox(width: 8),
-          Text(model.refreshing ? 'Updating…' : 'Connecting…', style: style),
+          Text(
+            model.refreshing ? l10n.libraryUpdating : l10n.libraryConnecting,
+            style: style,
+          ),
         ],
       );
     } else if (model.error != null) {
@@ -373,14 +374,14 @@ class _StatusLine extends StatelessWidget {
         children: [
           Icon(Icons.error_outline_rounded, size: 15, color: c.danger),
           const SizedBox(width: 6),
-          Flexible(child: Text("Couldn't update the list", style: style)),
+          Flexible(child: Text(l10n.libraryUpdateFailed, style: style)),
           TextButton(
             onPressed: () => unawaited(model.refresh()),
             style: TextButton.styleFrom(
               minimumSize: const Size(0, 32),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: const Text('Retry'),
+            child: Text(l10n.libraryRetry),
           ),
         ],
       );
@@ -405,12 +406,12 @@ class _Chips extends StatelessWidget {
   final Map<LibraryFilter, int> counts;
   final ValueChanged<LibraryFilter> onSelect;
 
-  static String _label(LibraryFilter f) => switch (f) {
-    LibraryFilter.all => 'All',
-    LibraryFilter.jpeg => 'JPEG',
-    LibraryFilter.raw => 'RAW',
-    LibraryFilter.video => 'Video',
-    LibraryFilter.notDownloaded => 'Not downloaded',
+  static String _label(AppLocalizations l10n, LibraryFilter f) => switch (f) {
+    LibraryFilter.all => l10n.libraryFilterAll,
+    LibraryFilter.jpeg => l10n.libraryFilterJpeg,
+    LibraryFilter.raw => l10n.libraryFilterRaw,
+    LibraryFilter.video => l10n.libraryFilterVideo,
+    LibraryFilter.notDownloaded => l10n.libraryFilterNotDownloaded,
   };
 
   @override
@@ -423,7 +424,7 @@ class _Chips extends StatelessWidget {
           if (f != LibraryFilter.all) const SizedBox(width: 8),
           GrChip(
             key: ValueKey('chip:${f.name}'),
-            label: _label(f),
+            label: _label(context.l10n, f),
             count: counts[f],
             selected: f == filter,
             onTap: () => onSelect(f),
@@ -443,10 +444,10 @@ class _DayLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    final storages = {for (final s in shots) storageLabel(s.storage)}
+    final storages = {for (final s in shots) storageLabel(context, s.storage)}
       ..remove(null);
     final meta = [
-      '${shots.length}',
+      formatCount(context, shots.length),
       if (storages.isNotEmpty) storages.join(' + '),
     ].join(' · ');
     return Padding(
@@ -489,7 +490,7 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    final name = connection.camera?.name ?? 'your camera';
+    final l10n = context.l10n;
     final IconData icon;
     final String title;
     final String body;
@@ -497,21 +498,21 @@ class _EmptyState extends StatelessWidget {
     if (model.shots != null) {
       icon = Icons.photo_library_outlined;
       if (filter == LibraryFilter.all) {
-        title = 'No photos';
-        body = 'The camera has no photos or videos.';
+        title = l10n.libraryEmptyTitle;
+        body = l10n.libraryEmptyBody;
       } else {
-        title = 'Nothing here';
+        title = l10n.libraryFilterEmptyTitle;
         body = filter == LibraryFilter.notDownloaded
-            ? 'Every photo is on your phone.'
-            : 'No photos match this filter.';
+            ? l10n.libraryFilterEmptyNotDownloaded
+            : l10n.libraryFilterEmptyBody;
       }
     } else if (model.connected && model.error != null) {
       icon = Icons.error_outline_rounded;
-      title = "Couldn't read the photos";
-      body = 'The camera did not send its photo list.';
+      title = l10n.libraryListFailedTitle;
+      body = l10n.libraryListFailedBody;
       action = FilledButton(
         onPressed: () => unawaited(model.refresh()),
-        child: const Text('Try again'),
+        child: Text(l10n.libraryTryAgain),
       );
     } else if (!model.connected) {
       return Padding(
@@ -521,7 +522,10 @@ class _EmptyState extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Photos come over $name's Wi-Fi",
+              switch (connection.camera?.name) {
+                final name? => l10n.libraryJoining(name),
+                null => l10n.libraryJoiningUnnamed,
+              },
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 18),
@@ -536,7 +540,7 @@ class _EmptyState extends StatelessWidget {
           children: [
             const CircularProgressIndicator(),
             const SizedBox(height: 16),
-            Text("Reading the camera's photos…", style: TextStyle(color: c.t2)),
+            Text(l10n.libraryReading, style: TextStyle(color: c.t2)),
           ],
         ),
       );
@@ -586,6 +590,7 @@ class _SelectionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     final kinds = [
       FileKind.jpeg,
       FileKind.raw,
@@ -604,12 +609,12 @@ class _SelectionBar extends StatelessWidget {
               children: [
                 IconButton(
                   onPressed: onClose,
-                  tooltip: 'Cancel selection',
+                  tooltip: l10n.libraryCancelSelection,
                   icon: Icon(Icons.close_rounded, color: c.invFg),
                 ),
                 Expanded(
                   child: Text(
-                    '${shots.length} selected',
+                    l10n.librarySelectedCount(shots.length),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -663,6 +668,7 @@ class _KindAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     final library = LibraryScope.of(context);
     final files = [
       for (final s in shots) ...library.engine.filesToDownload(serial, s, kind),
@@ -681,13 +687,13 @@ class _KindAction extends StatelessWidget {
     final String detail;
     if (files.isNotEmpty) {
       detail = [
-        '${files.length} ${files.length == 1 ? 'file' : 'files'}',
-        if (sizeKnown) formatBytes(bytes),
+        l10n.libraryFileCount(files.length),
+        if (sizeKnown) formatBytes(context, bytes),
       ].join(' · ');
     } else if (shots.any((s) => s.filesOf(kind).isNotEmpty)) {
-      detail = 'Queued';
+      detail = l10n.libraryKindQueued;
     } else {
-      detail = 'None selected';
+      detail = l10n.libraryKindNoneSelected;
     }
     return FilledButton(
       key: ValueKey('selection-download:${kind.name}'),
@@ -713,9 +719,9 @@ class _KindAction extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 switch (kind) {
-                  FileKind.jpeg => 'JPEG',
-                  FileKind.raw => 'RAW',
-                  FileKind.movie => 'Video',
+                  FileKind.jpeg => l10n.libraryFormatJpeg,
+                  FileKind.raw => l10n.libraryFormatRaw,
+                  FileKind.movie => l10n.libraryFormatVideo,
                 },
                 style: const TextStyle(
                   fontSize: 14,

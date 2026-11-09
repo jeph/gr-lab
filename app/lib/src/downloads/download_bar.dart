@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/downloads/download_engine.dart';
 import 'package:grlab/src/library/format.dart';
 import 'package:grlab/src/library/library_scope.dart';
-import 'package:grlab/src/library/shot.dart';
 import 'package:grlab/src/library/shot_cell.dart';
+import 'package:grlab/src/services.dart';
 import 'package:grlab/src/theme/tokens.dart';
 
 /// Mini download bar floating over the grid (mock `.mini`): what is being
@@ -34,22 +35,23 @@ class _Bar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     final job = engine.current ?? engine.jobs.first;
     final remaining = engine.remaining;
     final failed = engine.failedCount;
     final String title;
     if (remaining == 0) {
-      title = failed == 1 ? '1 download failed' : '$failed downloads failed';
+      title = l10n.downloadBarFailed(failed);
     } else if (engine.paused) {
-      title = 'Downloads paused';
+      title = l10n.downloadBarPaused;
     } else if (engine.current != null) {
-      title = 'Downloading';
+      title = l10n.downloadBarDownloading;
     } else {
-      title = 'Waiting for the camera';
+      title = l10n.downloadBarWaiting;
     }
     final position = engine.current != null
-        ? '${engine.batchDone + 1} of ${engine.batchTotal}'
-        : '$remaining left';
+        ? l10n.downloadBarPosition(engine.batchDone + 1, engine.batchTotal)
+        : l10n.downloadBarLeft(remaining);
     return Material(
       key: const ValueKey('download-bar'),
       color: c.float,
@@ -87,13 +89,17 @@ class _Bar extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           remaining == 0
-                              ? 'Tap to see why'
+                              ? l10n.downloadBarSeeWhy
                               : [
                                   position,
                                   if (engine.current != null &&
                                       progress.bytesPerSecond > 0)
-                                    formatRate(progress.bytesPerSecond),
-                                  if (failed > 0) '$failed failed',
+                                    formatRate(
+                                      context,
+                                      progress.bytesPerSecond,
+                                    ),
+                                  if (failed > 0)
+                                    l10n.downloadBarFailedCount(failed),
                                 ].join(' · '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -118,11 +124,13 @@ class _Bar extends StatelessWidget {
                 if (remaining == 0)
                   TextButton(
                     onPressed: engine.retryFailed,
-                    child: const Text('Retry'),
+                    child: Text(l10n.downloadRetry),
                   )
                 else
                   IconButton(
-                    tooltip: engine.paused ? 'Resume' : 'Pause',
+                    tooltip: engine.paused
+                        ? l10n.downloadResume
+                        : l10n.downloadPause,
                     onPressed: engine.paused ? engine.resume : engine.pause,
                     icon: Icon(
                       engine.paused
@@ -131,7 +139,7 @@ class _Bar extends StatelessWidget {
                     ),
                   ),
                 IconButton(
-                  tooltip: 'Cancel all',
+                  tooltip: l10n.downloadCancelAll,
                   onPressed: engine.cancelAll,
                   icon: const Icon(Icons.close_rounded),
                 ),
@@ -199,6 +207,7 @@ class _QueueSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     return ListenableBuilder(
       listenable: engine,
       builder: (context, _) {
@@ -211,10 +220,10 @@ class _QueueSheet extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 0, 12, 8),
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Downloads',
-                        style: TextStyle(
+                        l10n.downloadQueueTitle,
+                        style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
                         ),
@@ -223,12 +232,12 @@ class _QueueSheet extends StatelessWidget {
                     if (engine.failedCount > 0)
                       TextButton(
                         onPressed: engine.retryFailed,
-                        child: const Text('Retry failed'),
+                        child: Text(l10n.downloadRetryFailed),
                       ),
                     if (jobs.isNotEmpty)
                       TextButton(
                         onPressed: engine.cancelAll,
-                        child: const Text('Cancel all'),
+                        child: Text(l10n.downloadCancelAll),
                       ),
                   ],
                 ),
@@ -239,7 +248,7 @@ class _QueueSheet extends StatelessWidget {
                 hasScrollBody: false,
                 child: Center(
                   child: Text(
-                    'Nothing to download',
+                    l10n.downloadQueueEmpty,
                     style: TextStyle(color: c.t2),
                   ),
                 ),
@@ -267,16 +276,17 @@ class _JobRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     final names = job.files.map((f) => f.name).join(' + ');
-    final String status;
-    switch (job.state) {
-      case DownloadState.running:
-        status = 'Downloading';
-      case DownloadState.queued:
-        status = engine.paused ? 'Paused' : 'Queued';
-      case DownloadState.failed:
-        status = job.error ?? 'Failed';
-    }
+    final status = switch (job.state) {
+      DownloadState.running => l10n.downloadStateRunning,
+      DownloadState.queued when engine.paused => l10n.downloadStatePaused,
+      DownloadState.queued => l10n.downloadStateQueued,
+      DownloadState.failed => switch (job.failure) {
+        final failure? => _failureMessage(l10n, failure),
+        null => l10n.downloadStateFailed,
+      },
+    };
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
       child: Row(
@@ -296,8 +306,8 @@ class _JobRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   [
-                    formatLabel(job.shot.format),
-                    ?storageLabel(job.shot.storage),
+                    formatLabel(context, job.shot.format),
+                    ?storageLabel(context, job.shot.storage),
                     status,
                   ].join(' · '),
                   maxLines: 2,
@@ -312,12 +322,12 @@ class _JobRow extends StatelessWidget {
           ),
           if (job.state == DownloadState.failed)
             IconButton(
-              tooltip: 'Retry',
+              tooltip: l10n.downloadRetry,
               onPressed: () => engine.retry(job),
               icon: const Icon(Icons.refresh_rounded),
             ),
           IconButton(
-            tooltip: 'Cancel',
+            tooltip: l10n.downloadCancel,
             onPressed: () => engine.cancel(job),
             icon: const Icon(Icons.close_rounded),
           ),
@@ -326,3 +336,29 @@ class _JobRow extends StatelessWidget {
     );
   }
 }
+
+/// Why [failure] stopped a download, in words for the queue.
+String _failureMessage(AppLocalizations l10n, DownloadFailure failure) =>
+    switch (failure) {
+      DownloadSaveFailed(:final reason) => switch (reason) {
+        MediaSaveFailure.permissionDenied => l10n.downloadErrorNoPhotoAccess,
+        MediaSaveFailure.unsupported => l10n.downloadErrorSaveUnsupported,
+        MediaSaveFailure.failed => l10n.downloadErrorSaveFailed,
+      },
+      DownloadTransferFailed(:final reason) => switch (reason) {
+        TransferRefused(:final errCode, errMsg: null) =>
+          l10n.downloadErrorRefused(errCode),
+        TransferRefused(:final errCode, :final String errMsg) =>
+          l10n.downloadErrorRefusedWithMessage(errCode, errMsg),
+        TransferHttpStatus(:final httpStatus) => l10n.downloadErrorHttpStatus(
+          httpStatus,
+        ),
+        TransferCutOff() => l10n.downloadErrorCutOff,
+        TransferConnectionLost() => l10n.downloadErrorConnectionLost,
+        TransferStalled() => l10n.downloadErrorStalled,
+        TransferWriteFailed(:final detail) => l10n.downloadErrorWriteFailed(
+          detail,
+        ),
+        TransferOtherError(:final detail) => l10n.downloadErrorOther(detail),
+      },
+    };

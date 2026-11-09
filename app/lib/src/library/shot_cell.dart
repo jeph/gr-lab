@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/library/format.dart';
 import 'package:grlab/src/library/image_orientation.dart';
 import 'package:grlab/src/library/library_scope.dart';
@@ -452,7 +453,7 @@ class _CameraImageState extends State<CameraImage> {
       final c = GrColors.of(context);
       overlay = IconButton(
         key: ValueKey('image-retry:${widget.size.name}:${widget.file.key}'),
-        tooltip: "Couldn't load the image. Retry",
+        tooltip: context.l10n.libraryImageRetry,
         onPressed: _retryNow,
         style: IconButton.styleFrom(backgroundColor: c.s3),
         icon: Icon(Icons.refresh_rounded, color: c.t1, size: 20),
@@ -497,7 +498,10 @@ class ShotCell extends StatelessWidget {
     final c = GrColors.of(context);
     final selected = mark == CellMark.selected;
     return Semantics(
-      label: '${formatLabel(shot.format)} ${shot.primary.name}',
+      label: context.l10n.libraryShotSemantics(
+        formatLabel(context, shot.format),
+        shot.primary.name,
+      ),
       selected: selected,
       button: true,
       child: GestureDetector(
@@ -523,7 +527,7 @@ class ShotCell extends StatelessWidget {
                 ),
               ),
             ),
-            Positioned(left: 5, bottom: 5, child: PhotoTag(_tag())),
+            Positioned(left: 5, bottom: 5, child: PhotoTag(_tag(context))),
             if (_badge(c) case final badge?)
               Positioned(top: 6, right: 6, child: badge),
             if (selected)
@@ -538,9 +542,12 @@ class ShotCell extends StatelessWidget {
     );
   }
 
-  String _tag() => switch (shot.format) {
-    ShotFormat.video => duration == null ? 'MOV' : formatDuration(duration!),
-    final f => formatLabel(f),
+  String _tag(BuildContext context) => switch (shot.format) {
+    ShotFormat.video => switch (duration) {
+      final d? => formatDuration(context, d),
+      null => context.l10n.libraryTagMovie,
+    },
+    final f => formatLabel(context, f),
   };
 
   Widget? _badge(GrColors c) => switch (mark) {

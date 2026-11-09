@@ -297,27 +297,55 @@ void main() {
       expect(isConnectionError(const FileSystemException('full')), isFalse);
 
       expect(
-        describeTransferError(refused),
-        'The camera refused the file (404 Not Found)',
+        TransferFailure.of(refused),
+        isA<TransferRefused>()
+            .having((f) => f.errCode, 'errCode', 404)
+            .having((f) => f.errMsg, 'errMsg', 'Not Found'),
       );
       expect(
-        describeTransferError(
+        TransferFailure.of(
           const GrHttpStatusException(route: route, httpStatus: 503),
         ),
-        'The camera answered HTTP 503',
+        isA<TransferHttpStatus>().having((f) => f.httpStatus, 'status', 503),
       );
-      expect(describeTransferError(cut), 'The transfer was cut off');
+      expect(TransferFailure.of(cut), isA<TransferCutOff>());
       expect(
-        describeTransferError(const SocketException('reset')),
-        'Lost the connection to the camera',
-      );
-      expect(
-        describeTransferError(TimeoutException('quiet')),
-        'The camera stopped sending',
+        TransferFailure.of(const SocketException('reset')),
+        isA<TransferConnectionLost>(),
       );
       expect(
-        describeTransferError(const FileSystemException('No space')),
-        'Could not write the file: No space',
+        TransferFailure.of(const HttpException('closed')),
+        isA<TransferConnectionLost>(),
+      );
+      expect(
+        TransferFailure.of(TimeoutException('quiet')),
+        isA<TransferStalled>(),
+      );
+      expect(
+        TransferFailure.of(const FileSystemException('write failed')),
+        isA<TransferWriteFailed>().having(
+          (f) => f.detail,
+          'detail',
+          'write failed',
+        ),
+      );
+      expect(
+        TransferFailure.of(
+          const FileSystemException('write failed', null, OSError('No space')),
+        ),
+        isA<TransferWriteFailed>().having(
+          (f) => f.detail,
+          'detail',
+          'No space',
+        ),
+      );
+      expect(
+        TransferFailure.of(StateError('odd')),
+        isA<TransferOtherError>().having(
+          (f) => f.detail,
+          'detail',
+          contains('odd'),
+        ),
       );
     });
   });

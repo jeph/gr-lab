@@ -29,8 +29,8 @@ final class PlatformMediaSaver implements MediaSaver {
     };
     if (!supported) {
       throw MediaSaveException(
-        'unsupported',
-        'cannot save ${files.map((f) => _name(f.path)).join(', ')} as one shot',
+        MediaSaveFailure.unsupported,
+        'not one shot: ${files.map((f) => _name(f.path)).join(', ')}',
       );
     }
     try {
@@ -47,15 +47,16 @@ final class PlatformMediaSaver implements MediaSaver {
         ],
       });
     } on PlatformException catch (e) {
-      final code = switch (e.code) {
-        'permissionDenied' || 'unsupported' => e.code,
-        _ => 'failed',
+      final failure = switch (e.code) {
+        'permissionDenied' => MediaSaveFailure.permissionDenied,
+        'unsupported' => MediaSaveFailure.unsupported,
+        _ => MediaSaveFailure.failed,
       };
-      throw MediaSaveException(code, e.message ?? 'saving failed');
+      throw MediaSaveException(failure, [e.code, ?e.message].join(': '));
     } on MissingPluginException {
       throw const MediaSaveException(
-        'unsupported',
-        'saving to the photo library is not available on this platform',
+        MediaSaveFailure.unsupported,
+        'no media channel on this platform',
       );
     }
   }
@@ -69,8 +70,8 @@ final class PlatformMediaSaver implements MediaSaver {
       'dng' => _MediaKind.dng,
       'mov' => _MediaKind.movie,
       _ => throw MediaSaveException(
-        'unsupported',
-        '$name is not a JPEG, DNG or MOV file',
+        MediaSaveFailure.unsupported,
+        'not a JPEG, DNG or MOV file: $name',
       ),
     };
     return (file: file, kind: kind);

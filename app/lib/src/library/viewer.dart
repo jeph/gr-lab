@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/connection/idle_disconnect.dart';
 import 'package:grlab/src/downloads/download_engine.dart';
@@ -67,8 +68,9 @@ class _ShotViewerState extends State<ShotViewer> {
                 ),
                 Text(
                   [
-                    if (taken != null) formatDayTime(taken, DateTime.now()),
-                    ?storageLabel(shot.storage),
+                    if (taken != null)
+                      formatDayTime(context, taken, DateTime.now()),
+                    ?storageLabel(context, shot.storage),
                   ].join(' · '),
                   style: GrFonts.monoStyle(context, size: 11),
                 ),
@@ -208,7 +210,7 @@ class _VideoPageState extends State<_VideoPage> {
   late final IdleDisconnect _idle = AppScope.of(context).idle;
   VideoPlayerController? _video;
   MovieDownload? _download;
-  String? _error;
+  _MovieProblem? _problem;
 
   /// Set while a movie copy or playback keeps the camera's Wi-Fi up.
   VoidCallback? _release;
@@ -259,7 +261,7 @@ class _VideoPageState extends State<_VideoPage> {
       final download = _library.movies.download(link, file);
       setState(() {
         _download = download;
-        _error = null;
+        _problem = null;
       });
       // Only the attempt still on screen may change the page: a cancelled
       // one settles later, possibly after Play started a new attempt.
@@ -273,7 +275,7 @@ class _VideoPageState extends State<_VideoPage> {
         if (!current()) return;
         setState(() {
           _download = null;
-          _error = "Couldn't copy the movie from the camera";
+          _problem = _MovieProblem.copyFailed;
         });
         return;
       }
@@ -284,7 +286,7 @@ class _VideoPageState extends State<_VideoPage> {
     setState(() {
       _download = null;
       _video = controller;
-      _error = null;
+      _problem = null;
     });
     try {
       await controller.initialize();
@@ -296,7 +298,7 @@ class _VideoPageState extends State<_VideoPage> {
       if (!mounted) return;
       setState(() {
         _video = null;
-        _error = "This movie can't be played";
+        _problem = _MovieProblem.unplayable;
       });
     }
   }
@@ -364,7 +366,7 @@ class _VideoPageState extends State<_VideoPage> {
                                 widget.shot.primary,
                               ) !=
                               null,
-                      error: _error,
+                      problem: _problem,
                       onPlay: () => unawaited(_play()),
                     ),
                   ),
@@ -375,24 +377,37 @@ class _VideoPageState extends State<_VideoPage> {
   }
 }
 
+/// Why the movie is not playing.
+enum _MovieProblem { copyFailed, unplayable }
+
 class _PlayPrompt extends StatelessWidget {
-  const new({required this.canPlay, required this.error, required this.onPlay});
+  const new({
+    required this.canPlay,
+    required this.problem,
+    required this.onPlay,
+  });
 
   final bool canPlay;
-  final String? error;
+  final _MovieProblem? problem;
   final VoidCallback onPlay;
 
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    final note = error ?? (canPlay ? null : 'Connect to the camera to play');
+    final l10n = context.l10n;
+    final note = switch (problem) {
+      _MovieProblem.copyFailed => l10n.viewerMovieCopyFailed,
+      _MovieProblem.unplayable => l10n.viewerMovieUnplayable,
+      null when !canPlay => l10n.viewerConnectToPlay,
+      null => null,
+    };
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton.filled(
           key: const ValueKey('viewer-play'),
           iconSize: 36,
-          tooltip: 'Play',
+          tooltip: l10n.viewerPlay,
           onPressed: canPlay ? onPlay : null,
           icon: const Icon(Icons.play_arrow_rounded),
         ),
@@ -433,13 +448,16 @@ class _Copying extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             fraction == null
-                ? 'Copying from the camera…'
-                : 'Copying from the camera · ${(fraction * 100).round()}%',
+                ? context.l10n.viewerCopying
+                : context.l10n.viewerCopyingProgress(fraction),
             textAlign: TextAlign.center,
             style: TextStyle(color: c.t2),
           ),
           const SizedBox(height: 4),
-          TextButton(onPressed: onCancel, child: const Text('Cancel')),
+          TextButton(
+            onPressed: onCancel,
+            child: Text(context.l10n.viewerCancel),
+          ),
         ],
       ),
     );
@@ -456,11 +474,12 @@ class _Details extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     final infos = [for (final f in shot.files) model.info(f)];
     final sizes = [for (final i in infos) i?.size];
     final size = sizes.contains(null)
         ? '…'
-        : formatBytes(sizes.fold(0, (a, b) => a + b!));
+        : formatBytes(context, sizes.fold(0, (a, b) => a + b!));
     final taken = model.info(shot.primary)?.taken;
     final duration = model.info(shot.primary)?.duration;
     final label = TextStyle(fontSize: 11.5, color: c.t3);
@@ -482,16 +501,20 @@ class _Details extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           child: Row(
             children: [
-              cell('Format', formatLabel(shot.format)),
+              cell(l10n.viewerFormat, formatLabel(context, shot.format)),
               cell(
-                shot.isVideo ? 'Length' : 'Size',
+                shot.isVideo ? l10n.viewerLength : l10n.viewerSize,
                 shot.isVideo
-                    ? (duration == null ? '…' : formatDuration(duration))
+                    ? (duration == null
+                          ? '…'
+                          : formatDuration(context, duration))
                     : size,
               ),
               cell(
-                'Taken',
-                taken == null ? '…' : formatDayTime(taken, DateTime.now()),
+                l10n.viewerTaken,
+                taken == null
+                    ? '…'
+                    : formatDayTime(context, taken, DateTime.now()),
               ),
             ],
           ),
@@ -548,7 +571,7 @@ class _ActionBar extends StatelessWidget {
                           serial: serial,
                           shot: shot,
                           files: [shot.jpeg!],
-                          label: 'Download JPEG',
+                          kind: _DownloadKind.jpeg,
                           engine: engine,
                         ),
                       ),
@@ -559,7 +582,7 @@ class _ActionBar extends StatelessWidget {
                           serial: serial,
                           shot: shot,
                           files: [shot.raw!],
-                          label: 'Download RAW',
+                          kind: _DownloadKind.raw,
                           engine: engine,
                         ),
                       ),
@@ -571,7 +594,7 @@ class _ActionBar extends StatelessWidget {
                           serial: serial,
                           shot: shot,
                           files: shot.files,
-                          label: 'Download',
+                          kind: _DownloadKind.all,
                           engine: engine,
                         ),
                       ),
@@ -584,6 +607,10 @@ class _ActionBar extends StatelessWidget {
   }
 }
 
+/// Which files of the shot a [_DownloadAction] fetches. The names are the
+/// `kind` of the `viewerDownload` messages.
+enum _DownloadKind { jpeg, raw, all }
+
 /// Downloads [files] of the shot, or shows that they are queued or
 /// downloading, or offers a retry when their job failed.
 class _DownloadAction extends StatelessWidget {
@@ -591,7 +618,7 @@ class _DownloadAction extends StatelessWidget {
     required this.serial,
     required this.shot,
     required this.files,
-    required this.label,
+    required this.kind,
     required this.engine,
     super.key,
   });
@@ -599,12 +626,13 @@ class _DownloadAction extends StatelessWidget {
   final String serial;
   final Shot shot;
   final List<CameraFile> files;
-  final String label;
+  final _DownloadKind kind;
   final DownloadEngine engine;
 
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     final jobs = [
       for (final j in engine.jobs)
         if (j.serial == serial && j.files.any(files.contains)) j,
@@ -615,14 +643,14 @@ class _DownloadAction extends StatelessWidget {
         .firstOrNull;
     final downloaded = files.every((f) => engine.isFileDownloaded(serial, f));
     final (IconData icon, String text) = any(DownloadState.running)
-        ? (Icons.downloading_rounded, 'Downloading')
+        ? (Icons.downloading_rounded, l10n.viewerDownloading)
         : any(DownloadState.queued)
-        ? (Icons.schedule_rounded, 'Queued')
+        ? (Icons.schedule_rounded, l10n.viewerQueued)
         : failed != null
-        ? (Icons.refresh_rounded, 'Retry download')
+        ? (Icons.refresh_rounded, l10n.viewerRetryDownload)
         : downloaded
-        ? (Icons.check_rounded, '$label again')
-        : (Icons.download_rounded, label);
+        ? (Icons.check_rounded, l10n.viewerDownloadAgain(kind.name))
+        : (Icons.download_rounded, l10n.viewerDownload(kind.name));
     final VoidCallback? onTap;
     if (any(DownloadState.running) || any(DownloadState.queued)) {
       onTap = null;

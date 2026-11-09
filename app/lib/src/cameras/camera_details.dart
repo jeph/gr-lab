@@ -86,7 +86,7 @@ class CameraDetailsScreen extends StatelessWidget {
                       title: 'Paired',
                       trailing: TrailingFit.value(
                         context,
-                        formatDate(camera.pairedAt),
+                        formatDate(context, camera.pairedAt),
                       ),
                     ),
                   ],

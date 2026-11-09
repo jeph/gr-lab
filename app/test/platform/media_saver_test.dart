@@ -93,9 +93,9 @@ void main() {
         saver.saveShot(shot, album: 'GR Lab'),
         throwsA(
           isA<MediaSaveException>().having(
-            (e) => e.code,
-            'code',
-            'unsupported',
+            (e) => e.failure,
+            'failure',
+            MediaSaveFailure.unsupported,
           ),
         ),
         reason: shot.map((f) => f.path).join(', '),
@@ -115,9 +115,9 @@ void main() {
         isA<MediaSaveException>()
             .having((e) => e.permissionDenied, 'permissionDenied', isTrue)
             .having(
-              (e) => e.message,
-              'message',
-              'GR Lab may not add to Photos',
+              (e) => e.detail,
+              'detail',
+              'permissionDenied: GR Lab may not add to Photos',
             ),
       ),
     );
@@ -129,7 +129,7 @@ void main() {
       PlatformMediaSaver().saveShot([file('R0001234.JPG')], album: 'GR Lab'),
       throwsA(
         isA<MediaSaveException>()
-            .having((e) => e.code, 'code', 'failed')
+            .having((e) => e.failure, 'failure', MediaSaveFailure.failed)
             .having((e) => e.permissionDenied, 'permissionDenied', isFalse),
       ),
     );
@@ -140,7 +140,11 @@ void main() {
     await expectLater(
       PlatformMediaSaver().saveShot([file('R0001234.JPG')], album: 'GR Lab'),
       throwsA(
-        isA<MediaSaveException>().having((e) => e.code, 'code', 'unsupported'),
+        isA<MediaSaveException>().having(
+          (e) => e.failure,
+          'failure',
+          MediaSaveFailure.unsupported,
+        ),
       ),
     );
   });

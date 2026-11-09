@@ -355,7 +355,14 @@ void main() {
       final failed = engine.jobs.single;
       expect(failed.state, DownloadState.failed);
       expect(failed.shot.base, 'R0000002');
-      expect(failed.error, contains('500'));
+      expect(
+        failed.failure,
+        isA<DownloadTransferFailed>().having(
+          (f) => f.reason,
+          'reason',
+          isA<TransferRefused>().having((r) => r.errCode, 'errCode', 500),
+        ),
+      );
       expect(h.saved, [
         ['R0000003.DNG'],
       ]);
@@ -366,6 +373,32 @@ void main() {
       await engine.whenIdle();
       expect(h.saved.last, ['R0000002.JPG']);
       expect(engine.jobs, isEmpty);
+    });
+
+    test('why a job failed survives a restart', () async {
+      h = await Harness.start(
+        config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
+        failing: {'R0000002.JPG'},
+      );
+      final first = h.engine();
+      await first.enqueue(serial, [h.shot('R0000002')]);
+      await first.whenIdle();
+      await first.flush();
+      first.dispose();
+      h._engines.remove(first);
+
+      final second = h.engine();
+      await second.ready;
+      final job = second.jobs.single;
+      expect(job.state, DownloadState.failed);
+      expect(
+        job.failure,
+        isA<DownloadTransferFailed>().having(
+          (f) => f.reason,
+          'reason',
+          isA<TransferRefused>().having((r) => r.errCode, 'errCode', 500),
+        ),
+      );
     });
 
     test('a transfer cut off while still connected fails after the grace '
@@ -381,7 +414,15 @@ void main() {
       await engine.enqueue(serial, [h.shot('R0000002')]);
       await engine.whenIdle();
       expect(engine.jobs.single.state, DownloadState.failed);
-      expect(engine.jobs.single.error, isNotNull);
+      // The simulated camera closes the socket mid-body.
+      expect(
+        engine.jobs.single.failure,
+        isA<DownloadTransferFailed>().having(
+          (f) => f.reason,
+          'reason',
+          isA<TransferConnectionLost>(),
+        ),
+      );
       expect(h.saved, isEmpty);
       expect(engine.failedCount, 1);
     });
@@ -418,11 +459,21 @@ void main() {
       h = await Harness.start(
         config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
       );
-      h.media.failWith = const MediaSaveException('failed', 'disk full');
+      h.media.failWith = const MediaSaveException(
+        MediaSaveFailure.failed,
+        'disk full',
+      );
       final engine = h.engine();
       await engine.enqueue(serial, [h.shot('R0000002')]);
       await engine.whenIdle();
-      expect(engine.jobs.single.error, 'disk full');
+      expect(
+        engine.jobs.single.failure,
+        isA<DownloadSaveFailed>().having(
+          (f) => f.reason,
+          'reason',
+          MediaSaveFailure.failed,
+        ),
+      );
       expect(engine.permissionProblem, isNull);
 
       h.media.failWith = null;
@@ -440,7 +491,7 @@ void main() {
           config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
         );
         h.media.failWith = const MediaSaveException(
-          'permissionDenied',
+          MediaSaveFailure.permissionDenied,
           'Photos access denied',
         );
         final engine = h.engine();

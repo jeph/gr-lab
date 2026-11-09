@@ -91,6 +91,487 @@
       }
     }
   },
+  "downloadBarDownloading": "Downloading",
+  "@downloadBarDownloading": {
+    "description": "Download bar title while a shot is being downloaded."
+  },
+  "downloadBarFailed": "{count, plural, =1{1 download failed} other{{count} downloads failed}}",
+  "@downloadBarFailed": {
+    "description": "Download bar title when nothing is left to download and some downloads failed.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern",
+        "description": "How many downloads failed."
+      }
+    }
+  },
+  "downloadBarFailedCount": "{count, plural, other{{count} failed}}",
+  "@downloadBarFailedCount": {
+    "description": "Download bar detail: how many downloads failed so far.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern",
+        "description": "How many downloads failed."
+      }
+    }
+  },
+  "downloadBarLeft": "{count, plural, other{{count} left}}",
+  "@downloadBarLeft": {
+    "description": "Download bar: how many shots are still to download while none is running.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern",
+        "description": "Shots still to download."
+      }
+    }
+  },
+  "downloadBarPaused": "Downloads paused",
+  "@downloadBarPaused": {
+    "description": "Download bar title while the user has paused downloads."
+  },
+  "downloadBarPosition": "{current} of {total}",
+  "@downloadBarPosition": {
+    "description": "Download bar: which shot of the batch is being downloaded, e.g. '2 of 6'.",
+    "placeholders": {
+      "current": {
+        "type": "int",
+        "format": "decimalPattern",
+        "description": "Number of the shot being downloaded."
+      },
+      "total": {
+        "type": "int",
+        "format": "decimalPattern",
+        "description": "Shots in the batch."
+      }
+    }
+  },
+  "downloadBarSeeWhy": "Tap to see why",
+  "@downloadBarSeeWhy": {
+    "description": "Download bar detail when downloads failed: tapping opens the queue with the reasons."
+  },
+  "downloadBarWaiting": "Waiting for the camera",
+  "@downloadBarWaiting": {
+    "description": "Download bar title while queued downloads wait for their camera to connect."
+  },
+  "downloadCancel": "Cancel",
+  "@downloadCancel": {
+    "description": "Tooltip of the button that removes one download from the queue."
+  },
+  "downloadCancelAll": "Cancel all",
+  "@downloadCancelAll": {
+    "description": "Button and tooltip that removes every download from the queue."
+  },
+  "downloadErrorConnectionLost": "Lost the connection to the camera",
+  "@downloadErrorConnectionLost": {
+    "description": "Why a download failed: the connection to the camera broke."
+  },
+  "downloadErrorCutOff": "The transfer was cut off",
+  "@downloadErrorCutOff": {
+    "description": "Why a download failed: the file arrived shorter than announced."
+  },
+  "downloadErrorHttpStatus": "The camera answered HTTP {httpStatus}",
+  "@downloadErrorHttpStatus": {
+    "description": "Why a download failed: the camera answered with an HTTP error status.",
+    "placeholders": {
+      "httpStatus": {
+        "type": "int",
+        "description": "The HTTP status code, e.g. 503."
+      }
+    }
+  },
+  "downloadErrorNoPhotoAccess": "No access to the photo library",
+  "@downloadErrorNoPhotoAccess": {
+    "description": "Why a download failed: the user has not allowed GR Lab to add to the photo library."
+  },
+  "downloadErrorOther": "The download failed: {detail}",
+  "@downloadErrorOther": {
+    "description": "Why a download failed, for an unexpected error.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "description": "The error as technical text."
+      }
+    }
+  },
+  "downloadErrorRefused": "The camera refused the file ({errCode})",
+  "@downloadErrorRefused": {
+    "description": "Why a download failed: the camera answered with an error code instead of the file.",
+    "placeholders": {
+      "errCode": {
+        "type": "int",
+        "description": "The camera's error code, e.g. 404."
+      }
+    }
+  },
+  "downloadErrorRefusedWithMessage": "The camera refused the file ({errCode} {cameraMessage})",
+  "@downloadErrorRefusedWithMessage": {
+    "description": "Why a download failed: the camera answered with an error code and message instead of the file.",
+    "placeholders": {
+      "errCode": {
+        "type": "int",
+        "description": "The camera's error code, e.g. 404."
+      },
+      "cameraMessage": {
+        "type": "String",
+        "description": "The camera's error message as it sent it, in English, e.g. 'Not Found'."
+      }
+    }
+  },
+  "downloadErrorSaveFailed": "Couldn't save to the photo library",
+  "@downloadErrorSaveFailed": {
+    "description": "Why a download failed: the phone failed to save the shot to its photo library."
+  },
+  "downloadErrorSaveUnsupported": "These files can't be saved to the photo library",
+  "@downloadErrorSaveUnsupported": {
+    "description": "Why a download failed: the phone cannot save these files to its photo library."
+  },
+  "downloadErrorStalled": "The camera stopped sending",
+  "@downloadErrorStalled": {
+    "description": "Why a download failed: the camera stopped sending data."
+  },
+  "downloadErrorWriteFailed": "Could not write the file: {detail}",
+  "@downloadErrorWriteFailed": {
+    "description": "Why a download failed: the phone could not store the received file.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "description": "The operating system's description of the failure, e.g. 'No space left on device'."
+      }
+    }
+  },
+  "downloadPause": "Pause",
+  "@downloadPause": {
+    "description": "Tooltip of the button that pauses downloads."
+  },
+  "downloadQueueEmpty": "Nothing to download",
+  "@downloadQueueEmpty": {
+    "description": "Shown in the download queue when it is empty."
+  },
+  "downloadQueueTitle": "Downloads",
+  "@downloadQueueTitle": {
+    "description": "Title of the download queue sheet."
+  },
+  "downloadResume": "Resume",
+  "@downloadResume": {
+    "description": "Tooltip of the button that resumes paused downloads."
+  },
+  "downloadRetry": "Retry",
+  "@downloadRetry": {
+    "description": "Button and tooltip that retries failed downloads."
+  },
+  "downloadRetryFailed": "Retry failed",
+  "@downloadRetryFailed": {
+    "description": "Button in the download queue that retries every failed download."
+  },
+  "downloadStateFailed": "Failed",
+  "@downloadStateFailed": {
+    "description": "Status of a failed download whose reason is unknown."
+  },
+  "downloadStatePaused": "Paused",
+  "@downloadStatePaused": {
+    "description": "Status of a waiting download while the user has paused downloads."
+  },
+  "downloadStateQueued": "Queued",
+  "@downloadStateQueued": {
+    "description": "Status of a download in the queue while it waits for its turn."
+  },
+  "downloadStateRunning": "Downloading",
+  "@downloadStateRunning": {
+    "description": "Status of a download in the queue while it runs."
+  },
+  "libraryCancelSelection": "Cancel selection",
+  "@libraryCancelSelection": {
+    "description": "Tooltip of the button that ends selecting shots."
+  },
+  "libraryConnecting": "Connecting…",
+  "@libraryConnecting": {
+    "description": "Status under the Library title while the camera's Wi-Fi connects."
+  },
+  "libraryDayTime": "{day} {time}",
+  "@libraryDayTime": {
+    "description": "When a shot was taken, e.g. 'Today 14:22' or 'Nov 3 2:22 PM'.",
+    "placeholders": {
+      "day": {
+        "type": "String",
+        "description": "The day, e.g. 'Today' or 'Nov 3'."
+      },
+      "time": {
+        "type": "String",
+        "description": "The time of day."
+      }
+    }
+  },
+  "libraryDurationHours": "{hours}:{minutes}:{seconds}",
+  "@libraryDurationHours": {
+    "description": "A video length of an hour or more, e.g. '1:02:03'.",
+    "placeholders": {
+      "hours": {
+        "type": "String",
+        "description": "Hours, formatted."
+      },
+      "minutes": {
+        "type": "String",
+        "description": "Minutes, two digits."
+      },
+      "seconds": {
+        "type": "String",
+        "description": "Seconds, two digits."
+      }
+    }
+  },
+  "libraryDurationMinutes": "{minutes}:{seconds}",
+  "@libraryDurationMinutes": {
+    "description": "A video length under an hour, e.g. '0:14'.",
+    "placeholders": {
+      "minutes": {
+        "type": "String",
+        "description": "Minutes, formatted."
+      },
+      "seconds": {
+        "type": "String",
+        "description": "Seconds, two digits."
+      }
+    }
+  },
+  "libraryEmptyBody": "The camera has no photos or videos.",
+  "@libraryEmptyBody": {
+    "description": "Text shown when the camera has no shots."
+  },
+  "libraryEmptyTitle": "No photos",
+  "@libraryEmptyTitle": {
+    "description": "Title shown when the camera has no shots."
+  },
+  "libraryFileCount": "{count, plural, =1{1 file} other{{count} files}}",
+  "@libraryFileCount": {
+    "description": "How many files a download action of the selection would fetch.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern",
+        "description": "Number of files."
+      }
+    }
+  },
+  "libraryFilterAll": "All",
+  "@libraryFilterAll": {
+    "description": "Filter chip that shows every shot."
+  },
+  "libraryFilterEmptyBody": "No photos match this filter.",
+  "@libraryFilterEmptyBody": {
+    "description": "Text shown when no shot matches the selected filter."
+  },
+  "libraryFilterEmptyNotDownloaded": "Every photo is on your phone.",
+  "@libraryFilterEmptyNotDownloaded": {
+    "description": "Text shown when the Not downloaded filter matches no shot."
+  },
+  "libraryFilterEmptyTitle": "Nothing here",
+  "@libraryFilterEmptyTitle": {
+    "description": "Title shown when no shot matches the selected filter."
+  },
+  "libraryFilterJpeg": "JPEG",
+  "@libraryFilterJpeg": {
+    "description": "Filter chip that shows shots with a JPEG file."
+  },
+  "libraryFilterNotDownloaded": "Not downloaded",
+  "@libraryFilterNotDownloaded": {
+    "description": "Filter chip that shows shots not yet saved to the phone."
+  },
+  "libraryFilterRaw": "RAW",
+  "@libraryFilterRaw": {
+    "description": "Filter chip that shows shots with a RAW (DNG) file."
+  },
+  "libraryFilterVideo": "Video",
+  "@libraryFilterVideo": {
+    "description": "Filter chip that shows videos."
+  },
+  "libraryFormatJpeg": "JPEG",
+  "@libraryFormatJpeg": {
+    "description": "A shot or download of JPEG files."
+  },
+  "libraryFormatRaw": "RAW",
+  "@libraryFormatRaw": {
+    "description": "A shot or download of RAW (DNG) files."
+  },
+  "libraryFormatRawJpeg": "RAW+JPEG",
+  "@libraryFormatRawJpeg": {
+    "description": "A shot saved as both a RAW and a JPEG file."
+  },
+  "libraryFormatVideo": "Video",
+  "@libraryFormatVideo": {
+    "description": "A video shot or a download of video files."
+  },
+  "libraryImageRetry": "Couldn't load the image. Retry",
+  "@libraryImageRetry": {
+    "description": "Tooltip of the button that loads a thumbnail or photo again."
+  },
+  "libraryJoining": "Photos come over {cameraName}'s Wi-Fi",
+  "@libraryJoining": {
+    "description": "Heading while the phone joins the camera's Wi-Fi to read its photos.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name, as the camera reports it."
+      }
+    }
+  },
+  "libraryJoiningUnnamed": "Photos come over your camera's Wi-Fi",
+  "@libraryJoiningUnnamed": {
+    "description": "Heading while the phone joins the Wi-Fi of a camera whose name is unknown."
+  },
+  "libraryKindNoneSelected": "None selected",
+  "@libraryKindNoneSelected": {
+    "description": "Download action of the selection when no selected shot has files of its kind."
+  },
+  "libraryKindQueued": "Queued",
+  "@libraryKindQueued": {
+    "description": "Download action of the selection whose files are all already queued."
+  },
+  "libraryListFailedBody": "The camera did not send its photo list.",
+  "@libraryListFailedBody": {
+    "description": "Text shown when the camera did not send its photo list."
+  },
+  "libraryListFailedTitle": "Couldn't read the photos",
+  "@libraryListFailedTitle": {
+    "description": "Title shown when the camera did not send its photo list."
+  },
+  "libraryOk": "OK",
+  "@libraryOk": {
+    "description": "Button that closes the photo access dialog."
+  },
+  "libraryPhotoAccessAndroid": "GR Lab needs permission to save photos and videos. Open Settings › Apps › GR Lab › Permissions, allow Photos and videos, then retry the downloads.",
+  "@libraryPhotoAccessAndroid": {
+    "description": "Body of the photo access dialog on Android. Name the Settings path as Android shows it in the language."
+  },
+  "libraryPhotoAccessIos": "GR Lab needs permission to add photos. Open Settings › GR Lab › Photos, allow access, then retry the downloads.",
+  "@libraryPhotoAccessIos": {
+    "description": "Body of the photo access dialog on iOS. Name the Settings path as iOS shows it in the language."
+  },
+  "libraryPhotoAccessTitle": "Allow access to Photos",
+  "@libraryPhotoAccessTitle": {
+    "description": "Title of the dialog shown after the phone refused access to the photo library."
+  },
+  "libraryRate": "{size}/s",
+  "@libraryRate": {
+    "description": "A transfer speed, e.g. '31 MB/s'.",
+    "placeholders": {
+      "size": {
+        "type": "String",
+        "description": "Bytes per second as a size, e.g. '31 MB'."
+      }
+    }
+  },
+  "libraryReading": "Reading the camera's photos…",
+  "@libraryReading": {
+    "description": "Shown while the photo list is read for the first time."
+  },
+  "libraryRetry": "Retry",
+  "@libraryRetry": {
+    "description": "Button that reads the photo list again after a failure."
+  },
+  "librarySelectedCount": "{count, plural, other{{count} selected}}",
+  "@librarySelectedCount": {
+    "description": "How many shots are selected.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern",
+        "description": "Number of selected shots."
+      }
+    }
+  },
+  "libraryShotSemantics": "{format} {fileName}",
+  "@libraryShotSemantics": {
+    "description": "Screen reader label of a shot in the grid, e.g. 'RAW+JPEG R0001234.JPG'.",
+    "placeholders": {
+      "format": {
+        "type": "String",
+        "description": "The shot's format, e.g. 'RAW+JPEG'."
+      },
+      "fileName": {
+        "type": "String",
+        "description": "The camera's file name, e.g. 'R0001234.JPG'."
+      }
+    }
+  },
+  "librarySizeBytes": "{size} B",
+  "@librarySizeBytes": {
+    "description": "A file size in bytes.",
+    "placeholders": {
+      "size": {
+        "type": "String",
+        "description": "The number, formatted."
+      }
+    }
+  },
+  "librarySizeGigabytes": "{size} GB",
+  "@librarySizeGigabytes": {
+    "description": "A file size in gigabytes (1000000000 bytes).",
+    "placeholders": {
+      "size": {
+        "type": "String",
+        "description": "The number, formatted."
+      }
+    }
+  },
+  "librarySizeKilobytes": "{size} KB",
+  "@librarySizeKilobytes": {
+    "description": "A file size in kilobytes (1000 bytes).",
+    "placeholders": {
+      "size": {
+        "type": "String",
+        "description": "The number, formatted."
+      }
+    }
+  },
+  "librarySizeMegabytes": "{size} MB",
+  "@librarySizeMegabytes": {
+    "description": "A file size in megabytes (1000000 bytes).",
+    "placeholders": {
+      "size": {
+        "type": "String",
+        "description": "The number, formatted."
+      }
+    }
+  },
+  "libraryStorageInternal": "Internal",
+  "@libraryStorageInternal": {
+    "description": "The camera's internal memory, where a shot is stored."
+  },
+  "libraryStorageSd": "SD",
+  "@libraryStorageSd": {
+    "description": "The camera's SD card, where a shot is stored."
+  },
+  "libraryTagMovie": "MOV",
+  "@libraryTagMovie": {
+    "description": "Tag on a video in the grid while its length is unknown (the movie file format)."
+  },
+  "libraryTitle": "Library",
+  "@libraryTitle": {
+    "description": "Title of the Library screen, which shows the camera's photos."
+  },
+  "libraryToday": "Today",
+  "@libraryToday": {
+    "description": "Heading of the shots taken today."
+  },
+  "libraryTryAgain": "Try again",
+  "@libraryTryAgain": {
+    "description": "Button that reads the photo list again after it failed."
+  },
+  "libraryUpdateFailed": "Couldn't update the list",
+  "@libraryUpdateFailed": {
+    "description": "Status under the Library title when reading the photo list again failed."
+  },
+  "libraryUpdating": "Updating…",
+  "@libraryUpdating": {
+    "description": "Status under the Library title while the photo list is read again."
+  },
+  "libraryYesterday": "Yesterday",
+  "@libraryYesterday": {
+    "description": "Heading of the shots taken yesterday."
+  },
   "liveViewAperture": "Aperture",
   "@liveViewAperture": {
     "description": "Live view readout label (shown in capitals): the aperture."
@@ -920,5 +1401,88 @@
   "shootTurningOnUnnamed": "Turning the camera on…",
   "@shootTurningOnUnnamed": {
     "description": "Shoot: under the shutter while the app turns a camera whose name is unknown on in shooting mode."
+  },
+  "viewerCancel": "Cancel",
+  "@viewerCancel": {
+    "description": "Button that stops copying the movie."
+  },
+  "viewerConnectToPlay": "Connect to the camera to play",
+  "@viewerConnectToPlay": {
+    "description": "Shown under the Play button while the camera is not connected."
+  },
+  "viewerCopying": "Copying from the camera…",
+  "@viewerCopying": {
+    "description": "Shown while the movie is copied before playback and its progress is unknown."
+  },
+  "viewerCopyingProgress": "Copying from the camera · {fraction}",
+  "@viewerCopyingProgress": {
+    "description": "Shown while the movie is copied before playback, with its progress.",
+    "placeholders": {
+      "fraction": {
+        "type": "double",
+        "format": "percentPattern",
+        "description": "How much is copied, shown as a percentage."
+      }
+    }
+  },
+  "viewerDownload": "{kind, select, jpeg{Download JPEG} raw{Download RAW} other{Download}}",
+  "@viewerDownload": {
+    "description": "Viewer action that downloads the shot, or its JPEG or RAW file.",
+    "placeholders": {
+      "kind": {
+        "type": "String",
+        "description": "'jpeg' or 'raw' for one file of a RAW+JPEG pair, 'all' for the whole shot."
+      }
+    }
+  },
+  "viewerDownloadAgain": "{kind, select, jpeg{Download JPEG again} raw{Download RAW again} other{Download again}}",
+  "@viewerDownloadAgain": {
+    "description": "Viewer action that downloads a shot (or its JPEG or RAW file) that was saved to the phone before.",
+    "placeholders": {
+      "kind": {
+        "type": "String",
+        "description": "'jpeg' or 'raw' for one file of a RAW+JPEG pair, 'all' for the whole shot."
+      }
+    }
+  },
+  "viewerDownloading": "Downloading",
+  "@viewerDownloading": {
+    "description": "Viewer action while the file is being downloaded."
+  },
+  "viewerFormat": "Format",
+  "@viewerFormat": {
+    "description": "Label of the shot's format in the viewer details."
+  },
+  "viewerLength": "Length",
+  "@viewerLength": {
+    "description": "Label of the video length in the viewer details."
+  },
+  "viewerMovieCopyFailed": "Couldn't copy the movie from the camera",
+  "@viewerMovieCopyFailed": {
+    "description": "Shown when the movie could not be copied for playback."
+  },
+  "viewerMovieUnplayable": "This movie can't be played",
+  "@viewerMovieUnplayable": {
+    "description": "Shown when the phone cannot play the copied movie."
+  },
+  "viewerPlay": "Play",
+  "@viewerPlay": {
+    "description": "Tooltip of the button that plays the movie."
+  },
+  "viewerQueued": "Queued",
+  "@viewerQueued": {
+    "description": "Viewer action while the file waits in the download queue."
+  },
+  "viewerRetryDownload": "Retry download",
+  "@viewerRetryDownload": {
+    "description": "Viewer action that retries a failed download."
+  },
+  "viewerSize": "Size",
+  "@viewerSize": {
+    "description": "Label of the shot's file size in the viewer details."
+  },
+  "viewerTaken": "Taken",
+  "@viewerTaken": {
+    "description": "Label of when the shot was taken in the viewer details."
   }
 }

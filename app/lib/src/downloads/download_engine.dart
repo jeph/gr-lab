@@ -18,6 +18,23 @@ enum DownloadState {
   failed,
 }
 
+/// Why a job failed; the queue puts it into words.
+sealed class DownloadFailure {
+  const new();
+}
+
+/// Copying a file from the camera failed.
+final class DownloadTransferFailed extends DownloadFailure {
+  const new(this.reason);
+  final TransferFailure reason;
+}
+
+/// The photo library did not take the shot.
+final class DownloadSaveFailed extends DownloadFailure {
+  const new(this.reason);
+  final MediaSaveFailure reason;
+}
+
 /// One shot's files in the download queue.
 final class DownloadJob {
   new _({
@@ -26,7 +43,7 @@ final class DownloadJob {
     required this.shot,
     required this._files,
     this.state = DownloadState.queued,
-    this.error,
+    this.failure,
   });
 
   final String id;
@@ -38,7 +55,7 @@ final class DownloadJob {
   DownloadState state;
 
   /// Why the job failed.
-  String? error;
+  DownloadFailure? failure;
 
   /// The files this job saves: the kinds asked for, for a pair one or
   /// both halves.
@@ -52,7 +69,7 @@ final class DownloadJob {
     'shot': [for (final f in shot.files) _fileToJson(f)],
     'files': [for (final f in _files) _fileToJson(f)],
     'state': state == DownloadState.failed ? 'failed' : 'queued',
-    'error': ?error,
+    'error': ?_failureToJson(failure),
   };
 
   static DownloadJob? _fromJson(Object? json) {
@@ -71,14 +88,68 @@ final class DownloadJob {
       shot: shots.single,
       files: files,
       state: failed ? DownloadState.failed : DownloadState.queued,
-      error: failed
-          ? switch (json['error']) {
-              final String e => e,
-              _ => null,
-            }
-          : null,
+      failure: failed ? _failureFromJson(json['error']) : null,
     );
   }
+}
+
+Map<String, Object?>? _failureToJson(DownloadFailure? failure) =>
+    switch (failure) {
+      null => null,
+      DownloadSaveFailed(:final reason) => {'save': reason.name},
+      DownloadTransferFailed(:final reason) => switch (reason) {
+        TransferRefused(:final errCode, :final errMsg) => {
+          'transfer': 'refused',
+          'errCode': errCode,
+          'errMsg': ?errMsg,
+        },
+        TransferHttpStatus(:final httpStatus) => {
+          'transfer': 'httpStatus',
+          'httpStatus': httpStatus,
+        },
+        TransferCutOff() => {'transfer': 'cutOff'},
+        TransferConnectionLost() => {'transfer': 'connectionLost'},
+        TransferStalled() => {'transfer': 'stalled'},
+        TransferWriteFailed(:final detail) => {
+          'transfer': 'writeFailed',
+          'detail': detail,
+        },
+        TransferOtherError(:final detail) => {
+          'transfer': 'other',
+          'detail': detail,
+        },
+      },
+    };
+
+/// A failure saved by [_failureToJson]; null for anything else, such as the
+/// English sentences saved before failures were typed.
+DownloadFailure? _failureFromJson(Object? json) {
+  if (json is! Map<String, Object?>) return null;
+  if (json['save'] case final String save) {
+    final reason = MediaSaveFailure.values.asNameMap()[save];
+    return reason == null ? null : DownloadSaveFailed(reason);
+  }
+  final reason = switch (json) {
+    {'transfer': 'refused', 'errCode': final int errCode} => TransferRefused(
+      errCode: errCode,
+      errMsg: switch (json['errMsg']) {
+        final String m => m,
+        _ => null,
+      },
+    ),
+    {'transfer': 'httpStatus', 'httpStatus': final int status} =>
+      TransferHttpStatus(status),
+    {'transfer': 'cutOff'} => const TransferCutOff(),
+    {'transfer': 'connectionLost'} => const TransferConnectionLost(),
+    {'transfer': 'stalled'} => const TransferStalled(),
+    {'transfer': 'writeFailed', 'detail': final String detail} =>
+      TransferWriteFailed(detail),
+    {'transfer': 'other', 'detail': final String detail} => TransferOtherError(
+      detail,
+    ),
+    _ => null,
+  };
+  return reason == null ? null : DownloadTransferFailed(reason);
 }
 
 Map<String, Object?> _fileToJson(CameraFile f) => {
@@ -309,7 +380,7 @@ final class DownloadEngine extends ChangeNotifier {
         j
           .._files = {...j._files, ...files}.toList()
           ..state = DownloadState.queued
-          ..error = null;
+          ..failure = null;
         return files.length;
       }
     }
@@ -353,7 +424,7 @@ final class DownloadEngine extends ChangeNotifier {
     if (job.state != DownloadState.failed || !_jobs.contains(job)) return;
     job
       ..state = DownloadState.queued
-      ..error = null;
+      ..failure = null;
     _changed();
   }
 
@@ -363,7 +434,7 @@ final class DownloadEngine extends ChangeNotifier {
       if (j.state != DownloadState.failed) continue;
       j
         ..state = DownloadState.queued
-        ..error = null;
+        ..failure = null;
       any = true;
     }
     if (any) _changed();
@@ -454,7 +525,7 @@ final class DownloadEngine extends ChangeNotifier {
     _stop = null;
     job
       ..state = DownloadState.running
-      ..error = null;
+      ..failure = null;
     _samples.clear();
     _setProgress(const DownloadProgress());
     _notify();
@@ -477,18 +548,12 @@ final class DownloadEngine extends ChangeNotifier {
       if (e.permissionDenied) {
         _permissionProblem = e;
         for (final j in _jobs) {
-          if (j.active) {
-            j
-              ..state = DownloadState.failed
-              ..error = 'No access to the photo library';
-          }
+          if (j.active) _fail(j, DownloadSaveFailed(e.failure), e);
         }
+      } else if (_stop == _Stop.cancel) {
+        _stopped(job, _Stop.cancel);
       } else {
-        if (_stop == _Stop.cancel) {
-          _stopped(job, _Stop.cancel);
-        } else {
-          _fail(job, e.message);
-        }
+        _fail(job, DownloadSaveFailed(e.failure), e);
       }
     } on Object catch (e) {
       // A cancel or pause can arrive while waiting out the grace period; it
@@ -499,7 +564,7 @@ final class DownloadEngine extends ChangeNotifier {
       } else if (lost) {
         job.state = DownloadState.queued;
       } else {
-        _fail(job, describeTransferError(e));
+        _fail(job, DownloadTransferFailed(TransferFailure.of(e)), e);
       }
     } finally {
       _current = null;
@@ -521,10 +586,12 @@ final class DownloadEngine extends ChangeNotifier {
     }
   }
 
-  void _fail(DownloadJob job, String message) {
+  /// [error] goes to the debug log; the queue shows [failure].
+  void _fail(DownloadJob job, DownloadFailure failure, Object error) {
+    debugPrint('Download of ${job.shot} failed: $error');
     job
       ..state = DownloadState.failed
-      ..error = message;
+      ..failure = failure;
   }
 
   /// Network errors usually mean the camera's Wi-Fi went away; give the

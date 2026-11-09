@@ -217,15 +217,84 @@ bool isConnectionError(Object error) =>
     error is TimeoutException ||
     error is GrMalformedResponseException;
 
-/// Why a transfer from the camera failed, in words for the user.
-String describeTransferError(Object error) => switch (error) {
-  GrApiException(:final errCode, :final errMsg) =>
-    'The camera refused the file ($errCode${errMsg == null ? '' : ' $errMsg'})',
-  GrHttpStatusException(:final httpStatus) =>
-    'The camera answered HTTP $httpStatus',
-  GrMalformedResponseException() => 'The transfer was cut off',
-  SocketException() || HttpException() => 'Lost the connection to the camera',
-  TimeoutException() => 'The camera stopped sending',
-  FileSystemException(:final message) => 'Could not write the file: $message',
-  _ => '$error',
-};
+/// Why a transfer from the camera failed. The app puts it into words; the
+/// fields carry the technical detail it may show.
+sealed class TransferFailure {
+  const new();
+
+  /// What [error], thrown by [CameraLibrary.downloadFile] or
+  /// [CameraLibrary.downloadFiles], says about the transfer.
+  factory of(Object error) => switch (error) {
+    GrApiException(:final errCode, :final errMsg) => TransferRefused(
+      errCode: errCode,
+      errMsg: errMsg,
+    ),
+    GrHttpStatusException(httpStatus: final int status) => TransferHttpStatus(
+      status,
+    ),
+    GrMalformedResponseException() => const TransferCutOff(),
+    SocketException() || HttpException() => const TransferConnectionLost(),
+    TimeoutException() => const TransferStalled(),
+    FileSystemException(:final message, :final osError) => TransferWriteFailed(
+      osError?.message ?? message,
+    ),
+    _ => TransferOtherError('$error'),
+  };
+}
+
+/// The camera answered with an error envelope instead of the file.
+final class TransferRefused extends TransferFailure {
+  /// The camera refused with [errCode] and, when it sent one, [errMsg].
+  const new({required this.errCode, this.errMsg});
+
+  /// The camera's `errCode`, e.g. 404.
+  final int errCode;
+
+  /// The camera's `errMsg`, e.g. `Not Found`, as the camera sent it.
+  final String? errMsg;
+}
+
+/// The camera answered a non-200 HTTP status without an error envelope.
+final class TransferHttpStatus extends TransferFailure {
+  /// The camera answered [httpStatus].
+  const new(this.httpStatus);
+
+  /// The HTTP status code.
+  final int httpStatus;
+}
+
+/// The file arrived shorter than the camera announced.
+final class TransferCutOff extends TransferFailure {
+  /// The file was cut short.
+  const new();
+}
+
+/// The connection to the camera broke (a reset or closed socket).
+final class TransferConnectionLost extends TransferFailure {
+  /// The connection broke.
+  const new();
+}
+
+/// The camera stopped sending before the file was complete.
+final class TransferStalled extends TransferFailure {
+  /// The camera went quiet.
+  const new();
+}
+
+/// The phone could not write the received file.
+final class TransferWriteFailed extends TransferFailure {
+  /// Writing failed as [detail] says.
+  const new(this.detail);
+
+  /// The operating system's description of the failure.
+  final String detail;
+}
+
+/// An error none of the other cases describe.
+final class TransferOtherError extends TransferFailure {
+  /// [detail] describes the error.
+  const new(this.detail);
+
+  /// The error as text, for diagnosis.
+  final String detail;
+}
