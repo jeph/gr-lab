@@ -18,7 +18,10 @@ final class LibraryContext {
     required this.engine,
     IdleDisconnect? idle,
   }) : _idle = idle {
-    if (idle != null) engine.addListener(_holdWhileDownloading);
+    if (idle == null) return;
+    engine.addListener(_holdWhileDownloading);
+    // The app's engine may be running a job from an earlier visit.
+    _holdWhileDownloading();
   }
 
   factory create(AppModels app) {
@@ -39,12 +42,7 @@ final class LibraryContext {
         queue: queue,
       ),
       movies: MovieCache(cacheDir: services.cacheDir),
-      engine: DownloadEngine(
-        dataDir: services.dataDir,
-        cacheDir: services.cacheDir,
-        media: services.media,
-        link: link,
-      ),
+      engine: app.downloads,
     );
   }
 
@@ -53,6 +51,9 @@ final class LibraryContext {
   final LibraryModel model;
   final CameraImages images;
   final MovieCache movies;
+
+  /// The app's download queue ([AppModels.downloads]); it outlives the
+  /// context.
   final DownloadEngine engine;
 
   /// A running download keeps the camera's Wi-Fi from being left for
@@ -74,7 +75,6 @@ final class LibraryContext {
     engine.removeListener(_holdWhileDownloading);
     _release?.call();
     _release = null;
-    engine.dispose();
     model.dispose();
     link.dispose();
   }

@@ -80,6 +80,9 @@ class _LibraryViewState extends State<_LibraryView> {
     if (!_listening) {
       _listening = true;
       _library.engine.addListener(_onEngine);
+      // The engine is the app's: the photo library may have refused it
+      // while the camera pages were closed.
+      _onEngine();
     }
   }
 

@@ -8,6 +8,8 @@ import 'package:grlab/src/connection/idle_disconnect.dart';
 import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/data/settings.dart';
 import 'package:grlab/src/debug/debug_log.dart';
+import 'package:grlab/src/downloads/download_engine.dart';
+import 'package:grlab/src/library/camera_link.dart';
 import 'package:grlab/src/looks/looks_store.dart';
 import 'package:grlab/src/services.dart';
 
@@ -21,7 +23,13 @@ final class AppModels {
     required this.connection,
     required this.debugLog,
     required this.looks,
-  }) : idle = IdleDisconnect(connection: connection, settings: settings);
+  }) : idle = IdleDisconnect(connection: connection, settings: settings),
+       downloads = DownloadEngine(
+         dataDir: services.dataDir,
+         cacheDir: services.cacheDir,
+         media: services.media,
+         link: ConnectionLink(connection),
+       );
 
   static Future<AppModels> load(AppServices services) async {
     final settings = await SettingsController.load(services.dataDir);
@@ -67,6 +75,12 @@ final class AppModels {
 
   /// Leaves the camera's Wi-Fi after the app was not used for a while.
   final IdleDisconnect idle;
+
+  /// The download queue, one engine for the app's lifetime so only it uses
+  /// `downloads.json` and the job files: a photo-library save still running
+  /// when the camera pages close finishes in it, and the queue carries on
+  /// when they open again.
+  final DownloadEngine downloads;
 
   /// Lets screens know when another route covers them (the Cameras screen
   /// stops scanning then).

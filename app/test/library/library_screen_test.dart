@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -220,6 +222,70 @@ void main() {
       () => find.text('R0000268.JPG + R0000268.DNG').evaluate().isEmpty,
       reason: 'viewer closed',
     );
+
+    await app.dispose();
+  });
+
+  testWidgets('a photo-library save still running when the camera pages '
+      'close saves once, and the queue and history carry on when they '
+      'open again', (tester) async {
+    final app = (await tester.runAsync(
+      () => createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+      ),
+    ))!;
+    final gate = app.media.gate = Completer<void>();
+    await app.pumpApp(tester);
+    await _openLibrary(tester);
+    const jpeg = 'sd1|101RICOH/R0000270';
+    const raw = 'sd1|101RICOH/R0000269';
+    await pumpUntilFound(tester, _cell(jpeg));
+    await tester.longPress(_cell(jpeg));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('selection-download:jpeg')));
+    await tester.pump();
+    await pumpUntil(tester, () => app.media.held == 1, reason: 'save held');
+
+    await tapWhenReady(tester, find.byKey(const Key('camera-back')));
+    await pumpUntil(
+      tester,
+      () => find.byType(LibraryScreen).evaluate().isEmpty,
+      reason: 'camera pages closed',
+    );
+    await _openLibrary(tester);
+    await pumpUntilFound(tester, _cell(raw));
+    await tester.longPress(_cell(raw));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('selection-download:raw')));
+    await tester.pump();
+
+    app.media.gate = null;
+    gate.complete();
+    await pumpUntil(
+      tester,
+      () => app.media.shots.any((s) => s.names.contains('R0000269.DNG')),
+      reason: 'RAW saved',
+    );
+    expect(
+      [for (final s in app.media.shots) s.names],
+      [
+        ['R0000270.JPG'],
+        ['R0000269.DNG'],
+      ],
+    );
+    final manifest = File('${app.models.services.dataDir.path}/downloads.json');
+    await pumpUntil(tester, () {
+      final json = jsonDecode(manifest.readAsStringSync()) as Map;
+      final downloaded = (json['downloaded'] as Map).values.expand(
+        (keys) => keys as List,
+      );
+      return (json['jobs'] as List).isEmpty &&
+          downloaded.contains('$jpeg.JPG') &&
+          downloaded.contains('$raw.DNG');
+    }, reason: 'queue and history on disk');
+    await pumpUntilFound(tester, _downloadedBadge(jpeg));
+    await pumpUntilFound(tester, _downloadedBadge(raw));
 
     await app.dispose();
   });

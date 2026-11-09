@@ -11,6 +11,10 @@ final class JsonFile {
 
   final File file;
 
+  /// Numbers each write's temporary file, so two writers of one document
+  /// never write into the same temporary file.
+  static int _writes = 0;
+
   /// The latest [save]; fails when it did.
   Future<void> _lastSave = Future.value();
 
@@ -33,7 +37,7 @@ final class JsonFile {
   /// was.
   Future<void> write(Map<String, Object?> value) async {
     await file.parent.create(recursive: true);
-    final tmp = File('${file.path}.tmp');
+    final tmp = File('${file.path}.${_writes++}.tmp');
     try {
       await tmp.writeAsString(jsonEncode(value), flush: true);
       await tmp.rename(file.path);

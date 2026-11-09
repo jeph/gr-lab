@@ -312,13 +312,24 @@ final class CountingTransport implements BleTransport {
 typedef SavedShot = ({List<String> names, List<int> sizes, String album});
 
 /// Records saved shots instead of writing to the photo library. Set
-/// [failWith] to make the next saves throw.
+/// [failWith] to make the next saves throw, [gate] to hold them.
 final class RecordingMediaSaver implements MediaSaver {
   final List<SavedShot> shots = [];
   MediaSaveException? failWith;
 
+  /// While set, saves wait for it to complete.
+  Completer<void>? gate;
+
+  /// Saves waiting for [gate].
+  int held = 0;
+
   @override
   Future<void> saveShot(List<File> files, {required String album}) async {
+    if (gate case final gate?) {
+      held++;
+      await gate.future;
+      held--;
+    }
     final failure = failWith;
     if (failure != null) throw failure;
     shots.add((
