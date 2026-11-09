@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
@@ -88,7 +87,7 @@ final class LooksStore extends ChangeNotifier {
   final JsonFile _file;
   final Directory _photos;
   final List<SavedLook> _looks = [];
-  Future<void> _pending = Future.value();
+  Future<void> _queue = Future.value();
 
   List<SavedLook> get looks => List.unmodifiable(_looks);
 
@@ -115,7 +114,7 @@ final class LooksStore extends ChangeNotifier {
     required Uint8List data,
     String? source,
     Uint8List? photo,
-  }) async {
+  }) => _serial(() async {
     final now = DateTime.now();
     final look = SavedLook(
       id: now.microsecondsSinceEpoch.toRadixString(36),
@@ -131,65 +130,68 @@ final class LooksStore extends ChangeNotifier {
         await photoFile.writeAsBytes(photo);
       }
       _looks.insert(0, look);
-      await _save();
+      await _write();
     } on FileSystemException {
       if (_looks.remove(look)) notifyListeners();
       if (photoFile.existsSync()) await photoFile.delete();
       rethrow;
     }
     return look;
-  }
+  });
 
   /// Replaces the look with [look]'s id. Completes once it is on disk; when
   /// it cannot be written, the earlier version comes back and the
   /// [FileSystemException] is rethrown.
-  Future<void> update(SavedLook look) async {
+  Future<void> update(SavedLook look) => _serial(() async {
     final i = _looks.indexWhere((l) => l.id == look.id);
     if (i < 0) return;
     final before = _looks[i];
     _looks[i] = look;
     try {
-      await _save();
+      await _write();
     } on FileSystemException {
-      final now = _looks.indexWhere((l) => l.id == look.id);
-      if (now >= 0) _looks[now] = before;
+      _looks[i] = before;
       notifyListeners();
       rethrow;
     }
-  }
+  });
 
   /// Removes [look]. Completes once the removal is on disk; when it cannot
   /// be written, the look comes back and the [FileSystemException] is
   /// rethrown. Its photo is deleted only after a successful write.
-  Future<void> delete(SavedLook look) async {
+  Future<void> delete(SavedLook look) => _serial(() async {
     final i = _looks.indexWhere((l) => l.id == look.id);
     if (i < 0) return;
     final removed = _looks.removeAt(i);
     try {
-      await _save();
+      await _write();
     } on FileSystemException {
-      _looks.insert(math.min(i, _looks.length), removed);
+      _looks.insert(i, removed);
       notifyListeners();
       rethrow;
     }
     final photo = File('${_photos.path}/${look.id}.jpg');
     if (photo.existsSync()) await photo.delete();
+  });
+
+  /// Runs [change] once every earlier change has finished, so a change, its
+  /// write and its undo never interleave with another's: an undo then
+  /// always restores what is on disk. The returned future fails when
+  /// [change] does; the queue carries on.
+  Future<T> _serial<T>(Future<T> Function() change) {
+    final done = _queue.then((_) => change());
+    _queue = done.then<void>((_) {}, onError: (Object _) {});
+    return done;
   }
 
-  /// Writes every look after the writes already queued. The returned future
-  /// fails when this write does; the queue itself carries on, so one failed
-  /// write does not stop later ones.
-  Future<void> _save() {
+  Future<void> _write() {
     notifyListeners();
-    final snapshot = {
+    return _file.write({
       'looks': [for (final l in _looks) l.toJson()],
-    };
-    final write = _pending.then((_) => _file.write(snapshot));
-    _pending = write.catchError((Object _) {});
-    return write;
+    });
   }
 
-  /// Completes when every write so far has finished, whether or not it
-  /// succeeded.
-  Future<void> flush() => _pending;
+  /// Completes when every change so far has finished, whether or not it
+  /// reached disk.
+  Future<void> flush() => _queue;
 }

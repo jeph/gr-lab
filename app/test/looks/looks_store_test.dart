@@ -48,6 +48,19 @@ void main() {
     },
   );
 
+  test('two overlapping updates that both fail leave the stored '
+      'version', () async {
+    final store = await LooksStore.load(dataDir);
+    final look = await store.add(name: 'Tokyo Night', data: data);
+
+    blockWrites();
+    final first = store.update(look.copyWith(name: 'First'));
+    final second = store.update(look.copyWith(name: 'Second'));
+    await expectLater(first, throwsA(isA<FileSystemException>()));
+    await expectLater(second, throwsA(isA<FileSystemException>()));
+    expect(store.looks.single.name, 'Tokyo Night');
+  });
+
   test('a look that could not be added is taken out, and adding it again '
       'stores it once', () async {
     final store = await LooksStore.load(dataDir);
