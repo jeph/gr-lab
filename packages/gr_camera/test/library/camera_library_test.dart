@@ -521,6 +521,67 @@ void main() {
         true,
       ], reason: 'the stalled request was closed before the next one began');
     });
+
+    test('keeps the images on disk within their budget, sparing those in '
+        'memory, and fetches an evicted one again', () async {
+      link.value = connected();
+      final thumb = await syntheticMedia()(card().first, GrImageSize.thumb);
+      final a = file;
+      final b = CameraFile(
+        GrStorageId.sd,
+        GrPhotoPath('100RICOH', 'R0000001.DNG'),
+      );
+      final c = CameraFile(
+        GrStorageId.internal,
+        GrPhotoPath('100RICOH', 'R0000001.JPG'),
+      );
+      File onDisk(CameraFile f) =>
+          CameraImages.diskFile(cache, serial, f, GrImageSize.thumb);
+      List<bool> kept(List<CameraFile> files) => [
+        for (final f in files) onDisk(f).existsSync(),
+      ];
+
+      // Room in memory for two thumbnails, on disk for one.
+      final loader = CameraImages(
+        cacheDir: cache,
+        link: link,
+        queue: queue,
+        memoryThumbs: 2,
+        diskBytes: thumb.length,
+      );
+      for (final f in [a, b]) {
+        await loader.load(serial, f, GrImageSize.thumb).future;
+      }
+      await loader.diskSettled;
+      expect(kept([a, b]), [true, true], reason: 'both are in memory');
+      await loader.load(serial, c, GrImageSize.thumb).future;
+      await loader.diskSettled;
+      expect(kept([a, b, c]), [false, true, true], reason: 'a left memory');
+
+      // At start, the least recently used go first, with staging files
+      // left over by a stopped app; a fresh one belongs to a write.
+      onDisk(b).setLastModifiedSync(DateTime(2001));
+      final leftover = File('${onDisk(c).path}.1.tmp')
+        ..writeAsBytesSync(thumb)
+        ..setLastModifiedSync(DateTime(2000));
+      final writing = File('${onDisk(c).path}.2.tmp')..writeAsBytesSync(thumb);
+      final next = CameraImages(
+        cacheDir: cache,
+        link: link,
+        queue: queue,
+        diskBytes: thumb.length,
+      );
+      await next.diskSettled;
+      expect(kept([b, c]), [false, true]);
+      expect(leftover.existsSync(), isFalse);
+      expect(writing.existsSync(), isTrue);
+
+      final asked = requests;
+      expect(await next.load(serial, a, GrImageSize.thumb).future, thumb);
+      expect(requests, asked + 1, reason: 'fetched again');
+      await next.diskSettled;
+      expect(kept([a, c]), [true, false]);
+    });
   });
 
   group('MovieCache', () {
@@ -604,6 +665,68 @@ void main() {
       );
       await stalling.closed.single.future.timeout(guard);
       expect(movies.fileFor(serial, movie).parent.listSync(), isEmpty);
+    });
+
+    test('keeps copies within their budget, sparing the two handed out '
+        'last and copies in progress', () async {
+      FakePhoto movieAt(String name) => FakePhoto(
+        '100RICOH',
+        name,
+        _day2,
+        videoLength: const Duration(seconds: 3),
+      );
+      await restartCamera(
+        FakeCameraConfig(
+          httpLatency: Duration.zero,
+          photos: [...card(), movieAt('R0000003.MOV'), movieAt('R0000004.MOV')],
+        ),
+        syntheticMedia(movieBytes: 16 * 1024),
+      );
+      final all = [
+        for (final name in ['R0000002.MOV', 'R0000003.MOV', 'R0000004.MOV'])
+          CameraFile(GrStorageId.sd, GrPhotoPath('100RICOH', name)),
+      ];
+      Future<List<int>> expected(CameraFile f) => camera.media(
+        camera.photos.firstWhere(
+          (p) => p.storage == f.storage && p.path == f.path,
+        ),
+        GrImageSize.full,
+      );
+      List<bool> kept(MovieCache movies) => [
+        for (final f in all) movies.fileFor(serial, f).existsSync(),
+      ];
+
+      final movies = MovieCache(cacheDir: cache, maxBytes: 1);
+      final library = connected();
+      for (final f in all) {
+        await movies.download(library, f).done;
+      }
+      await movies.diskSettled;
+      expect(kept(movies), [false, true, true]);
+
+      // At start, only the most recently played copy fits; a staging file
+      // being written stays, one left over by a stopped app goes.
+      final last = movies.fileFor(serial, all[2]);
+      movies.fileFor(serial, all[1]).setLastModifiedSync(DateTime(2001));
+      final leftover = File('${last.path}.0.download.part')
+        ..writeAsBytesSync([1, 2, 3])
+        ..setLastModifiedSync(DateTime(2000));
+      final writing = File('${last.path}.1.download.part')
+        ..writeAsBytesSync([1, 2, 3]);
+      final next = MovieCache(cacheDir: cache, maxBytes: last.lengthSync());
+      await next.diskSettled;
+      expect(kept(next), [false, false, true]);
+      expect(leftover.existsSync(), isFalse);
+      expect(writing.existsSync(), isTrue);
+      writing.deleteSync();
+
+      expect(next.cached(serial, all[0]), isNull);
+      // The last copy plays while the first is copied again.
+      expect(next.cached(serial, all[2]), isNotNull);
+      final again = await next.download(library, all[0]).done;
+      expect(await again.readAsBytes(), await expected(all[0]));
+      await next.diskSettled;
+      expect(kept(next), [true, false, true], reason: 'both handed out');
     });
   });
 

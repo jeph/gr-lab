@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import 'package:gr_camera/src/library/camera_file.dart';
 import 'package:gr_camera/src/library/camera_library.dart';
+import 'package:gr_camera/src/library/disk_budget.dart';
 
 /// Thrown by [MovieDownload.done] after [MovieDownload.cancel].
 final class MovieDownloadCancelled implements Exception {
@@ -43,27 +44,67 @@ final class MovieDownload {
 /// The camera serves plain GETs without byte ranges, which iOS's player
 /// requires for network playback, and on Android the player's own HTTP
 /// stack would not be bound to the camera's network. Playing a local file
-/// avoids both; a copied movie plays again without the camera.
+/// avoids both; a copied movie plays again without the camera. The copies
+/// are kept within [maxBytes].
 final class MovieCache {
   /// Movies cached under [cacheDir].
-  new({required this.cacheDir});
+  new({required this.cacheDir, this.maxBytes = 1 << 30}) {
+    _disk = DiskBudget(
+      cacheDir: cacheDir,
+      folders: const ['movies'],
+      maxBytes: maxBytes,
+      // A copy in progress is a staging file, which the budget leaves alone.
+      keep: _handedOut.contains,
+      isStaging: (path) =>
+          path.endsWith('.download') || path.endsWith('.download.part'),
+    );
+  }
 
   /// Root of the on-device cache; movies go to `<serial>/movies/` in it.
   final Directory cacheDir;
 
+  /// \[design\] Budget for the copies, in bytes, across cameras. Past it
+  /// the least recently played are deleted, at start and after each new
+  /// copy, except a copy in progress and the two copies handed out last
+  /// (one playing, one on a page next to it); a deleted movie is copied
+  /// again when played.
+  final int maxBytes;
+
+  /// How many of the copies handed out last are never deleted.
+  static const _keptPlayed = 2;
+
   /// Per destination, the latest attempt settling (success or failure).
   final Map<String, Future<void>> _latest = {};
   int _attempts = 0;
+  late final DiskBudget _disk;
+
+  /// Paths of the copies handed out last, oldest first.
+  final _handedOut = <String>{};
 
   /// Where [serial]'s copy of [f] is kept. Keeps the camera's extension so
   /// the players recognise the container.
   File fileFor(String serial, CameraFile f) =>
       File('${cacheDir.path}/$serial/movies/${f.fileStem}');
 
-  /// The cached copy, if a complete one exists.
+  /// The cached copy, if a complete one exists. A copy returned here is
+  /// kept while it is one of the last handed out.
   File? cached(String serial, CameraFile f) {
     final file = fileFor(serial, f);
-    return file.existsSync() ? file : null;
+    if (!file.existsSync()) return null;
+    _handOut(file);
+    return file;
+  }
+
+  void _handOut(File file) {
+    // Called on every rebuild of a page; only a change of order is news.
+    if (_handedOut.isNotEmpty && _handedOut.last == file.path) return;
+    _handedOut
+      ..remove(file.path)
+      ..add(file.path);
+    while (_handedOut.length > _keptPlayed) {
+      _handedOut.remove(_handedOut.first);
+    }
+    _disk.used(file);
   }
 
   /// Copies [f] from [library]'s camera. The file appears under its final
@@ -82,6 +123,7 @@ final class MovieCache {
       if (previous != null) await previous;
       if (download._cancelled) throw const MovieDownloadCancelled();
       if (file.existsSync()) {
+        _handOut(file);
         download._progress.value = 1;
         return file;
       }
@@ -100,6 +142,8 @@ final class MovieCache {
         if (staging.existsSync()) await staging.delete();
         rethrow;
       }
+      _handOut(file);
+      _disk.added(file, await file.length());
       download._progress.value = 1;
       return file;
     }();
@@ -113,4 +157,9 @@ final class MovieCache {
     );
     return download;
   }
+
+  /// Completes when the disk budget has caught up with every copy made or
+  /// handed out so far.
+  @visibleForTesting
+  Future<void> get diskSettled => _disk.settled;
 }

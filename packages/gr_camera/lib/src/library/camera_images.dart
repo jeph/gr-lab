@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/src/library/camera_file.dart';
 import 'package:gr_camera/src/library/camera_library.dart';
+import 'package:gr_camera/src/library/disk_budget.dart';
 import 'package:gr_camera/src/library/request_queue.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 
@@ -55,6 +56,7 @@ final class NotAnImageException implements Exception {
 /// (`size=view`), cached on disk under `<cacheDir>/<serial>/thumbs|views` so
 /// the grid shows them offline, plus full-size JPEGs for zooming, which
 /// stay in memory only. Each camera request has a deadline ([timeouts]).
+/// The disk copies are kept within [diskBytes].
 final class CameraImages {
   /// Images of [link]'s camera, fetched through [queue], cached under
   /// [cacheDir].
@@ -65,13 +67,26 @@ final class CameraImages {
     this.memoryThumbs = 600,
     this.memoryViewBytes = 48 << 20,
     this.memoryFull = 2,
+    this.diskBytes = 256 << 20,
     this.timeouts = const {
       GrImageSize.thumb: Duration(seconds: 10),
       GrImageSize.xs: Duration(seconds: 20),
       GrImageSize.view: Duration(seconds: 20),
       GrImageSize.full: Duration(minutes: 2),
     },
-  }) : _requests = SharedRequests(queue);
+  }) : _requests = SharedRequests(queue) {
+    _disk = DiskBudget(
+      cacheDir: cacheDir,
+      folders: [
+        for (final size in GrImageSize.values)
+          if (_onDisk(size)) _dirName(size),
+      ],
+      maxBytes: diskBytes,
+      // Images in memory are on screen or were just shown.
+      keep: (path) => _thumbs.containsKey(path) || _views.containsKey(path),
+      isStaging: (path) => path.endsWith('.tmp'),
+    );
+  }
 
   /// Root of the on-disk thumbnail and preview cache.
   final Directory cacheDir;
@@ -92,12 +107,20 @@ final class CameraImages {
   /// Full-size images kept in memory (count).
   final int memoryFull;
 
+  /// \[design\] Budget for the images on disk, in bytes, across cameras.
+  /// Past it the least recently used are deleted, at start and after each
+  /// new one, except images in memory; a deleted image is fetched again
+  /// when shown. The default holds a few thousand previews.
+  final int diskBytes;
+
   /// Deadline for one camera request of each image size.
   final Map<GrImageSize, Duration> timeouts;
 
   final SharedRequests<Uint8List> _requests;
+  late final DiskBudget _disk;
 
   // Insertion-ordered maps double as LRU caches: a hit is moved to the end.
+  // Keys are disk paths ([_key]), so the disk budget can see what is shown.
   final _thumbs = <String, Uint8List>{};
   final _views = <String, Uint8List>{};
   final _full = <String, Uint8List>{};
@@ -125,7 +148,7 @@ final class CameraImages {
       diskFile(cacheDir, serial, f, size);
 
   String _key(String serial, CameraFile f, GrImageSize size) =>
-      '$serial|${size.name}|${f.key}';
+      _file(serial, f, size).path;
 
   Map<String, Uint8List> _memory(GrImageSize size) => switch (size) {
     GrImageSize.thumb => _thumbs,
@@ -166,9 +189,13 @@ final class CameraImages {
         try {
           if (file.existsSync()) {
             final bytes = await file.readAsBytes();
-            if (isJpeg(bytes)) return _remember(size, key, bytes);
+            if (isJpeg(bytes)) {
+              _disk.used(file);
+              return _remember(size, key, bytes);
+            }
             // A broken copy would be shown (as nothing) forever.
             await file.delete();
+            _disk.removed(file);
           }
         } on FileSystemException {
           // Fall through to the camera.
@@ -237,13 +264,17 @@ final class CameraImages {
       throw NotAnImageException(bytes.length);
     }
     if (signal.abandoned) throw const RequestCancelled();
-    if (_onDisk(size)) await _store(file, bytes);
-    return _remember(size, key, bytes);
+    if (!_onDisk(size)) return _remember(size, key, bytes);
+    final stored = await _store(file, bytes);
+    // Remembered before the disk budget hears of it, so it counts as shown.
+    _remember(size, key, bytes);
+    if (stored) _disk.added(file, bytes.length);
+    return bytes;
   }
 
   /// Writes [bytes] under a name of its own first, so a reader never sees a
-  /// partial file.
-  Future<void> _store(File file, Uint8List bytes) async {
+  /// partial file. False when the phone could not write it.
+  Future<bool> _store(File file, Uint8List bytes) async {
     final temp = File(
       '${file.path}.${DateTime.now().microsecondsSinceEpoch}.tmp',
     );
@@ -251,13 +282,15 @@ final class CameraImages {
       await file.parent.create(recursive: true);
       await temp.writeAsBytes(bytes, flush: true);
       await temp.rename(file.path);
+      return true;
     } on FileSystemException {
       // The image still shows; it is fetched again next time.
       try {
         if (temp.existsSync()) await temp.delete();
       } on FileSystemException {
-        // A leftover in the cache directory is harmless.
+        // A leftover counts against the disk budget once it is stale.
       }
+      return false;
     }
   }
 
@@ -294,7 +327,10 @@ final class CameraImages {
     if (!_onDisk(size)) return;
     try {
       final file = _file(serial, f, size);
-      if (file.existsSync()) file.deleteSync();
+      if (file.existsSync()) {
+        file.deleteSync();
+        _disk.removed(file);
+      }
     } on FileSystemException {
       // Replaced on the next successful load.
     }
@@ -307,6 +343,11 @@ final class CameraImages {
     _full.clear();
     _viewBytes = 0;
   }
+
+  /// Completes when the disk budget has caught up with every image written,
+  /// read or deleted so far.
+  @visibleForTesting
+  Future<void> get diskSettled => _disk.settled;
 }
 
 /// Starts with the JPEG start-of-image marker.
