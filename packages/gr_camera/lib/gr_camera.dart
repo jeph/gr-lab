@@ -76,6 +76,7 @@ export 'src/library/camera_library.dart'
         TransferStalled,
         TransferWriteFailed,
         isConnectionError;
+export 'src/library/disk_budget.dart' show CacheHold;
 export 'src/library/listing_cache.dart'
     show CachedListing, readCachedListing, writeCachedListing;
 export 'src/library/movie_cache.dart'

@@ -54,7 +54,6 @@ final class MovieCache {
       folders: const ['movies'],
       maxBytes: maxBytes,
       // A copy in progress is a staging file, which the budget leaves alone.
-      keep: _handedOut.contains,
       isStaging: (path) =>
           path.endsWith('.download') || path.endsWith('.download.part'),
     );
@@ -64,30 +63,27 @@ final class MovieCache {
   final Directory cacheDir;
 
   /// \[design\] Budget for the copies, in bytes, across cameras. Past it
-  /// the least recently played are deleted, at start and after each new
-  /// copy, except a copy in progress and the two copies handed out last
-  /// (one playing, one on a page next to it); a deleted movie is copied
-  /// again when played.
+  /// the least recently played are deleted, at start, after each new copy
+  /// and when a hold ends, except a copy in progress and copies [hold]
+  /// holds (a movie on screen); a deleted movie is copied again when
+  /// played.
   final int maxBytes;
-
-  /// How many of the copies handed out last are never deleted.
-  static const _keptPlayed = 2;
 
   /// Per destination, the latest attempt settling (success or failure).
   final Map<String, Future<void>> _latest = {};
   int _attempts = 0;
   late final DiskBudget _disk;
 
-  /// Paths of the copies handed out last, oldest first.
-  final _handedOut = <String>{};
+  /// The copy [cached] or [download] handed out last.
+  String? _lastUsed;
 
   /// Where [serial]'s copy of [f] is kept. Keeps the camera's extension so
   /// the players recognise the container.
   File fileFor(String serial, CameraFile f) =>
       File('${cacheDir.path}/$serial/movies/${f.fileStem}');
 
-  /// The cached copy, if a complete one exists. A copy returned here is
-  /// kept while it is one of the last handed out.
+  /// The cached copy, if a complete one exists. Only a [hold] keeps it on
+  /// disk while it plays.
   File? cached(String serial, CameraFile f) {
     final file = fileFor(serial, f);
     if (!file.existsSync()) return null;
@@ -95,15 +91,15 @@ final class MovieCache {
     return file;
   }
 
+  /// Keeps [serial]'s copy of [f] on disk, also one copied later, until
+  /// the hold is released: a player reads the file while it plays, without
+  /// asking the cache again. [forget] still deletes it.
+  CacheHold hold(String serial, CameraFile f) => _disk.hold(fileFor(serial, f));
+
   void _handOut(File file) {
     // Called on every rebuild of a page; only a change of order is news.
-    if (_handedOut.isNotEmpty && _handedOut.last == file.path) return;
-    _handedOut
-      ..remove(file.path)
-      ..add(file.path);
-    while (_handedOut.length > _keptPlayed) {
-      _handedOut.remove(_handedOut.first);
-    }
+    if (_lastUsed == file.path) return;
+    _lastUsed = file.path;
     _disk.used(file);
   }
 
@@ -142,7 +138,7 @@ final class MovieCache {
         if (staging.existsSync()) await staging.delete();
         rethrow;
       }
-      _handOut(file);
+      _lastUsed = file.path;
       _disk.added(file, await file.length());
       download._progress.value = 1;
       return file;

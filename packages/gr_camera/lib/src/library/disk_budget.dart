@@ -3,9 +3,9 @@ import 'dart:io';
 
 /// Keeps the files of one on-disk cache within [maxBytes]: past it the
 /// least recently used files are deleted, once the existing files have been
-/// indexed at start and after each new file, except those [keep] protects.
-/// When a file was last used is kept in its modification time, so the order
-/// survives a restart.
+/// indexed at start and after each new file, except those [keep] protects
+/// and those [hold] holds. When a file was last used is kept in its
+/// modification time, so the order survives a restart.
 ///
 /// The files are those in `<cacheDir>/<camera>/<folder>/` for each of
 /// [folders]. Staging files ([isStaging]) count only once nothing has
@@ -17,12 +17,18 @@ final class DiskBudget {
     required this.cacheDir,
     required this.folders,
     required this.maxBytes,
-    required this.keep,
     required this.isStaging,
+    this.keep = _keepNone,
     this.staleStaging = const Duration(minutes: 10),
   }) {
     _run(_scan);
   }
+
+  /// Holds by path, across every budget of this process (two caches can
+  /// share a folder for a moment, as when the camera pages open again).
+  static final _held = <String, int>{};
+
+  static bool _keepNone(String path) => false;
 
   /// Root of the cache; each camera has a folder in it.
   final Directory cacheDir;
@@ -30,7 +36,8 @@ final class DiskBudget {
   /// Folders of each camera's folder that hold this cache's files.
   final List<String> folders;
 
-  /// Bytes the cache may hold, not counting files [keep] protects.
+  /// Bytes the cache may hold, not counting files [keep] protects or
+  /// [hold] holds.
   final int maxBytes;
 
   /// The file at this path is in use and must stay.
@@ -79,6 +86,23 @@ final class DiskBudget {
     if (length != null) _bytes -= length;
   });
 
+  /// Keeps [file] from being deleted until the hold is released, also when
+  /// it is written only later: something reads it from disk, as a player
+  /// does. Releasing trims the cache again.
+  CacheHold hold(File file) {
+    final path = file.path;
+    _held[path] = (_held[path] ?? 0) + 1;
+    return CacheHold._(() {
+      final left = _held[path]! - 1;
+      if (left == 0) {
+        _held.remove(path);
+      } else {
+        _held[path] = left;
+      }
+      _run(_trim);
+    });
+  }
+
   void _run(Future<void> Function() change) {
     _work = _work.then((_) => change());
   }
@@ -125,7 +149,7 @@ final class DiskBudget {
   Future<void> _trim() async {
     for (final path in _files.keys.toList()) {
       if (_bytes <= maxBytes) return;
-      if (keep(path)) continue;
+      if (keep(path) || _held.containsKey(path)) continue;
       _bytes -= _files.remove(path)!;
       try {
         await File(path).delete();
@@ -133,5 +157,20 @@ final class DiskBudget {
         // Already gone.
       }
     }
+  }
+}
+
+/// Keeps one cached file on disk until [release]; see [DiskBudget.hold].
+final class CacheHold {
+  new _(this._release);
+
+  final void Function() _release;
+  bool _released = false;
+
+  /// Lets the cache delete the file again. Later calls do nothing.
+  void release() {
+    if (_released) return;
+    _released = true;
+    _release();
   }
 }

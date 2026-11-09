@@ -699,23 +699,20 @@ void main() {
       expect(movies.fileFor(serial, movie).parent.listSync(), isEmpty);
     });
 
-    test('keeps copies within their budget, sparing the two handed out '
-        'last and copies in progress', () async {
+    group('budget', () {
       FakePhoto movieAt(String name) => FakePhoto(
         '100RICOH',
         name,
         _day2,
         videoLength: const Duration(seconds: 3),
       );
-      await restartCamera(
-        FakeCameraConfig(
-          httpLatency: Duration.zero,
-          photos: [...card(), movieAt('R0000003.MOV'), movieAt('R0000004.MOV')],
-        ),
-        syntheticMedia(movieBytes: 16 * 1024),
-      );
       final all = [
-        for (final name in ['R0000002.MOV', 'R0000003.MOV', 'R0000004.MOV'])
+        for (final name in [
+          'R0000002.MOV',
+          'R0000003.MOV',
+          'R0000004.MOV',
+          'R0000005.MOV',
+        ])
           CameraFile(GrStorageId.sd, GrPhotoPath('100RICOH', name)),
       ];
       Future<List<int>> expected(CameraFile f) => camera.media(
@@ -724,41 +721,102 @@ void main() {
         ),
         GrImageSize.full,
       );
-      List<bool> kept(MovieCache movies) => [
-        for (final f in all) movies.fileFor(serial, f).existsSync(),
+      List<bool> kept(MovieCache movies, [List<CameraFile>? files]) => [
+        for (final f in files ?? all) movies.fileFor(serial, f).existsSync(),
       ];
 
-      final movies = MovieCache(cacheDir: cache, maxBytes: 1);
-      final library = connected();
-      for (final f in all) {
-        await movies.download(library, f).done;
-      }
-      await movies.diskSettled;
-      expect(kept(movies), [false, true, true]);
+      setUp(
+        () => restartCamera(
+          FakeCameraConfig(
+            httpLatency: Duration.zero,
+            photos: [...card(), for (final f in all.skip(1)) movieAt(f.name)],
+          ),
+          syntheticMedia(movieBytes: 16 * 1024),
+        ),
+      );
 
-      // At start, only the most recently played copy fits; a staging file
-      // being written stays, one left over by a stopped app goes.
-      final last = movies.fileFor(serial, all[2]);
-      movies.fileFor(serial, all[1]).setLastModifiedSync(DateTime(2001));
-      final leftover = File('${last.path}.0.download.part')
-        ..writeAsBytesSync([1, 2, 3])
-        ..setLastModifiedSync(DateTime(2000));
-      final writing = File('${last.path}.1.download.part')
-        ..writeAsBytesSync([1, 2, 3]);
-      final next = MovieCache(cacheDir: cache, maxBytes: last.lengthSync());
-      await next.diskSettled;
-      expect(kept(next), [false, false, true]);
-      expect(leftover.existsSync(), isFalse);
-      expect(writing.existsSync(), isTrue);
-      writing.deleteSync();
+      test('keeps copies within their budget, sparing held copies and '
+          'copies in progress', () async {
+        final three = all.take(3).toList();
+        final movies = MovieCache(cacheDir: cache, maxBytes: 1);
+        final library = connected();
+        // One plays, one is on the page next to it.
+        final holds = [
+          movies.hold(serial, three[1]),
+          movies.hold(serial, three[2]),
+        ];
+        for (final f in three) {
+          await movies.download(library, f).done;
+        }
+        await movies.diskSettled;
+        expect(kept(movies, three), [false, true, true]);
 
-      expect(next.cached(serial, all[0]), isNull);
-      // The last copy plays while the first is copied again.
-      expect(next.cached(serial, all[2]), isNotNull);
-      final again = await next.download(library, all[0]).done;
-      expect(await again.readAsBytes(), await expected(all[0]));
-      await next.diskSettled;
-      expect(kept(next), [true, false, true], reason: 'both handed out');
+        // At start, only the most recently played copy fits; a staging file
+        // being written stays, one left over by a stopped app goes.
+        for (final hold in holds) {
+          hold.release();
+        }
+        await movies.diskSettled;
+        expect(kept(movies, three), [false, false, false]);
+        final roomy = MovieCache(cacheDir: cache);
+        for (final f in three.skip(1)) {
+          await roomy.download(library, f).done;
+        }
+        final last = movies.fileFor(serial, three[2]);
+        movies.fileFor(serial, three[1]).setLastModifiedSync(DateTime(2001));
+        final leftover = File('${last.path}.0.download.part')
+          ..writeAsBytesSync([1, 2, 3])
+          ..setLastModifiedSync(DateTime(2000));
+        final writing = File('${last.path}.1.download.part')
+          ..writeAsBytesSync([1, 2, 3]);
+        final next = MovieCache(cacheDir: cache, maxBytes: last.lengthSync());
+        await next.diskSettled;
+        expect(kept(next, three), [false, false, true]);
+        expect(leftover.existsSync(), isFalse);
+        expect(writing.existsSync(), isTrue);
+        writing.deleteSync();
+
+        expect(next.cached(serial, three[0]), isNull);
+        // The last copy plays while the first is copied again.
+        final playing = next.hold(serial, three[2]);
+        final shown = next.hold(serial, three[0]);
+        expect(next.cached(serial, three[2]), isNotNull);
+        final again = await next.download(library, three[0]).done;
+        expect(await again.readAsBytes(), await expected(three[0]));
+        await next.diskSettled;
+        expect(kept(next, three), [true, false, true], reason: 'both held');
+        playing.release();
+        shown.release();
+      });
+
+      test('a movie held while it plays stays however many movies are '
+          'played after it, until released', () async {
+        final movies = MovieCache(cacheDir: cache, maxBytes: 1);
+        final library = connected();
+        final playing = movies.hold(serial, all[0]);
+        await movies.download(library, all[0]).done;
+        // The player reads the file and asks the cache nothing more, while
+        // the user pages through the other movies.
+        for (final f in all.skip(1)) {
+          final shown = movies.hold(serial, f);
+          await movies.download(library, f).done;
+          shown.release();
+        }
+        await movies.diskSettled;
+        expect(kept(movies), [true, false, false, false]);
+
+        // A cache opened again over the same folder spares it too.
+        final reopened = MovieCache(cacheDir: cache, maxBytes: 1);
+        await reopened.diskSettled;
+        expect(kept(reopened), [true, false, false, false]);
+
+        playing
+          ..release()
+          // A second release changes nothing.
+          ..release();
+        await movies.diskSettled;
+        expect(kept(movies), [false, false, false, false]);
+      });
     });
   });
 

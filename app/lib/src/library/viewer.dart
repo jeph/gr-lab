@@ -216,6 +216,16 @@ class _VideoPageState extends State<_VideoPage> {
   MovieDownload? _download;
   _MovieProblem? _problem;
 
+  /// Keeps the movie's copy on disk while the page shows: the player
+  /// reads the file without asking the cache again.
+  CacheHold? _movieHold;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _movieHold ??= _library.movies.hold(widget.serial, widget.shot.primary);
+  }
+
   /// Set while a movie copy or playback keeps the camera's Wi-Fi up.
   VoidCallback? _release;
 
@@ -244,8 +254,8 @@ class _VideoPageState extends State<_VideoPage> {
 
   @override
   void dispose() {
+    _movieHold?.release();
     _release?.call();
-    _release = null;
     _download?.cancel();
     final video = _video;
     if (video != null) {
