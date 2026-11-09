@@ -17,14 +17,16 @@ final class Look {
 
   /// A new look on [base] with every parameter the base has
   /// ([lookParameters]) at its [LookRange.initial] value (0 where the range
-  /// is unknown). The header is copied from [template], a look the camera
-  /// produced: GR WORLD never builds a blob itself, so which header the
-  /// camera expects of a new one is \[unknown\]
+  /// is unknown). The header is copied from [template], a look a camera
+  /// produced, when there is one: which header a camera expects of a blob
+  /// it did not produce is \[unknown\]. Without one it is format version 1
+  /// and byte 1 zero, the header of GR WORLD's own fallback look and the
+  /// version a GR IV HDF on firmware 1.20 stores
   /// (research/protocol/image-control.md §1).
-  factory onBase(LookBase base, {required Look template}) => Look._(
+  factory onBase(LookBase base, {Look? template}) => Look._(
     BleImageControlBlob(
-      version: template._blob.version,
-      reserved: template._blob.reserved,
+      version: template?._blob.version ?? 1,
+      reserved: template?._blob.reserved ?? 0,
       base: BleEnumValue.of(base._wire),
       parameters: [
         for (final p in lookParameters(base)) _entry(p, _initial(p)),

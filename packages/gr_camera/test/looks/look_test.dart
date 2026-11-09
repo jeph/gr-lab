@@ -124,6 +124,12 @@ void main() {
     });
   });
 
+  test("a new look with no camera look to copy takes GR WORLD's fallback "
+      'header', () {
+    final fresh = Look.onBase(LookBase.vivid);
+    expect(fresh.toBytes().take(4), [1, 0, 0x01, fresh.values.length]);
+  });
+
   test('a value is set in place, or added when the look lacks it', () {
     final look = _preset(0);
     final keyed = look.withValue(LookParameter.key, 2);

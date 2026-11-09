@@ -329,6 +329,21 @@ void main() {
     await app.dispose();
   });
 
+  testWidgets("the phone's Looks makes a new look with no camera and no "
+      'saved look to copy', (tester) async {
+    final app = await _start(tester, saveCamera: false);
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+    await tapWhenReady(tester, find.byKey(const Key('looks-new')));
+    await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
+    await tapWhenReady(tester, find.byKey(const Key('look-save')));
+    await tapWhenReady(tester, find.byKey(const Key('looks-name-ok')));
+    await pumpUntilFound(tester, find.text('Saved Standard'));
+    final saved = app.models.looks.looks.single;
+    expect(saved.look!.base, LookBase.standard);
+    expect(saved.data.take(2), [1, 0], reason: "GR WORLD's fallback header");
+    await app.dispose();
+  });
+
   testWidgets('a slot saved from the editor joins the library, from C2 and '
       'tagged as in C2', (tester) async {
     final app = await _inLooks(tester);

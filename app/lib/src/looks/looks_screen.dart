@@ -98,9 +98,7 @@ class _LooksScreenState extends State<LooksScreen> {
                         key: const Key('looks-new'),
                         icon: Icons.add_rounded,
                         label: l10n.looksNew,
-                        onTap: _model.template == null
-                            ? null
-                            : () => unawaited(openNewLook(context, _model)),
+                        onTap: () => unawaited(openNewLook(context, _model)),
                       ),
                       const SettingsButton(),
                     ],

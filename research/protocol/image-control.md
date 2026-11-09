@@ -113,7 +113,7 @@ GR WORLD decodes each value as a signed byte [code 0xd8e504]. Its formatter [cod
 ## 6. What GR Lab does where the facts stop
 
 These are GR Lab's choices **[design]**, in `packages/gr_camera/lib/src/looks/`:
-- **A new look** copies the version byte and byte 1 from a blob a camera produced (a slot's, else a saved look's), and GR Lab offers New look only when it has one.
+- **A new look** copies the version byte and byte 1 from a blob a camera produced (a slot's, else a saved look's). With neither, as on the home dock's Looks page before any look is saved, it uses `01 00`: the header of GR WORLD's fallback constant (§1), and version 1 is what a GR IV HDF on firmware 1.20 stores (ble.md). Whether every body accepts that header in a written blob is **[unknown]**; a refusal shows as a failed load. On the home dock such a look starts on Standard and keeps to the colour bases (`lookBasesWith`).
 - **Changing the base** keeps the values both bases share, drops the parameters the new base lacks and adds the missing ones at 0, or at the lowest value where 0 is out of range (bleach-bypass toning and HDR Tone Level start at 1). New parameters follow the ascending order of §3, and a base with the filter effect gets the six R, G and B bytes at 0. Whether the camera accepts a blob ordered differently from its own is **[unknown]**.
 - **Editing** covers the parameters whose values are known: the numeric ones as −4..+4 and the enumerated ones as listed in §4, with bleach-bypass toning and HDR Tone Level limited to 1..3. The filter effect, the solarization type and the GR IVx parameters are shown but kept as the camera set them.
 - **Slot names** follow §2: at most 32 characters from GR WORLD's character set.

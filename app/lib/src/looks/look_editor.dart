@@ -38,12 +38,11 @@ Future<void> openLookEditor(
 );
 
 /// Opens the editor on a new look: the first base image it can be given
-/// ([LooksModel.basesFor]), with every adjustment neutral. Does nothing
-/// without [LooksModel.template].
+/// ([LooksModel.basesFor]), with every adjustment neutral and the header of
+/// [LooksModel.template] when there is one.
 Future<void> openNewLook(BuildContext context, LooksModel model) async {
   final template = model.template;
-  if (template == null) return;
-  final base = model.basesFor(template).first;
+  final base = model.basesFor(template ?? Look.onBase(LookBase.standard)).first;
   await openLookEditor(
     context,
     model: model,
