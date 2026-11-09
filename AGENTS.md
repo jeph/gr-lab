@@ -13,6 +13,24 @@ GR Lab talks to Ricoh GR cameras over a protocol that was reverse-engineered, no
 | `tool/check.sh` | Every code-quality check; see below |
 | `research` | Protocol research: how each route and characteristic was found, firmware evidence, hardware results, what is still unknown. `research/README.md` indexes it |
 
+## Branches and worktrees
+
+Several agents work on this repository at once, so make every change in its own git worktree instead of in the main checkout at `~/Developer/gr-lab`. Create the worktree next to the main checkout on a new branch from `dev`, for example `git worktree add ../gr-lab-<branch> -b <branch> dev`, and leave the main checkout on `dev`.
+
+Documentation changes are the exception. Edit Markdown files such as `AGENTS.md`, `README.md` and the files in `research/` directly in the main checkout on `dev`; they don't need a worktree. The exception covers documentation only: changes to the build system or toolchain, such as `pubspec.yaml` files, `analysis_options.yaml`, the Gradle files, the Xcode project, `Package.swift` or `tool/`, go in a worktree like any code change, even though they aren't application logic.
+
+Development is trunk-based: `dev` is the trunk and the repository's default branch, and work reaches it in small, frequent pushes. Always pull `dev` into the worktree before building, with `git fetch origin && git rebase origin/dev`. Resolve any conflicts, and if changes other agents landed on `dev` break yours or don't work with them, fix that in your branch before you build. That way every build you test is the current `dev` plus your work.
+
+Finished work goes directly to `dev`; this project doesn't use pull requests. Once your work is finished and `tool/check.sh` passes, rebase the branch onto `origin/dev` and run `git push origin HEAD:dev` from the worktree. Never push to `main` without the user's explicit approval; `main` only moves when the user asks for `dev` to be promoted to it. Never force push, to any branch, with `--force`, `--force-with-lease` or a `+` refspec. If the push is rejected because `dev` moved, fetch, rebase onto `origin/dev` again, fix any conflicts or breakage, and push again. Worktree branches stay local: never push them under their own names.
+
+Once the push has landed, remove the worktree and its branch. Confirm the work is on `dev` with `git fetch origin && git merge-base --is-ancestor HEAD origin/dev`, then from the main checkout run `git worktree remove ../gr-lab-<branch>` and `git branch -D <branch>`. Finally, bring the main checkout up to date with `git pull --ff-only origin dev`.
+
+## Commits
+
+Write commit messages in the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format: `<type>(<optional scope>): <description>`, for example `fix(wifi): rejoin the camera network after Android drops it`. Use `feat` for new behaviour, `fix` for bug fixes, `docs` for documentation-only changes (including `research/`), and `refactor`, `perf`, `test`, `build`, `ci` or `chore` where they fit. Useful scopes are the areas of the app and the packages: `shoot`, `library`, `pairing`, `connection`, `settings`, `wifi`, `ble`, `protocol`, `camera`, `fake-camera`. Mark breaking changes with `!` after the type or scope and a `BREAKING CHANGE:` footer.
+
+Commits are signed through 1Password, so commit normally first. If 1Password doesn't allow the signature, for example because the request times out or the agent returns an error, commit again without signing using `git -c commit.gpgsign=false commit`. Don't change the repository's or the global Git signing settings to get around it.
+
 ## Research
 
 `research/` is the record of what the camera does and how we know it. The code cites it (for example `research/protocol/remote-shooting.md §4.2`).
@@ -45,12 +63,16 @@ Many routes and characteristics were reverse-engineered, so what the camera actu
 - Other diagnostic output uses `print`/`debugPrint` in Dart, or the plugin's `log` in Kotlin and Swift: all of it goes to the debug log and only while "Enable debug logging" is on. Don't add a second logging path.
 - Debug logging is on by default in the `dev` build and off in `prod`, where Settings can turn it on and export the log. The log holds the camera's Wi-Fi passphrase; that is intended for diagnosis.
 
+## Code you touch
+
+Leave code you change better than you found it, and limit the cleanup to that code: don't refactor whole files or unrelated parts of the codebase. Where a change touches a function or block, flatten its nesting where you can, using early returns and guards and reordering conditions so the common path reads straight down, and simplify what's there. Some nesting is unavoidable; keep it when flattening would make the code harder to follow. Rename variables, properties and functions in that code whose names no longer match what they hold or do, or could say it more precisely.
+
 ## Checks
 
 Run `tool/check.sh` before considering any change done. It runs the formatter, the analyzer with `very_good_analysis` on every package (infos are fatal), the camera layer boundary check and every test suite. The Android and iOS builds run `tool/check.sh --static` and refuse to build when it fails.
 
-- Every check must pass, whether or not a finding looks important. Fix the code, not the check.
-- Do not disable a lint, add `// ignore`, relax `analysis_options.yaml`, skip a test or bypass the build gate to get past a finding. An escape hatch is a last resort, for a finding that cannot be fixed (for example a false positive or a third-party API you cannot change). It must be as narrow as possible (one line, one rule) and carry a comment saying why.
+- Every check must pass, whether or not a finding looks important, including failures in code you didn't change: fix them rather than leaving them for later. Fix the code, not the check.
+- Do not disable a lint, add `// ignore`, relax `analysis_options.yaml`, add a baseline, skip a test or bypass the build gate to get past a finding. Needing an escape hatch usually means you are taking a shortcut, and avoiding that shortcut is the point of this rule. An escape hatch is a last resort, only when a finding truly cannot be fixed (for example a false positive or a third-party API you cannot change). It must be as narrow as possible (one line, one rule, never a whole file) and carry a comment saying why the rule doesn't fit there.
 - Kotlin and Swift warnings are errors too.
 
 ## Builds
@@ -58,9 +80,33 @@ Run `tool/check.sh` before considering any change done. It runs the formatter, t
 - Flavors: `dev` (application ID `io.jeph.grlab.dev`, "GR Lab Dev") and `prod` (`io.jeph.grlab`, "GR Lab"). `flutter run` and `flutter build` without `--flavor` build `dev`.
 - Demo mode: `--dart-define=GR_DEMO=true` runs against the simulated camera.
 
+## Testing on devices
+
+Most of GR Lab needs a real camera, but demo mode (`--dart-define=GR_DEMO=true`) runs the whole app against the simulated camera on an Android emulator. Several agents work at once, so each worktree gets its own emulator, and agents never share one: installs, app data and taps from one agent would otherwise overwrite or interrupt another's test. Don't install on, drive or shut down an emulator that another worktree or project is using.
+
+Before testing, create an emulator for the worktree, named after its branch, with the Pixel 9 hardware profile and a system image under `~/Library/Android/sdk/system-images`, for example `echo no | avdmanager create avd -n gr-lab-<branch> -d pixel_9 -k "system-images;android-36;google_apis_playstore;arm64-v8a"` (the `echo no` answers its custom hardware profile prompt). Boot it on a free even port with `emulator -avd gr-lab-<branch> -port <port> -memory 4096`, and pass `-s emulator-<port>` to every `adb` command and `-d emulator-<port>` to `flutter` so it can't reach another agent's emulator or the phone. When you remove the worktree, shut the emulator down with `adb -s emulator-<port> emu kill` and delete it with `avdmanager delete avd -n gr-lab-<branch>`.
+
+The user's phone is sometimes reachable over `adb`, and it's the only way to test with the user's camera, but it's their own phone, not a test device. Ask the user before you install a build on it, run commands on it (pulling a log included) or test on it, and do only what they agreed to. Install the `dev` build (`io.jeph.grlab.dev`) unless the user asks for `prod`. Never change settings on the phone, whether in Android, GR Lab or any other app, without asking first.
+
 ## Tests
 
 - Behaviour changes come with tests against the simulated camera. Extend `gr_fake_camera` when the real camera does something it cannot yet simulate.
 - Break the change on purpose and confirm a test fails before trusting it.
 - Hardware findings (what a GR IV did on a given date and firmware) go into `research/`, marked as observed; guesses are marked as inferred.
 - In doc comments, protocol facts that are not established carry an evidence tag with escaped brackets, `\[inferred\]`, `\[unknown\]` or `\[design\]` (our choice, not the camera's), so `comment_references` does not read them as code references. Do not state a meaning `research/` or the code does not support.
+
+## Text the user sees
+
+GR Lab is set up for translation, so every text the app itself shows comes from the localized messages in `app/lib/l10n/app_en.arb`: labels, buttons, errors, notices, dialogs and snackbars alike. Read them through `context.l10n` (the generated `AppLocalizations`). Text from the camera, such as its name, file names and setting values, is shown as the camera sends it. The camera layer reports failures as typed values, never as English sentences; the app turns each into a message. Give every message an `@` description, and describe each placeholder. Format numbers, sizes, times and dates with the locale (`intl`'s `NumberFormat` and `DateFormat`), not fixed patterns or English suffixes.
+
+## Privacy policy
+
+`app/assets/privacy.md` is GR Lab's privacy policy, which Settings › About shows. App stores require it to be accurate, so when you add a feature or change behaviour, check whether the policy still describes what GR Lab does. Update it when a change affects what data GR Lab stores, where it stores it, or what it sends off the phone and to whom, or when GR Lab asks for a new permission or uses one for something new. Examples are a new network request other than to the camera, a new kind of file kept on the phone, a new export or share, or telemetry. When you update the policy, change the date at its top in the same commit.
+
+## Third-party licenses
+
+Before adding a dependency, whether a Dart or Flutter package in a `pubspec.yaml`, a Gradle dependency, or a Swift package, check its license. Don't add copyleft code (GPL, LGPL, AGPL) without asking first, since it would change how GR Lab can be distributed.
+
+When you copy or adapt code, icons or other assets from another project, keep a header in the copied file naming the source, version and license.
+
+The app has to show the license of everything third-party that it ships, in Settings › About › Licenses. Flutter adds the licenses of Dart and Flutter packages itself. Anything else it ships, such as fonts, copied assets, or native libraries from Gradle or Swift packages, needs its license file in `app/assets/` and an entry in the `LicenseRegistry` registration in `app/lib/main.dart`, as the Inter and JetBrains Mono fonts have.
