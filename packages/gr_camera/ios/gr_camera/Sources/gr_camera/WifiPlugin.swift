@@ -29,6 +29,8 @@ final class WifiPlugin: NSObject, FlutterPlugin {
   private var pending: Attempt?
   /// The SSID whose configuration this app installed, removed by `leave`.
   private var configuredSsid: String?
+  /// The join whose `apply` installed `configuredSsid`'s configuration.
+  private var configurationOwner: Attempt?
 
   private init(channel: FlutterMethodChannel) {
     self.channel = channel
@@ -71,6 +73,7 @@ final class WifiPlugin: NSObject, FlutterPlugin {
         NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: ssid)
       }
       configuredSsid = nil
+      configurationOwner = nil
       result(nil)
     default:
       result(FlutterMethodNotImplemented)
@@ -93,9 +96,13 @@ final class WifiPlugin: NSObject, FlutterPlugin {
     log("applying a configuration for \"\(ssid)\"")
 
     DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(timeoutMs)) { [weak self] in
-      self?.settle(attempt, FlutterError(
+      guard let self, self.pending === attempt else { return }
+      self.settle(attempt, FlutterError(
         code: "timeout", message: "\"\(ssid)\" did not connect within \(timeoutMs) ms",
         details: nil))
+      // Dart now treats the camera network as not joined; a configuration
+      // left installed could still associate later.
+      self.removeConfiguration(installedBy: attempt)
     }
 
     let configuration = NEHotspotConfiguration(ssid: ssid, passphrase: passphrase, isWEP: false)
@@ -124,6 +131,7 @@ final class WifiPlugin: NSObject, FlutterPlugin {
           NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: previous)
         }
         self.configuredSsid = ssid
+        self.configurationOwner = attempt
         self.awaitAssociation(attempt)
       }
     }
@@ -135,6 +143,16 @@ final class WifiPlugin: NSObject, FlutterPlugin {
     guard pending?.ssid != ssid, configuredSsid != ssid else { return }
     log("removing the stale configuration of \"\(ssid)\"")
     NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: ssid)
+  }
+
+  /// Removes the configuration `attempt` installed, unless a newer join's
+  /// successful `apply` has taken it over.
+  private func removeConfiguration(installedBy attempt: Attempt) {
+    guard configurationOwner === attempt, let ssid = configuredSsid else { return }
+    log("removing the configuration of \"\(ssid)\" after its join timed out")
+    NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: ssid)
+    configuredSsid = nil
+    configurationOwner = nil
   }
 
   /// `apply` can report success before (or without) the phone actually
