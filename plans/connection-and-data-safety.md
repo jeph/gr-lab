@@ -16,7 +16,7 @@ The work is split into workstreams so that no two agents edit the same source fi
 | W4 | App data, downloads and debug log | `app/lib/src/data/`, `app/lib/src/downloads/`, `app/lib/src/library/library_scope.dart`, `app/lib/src/debug/`, `app/lib/src/app_scope.dart` | `[x]` |
 | W5 | App connection controller and Cameras screen | `app/lib/src/connection/`, `app/lib/src/cameras/` | `[~]` |
 | W6 | Protocol Bluetooth pairing and Wi-Fi credentials | `packages/gr_protocol/lib/src/ble/` | `[x]` |
-| W7 | Reused file names (after W2 and W4 land) | as needed across W2 and W4's files | `[~]` |
+| W7 | Reused file names, crash replay (D9), aborting stalled downloads (C28) | `packages/gr_camera/lib/src/library/`, `app/lib/src/library/library_model.dart`, `app/lib/src/downloads/` | `[~]` |
 
 Test files follow their source files. `gr_fake_camera` is shared: changes to it stay small, and conflicts are resolved when rebasing.
 
