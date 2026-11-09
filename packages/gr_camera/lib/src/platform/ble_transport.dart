@@ -8,12 +8,23 @@ import 'package:universal_ble/universal_ble.dart';
 /// [BleTransport] over `universal_ble` (BSD-3-Clause; Android, iOS, macOS,
 /// Windows, Linux). `universal_ble` is a process-wide singleton, so create
 /// one transport per app.
+///
+/// The phone holds one link per camera, which `universal_ble` addresses by
+/// device id, so owners asking for the same camera share it. Each
+/// [connect] hands out its own [BleConnection]; the link is only closed by
+/// the newest one, so a run that was cancelled while connecting cannot
+/// drop the link a newer session or pairing run has been given. Connects
+/// and disconnects of one device run one after another, so a connect never
+/// gets a link that is still being set up or closed.
 final class UniversalBleTransport implements BleTransport {
   /// GR WORLD requests a 512-byte MTU right after connecting (ble.md
   /// §Connection, pairing and reconnect).
   static const requestedMtu = 512;
 
-  final Map<String, _UniversalBleConnection> _connections = {};
+  final Map<String, _UniversalBleLink> _links = {};
+
+  /// Connects and disconnects, one device at a time.
+  final _deviceOps = _Serial();
 
   /// The scan stream that owns the platform scan. Only its cancellation
   /// stops the scan; a rejected concurrent scan must not.
@@ -105,20 +116,25 @@ final class UniversalBleTransport implements BleTransport {
   }
 
   @override
-  Future<BleConnection> connect(
-    String deviceId, {
-    required Duration timeout,
-  }) async {
-    final existing = _connections[deviceId];
-    if (existing != null && !existing.isClosed) return existing;
-    final connection = _UniversalBleConnection(deviceId, () {
-      _connections.remove(deviceId);
-    });
+  Future<BleConnection> connect(String deviceId, {required Duration timeout}) =>
+      _deviceOps.run(deviceId, () => _connect(deviceId, timeout));
+
+  Future<BleConnection> _connect(String deviceId, Duration timeout) async {
+    final existing = _links[deviceId];
+    if (existing != null && !existing.isClosed) return existing.handOut();
+    late final _UniversalBleLink link;
+    link = _UniversalBleLink(
+      deviceId,
+      onClosed: () {
+        if (identical(_links[deviceId], link)) _links.remove(deviceId);
+      },
+      serialize: (op) => _deviceOps.run(deviceId, op),
+    );
     try {
       await _guard(() => UniversalBle.connect(deviceId, timeout: timeout));
     } on Object catch (e) {
-      final bondRejected = connection.bondRejected;
-      connection.dispose();
+      final bondRejected = link.bondRejected;
+      link.dispose();
       // CoreBluetooth and Android keep a connect request pending after the
       // Dart-side timeout; cancel it so it cannot complete later or block
       // the next attempt.
@@ -135,9 +151,9 @@ final class UniversalBleTransport implements BleTransport {
       }
       rethrow;
     }
-    _connections[deviceId] = connection;
-    await connection.negotiateMtu(timeout);
-    return connection;
+    _links[deviceId] = link;
+    await link.negotiateMtu(timeout);
+    return link.handOut();
   }
 
   @override
@@ -147,8 +163,8 @@ final class UniversalBleTransport implements BleTransport {
       await _guard(UniversalBle.stopScan);
     }
     await _stopping;
-    for (final c in _connections.values.toList()) {
-      await c.disconnect();
+    for (final link in _links.values.toList()) {
+      await link.disconnect();
     }
   }
 
@@ -164,8 +180,111 @@ final class UniversalBleTransport implements BleTransport {
   );
 }
 
+/// One owner's use of a [_UniversalBleLink], handed out by
+/// [UniversalBleTransport.connect].
 final class _UniversalBleConnection implements BleConnection {
-  new(this.deviceId, this._onClosed) {
+  new(this._link);
+
+  final _UniversalBleLink _link;
+
+  /// Completed when this owner let go of a link a newer connection uses.
+  final Completer<BleDisconnect> _released = Completer();
+
+  @override
+  String get deviceId => _link.deviceId;
+
+  @override
+  int? get maximumWriteLength => _link.maximumWriteLength;
+
+  @override
+  late final Future<BleDisconnect> disconnected = Future.any([
+    _link.disconnected,
+    _released.future,
+  ]);
+
+  @override
+  Future<List<BleServiceInfo>> discover() async {
+    _checkHeld();
+    return await _link.discover();
+  }
+
+  @override
+  Future<Uint8List> read(
+    String serviceUuid,
+    String characteristicUuid, {
+    Duration? timeout,
+  }) async {
+    _checkHeld();
+    return await _link.read(serviceUuid, characteristicUuid, timeout: timeout);
+  }
+
+  @override
+  Future<void> write(
+    String serviceUuid,
+    String characteristicUuid,
+    Uint8List value, {
+    bool withResponse = true,
+    Duration? timeout,
+  }) async {
+    _checkHeld();
+    await _link.write(
+      serviceUuid,
+      characteristicUuid,
+      value,
+      withResponse: withResponse,
+      timeout: timeout,
+    );
+  }
+
+  @override
+  Stream<Uint8List> subscribe(String serviceUuid, String characteristicUuid) {
+    if (_released.isCompleted) return Stream.error(_releasedError);
+    return _link.subscribe(serviceUuid, characteristicUuid);
+  }
+
+  @override
+  Future<void> pair({
+    required String probeServiceUuid,
+    required String probeCharacteristicUuid,
+    required Duration timeout,
+  }) async {
+    _checkHeld();
+    await _link.pair(
+      probeServiceUuid: probeServiceUuid,
+      probeCharacteristicUuid: probeCharacteristicUuid,
+      timeout: timeout,
+    );
+  }
+
+  /// Closes the link, unless a newer connection has been handed it: then
+  /// only this one ends, and the link stays up for its new owner.
+  @override
+  Future<void> disconnect() => _link.release(this);
+
+  void _letGo() {
+    if (_released.isCompleted) return;
+    _released.complete(
+      const BleDisconnect(
+        requested: true,
+        reason: 'the link stays up for a newer connection',
+      ),
+    );
+  }
+
+  static const _releasedError = BleException(
+    BleErrorCode.notConnected,
+    'disconnected; a newer connection uses the link',
+  );
+
+  void _checkHeld() {
+    if (_released.isCompleted) throw _releasedError;
+  }
+}
+
+/// The phone's link to one peripheral, shared by every connection handed
+/// out for it.
+final class _UniversalBleLink {
+  new(this.deviceId, {required this._onClosed, required this._serialize}) {
     _connectionSub = UniversalBle.connectionChangeStream(deviceId).listen((c) {
       if (c.isConnected) return;
       if (_isBondRejection(c.nativeErrorCode)) bondRejected = true;
@@ -188,22 +307,49 @@ final class _UniversalBleConnection implements BleConnection {
   /// Set when a disconnect carried a [_isBondRejection] code.
   bool bondRejected = false;
 
-  @override
   final String deviceId;
   final void Function() _onClosed;
+
+  /// Runs an operation in turn with the transport's connects and
+  /// disconnects of this device.
+  final Future<void> Function(Future<void> Function() op) _serialize;
   late final StreamSubscription<BleConnectionChange> _connectionSub;
   final Completer<BleDisconnect> _disconnected = Completer();
   final Map<String, Set<BleCharacteristicProperty>> _properties = {};
   bool _requested = false;
   int? _maximumWriteLength;
 
+  /// The connection handed out last; only it closes the link.
+  _UniversalBleConnection? _newest;
+
+  /// Listened [subscribe] streams per characteristic. The platform enables
+  /// notifications per characteristic, not per listener.
+  final Map<String, int> _subscribers = {};
+
+  /// Enables and disables, one characteristic at a time.
+  final _notifyOps = _Serial();
+
   bool get isClosed => _disconnected.isCompleted;
 
-  @override
   int? get maximumWriteLength => _maximumWriteLength;
 
-  @override
   Future<BleDisconnect> get disconnected => _disconnected.future;
+
+  /// A new connection for a new owner; older ones can no longer close the
+  /// link.
+  _UniversalBleConnection handOut() => _newest = _UniversalBleConnection(this);
+
+  /// [connection]'s owner is done with the link: the newest connection
+  /// closes it, an older one only lets go. Decided in turn with connects,
+  /// so a connect that has just handed the link to someone else counts.
+  Future<void> release(_UniversalBleConnection connection) async {
+    if (isClosed) return;
+    await _serialize(() async {
+      if (isClosed) return;
+      if (!identical(connection, _newest)) return connection._letGo();
+      await disconnect();
+    });
+  }
 
   /// Best effort: CoreBluetooth negotiates the MTU itself and Windows may
   /// refuse; the camera works at the default MTU for every documented
@@ -221,7 +367,6 @@ final class _UniversalBleConnection implements BleConnection {
     }
   }
 
-  @override
   Future<List<BleServiceInfo>> discover() async {
     final services = await _guard(
       () => UniversalBle.discoverServices(deviceId),
@@ -243,7 +388,6 @@ final class _UniversalBleConnection implements BleConnection {
     ];
   }
 
-  @override
   Future<Uint8List> read(
     String serviceUuid,
     String characteristicUuid, {
@@ -257,7 +401,6 @@ final class _UniversalBleConnection implements BleConnection {
     ),
   );
 
-  @override
   Future<void> write(
     String serviceUuid,
     String characteristicUuid,
@@ -275,59 +418,92 @@ final class _UniversalBleConnection implements BleConnection {
     ),
   );
 
-  @override
+  /// Notifications (or indications) of one characteristic, enabled while at
+  /// least one returned stream is listened to. The platform switches them
+  /// per characteristic, so enables and disables run in turn and go by the
+  /// listeners left when they run: a stream cancelled as its replacement
+  /// starts cannot switch the replacement's notifications off.
   Stream<Uint8List> subscribe(String serviceUuid, String characteristicUuid) {
+    final key = _canonicalOrSelf(characteristicUuid);
     late final StreamController<Uint8List> controller;
-    StreamSubscription<Uint8List>? sub;
+    StreamSubscription<Uint8List>? values;
+    var counted = false;
+    // True when this stream was still counted as a listener.
+    bool stopCounting() {
+      if (!counted) return false;
+      counted = false;
+      final left = _subscribers[key]! - 1;
+      if (left == 0) {
+        _subscribers.remove(key);
+      } else {
+        _subscribers[key] = left;
+      }
+      return true;
+    }
+
     controller = StreamController<Uint8List>(
       onListen: () async {
-        sub = UniversalBle.characteristicValueStream(
+        counted = true;
+        _subscribers.update(key, (n) => n + 1, ifAbsent: () => 1);
+        values = UniversalBle.characteristicValueStream(
           deviceId,
           characteristicUuid,
         ).listen(controller.add, onError: controller.addError);
-        final props = _properties[_canonicalOrSelf(characteristicUuid)];
-        final indicateOnly =
-            props != null &&
-            props.contains(BleCharacteristicProperty.indicate) &&
-            !props.contains(BleCharacteristicProperty.notify);
         try {
-          await _guard(
-            () => indicateOnly
-                ? UniversalBle.subscribeIndications(
-                    deviceId,
-                    serviceUuid,
-                    characteristicUuid,
-                  )
-                : UniversalBle.subscribeNotifications(
-                    deviceId,
-                    serviceUuid,
-                    characteristicUuid,
-                  ),
-          );
+          await _notifyOps.run(key, () async {
+            // Cancelled before its turn, and nobody else listens.
+            if (!_subscribers.containsKey(key)) return;
+            await _guard(() => _enable(serviceUuid, characteristicUuid));
+          });
         } on Object catch (e, s) {
+          stopCounting();
           controller.addError(e, s);
-          await sub?.cancel();
+          await values?.cancel();
           await controller.close();
         }
       },
       onCancel: () async {
-        await sub?.cancel();
-        if (isClosed) return;
-        try {
-          await UniversalBle.unsubscribe(
-            deviceId,
-            serviceUuid,
-            characteristicUuid,
-          );
-        } on Object {
-          // The link may have dropped meanwhile; nothing left to disable.
-        }
+        final wasCounted = stopCounting();
+        await values?.cancel();
+        if (!wasCounted || isClosed) return;
+        await _notifyOps.run(key, () async {
+          // A newer listener (a watcher's replacement) still needs them.
+          if (_subscribers.containsKey(key) || isClosed) return;
+          try {
+            await UniversalBle.unsubscribe(
+              deviceId,
+              serviceUuid,
+              characteristicUuid,
+            );
+          } on Object {
+            // The link may have dropped meanwhile; nothing left to disable.
+          }
+        });
       },
     );
     return controller.stream;
   }
 
-  @override
+  Future<void> _enable(String serviceUuid, String characteristicUuid) {
+    final props = _properties[_canonicalOrSelf(characteristicUuid)];
+    final indicateOnly =
+        props != null &&
+        props.contains(BleCharacteristicProperty.indicate) &&
+        !props.contains(BleCharacteristicProperty.notify);
+    return indicateOnly
+        ? UniversalBle.subscribeIndications(
+            deviceId,
+            serviceUuid,
+            characteristicUuid,
+          )
+        : UniversalBle.subscribeNotifications(
+            deviceId,
+            serviceUuid,
+            characteristicUuid,
+          );
+  }
+
+  /// Closes the link for every connection handed out for it.
   Future<void> disconnect() async {
     if (isClosed) return;
     _requested = true;
@@ -338,7 +514,6 @@ final class _UniversalBleConnection implements BleConnection {
     }
   }
 
-  @override
   Future<void> pair({
     required String probeServiceUuid,
     required String probeCharacteristicUuid,
@@ -381,6 +556,18 @@ final class _UniversalBleConnection implements BleConnection {
         CharacteristicProperty.indicate => BleCharacteristicProperty.indicate,
         _ => null,
       };
+}
+
+/// Runs operations that share a key one after another, in call order.
+/// Keys are device ids and characteristic UUIDs, so the map stays small.
+final class _Serial {
+  final Map<String, Future<void>> _tails = {};
+
+  Future<T> run<T>(String key, Future<T> Function() op) {
+    final result = (_tails[key] ?? Future<void>.value()).then((_) => op());
+    _tails[key] = result.then<void>((_) {}, onError: (Object _) {});
+    return result;
+  }
 }
 
 String _canonicalOrSelf(String uuid) {
