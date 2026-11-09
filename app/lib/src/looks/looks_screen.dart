@@ -84,22 +84,22 @@ class _LooksScreenState extends State<LooksScreen> {
             bottom: false,
             child: CustomScrollView(
               slivers: [
-                const SliverToBoxAdapter(child: CameraTopBar()),
+                const SliverToBoxAdapter(
+                  child: CameraTopBar(showSettings: false),
+                ),
                 SliverToBoxAdapter(
-                  child: Row(
-                    children: [
-                      Expanded(child: PageTitle(l10n.looksTitle)),
-                      Padding(
-                        padding: const EdgeInsets.only(right: 18, top: 10),
-                        child: RoundIconButton(
-                          key: const Key('looks-new'),
-                          icon: Icons.add_rounded,
-                          label: l10n.looksNew,
-                          onTap: _model.template == null
-                              ? null
-                              : () => unawaited(openNewLook(context, _model)),
-                        ),
+                  child: PageTitle(
+                    l10n.looksTitle,
+                    actions: [
+                      RoundIconButton(
+                        key: const Key('looks-new'),
+                        icon: Icons.add_rounded,
+                        label: l10n.looksNew,
+                        onTap: _model.template == null
+                            ? null
+                            : () => unawaited(openNewLook(context, _model)),
                       ),
+                      const SettingsButton(),
                     ],
                   ),
                 ),

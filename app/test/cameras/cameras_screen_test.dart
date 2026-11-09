@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
+import 'package:grlab/src/camera/camera_top_bar.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/library/library_screen.dart';
@@ -374,6 +375,32 @@ void main() {
     );
     expect(await app.camera.wifi.currentSsid(), isNull);
     expect(find.byKey(const Key('cameras-lost')), findsNothing);
+
+    await app.dispose();
+  });
+
+  testWidgets('Settings sits on the title row of Cameras and the Library', (
+    tester,
+  ) async {
+    void expectOnTitleRow(String title, Key settings) {
+      final titleRect = tester.getRect(
+        find.descendant(of: find.byType(PageTitle), matching: find.text(title)),
+      );
+      final button = tester.getRect(find.byKey(settings));
+      expect(
+        button.center.dy,
+        moreOrLessEquals(titleRect.center.dy, epsilon: 1),
+      );
+      expect(button.left, greaterThan(titleRect.right));
+    }
+
+    final app = await _start(tester);
+    await pumpUntilFound(tester, find.byKey(const Key('camera-card-library')));
+    expectOnTitleRow('Cameras', const Key('cameras-settings'));
+
+    await _tap(tester, const Key('camera-card-library'));
+    await pumpUntilFound(tester, find.byType(LibraryScreen));
+    expectOnTitleRow('Library', const Key('camera-settings'));
 
     await app.dispose();
   });

@@ -6,9 +6,14 @@ import 'package:grlab/src/settings/settings_screen.dart';
 import 'package:grlab/src/theme/tokens.dart';
 
 /// The row at the top of the camera's pages (mock `.topbar`): back to the
-/// Cameras screen, the camera pill, and Settings.
+/// Cameras screen, the camera pill and, on pages without a [PageTitle],
+/// Settings.
 class CameraTopBar extends StatelessWidget {
-  const new({super.key});
+  const new({super.key, this.showSettings = true});
+
+  /// Whether the bar carries [SettingsButton]. Pages with a [PageTitle] put
+  /// it in the title's row instead.
+  final bool showSettings;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -29,17 +34,23 @@ class CameraTopBar extends StatelessWidget {
             child: CameraPill(),
           ),
         ),
-        const SizedBox(width: 8),
-        RoundIconButton(
-          key: const Key('camera-settings'),
-          icon: Icons.settings_outlined,
-          label: context.l10n.cameraBarSettings,
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-          ),
-        ),
+        if (showSettings) ...[const SizedBox(width: 8), const SettingsButton()],
       ],
     ),
+  );
+}
+
+/// Opens Settings from the camera's pages.
+class SettingsButton extends StatelessWidget {
+  const new({super.key});
+
+  @override
+  Widget build(BuildContext context) => RoundIconButton(
+    key: const Key('camera-settings'),
+    icon: Icons.settings_outlined,
+    label: context.l10n.cameraBarSettings,
+    onTap: () => Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen())),
   );
 }
 
@@ -91,22 +102,33 @@ class RoundIconButton extends StatelessWidget {
   }
 }
 
-/// The large title under [CameraTopBar] (mock `.h1`).
+/// The large title of a page (mock `.h1`), with its [actions] on the same
+/// row.
 class PageTitle extends StatelessWidget {
-  const new(this.text, {super.key});
+  const new(this.text, {super.key, this.actions = const []});
 
   final String text;
 
+  /// Buttons at the end of the row, such as [SettingsButton].
+  final List<Widget> actions;
+
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
-    child: Text(
-      text,
-      style: const TextStyle(
-        fontSize: 32,
-        fontWeight: FontWeight.w700,
-        letterSpacing: -.8,
-      ),
+    padding: const EdgeInsets.fromLTRB(20, 14, 18, 4),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -.8,
+            ),
+          ),
+        ),
+        for (final action in actions) ...[const SizedBox(width: 8), action],
+      ],
     ),
   );
 }

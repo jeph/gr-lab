@@ -310,7 +310,10 @@ class _Header extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [const CameraTopBar(), PageTitle(context.l10n.libraryTitle)],
+      children: [
+        const CameraTopBar(showSettings: false),
+        PageTitle(context.l10n.libraryTitle, actions: const [SettingsButton()]),
+      ],
     );
   }
 }

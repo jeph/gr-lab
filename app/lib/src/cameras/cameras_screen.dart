@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/camera/camera_tab_bar.dart';
+import 'package:grlab/src/camera/camera_top_bar.dart';
 import 'package:grlab/src/cameras/camera_details.dart';
 import 'package:grlab/src/cameras/camera_drawing.dart';
 import 'package:grlab/src/cameras/camera_identity.dart';
@@ -370,34 +371,20 @@ class _CameraList extends StatelessWidget {
         key: const Key('cameras'),
         padding: const EdgeInsets.only(bottom: 32),
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                GrIconButton(
-                  key: const Key('cameras-settings'),
-                  icon: Icons.settings_outlined,
-                  tooltip: context.l10n.camerasSettings,
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const SettingsScreen(),
-                    ),
+          PageTitle(
+            context.l10n.camerasTitle,
+            actions: [
+              GrIconButton(
+                key: const Key('cameras-settings'),
+                icon: Icons.settings_outlined,
+                tooltip: context.l10n.camerasSettings,
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const SettingsScreen(),
                   ),
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
-            child: Text(
-              context.l10n.camerasTitle,
-              style: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -.8,
               ),
-            ),
+            ],
           ),
           if (lost)
             _Banner(
