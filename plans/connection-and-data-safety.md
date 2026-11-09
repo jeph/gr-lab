@@ -15,7 +15,7 @@ The work is split into workstreams so that no two agents edit the same source fi
 | W3 | Camera layer pairing, Bluetooth adapter, native Wi-Fi, app pairing screens | `packages/gr_camera/lib/src/{session,pairing}.dart`, `packages/gr_camera/lib/src/platform/`, `packages/gr_camera/lib/src/shoot/remote.dart`, `packages/gr_camera/android/`, `packages/gr_camera/ios/`, `app/lib/src/pairing/` | `[~]` |
 | W4 | App data, downloads and debug log | `app/lib/src/data/`, `app/lib/src/downloads/`, `app/lib/src/library/library_scope.dart`, `app/lib/src/debug/`, `app/lib/src/app_scope.dart` | `[~]` |
 | W5 | App connection controller and Cameras screen | `app/lib/src/connection/`, `app/lib/src/cameras/` | `[~]` |
-| W6 | Protocol Bluetooth pairing and Wi-Fi credentials | `packages/gr_protocol/lib/src/ble/` | `[~]` |
+| W6 | Protocol Bluetooth pairing and Wi-Fi credentials | `packages/gr_protocol/lib/src/ble/` | `[x]` |
 | W7 | Reused file names (after W2 and W4 land) | as needed across W2 and W4's files | `[ ]` |
 
 Test files follow their source files. `gr_fake_camera` is shared: changes to it stay small, and conflicts are resolved when rebasing.
@@ -58,10 +58,11 @@ Test files follow their source files. `gr_fake_camera` is shared: changes to it 
 
 ### W6: protocol Bluetooth pairing and Wi-Fi credentials
 
-- [ ] **C23. If reading the camera's Wi-Fi security fails, the app assumes WPA2** instead of reporting it. Use WPA2 only when the camera has no security characteristic. `client.dart` `readWifiCredentials`.
-- [ ] **C24. A camera that is turned off ends the pairing search** even when another camera nearby is on. `pairing.dart` scan predicate.
-- [ ] **C25. A disconnect error during pairing cleanup hides the real pairing failure.** `pairing.dart` `fail`.
-- [ ] **C26. Delete `wakeCamera`.** It uses a wake method our GR IV test showed doesn't work, and nothing in the app calls it. `wake.dart`.
+- [x] (1ade2f4) **C23. If reading the camera's Wi-Fi security fails, the app assumes WPA2** instead of reporting it. Use WPA2 only when the camera has no security characteristic. `client.dart` `readWifiCredentials`.
+- [x] (d304c5c) **C24. A camera that is turned off ends the pairing search** even when another camera nearby is on. `pairing.dart` scan predicate.
+- [x] (d304c5c) **C25. A disconnect error during pairing cleanup hides the real pairing failure.** `pairing.dart` `fail`.
+- [x] (bde0240) **C26. Delete `wakeCamera`.** It uses a wake method our GR IV test showed doesn't work, and nothing in the app calls it. `wake.dart`.
+- [ ] **C27. A camera whose Wi-Fi security can't be read is still joined with WPA2.** After C23 the credentials report unknown security, but `session.dart` `_joinAndVerify` treats anything but WPA3 as WPA2, so a WPA3-only camera still fails to join. Decide what unknown security does (read it again, or try both). Follow-up after W1 lands, since W1 owns `session.dart`.
 
 ## Data safety
 
