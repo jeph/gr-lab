@@ -37,7 +37,7 @@ Test files follow their source files. `gr_fake_camera` is shared: changes to it 
 
 - [x] (e5053c7) **C9. Stalled responses outlive their timeouts.** After a timeout the body read keeps going, and an error response to a download has no timeout at all. `client.dart` `_exchange`, `_readBody`, download non-200 path.
 - [x] (2d84032) **C10. The Library's three-request limit stops holding when the camera stalls.** A request past its deadline frees its slot but keeps its connection open. `request_queue.dart`, `camera_images.dart` `_fetch`, `movie_cache.dart`.
-- [ ] **C28. Download pause and cancel, and Library info requests, still can't close a stalled request early.** C10 added an `abort` option, but `downloadFiles` and `fileInfo` don't take it yet, so these wait for the next chunk or their own HTTP timeout. `camera_library.dart`, `download_engine.dart`, `library_model.dart`.
+- [x] (b0525b5) **C28. Download pause and cancel, and Library info requests, still can't close a stalled request early.** C10 added an `abort` option, but `downloadFiles` and `fileInfo` don't take it yet, so these wait for the next chunk or their own HTTP timeout. `camera_library.dart`, `download_engine.dart`, `library_model.dart`.
 
 ### W3: camera layer pairing, Bluetooth adapter, native Wi-Fi
 
@@ -74,7 +74,7 @@ Test files follow their source files. `gr_fake_camera` is shared: changes to it 
 - [x] (e035fc3) **D3. Leaving the camera pages and coming back quickly can run two download engines on the same queue**, which can save a photo twice or delete files the other still needs. `download_engine.dart`, `library_scope.dart`; also two writers sharing `downloads.json.tmp` in `json_file.dart`.
 - [x] (091c1c5) **D4. If the debug log folder can't be opened, the app won't start**, even with logging off. `debug_log.dart` `open`, `app_scope.dart`.
 - [x] (6f168a5) **D5. A half-written log line (after a crash or a failed write) corrupts the next entry.** `debug_log.dart` reopen and write-failure paths.
-- [ ] **D9. After a crash between a photo-library save and the queue write, the shot can be saved again on restart.** W4 left this reconciliation out of D2. `download_engine.dart`.
+- [x] (0a086d8) **D9. After a crash between a photo-library save and the queue write, the shot can be saved again on restart.** W4 left this reconciliation out of D2. `download_engine.dart`.
 
 ### W2: camera Library caches
 
