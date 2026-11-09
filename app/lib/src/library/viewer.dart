@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -600,17 +601,22 @@ class _ImageControlRowState extends State<_ImageControlRow> {
               .load(serial, file, GrImageSize.view)
               .future
               .then<Uint8List?>((b) => b, onError: (Object _) => null);
-    await store.add(
-      name: name,
-      data: imageControlToBytes(look),
-      source: file.name,
-      photo: photo,
+    var stored = true;
+    try {
+      await store.add(
+        name: name,
+        data: imageControlToBytes(look),
+        source: file.name,
+        photo: photo,
+      );
+    } on FileSystemException {
+      stored = false;
+    }
+    if (mounted) setState(() => _saving = false);
+    showLooksMessage(
+      messenger,
+      stored ? l10n.looksSaved(name) : l10n.looksSaveFailed(name),
     );
-    if (!mounted) return;
-    setState(() => _saving = false);
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(l10n.looksSaved(name))));
   }
 
   @override

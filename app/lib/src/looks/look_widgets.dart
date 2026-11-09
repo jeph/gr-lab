@@ -115,6 +115,13 @@ class MiniTag extends StatelessWidget {
   }
 }
 
+/// Replaces the snack bar [messenger] shows with [text].
+void showLooksMessage(ScaffoldMessengerState messenger, String text) {
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(text)));
+}
+
 /// Asks before loading [look] under [name] into slot [number], naming what
 /// it replaces, then loads it and says so in a snack bar. Returns whether
 /// the camera took it; a refusal reaches [LooksModel.refusals].
@@ -152,11 +159,7 @@ Future<bool> confirmAndLoad(
   );
   if (ok != true) return false;
   final loaded = await model.load(number, name: name, look: look);
-  if (loaded) {
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(l10n.looksLoaded(name, number))));
-  }
+  if (loaded) showLooksMessage(messenger, l10n.looksLoaded(name, number));
   return loaded;
 }
 

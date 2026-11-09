@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
@@ -106,7 +107,9 @@ final class LooksStore extends ChangeNotifier {
 
   /// Adds a look named [name] holding [data], from [source] (see
   /// [SavedLook.source]), with [photo] (a JPEG) of the camera photo it was
-  /// saved from.
+  /// saved from. Completes once the look is on disk; when it cannot be
+  /// written, the look is taken out again and the [FileSystemException] is
+  /// rethrown, so saving again does not leave a duplicate.
   Future<SavedLook> add({
     required String name,
     required Uint8List data,
@@ -121,38 +124,72 @@ final class LooksStore extends ChangeNotifier {
       created: now,
       source: source,
     );
-    if (photo != null) {
-      await _photos.create(recursive: true);
-      await File('${_photos.path}/${look.id}.jpg').writeAsBytes(photo);
+    final photoFile = File('${_photos.path}/${look.id}.jpg');
+    try {
+      if (photo != null) {
+        await _photos.create(recursive: true);
+        await photoFile.writeAsBytes(photo);
+      }
+      _looks.insert(0, look);
+      await _save();
+    } on FileSystemException {
+      if (_looks.remove(look)) notifyListeners();
+      if (photoFile.existsSync()) await photoFile.delete();
+      rethrow;
     }
-    _looks.insert(0, look);
-    _changed();
     return look;
   }
 
-  /// Replaces the look with [look]'s id.
-  void update(SavedLook look) {
+  /// Replaces the look with [look]'s id. Completes once it is on disk; when
+  /// it cannot be written, the earlier version comes back and the
+  /// [FileSystemException] is rethrown.
+  Future<void> update(SavedLook look) async {
     final i = _looks.indexWhere((l) => l.id == look.id);
     if (i < 0) return;
+    final before = _looks[i];
     _looks[i] = look;
-    _changed();
+    try {
+      await _save();
+    } on FileSystemException {
+      final now = _looks.indexWhere((l) => l.id == look.id);
+      if (now >= 0) _looks[now] = before;
+      notifyListeners();
+      rethrow;
+    }
   }
 
+  /// Removes [look]. Completes once the removal is on disk; when it cannot
+  /// be written, the look comes back and the [FileSystemException] is
+  /// rethrown. Its photo is deleted only after a successful write.
   Future<void> delete(SavedLook look) async {
-    _looks.removeWhere((l) => l.id == look.id);
-    _changed();
+    final i = _looks.indexWhere((l) => l.id == look.id);
+    if (i < 0) return;
+    final removed = _looks.removeAt(i);
+    try {
+      await _save();
+    } on FileSystemException {
+      _looks.insert(math.min(i, _looks.length), removed);
+      notifyListeners();
+      rethrow;
+    }
     final photo = File('${_photos.path}/${look.id}.jpg');
     if (photo.existsSync()) await photo.delete();
   }
 
-  void _changed() {
+  /// Writes every look after the writes already queued. The returned future
+  /// fails when this write does; the queue itself carries on, so one failed
+  /// write does not stop later ones.
+  Future<void> _save() {
     notifyListeners();
     final snapshot = {
       'looks': [for (final l in _looks) l.toJson()],
     };
-    _pending = _pending.then((_) => _file.write(snapshot));
+    final write = _pending.then((_) => _file.write(snapshot));
+    _pending = write.catchError((Object _) {});
+    return write;
   }
 
-  /// Completes when every change so far is on disk.
+  /// Completes when every write so far has finished, whether or not it
+  /// succeeded.
   Future<void> flush() => _pending;
 }

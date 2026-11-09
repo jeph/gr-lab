@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -113,5 +114,31 @@ void main() {
     final saved = app.models.looks.looks.single;
     expect(saved.name, 'Daido');
     expect(saved.data, app.camera.lookSlot(2).data);
+  });
+
+  testWidgets('a save the phone cannot store says so, and saving again '
+      'stores the look once', (tester) async {
+    final app = await _inLooks(tester);
+    final dataDir = app.models.services.dataDir.path;
+    // `looks.json` is replaced by renaming a temporary file over it, which
+    // fails while a non-empty directory has its name.
+    final block = Directory('$dataDir/looks.json')..createSync();
+    File('${block.path}/keep').writeAsStringSync('');
+
+    await tapWhenReady(tester, _inSlot(2, 'Daido'));
+    await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
+    await tapWhenReady(tester, find.byKey(const Key('look-save')));
+    await tapWhenReady(tester, find.byKey(const Key('looks-name-ok')));
+    await pumpUntilFound(
+      tester,
+      find.text("Couldn't save Daido on this phone."),
+    );
+    expect(app.models.looks.looks, isEmpty);
+
+    block.deleteSync(recursive: true);
+    await tapWhenReady(tester, find.byKey(const Key('look-save')));
+    await tapWhenReady(tester, find.byKey(const Key('looks-name-ok')));
+    await pumpUntilFound(tester, find.text('Saved Daido'));
+    expect(app.models.looks.looks.single.name, 'Daido');
   });
 }

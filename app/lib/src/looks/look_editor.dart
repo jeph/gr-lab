@@ -114,31 +114,36 @@ class _LookEditorState extends State<LookEditor> {
     return saved == null ? null : _model.store.photoOf(saved);
   }
 
+  /// Stores the look, asking for a name when it is new, and says in a snack
+  /// bar whether it reached the phone's storage.
   Future<void> _save() async {
     final l10n = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
     final saved = _saved;
     final data = imageControlToBytes(_look);
-    if (saved != null) {
-      _model.store.update(saved.copyWith(name: _name, data: data));
-      setState(() => _saved = _model.store.byId(saved.id));
-    } else {
-      final name = await askLookName(context, initial: _name);
-      if (name == null || !mounted) return;
-      final added = await _model.store.add(
-        name: name,
-        data: data,
-        source: widget.source,
-      );
-      if (!mounted) return;
-      setState(() {
-        _name = name;
-        _saved = added;
-      });
+    final name = saved != null
+        ? _name
+        : await askLookName(context, initial: _name);
+    if (name == null || !mounted) return;
+    setState(() => _name = name);
+    final SavedLook stored;
+    try {
+      if (saved == null) {
+        stored = await _model.store.add(
+          name: name,
+          data: data,
+          source: widget.source,
+        );
+      } else {
+        stored = saved.copyWith(name: name, data: data);
+        await _model.store.update(stored);
+      }
+    } on FileSystemException {
+      showLooksMessage(messenger, l10n.looksSaveFailed(name));
+      return;
     }
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(l10n.looksSaved(_name))));
+    if (mounted) setState(() => _saved = stored);
+    showLooksMessage(messenger, l10n.looksSaved(name));
   }
 
   Future<void> _load(int number) async {
@@ -165,8 +170,15 @@ class _LookEditorState extends State<LookEditor> {
         await _load(3);
       case _EditorAction.delete:
         final saved = _saved;
+        final l10n = context.l10n;
+        final messenger = ScaffoldMessenger.of(context);
         if (saved == null || !await confirmDelete(context, saved)) return;
-        await _model.store.delete(saved);
+        try {
+          await _model.store.delete(saved);
+        } on FileSystemException {
+          showLooksMessage(messenger, l10n.looksDeleteFailed(saved.name));
+          return;
+        }
         if (mounted) Navigator.of(context).pop();
     }
   }

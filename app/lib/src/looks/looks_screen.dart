@@ -599,6 +599,8 @@ class _LookMenu extends StatelessWidget {
 
   Future<void> _act(BuildContext context, _LookAction action) async {
     final look = saved.look;
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
     switch (action) {
       case _LookAction.edit:
         if (look == null) return;
@@ -626,10 +628,18 @@ class _LookMenu extends StatelessWidget {
         );
       case _LookAction.rename:
         final name = await askLookName(context, initial: saved.name);
-        if (name != null) model.store.update(saved.copyWith(name: name));
+        if (name == null) return;
+        try {
+          await model.store.update(saved.copyWith(name: name));
+        } on FileSystemException {
+          showLooksMessage(messenger, l10n.looksSaveFailed(name));
+        }
       case _LookAction.delete:
-        if (await confirmDelete(context, saved)) {
+        if (!await confirmDelete(context, saved)) return;
+        try {
           await model.store.delete(saved);
+        } on FileSystemException {
+          showLooksMessage(messenger, l10n.looksDeleteFailed(saved.name));
         }
     }
   }

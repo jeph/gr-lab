@@ -1377,6 +1377,16 @@
   "@looksDeleteBody": {
     "description": "Body of the delete confirmation."
   },
+  "looksDeleteFailed": "Couldn't delete {name} from this phone.",
+  "@looksDeleteFailed": {
+    "description": "Snack bar when deleting a saved look could not be written to the phone's storage.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "description": "The look's name, as the user or the camera named it."
+      }
+    }
+  },
   "looksDeleteTitle": "Delete {name}?",
   "@looksDeleteTitle": {
     "description": "Title of the delete confirmation for a saved look.",
@@ -1670,6 +1680,16 @@
   "looksSave": "Save",
   "@looksSave": {
     "description": "Button in the look editor that saves the look to the user's library."
+  },
+  "looksSaveFailed": "Couldn't save {name} on this phone.",
+  "@looksSaveFailed": {
+    "description": "Snack bar when a saved look could not be written to the phone's storage.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "description": "The look's name, as the user or the camera named it."
+      }
+    }
   },
   "looksSaved": "Saved {name}",
   "@looksSaved": {
