@@ -16,7 +16,7 @@ The work is split into workstreams so that no two agents edit the same source fi
 | W4 | App data, downloads and debug log | `app/lib/src/data/`, `app/lib/src/downloads/`, `app/lib/src/library/library_scope.dart`, `app/lib/src/debug/`, `app/lib/src/app_scope.dart` | `[x]` |
 | W5 | App connection controller and Cameras screen | `app/lib/src/connection/`, `app/lib/src/cameras/` | `[~]` |
 | W6 | Protocol Bluetooth pairing and Wi-Fi credentials | `packages/gr_protocol/lib/src/ble/` | `[x]` |
-| W7 | Reused file names (after W2 and W4 land) | as needed across W2 and W4's files | `[ ]` |
+| W7 | Reused file names (after W2 and W4 land) | as needed across W2 and W4's files | `[~]` |
 
 Test files follow their source files. `gr_fake_camera` is shared: changes to it stay small, and conflicts are resolved when rebasing.
 
@@ -81,7 +81,7 @@ Test files follow their source files. `gr_fake_camera` is shared: changes to it 
 - [x] (afc3924) **D6. Two files with the same name on different storage or folders download to the same place**, and the second returns the first's bytes. `camera_library.dart` `downloadFiles`.
 - [x] (7d37dc0) **D7. The preview and movie cache on disk has no size limit.** `camera_images.dart`, `movie_cache.dart`.
 
-### W7: reused file names (after W2 and W4)
+### W7: reused file names, crash replay, aborting stalled downloads
 
 - [ ] **D8. When a file name comes back with different content** (SD card swap, deleted and re-shot), the app shows the old preview and movie and marks the new shot as already downloaded. Needs a freshness check for cached media and download history. `camera_images.dart`, `movie_cache.dart`, `library_model.dart`, `download_engine.dart`.
 
