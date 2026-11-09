@@ -237,8 +237,7 @@ class WifiChannel(private val context: Context, messenger: BinaryMessenger) :
                 stopRescans()
                 network = n
                 if (!connectivity.bindProcessToNetwork(n)) {
-                    fail("failed", "Android would not route traffic over \"$ssid\"")
-                    release()
+                    failUnbound(n, ssid)
                     return
                 }
                 log("\"$ssid\" available after request $requests; process bound to it")
@@ -286,6 +285,33 @@ class WifiChannel(private val context: Context, messenger: BinaryMessenger) :
             return false
         }
         return true
+    }
+
+    /**
+     * Fails a join whose network Android would not bind the process to. It
+     * refuses a network that is already gone, and every network but the VPN
+     * while a VPN that apps cannot bypass carries this app's traffic (AOSP
+     * netd `checkUserNetworkAccess`; seen with Tailscale on an
+     * Android 17 phone, 2026-11-09). Apps cannot ask whether a VPN is
+     * bypassable, so a VPN on this app's traffic with the camera network
+     * still present is reported as `vpnSuspected`, not as the cause.
+     * [ConnectivityManager.getActiveNetwork] returns a VPN only when it
+     * applies to this app, so one that excludes GR Lab is not suspected.
+     */
+    private fun failUnbound(n: Network, ssid: String?) {
+        val present = connectivity.getNetworkCapabilities(n) != null
+        val vpn = connectivity.getNetworkCapabilities(connectivity.activeNetwork)
+            ?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+        log("binding to \"$ssid\" refused; network present $present, VPN on this app $vpn")
+        if (present && vpn) {
+            fail(
+                "vpnSuspected",
+                "Android would not route traffic over \"$ssid\" while a VPN carries this app's traffic",
+            )
+        } else {
+            fail("failed", "Android would not route traffic over \"$ssid\"")
+        }
+        release()
     }
 
     /**

@@ -13,6 +13,7 @@ import 'package:gr_protocol/gr_protocol.dart'
         BleServiceInfo,
         BleTransport,
         WifiJoinDeclined,
+        WifiJoinVpnSuspected,
         WifiNetworkControl,
         WifiSecurity;
 import 'package:grlab/src/connection/connection_controller.dart';
@@ -428,11 +429,11 @@ void main() {
       },
     );
 
-    /// The Library on Wi-Fi joined through [_BackgroundWifi], with
-    /// recovery giving up after one attempt that fails. (A second attempt
+    /// The camera behind [_RefusableWifi], with joins giving up after
+    /// 300 ms and recovery after one attempt that fails. (A second attempt
     /// would find the simulated camera answering without a join.)
-    Future<(TestApp, _BackgroundWifi)> connectedRefusable() async {
-      late _BackgroundWifi wifi;
+    Future<(TestApp, _RefusableWifi)> refusable() async {
+      late _RefusableWifi wifi;
       final app = await createTestApp(
         config: const FakeCameraConfig(
           bonded: true,
@@ -448,9 +449,15 @@ void main() {
           wifiRecoveryDelays: [Duration(milliseconds: 50)],
           maxWifiRecoveryAttempts: 1,
         ),
-        wifi: (camera) => wifi = _BackgroundWifi(camera),
+        wifi: (camera) => wifi = _RefusableWifi(camera),
       );
       addTearDown(app.dispose);
+      return (app, wifi);
+    }
+
+    /// The Library on Wi-Fi joined through [_RefusableWifi].
+    Future<(TestApp, _RefusableWifi)> connectedRefusable() async {
+      final (app, wifi) = await refusable();
       await app.models.connection.openCamera(CameraTab.library);
       expect(app.models.connection.status, ConnectionStatus.connected);
       return (app, wifi);
@@ -504,6 +511,48 @@ void main() {
       await pumpEventQueue();
       expect(connection.status, ConnectionStatus.bluetooth);
       expect(wifi.joins, joins);
+    });
+
+    test('a join a VPN may be blocking is retried, and its hint shows when '
+        'every try fails on it', () async {
+      final (app, wifi) = await refusable();
+      final connection = app.models.connection;
+
+      wifi.vpnBlocks = 1000;
+      await connection.openCamera(CameraTab.library);
+      expect(wifi.joins, greaterThan(1));
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(connection.failure?.kind, ConnectFailureKind.wifiVpn);
+    });
+
+    test(
+      'a Wi-Fi a VPN keeps blocking after a loss shows the VPN hint',
+      () async {
+        final (app, wifi) = await connectedRefusable();
+        final connection = app.models.connection;
+
+        final gaveUp = recoveryGaveUp(connection);
+        wifi.vpnBlocks = 1000;
+        app.camera.dropWifi();
+        await gaveUp;
+        expect(connection.status, ConnectionStatus.bluetooth);
+        expect(connection.failure?.kind, ConnectFailureKind.wifiVpn);
+      },
+    );
+
+    test('a VPN suspicion that clears on a retry rejoins without a '
+        'failure', () async {
+      final (app, wifi) = await connectedRefusable();
+      final connection = app.models.connection;
+
+      final up = connection.wifiUp.first;
+      wifi.vpnBlocks = 1;
+      final joins = wifi.joins;
+      app.camera.dropWifi();
+      await up.timeout(const Duration(seconds: 10));
+      expect(wifi.joins, joins + 2);
+      expect(connection.status, ConnectionStatus.connected);
+      expect(connection.failure, isNull);
     });
   });
 
@@ -799,14 +848,16 @@ final class _GatedLink implements BleConnection {
 }
 
 /// The camera's Wi-Fi, which the OS does not join while [background] (as
-/// Android and iOS refuse joins for an app that is not in front), and
-/// which the user declines while [decline].
-final class _BackgroundWifi implements WifiNetworkControl {
+/// Android and iOS refuse joins for an app that is not in front), which
+/// the user declines while [decline], and whose next [vpnBlocks] joins
+/// Android refuses to route over while a VPN carries the app's traffic.
+final class _RefusableWifi implements WifiNetworkControl {
   new(this._camera);
 
   final WifiNetworkControl _camera;
   bool background = false;
   bool decline = false;
+  int vpnBlocks = 0;
   int joins = 0;
 
   @override
@@ -820,6 +871,10 @@ final class _BackgroundWifi implements WifiNetworkControl {
     joins++;
     if (decline) throw const WifiJoinDeclined();
     if (background) throw const _JoinInBackground();
+    if (vpnBlocks > 0) {
+      vpnBlocks--;
+      throw const WifiJoinVpnSuspected('a VPN carries the app');
+    }
     await _camera.join(
       ssid: ssid,
       passphrase: passphrase,

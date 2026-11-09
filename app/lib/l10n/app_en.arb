@@ -407,6 +407,14 @@
   "@connectionFailureCheckStayClose": {
     "description": "Check in the list under a failed join of the camera's Wi-Fi."
   },
+  "connectionFailureCheckVpnExclude": "In the VPN app's settings, exclude GR Lab (often called split tunneling)",
+  "@connectionFailureCheckVpnExclude": {
+    "description": "Check in the list under a camera Wi-Fi join a VPN may be blocking: let GR Lab bypass the VPN."
+  },
+  "connectionFailureCheckVpnOff": "Or turn the VPN off while you use the camera",
+  "@connectionFailureCheckVpnOff": {
+    "description": "Check in the list under a camera Wi-Fi join a VPN may be blocking, after the one about excluding GR Lab."
+  },
   "connectionFailureDetailBluetoothDenied": "Bluetooth permission was denied",
   "@connectionFailureDetailBluetoothDenied": {
     "description": "Small technical line under a connection failure: the Bluetooth permission was denied."
@@ -510,6 +518,20 @@
   "connectionFailureWifiTitle": "Couldn't join {cameraName}'s Wi-Fi",
   "@connectionFailureWifiTitle": {
     "description": "Title of the connection failure when the camera's Wi-Fi could not be joined or was lost.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name as the user named it, for example GR IV."
+      }
+    }
+  },
+  "connectionFailureWifiVpnBody": "The phone joined the camera's Wi-Fi, but Android didn't let GR Lab use it while a VPN was on. If connecting keeps failing:",
+  "@connectionFailureWifiVpnBody": {
+    "description": "Body of the connection failure when the phone joined the camera's Wi-Fi but Android would not let the app use it while a VPN was on; the checks to try follow."
+  },
+  "connectionFailureWifiVpnTitle": "A VPN may be blocking {cameraName}'s Wi-Fi",
+  "@connectionFailureWifiVpnTitle": {
+    "description": "Title of the connection failure when a VPN on the phone may be keeping the app off the camera's Wi-Fi.",
     "placeholders": {
       "cameraName": {
         "type": "String",

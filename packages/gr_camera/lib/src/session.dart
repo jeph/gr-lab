@@ -101,7 +101,7 @@ final class CameraSession {
 
   /// Every step of the session, such as `ble.lost`, `ble.restored`,
   /// `ble.gaveUp`, `ble.needsPairing`, `wifi.lost`, `recovery.done` and
-  /// `recovery.gaveUp` (fields `noBle`, `declined`).
+  /// `recovery.gaveUp` (fields `noBle`, `declined`, `vpnSuspected`).
   Stream<GrSessionEvent> get events => _session.events;
 
   /// Current stage, from scanning through the Bluetooth link and Wi-Fi

@@ -98,6 +98,24 @@ void main() {
     );
   });
 
+  test('a suspected VPN block is WifiJoinVpnSuspected, with the native '
+      'message', () async {
+    reply = (_) async => throw PlatformException(
+      code: 'vpnSuspected',
+      message: 'a VPN carries this app',
+    );
+    await expectLater(
+      join(PlatformWifiControl(trace: trace.add)),
+      throwsA(
+        isA<WifiJoinVpnSuspected>().having(
+          (e) => e.message,
+          'message',
+          'a VPN carries this app',
+        ),
+      ),
+    );
+  });
+
   test('other native errors keep their code', () async {
     for (final code in ['invalid', 'superseded', 'cancelled', 'failed']) {
       reply = (_) async => throw PlatformException(code: code);

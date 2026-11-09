@@ -77,6 +77,10 @@ class ConnectFailureView extends StatelessWidget {
         l10n.connectionFailureWifiDeclinedTitle(name),
         l10n.connectionFailureWifiDeclinedBody,
       ),
+      ConnectFailureKind.wifiVpn => (
+        l10n.connectionFailureWifiVpnTitle(name),
+        l10n.connectionFailureWifiVpnBody,
+      ),
     };
     void pairAgain() => unawaited(PairingFlow.push(context));
     final checks = switch (kind) {
@@ -125,6 +129,16 @@ class ConnectFailureView extends StatelessWidget {
         GroupRow(
           icon: Icons.check_circle_outline_rounded,
           title: l10n.connectionFailureCheckAllowJoin,
+        ),
+      ],
+      ConnectFailureKind.wifiVpn => [
+        GroupRow(
+          icon: Icons.vpn_lock_rounded,
+          title: l10n.connectionFailureCheckVpnExclude,
+        ),
+        GroupRow(
+          icon: Icons.vpn_key_off_rounded,
+          title: l10n.connectionFailureCheckVpnOff,
         ),
       ],
       ConnectFailureKind.bluetoothOff ||

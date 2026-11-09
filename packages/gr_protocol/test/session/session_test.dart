@@ -334,6 +334,39 @@ final class SecuredApWifi implements WifiNetworkControl {
   Stream<void> get lost => const Stream.empty();
 }
 
+/// Fails the first joins with [failures], one each; the joins after them
+/// fail with [then], or go through when it is null.
+final class ScriptedWifi implements WifiNetworkControl {
+  new(this.failures, {this.then});
+
+  final List<Exception> failures;
+  final Exception? then;
+  int joins = 0;
+
+  @override
+  Future<void> join({
+    required String ssid,
+    required String passphrase,
+    required WifiSecurity security,
+    required Duration timeout,
+    bool approved = false,
+  }) async {
+    joins++;
+    if (joins <= failures.length) throw failures[joins - 1];
+    final error = then;
+    if (error != null) throw error;
+  }
+
+  @override
+  Future<String?> currentSsid() async => null;
+
+  @override
+  Future<void> leave() async {}
+
+  @override
+  Stream<void> get lost => const Stream.empty();
+}
+
 /// Joins the camera network at once, or when [holdJoin] completes. [leave]
 /// cuts a held join short, as the platforms do, unless [leaveMissesJoin]
 /// (a join that completes although it was released). Records joins and
@@ -843,6 +876,70 @@ void main() {
         ),
       );
       expect(wifi.joins, hasLength(1));
+    });
+
+    group('a suspected VPN block', () {
+      const vpn = WifiJoinVpnSuspected('a VPN carries the app');
+      GrSession scripted(ScriptedWifi wifi) => GrSession(
+        transport: BondedCamera(),
+        wifi: wifi,
+        options: const GrSessionOptions(
+          joinTimeout: Duration(milliseconds: 200),
+          joinRetryDelay: Duration(milliseconds: 1),
+        ),
+      );
+
+      test('is retried, and a join that then goes through connects', () async {
+        final wifi = ScriptedWifi([vpn]);
+        final s = wifiSession(BondedCamera(), wifi, await CameraServer.start());
+        await s.connect(deviceId: 'cam');
+        expect(s.phase, GrSessionPhase.connected);
+        expect(wifi.joins, 2);
+        await s.close();
+      });
+
+      test('on every try is the cause of the failed join', () async {
+        final wifi = ScriptedWifi([], then: vpn);
+        await expectLater(
+          scripted(wifi).connect(deviceId: 'cam'),
+          throwsA(
+            isA<GrSessionException>()
+                .having((e) => e.wifiVpnSuspected, 'wifiVpnSuspected', isTrue)
+                .having((e) => e.wifiDeclined, 'wifiDeclined', isFalse),
+          ),
+        );
+        expect(wifi.joins, greaterThan(1));
+      });
+
+      test('stays the cause when later tries time out', () async {
+        final wifi = ScriptedWifi([
+          vpn,
+        ], then: TimeoutException('no camera network'));
+        await expectLater(
+          scripted(wifi).connect(deviceId: 'cam'),
+          throwsA(
+            isA<GrSessionException>().having(
+              (e) => e.wifiVpnSuspected,
+              'wifiVpnSuspected',
+              isTrue,
+            ),
+          ),
+        );
+      });
+
+      test('is not the cause when a later try fails otherwise', () async {
+        final wifi = ScriptedWifi([vpn], then: Exception('no network'));
+        await expectLater(
+          scripted(wifi).connect(deviceId: 'cam'),
+          throwsA(
+            isA<GrSessionException>().having(
+              (e) => e.wifiVpnSuspected,
+              'wifiVpnSuspected',
+              isFalse,
+            ),
+          ),
+        );
+      });
     });
 
     test('a camera without the security characteristic is joined with '

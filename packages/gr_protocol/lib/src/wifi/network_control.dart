@@ -26,6 +26,24 @@ final class WifiJoinDeclined implements Exception {
   String toString() => 'WifiJoinDeclined: $message';
 }
 
+/// Thrown by [WifiNetworkControl.join] when the phone joined the camera
+/// network but the OS would not route the app's traffic over it while a VPN
+/// carries that traffic. A VPN that apps cannot bypass blocks every other
+/// network, but apps cannot ask whether a VPN is bypassable, and a network
+/// that dropped just before the routing step fails the same way: so this is
+/// a suspicion \[inferred\], and sessions retry it like any failed join.
+/// `GrSessionException.wifiVpnSuspected` reports a join that ended on it.
+final class WifiJoinVpnSuspected implements Exception {
+  /// Suspected VPN interference, with the platform's [message].
+  const new(this.message);
+
+  /// What the platform said, for the log.
+  final String message;
+
+  @override
+  String toString() => 'WifiJoinVpnSuspected: $message';
+}
+
 /// Platform control of the phone/computer Wi-Fi link to the camera AP,
 /// implemented outside this package.
 abstract interface class WifiNetworkControl {

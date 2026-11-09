@@ -12,7 +12,8 @@ final class WifiJoinException implements Exception {
   /// `invalid` (the OS rejected the SSID or passphrase), `superseded` (a
   /// newer join replaced this one), `cancelled` ([PlatformWifiControl.leave]
   /// during the join), `unsupported` (no native implementation) or
-  /// `failed`. A declined prompt is [WifiJoinDeclined] instead.
+  /// `failed`. A declined prompt is [WifiJoinDeclined] and a suspected VPN
+  /// block (Android) [WifiJoinVpnSuspected] instead.
   final String code;
 
   /// What the platform said, for the log.
@@ -98,6 +99,7 @@ final class PlatformWifiControl implements WifiNetworkControl {
       final message = e.message ?? 'joining "$ssid" failed';
       if (e.code == 'timeout') throw TimeoutException(message, timeout);
       if (e.code == 'declined') throw WifiJoinDeclined(message);
+      if (e.code == 'vpnSuspected') throw WifiJoinVpnSuspected(message);
       throw WifiJoinException(e.code, message);
     } on MissingPluginException {
       throw const WifiJoinException(

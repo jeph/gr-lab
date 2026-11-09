@@ -110,6 +110,11 @@ final class GrSessionException implements Exception {
   /// (an explicit connect) can continue.
   bool get wifiDeclined => cause is WifiJoinDeclined;
 
+  /// The join ended with the OS refusing the camera network while a VPN
+  /// carried the app's traffic: a VPN may be blocking it
+  /// ([WifiJoinVpnSuspected]).
+  bool get wifiVpnSuspected => cause is WifiJoinVpnSuspected;
+
   @override
   String toString() =>
       'GrSessionException(${phase.name}): $message'
@@ -1411,6 +1416,10 @@ final class GrSession {
     // The AP comes up several seconds after WLAN-on (GR IV HDF: a join at
     // 0 s found no network, one at 16 s succeeded), so retry until [until].
     var attempt = 0;
+    // The latest suspected VPN block, kept through timeouts: those say
+    // nothing about routing, and the last try is often cut short by the
+    // deadline. Any other failure clears it.
+    WifiJoinVpnSuspected? vpnSuspected;
     while (true) {
       // close() or stopWifi() during the hand-off must not leave the phone
       // retrying, and possibly joining, the camera's network afterwards.
@@ -1437,6 +1446,11 @@ final class GrSession {
         _emit('wifi.declined');
         throw GrSessionException(GrSessionPhase.joining, 'declined', e);
       } catch (e) {
+        if (e is WifiJoinVpnSuspected) {
+          vpnSuspected = e;
+        } else if (e is! TimeoutException) {
+          vpnSuspected = null;
+        }
         final remaining = until.difference(DateTime.now());
         _emit('wifi.joinRetry', {
           'attempt': attempt,
@@ -1449,7 +1463,11 @@ final class GrSession {
           continue;
         }
         if (last) {
-          throw GrSessionException(GrSessionPhase.joining, 'join failed', e);
+          throw GrSessionException(
+            GrSessionPhase.joining,
+            'join failed',
+            vpnSuspected ?? e,
+          );
         }
         return false;
       }
@@ -1617,7 +1635,8 @@ final class GrSession {
   /// Bluetooth link to return (up to [GrSessionOptions.bleLostAfter] from
   /// the loss), turns the camera on when it is off, writes WLAN-on and
   /// rejoins. Ends in [GrSessionPhase.connected] or [GrSessionPhase.lost];
-  /// `recovery.gaveUp` carries `noBle` when Bluetooth did not come back.
+  /// `recovery.gaveUp` carries `noBle` when Bluetooth did not come back,
+  /// and `vpnSuspected` when the last attempt ended on a suspected VPN block.
   Future<void> _recoverWifi() async {
     final stop = _wifiStop.future;
     final bleDeadline = DateTime.now().add(options.bleLostAfter);
@@ -1627,6 +1646,7 @@ final class GrSession {
     await _stopWifiServices();
     final wifiLink = _ble;
     var declined = false;
+    var vpnSuspected = false;
     var noBle = false;
     var attempts = 0;
     while (attempts < options.maxWifiRecoveryAttempts) {
@@ -1681,6 +1701,7 @@ final class GrSession {
       } on Object catch (e) {
         if (_closing || _wifiStopped) return;
         _emit('recovery.failed', {'attempt': attempt + 1, 'error': '$e'});
+        vpnSuspected = e is GrSessionException && e.wifiVpnSuspected;
         if (e is GrSessionException && e.wifiDeclined) {
           declined = true;
           break;
@@ -1691,6 +1712,7 @@ final class GrSession {
     _set(GrSessionPhase.lost, 'recovery.gaveUp', {
       'attempts': attempts,
       if (declined) 'declined': true,
+      if (vpnSuspected) 'vpnSuspected': true,
       if (noBle) 'noBle': true,
     });
   }

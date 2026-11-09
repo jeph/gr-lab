@@ -61,6 +61,11 @@ enum ConnectFailureKind {
   /// The user chose not to join the camera's Wi-Fi (GR Lab's explanation or
   /// the OS prompt). Only the user asking again continues.
   wifiDeclined,
+
+  /// The phone joined the camera's Wi-Fi, but Android would not let GR Lab
+  /// use it while a VPN carried GR Lab's traffic: a VPN may be blocking it.
+  /// Retried like [wifi].
+  wifiVpn,
 }
 
 /// The link a [ConnectFailure] lost after it had been up.
@@ -706,6 +711,7 @@ final class ConnectionController extends ChangeNotifier {
         return _wifiGaveUp(
           noBle: e.fields['noBle'] == true,
           declined: e.fields['declined'] == true,
+          vpnSuspected: e.fields['vpnSuspected'] == true,
         );
     }
     notifyListeners();
@@ -715,12 +721,16 @@ final class ConnectionController extends ChangeNotifier {
   /// either ([noBle]) the camera is gone (switched off with its Bluetooth,
   /// or out of range): the session ends and the Cameras screen says the
   /// connection was lost. Otherwise the camera's pages stay on Bluetooth,
-  /// the Library says the Wi-Fi was lost (or declined), and the camera's
-  /// Wi-Fi is left as [closeCamera] does. A loss in the background that
-  /// was not declined is instead joined again on return, as a join that
-  /// failed in the background is: the OS only joins camera networks for
-  /// the app in front.
-  void _wifiGaveUp({required bool noBle, required bool declined}) {
+  /// the Library says the Wi-Fi was lost (or declined, or that a VPN may
+  /// be blocking it: [vpnSuspected]), and the camera's Wi-Fi is left as
+  /// [closeCamera] does. A loss in the background that was not declined is
+  /// instead joined again on return, as a join that failed in the
+  /// background is: the OS only joins camera networks for the app in front.
+  void _wifiGaveUp({
+    required bool noBle,
+    required bool declined,
+    required bool vpnSuspected,
+  }) {
     final session = _session;
     if (session == null || _status != ConnectionStatus.connected) return;
     _wifiRun++;
@@ -745,8 +755,8 @@ final class ConnectionController extends ChangeNotifier {
             ConnectFailureKind.wifiDeclined,
             step: ConnectStep.wifi,
           )
-        : const ConnectFailure(
-            ConnectFailureKind.wifi,
+        : ConnectFailure(
+            vpnSuspected ? ConnectFailureKind.wifiVpn : ConnectFailureKind.wifi,
             step: ConnectStep.wifi,
             loss: ConnectLoss.wifi,
           );
@@ -759,6 +769,7 @@ final class ConnectionController extends ChangeNotifier {
       GrSessionException(needsPairing: true) => ConnectFailureKind.needsPairing,
       GrSessionException(wifiDeclined: true) => ConnectFailureKind.wifiDeclined,
       _ when step == ConnectStep.bluetooth => ConnectFailureKind.unreachable,
+      GrSessionException(wifiVpnSuspected: true) => ConnectFailureKind.wifiVpn,
       _ => ConnectFailureKind.wifi,
     };
     return ConnectFailure(kind, step: step, cause: error);
@@ -768,13 +779,11 @@ final class ConnectionController extends ChangeNotifier {
   /// because the app was in the background (or a quiet retry failed
   /// again); otherwise shows [failure] next to the Bluetooth link.
   void _wifiFailed(ConnectFailure failure) {
-    final transient =
+    final wifi =
         failure.kind == ConnectFailureKind.wifi ||
-        failure.kind == ConnectFailureKind.unreachable;
-    final redial =
-        transient &&
-        (_quietRejoin ||
-            (!_foreground && failure.kind == ConnectFailureKind.wifi));
+        failure.kind == ConnectFailureKind.wifiVpn;
+    final transient = wifi || failure.kind == ConnectFailureKind.unreachable;
+    final redial = transient && (_quietRejoin || (!_foreground && wifi));
     if (redial && _scheduleRedial()) return;
     _failure = failure;
     _step = null;
