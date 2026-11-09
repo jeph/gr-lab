@@ -425,5 +425,25 @@
   "pairingTryAgain": "Try again",
   "@pairingTryAgain": {
     "description": "Button that checks Bluetooth and scans again."
+  },
+  "privacyAboutSection": "About",
+  "@privacyAboutSection": {
+    "description": "Settings: label of the section with the licenses and the privacy policy (shown in capitals)."
+  },
+  "privacyLicensesRow": "Licenses",
+  "@privacyLicensesRow": {
+    "description": "Settings › About: row that opens the licenses of the software GR Lab ships."
+  },
+  "privacyPolicyLoadFailed": "The privacy policy could not be shown.",
+  "@privacyPolicyLoadFailed": {
+    "description": "Privacy policy screen: shown instead of the policy when the text bundled with the app cannot be read."
+  },
+  "privacyPolicyRow": "Privacy policy",
+  "@privacyPolicyRow": {
+    "description": "Settings › About: row that opens GR Lab's privacy policy."
+  },
+  "privacyPolicyTitle": "Privacy policy",
+  "@privacyPolicyTitle": {
+    "description": "Title of the screen that shows GR Lab's privacy policy. The policy text itself stays in English."
   }
 }

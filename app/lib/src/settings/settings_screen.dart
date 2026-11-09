@@ -1,15 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/data/settings.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart';
 import 'package:grlab/src/settings/debug_log_group.dart';
+import 'package:grlab/src/settings/privacy_policy_screen.dart';
 import 'package:grlab/src/theme/tokens.dart';
 import 'package:grlab/src/widgets/group.dart';
 
 /// App settings (subset of mock `b-settings`): appearance, leaving the
-/// camera's Wi-Fi when the app is not used, the debug log, and licenses.
+/// camera's Wi-Fi when the app is not used, the debug log, licenses and the
+/// privacy policy.
 class SettingsScreen extends StatelessWidget {
   const new({super.key});
 
@@ -50,17 +53,24 @@ class SettingsScreen extends StatelessWidget {
             ),
             const SectionLabel('Debug log'),
             DebugLogGroup(log: models.debugLog),
-            const SectionLabel('About'),
+            SectionLabel(context.l10n.privacyAboutSection),
             GroupBox(
               children: [
                 GroupRow(
                   icon: Icons.info_outline_rounded,
-                  title: 'Licenses',
+                  title: context.l10n.privacyLicensesRow,
                   chevron: true,
                   onTap: () => showLicensePage(
                     context: context,
-                    applicationName: 'GR Lab',
+                    applicationName: context.l10n.appTitle,
                   ),
+                ),
+                GroupRow(
+                  key: const Key('setting-privacy-policy'),
+                  icon: Icons.privacy_tip_outlined,
+                  title: context.l10n.privacyPolicyRow,
+                  chevron: true,
+                  onTap: () => unawaited(PrivacyPolicyScreen.push(context)),
                 ),
               ],
             ),

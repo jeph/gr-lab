@@ -32,9 +32,9 @@
 		<true/>
 	</dict>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>GR Lab uses Bluetooth to pair with your Ricoh GR, wake it and turn on its Wi-Fi.</string>
+	<string>GR Lab uses Bluetooth to pair with your Ricoh GR, find it nearby, wake it, turn on its Wi-Fi and act as its remote shutter.</string>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>GR Lab connects to your camera over its own Wi-Fi network to browse and download photos.</string>
+	<string>GR Lab connects to your camera over its own Wi-Fi network to browse and download photos and videos and to show its live view.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>GR Lab saves the photos and videos you download from your camera to your library.</string>
 	<key>UIApplicationSceneManifest</key>

@@ -43,6 +43,7 @@ flutter:
     - assets/welcome.jpg
     - assets/fonts/Inter-OFL.txt
     - assets/fonts/JetBrainsMono-OFL.txt
+    - assets/privacy.md
   fonts:
     - family: Inter
       fonts:

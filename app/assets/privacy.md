@@ -1,0 +1,75 @@
+# GR Lab privacy policy
+
+Last updated: 8 November 2026
+
+GR Lab is an app for Ricoh GR cameras. It pairs with your camera over Bluetooth, connects to the camera's own Wi-Fi network, and lets you browse and download your photos and videos and shoot remotely. GR Lab has no accounts, no analytics, no advertising and no crash reporting. It sends nothing to the developer or to anyone else.
+
+## What GR Lab keeps on your phone
+
+GR Lab keeps the following in its own app storage on your phone:
+
+- Your settings: the theme, the auto-disconnect time, the Shoot mode you used last and whether debug logging is on.
+- Your paired cameras: the name you gave each one, its model, serial number, firmware version, Bluetooth name and address, the identifier your phone uses for it, when you paired it and whether your phone has already joined its Wi-Fi.
+- A record of your downloads: which files from which camera you have saved, and downloads still waiting.
+- Copies of what your cameras sent, so the Library opens quickly: the list of files on each camera with their date, size and orientation, thumbnails and previews, videos you played, and files that are still being downloaded. These are kept in the app's cache, which your phone may clear when it needs space.
+- The debug log, when it is on (see below).
+
+GR Lab does not keep your camera's Wi-Fi password in its own storage. It reads the password from the camera over Bluetooth each time it connects and passes it to your phone's Wi-Fi system to join the camera's network.
+
+Photos and videos you download are saved to your phone's photo library: on iOS in Photos, on Android in the GR folders under Pictures and Movies. From then on they are yours and are managed by your photo app; GR Lab does not change or delete them.
+
+The demo version of GR Lab uses a simulated camera with sample photos included in the app. It keeps its data apart from that of real cameras.
+
+## What GR Lab sends, and to whom
+
+GR Lab communicates only with your camera:
+
+- Over Bluetooth, to pair with the camera, find it nearby, wake it, turn on its Wi-Fi, read its Wi-Fi network name and password, and work as a remote shutter with its shooting settings. When pairing, GR Lab gives the camera your phone's name, which the camera shows in its list of paired devices. On Android this is the device name you set; on iOS it is the model, such as iPhone.
+- Over the camera's own Wi-Fi network, to list, preview and download your photos and videos, show the camera's live view and shoot. These requests go only to the camera, at the address 192.168.0.1 on its network.
+
+GR Lab makes no other network connections. It sends nothing to the developer or to third parties: no analytics, no usage statistics, no crash reports, no update checks and no advertising. Its fonts and license texts are included in the app.
+
+## The debug log
+
+The debug log helps find bugs. While it is on, GR Lab records every exchange with your camera in full, along with the app's own messages and errors. The log therefore contains your camera's serial number, its Bluetooth name and address, its Wi-Fi network name and password, the names, dates and sizes of the files on the camera and your phone's name. It does not contain your photos or videos.
+
+Debug logging is off unless you turn it on, under Settings, Debug log, Enable debug logging. It is on by default only in GR Lab Dev, the test version of the app. The log is limited to about 50 MB; the oldest entries are deleted first.
+
+The log stays on your phone. On iOS it is in GR Lab's app storage. On Android it is in GR Lab's folder under Android/data, which developer tools on a computer connected to the phone can also read. The log leaves your phone only if you tap Export log and choose where to send it in the share sheet; the app you choose then handles it under its own terms. Because the log contains your camera's Wi-Fi password, share it only with someone you trust, such as the developer when you report a bug.
+
+## Permissions
+
+On Android, GR Lab asks for or uses:
+
+- Nearby devices (Bluetooth scan and connect), to find, pair with and control your camera. GR Lab tells Android that it does not use Bluetooth scans to work out your location, and it does not ask for location access.
+- Wi-Fi and network access, to join the camera's Wi-Fi network, which Android asks you to approve, to check that the phone is on it and to send the camera's traffic over it.
+- Internet, which Android requires for any network connection. GR Lab uses it only to talk to the camera.
+
+Saving photos and videos to Pictures and Movies needs no permission on the Android versions GR Lab runs on.
+
+On iOS, GR Lab asks for:
+
+- Bluetooth, to find, pair with, wake and control your camera.
+- Local network, to talk to the camera over its Wi-Fi network.
+- Adding to Photos, to save the photos and videos you download. This lets GR Lab add to your library but not see it.
+- Joining the camera's Wi-Fi network, which iOS asks you to approve. GR Lab also reads the name of the Wi-Fi network your phone is on, only to check that it has joined the camera.
+
+GR Lab does not use your location, camera, microphone, contacts or notifications.
+
+## Deleting your data
+
+- Forget camera, on the camera's page under Cameras, removes the camera from GR Lab's paired cameras. The cached file list, thumbnails, previews and videos of that camera and its download record stay in the app's storage until your phone clears the cache or you uninstall GR Lab. Your phone's Bluetooth settings may still list the camera, and the camera may still list your phone; you can remove those entries in the phone's Bluetooth settings and on the camera.
+- Clear log, under Settings, Debug log, deletes the debug log from your phone.
+- Uninstalling GR Lab deletes everything GR Lab keeps on your phone, including the debug log. Photos and videos you saved to your photo library stay there.
+
+## Children
+
+GR Lab is not directed at children. It collects no personal information from anyone, children included.
+
+## Contact
+
+If you have a question about this policy or about GR Lab, contact jeph, GR Lab's developer, by opening an issue in GR Lab's GitHub repository, jeph/gr-lab, at github.com/jeph/gr-lab.
+
+## Changes to this policy
+
+When GR Lab changes what it keeps on your phone, what it sends or the permissions it asks for, this policy is updated in the next version of the app and the date at the top changes.
