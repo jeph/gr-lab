@@ -75,6 +75,7 @@ Each document ends with "Open questions". The highest-value remaining checks:
 2. iOS and Windows reconnects to a bonded camera (the Mac fails; static analysis of iOS `bluetoothd` suggests iOS does not force the public address, untested: [firmware bonding §7(a)](protocol/firmware-bonding.md#a-the-mac-cannot-reconnect-after-pairing)).
 3. Whether the camera drops idle HTTP/WebSocket clients, and its Wi-Fi idle timeout with and without periodic `GET /v1/props`.
 4. HTTP proxy capture of GR WORLD's own `/v1/transfers` and WebSocket traffic.
+5. iOS with Tailscale, and another VPN, on: does a GR Lab join reach the camera at `192.168.0.1`, with and without the VPN routing the camera's subnet, and what does the app show if it fails? Android refuses the camera network under a VPN that apps cannot bypass, and GR Lab now says so there; iOS has no VPN check yet ([connection lifecycle §9 iOS, open question 9](protocol/connection-lifecycle.md#9-recommendations-for-a-robust-client)).
 
 Two in-app inconsistencies to keep in mind: the firmware gate in code requires GR II ≥ "3.00" (`0x54b6c0`) while the UI text says 1.10; and the gate compares model strings exactly against "GR IV", "GR IIIx", "GR III", "GR II".
 
