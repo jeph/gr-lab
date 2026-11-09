@@ -38,6 +38,9 @@ final class BondedCamera implements BleTransport {
   /// While set, a WLAN write waits for it before it lands.
   Completer<void>? holdWlanWrite;
 
+  /// While set, a read of the Wi-Fi SSID waits for it.
+  Completer<void>? holdSsidRead;
+
   /// What a scan delivers; no advertisements when null.
   StreamController<BleAdvertisement>? advertising;
   final _links = <_Link>[];
@@ -147,6 +150,7 @@ final class _Link implements BleConnection {
         'Authentication is insufficient.',
       );
     }
+    if (uuid == GrBleCatalog.ssid.uuid) await camera.holdSsidRead?.future;
     if (uuid == GrBleCatalog.wlanSecurity.uuid) {
       return Uint8List.fromList([camera.security]);
     }
@@ -1428,6 +1432,26 @@ void main() {
       expect(s.phase, GrSessionPhase.connected);
       await s.close();
     });
+  });
+
+  test('stopWifi while the Wi-Fi credentials are read writes no '
+      'WLAN-on', () async {
+    final camera = BondedCamera()..holdSsidRead = Completer<void>();
+    final s = session(camera);
+    await s.connectBluetooth(deviceId: 'cam');
+    final started = expectLater(
+      s.startWifi(),
+      throwsA(isA<GrSessionException>()),
+    );
+    // The start is reading the credentials.
+    await pumpEventQueue();
+    final stopped = s.stopWifi();
+    camera.holdSsidRead!.complete();
+    await stopped;
+    await started;
+    expect(camera.ops.where((o) => o == 'write wlan 1'), isEmpty);
+    expect(s.phase, GrSessionPhase.bluetooth);
+    await s.close();
   });
 
   group('cancelling while Bluetooth reconnects', () {

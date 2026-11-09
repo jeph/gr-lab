@@ -1018,6 +1018,8 @@ final class GrSession {
       if (credentials.issues.isNotEmpty) 'issues': credentials.issues,
     });
 
+    // Stopped or closed while the credentials were read: no WLAN-on.
+    _checkWifiStopped(GrSessionPhase.wlanOn);
     _set(GrSessionPhase.wlanOn, 'wlan.on');
     await _step(
       GrSessionPhase.wlanOn,
