@@ -269,16 +269,16 @@ Same code structure, and mostly the same data. The differences:
 
 ## 10. Approximating a look in GR Lab's preview
 
-GR Lab previews a look on a photo the camera already developed, normally a Standard JPEG. A faithful preview therefore applies the difference between the target look and the photo's own look, not the look from scratch. In order:
+GR Lab previews a look on a photo the camera already developed, normally a Standard JPEG with every slider at 0. A faithful preview therefore undoes the photo's own rendering and applies the target look's. The camera's tone curve already produces sRGB-encoded values (§3), so the JPEG is undone with the inverse of that curve, not with the sRGB decoding. In order, per pixel of the encoded R, G, B:
 
-1. Decode sRGB to linear. Apply `B_base · B_Standard⁻¹` (§4.1) for colour bases, or the §6.1 weights for monochrome ones.
-2. Tone: find for each value the linear input of the neutral curve that produces it, then output the curve for the look's key, contrast, highlight and shadow (§3). With all four at 0 this is the identity.
-3. Per-channel curve for the bases in §5, with the cinema blend.
-4. Saturation `s = 1.1^step` and hue rotation 2.46° per step.
-5. Toning offsets (§4.4, §6.2) once their scale is confirmed.
-6. Shading, Clarity, Grain, HDR Tone (§8) on Y, scaled to the preview size; sharpness as an unsharp-mask difference.
+1. Back to the camera's linear values: `lin = G_neutral⁻¹(encoded)` per channel, where `G_neutral` is the neutral tone curve (§3). This ignores the Standard multi-axis correction (§4.5) and the neutral saturation and hue, which are identity.
+2. Colour, in that linear domain: `lin' = B_target · B_Standard⁻¹ · lin` (§4.1). On the GR III the saturation matrix belongs here too (§4.2).
+3. Tone: `enc = G_target(lin')` per channel, the curve for the look's key, contrast, highlight and shadow (§3). With a Standard target and all four at 0, steps 1–3 give back the photo.
+4. Per-channel curve for the bases in §5, with the cinema blend.
+5. In the encoded domain: on the GR IV, saturation `s = 1.1^step` or the §6.1 black-and-white weights (this position is **[inferred]**, §2); then the hue rotation of 2.46° per step on BT.601 Cb/Cr, and the toning offsets (§4.4, §6.2) once their scale is confirmed.
+6. Shading, Clarity, Grain, HDR Tone (§8) on the encoded 8-bit Y, scaled to the preview size; sharpness as an unsharp-mask difference.
 
-A single 4 × 5 colour matrix, which is what `app/lib/src/looks/look_preview.dart` uses today, can reproduce steps 1 and 4 and the toning offsets. It cannot reproduce the tone curves, the per-channel curves (Cinema, Cross Processing, Hi-Contrast B&W, Solarized) or the spatial effects; those need a lookup table per channel (a 1D LUT, or a 3D LUT for the combined colour and tone) and image filters. The full curves are Ricoh's firmware data; shipping them in GR Lab is a decision for the project, not something these notes settle.
+Steps 1–4 are a per-pixel colour transform: one 3D lookup table per look reproduces them exactly, and for bases without a per-channel curve (§5) so does a 1D curve per channel before and after one 3×3 matrix. A 4 × 5 colour matrix, which is what `app/lib/src/looks/look_preview.dart` uses today, acts linearly on encoded values, so of all this it reproduces exactly only step 5 (saturation, hue, toning offsets). It can only approximate the base matrices, because they apply between two nonlinear curves, and it cannot reproduce the tone sliders, the per-channel curves (Cinema, Cross Processing, Hi-Contrast B&W, Solarized) or the spatial effects of step 6, which need image filters. The full curves are Ricoh's firmware data; shipping them in GR Lab is a decision for the project, not something these notes settle.
 
 ## 11. Open questions and hardware tests
 
