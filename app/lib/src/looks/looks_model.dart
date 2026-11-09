@@ -93,7 +93,8 @@ final class LooksModel extends ChangeNotifier {
   int? get loading => _loading;
 
   /// The camera's model and firmware, for the slots and base images it
-  /// offers: as it reported them on this connection, else as last saved.
+  /// offers: the session's (`CameraSession.body`, which fills what a link
+  /// did not read from the saved camera), else as last saved.
   CameraBody get body =>
       connection.cameraSession?.body ??
       connection.camera?.body ??

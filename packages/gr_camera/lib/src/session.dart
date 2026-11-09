@@ -87,6 +87,10 @@ final class CameraSession {
 
   /// The paired camera's serial number, which [connectBluetooth] links to.
   String? _serial;
+
+  /// The model and firmware recorded for the camera, which fill in what a
+  /// link does not read ([body]).
+  CameraBody _saved = CameraBody.unknown;
   CameraLibrary? _library;
 
   /// The change socket of the link [_library] belongs to.
@@ -122,11 +126,13 @@ final class CameraSession {
   /// linked; null before the first link.
   String? get firmwareRevision => _session.identity?.firmwareRevision;
 
-  /// The camera's model and firmware as it reported them over Bluetooth
-  /// when it last linked, for what it supports; null before the first link.
-  CameraBody? get body => switch (_session.identity) {
-    final identity? => CameraBody.reported(identity),
-    null => null,
+  /// The camera's model and firmware, for what it supports: as it reported
+  /// them over Bluetooth when it last linked, with what it did not report
+  /// (or before the first link, everything) from the `saved` record given
+  /// to [connectBluetooth].
+  CameraBody get body => switch (_session.identity) {
+    final identity? => CameraBody.reported(identity).completedBy(_saved),
+    null => _saved,
   };
 
   /// The newest `/v1/props` the session read over Wi-Fi.
@@ -136,14 +142,17 @@ final class CameraSession {
   String? get ssid => _session.credentials?.ssid;
 
   /// Links the camera over Bluetooth: directly to [deviceId], which pairing
-  /// recorded, matching [serial]. A camera that is off is not woken; it
+  /// recorded, matching [serial]. [saved] is the model and firmware last
+  /// recorded for it, for [body]. A camera that is off is not woken; it
   /// drops the link soon after, and [startWifi] links again. Throws
   /// [GrSessionException]; check [GrSessionException.needsPairing].
   Future<void> connectBluetooth({
     required String deviceId,
     required String serial,
+    CameraBody saved = CameraBody.unknown,
   }) {
     _serial = serial;
+    _saved = saved;
     return _session.connectBluetooth(deviceId: deviceId, serial: serial);
   }
 
@@ -244,7 +253,8 @@ final class CameraSession {
 
   /// The camera's Image Control Custom slots over Bluetooth. One for the
   /// whole session.
-  CameraLooks get looks => _looks ??= createCameraLooks(_session, _environment);
+  CameraLooks get looks =>
+      _looks ??= createCameraLooks(_session, _environment, body: () => body);
 
   /// Live view over the camera's Wi-Fi, run between its `start` and
   /// `stop`. One for the whole session; it stops when the session closes.

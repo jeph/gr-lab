@@ -551,6 +551,7 @@ final class ConnectionController extends ChangeNotifier {
       await session.connectBluetooth(
         deviceId: target.paired.deviceId,
         serial: target.serial,
+        saved: target.body,
       );
     } on Object catch (e) {
       if (generation != _generation) return;

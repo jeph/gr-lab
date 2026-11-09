@@ -15,12 +15,14 @@ const _quietLiveness = GrSessionOptions(
 
 /// The whole app with the fake camera ([model], a GR IV by default, on
 /// [firmware]) paired and off, on the Looks tab. [saveModel] false saves it
-/// without its model.
+/// without its model; the camera fails reads of the [unreadable]
+/// characteristics.
 Future<TestApp> _inLooks(
   WidgetTester tester, {
   String model = 'RICOH GR IV',
   String firmware = '1.20',
   bool saveModel = true,
+  Set<String> unreadable = const {},
 }) async {
   tester.view
     ..physicalSize = const Size(1170, 2532)
@@ -33,6 +35,7 @@ Future<TestApp> _inLooks(
         poweredOn: false,
         model: model,
         firmware: firmware,
+        unreadable: unreadable,
       ),
       saveCamera: true,
       saveModel: saveModel,
@@ -170,6 +173,36 @@ void main() {
     final app = await _inLooks(tester, saveModel: false);
     expect(app.models.cameras.current!.body.model, isNull);
     await pumpUntilFound(tester, _inSlot(1, 'Tokyo Night'));
+    await app.dispose();
+  });
+
+  testWidgets("a link that can't read the model or firmware keeps the saved "
+      'ones for the slots', (tester) async {
+    final app = await _inLooks(
+      tester,
+      unreadable: const {'model-name', 'firmware-revision'},
+    );
+    await pumpUntilFound(tester, _inSlot(1, 'Tokyo Night'));
+    await app.dispose();
+  });
+
+  testWidgets("a GR IV Monochrome whose model a link can't read still takes "
+      'a monochrome look', (tester) async {
+    final app = await _inLooks(
+      tester,
+      model: 'RICOH GR IV Monochrome',
+      unreadable: const {'model-name'},
+    );
+    await tapWhenReady(tester, _inSlot(1, 'Tokyo Night'));
+    await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
+    await tapWhenReady(
+      tester,
+      find.byKey(const ValueKey('look-base:standardMono')),
+    );
+    await tapWhenReady(tester, find.byKey(const Key('look-load')));
+    await tapWhenReady(tester, find.byKey(const Key('looks-load-confirm')));
+    await pumpUntilFound(tester, find.text('Loaded Tokyo Night into C1'));
+    expect(_slotLook(app, 1).base, LookBase.standardMono);
     await app.dispose();
   });
 

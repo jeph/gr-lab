@@ -67,6 +67,14 @@ final class CameraBody {
   String? minimumFirmware(CameraFeature feature) =>
       _minimumFirmware[feature]![model];
 
+  /// This camera with what it does not say taken from [saved]: a link's
+  /// Camera Information read can fail field by field, and a model or
+  /// firmware the camera reported before still holds.
+  CameraBody completedBy(CameraBody saved) => CameraBody(
+    model: model ?? saved.model,
+    firmware: firmware ?? saved.firmware,
+  );
+
   /// Whether this camera has [feature]: its model has it and its firmware
   /// is at least [minimumFirmware]. A firmware version that was not read
   /// meets only a minimum of `0.00`.

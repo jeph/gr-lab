@@ -94,6 +94,9 @@ final class _FakeLink implements BleConnection {
     if (!c.readable) {
       throw BleException(BleErrorCode.gatt, '${c.key}: read not permitted');
     }
+    if (_camera.config.unreadable.contains(c.key)) {
+      throw BleException(BleErrorCode.gatt, '${c.key}: read failed');
+    }
     _camera
       .._requireBond(c)
       .._requireMainFirmware(c);

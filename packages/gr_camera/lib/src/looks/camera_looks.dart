@@ -67,10 +67,13 @@ final class LookSlot {
 /// (`/imageControlWrite`, CamSvcChars.md §7 item 4); this does the same for
 /// the one slot it writes.
 final class CameraLooks extends ChangeNotifier {
-  new _(this._session, this._camera);
+  new _(this._session, this._camera, this._body);
 
   final GrSession _session;
   final GrCameraEnvironment _camera;
+
+  /// The camera's model and firmware, as `CameraSession.body` has them.
+  final CameraBody Function() _body;
   List<LookSlot>? _slots;
   bool _closed = false;
 
@@ -126,7 +129,7 @@ final class CameraLooks extends ChangeNotifier {
       throw const BleException(BleErrorCode.notConnected, 'no link');
     }
     final bytes = look.toBytes();
-    final camera = _cameraBody;
+    final camera = _body();
     if (!look.offeredBy(camera)) {
       _camera.event('looks.refused', {
         'slot': number,
@@ -164,12 +167,6 @@ final class CameraLooks extends ChangeNotifier {
     return slot;
   }
 
-  /// The linked camera as it reported itself at connect.
-  CameraBody get _cameraBody => switch (_session.identity) {
-    final identity? => CameraBody.reported(identity),
-    null => CameraBody.unknown,
-  };
-
   static Future<LookSlot> _read(GrBleClient ble, int number) async {
     final read = await ble.readImageControl(number);
     final data = read.data.raw;
@@ -187,9 +184,13 @@ final class CameraLooks extends ChangeNotifier {
   void _close() => _closed = true;
 }
 
-/// Creates the looks of [session]. Used by `CameraSession` only.
-CameraLooks createCameraLooks(GrSession session, GrCameraEnvironment camera) =>
-    CameraLooks._(session, camera);
+/// Creates the looks of [session], judging what the camera offers by
+/// [body]. Used by `CameraSession` only.
+CameraLooks createCameraLooks(
+  GrSession session,
+  GrCameraEnvironment camera, {
+  required CameraBody Function() body,
+}) => CameraLooks._(session, camera, body);
 
 /// What `CameraSession` does to its looks. Not exported.
 extension CameraLooksInternals on CameraLooks {

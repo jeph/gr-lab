@@ -343,6 +343,7 @@ final class FakeCameraConfig {
     this.httpLatency = const Duration(milliseconds: 30),
     this.downloadBytesPerSecond,
     this.refusePairing = false,
+    this.unreadable = const {},
     this.dropWifiAfter,
     this.unreachable = false,
     this.reportsWifiLoss = true,
@@ -448,6 +449,10 @@ final class FakeCameraConfig {
 
   /// The camera rejects the pairing request even on Execute Pairing.
   final bool refusePairing;
+
+  /// Catalog keys (`GrBleCatalog`, such as `model-name`) whose reads fail
+  /// with a GATT error, as a read the phone's stack drops or times out does.
+  final Set<String> unreadable;
 
   /// The camera's access point goes down this long after the first
   /// successful join (once). A WLAN-on write brings it back.
