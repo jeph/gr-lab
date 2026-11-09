@@ -498,6 +498,13 @@ void main() {
         ),
       );
       expect(engine.permissionProblem, isNull);
+      // The save is known to have failed, so a restart says so.
+      await engine.flush();
+      final reopened = h.engine();
+      await reopened.ready;
+      expect(reopened.jobs.single.failure, isA<DownloadSaveFailed>());
+      reopened.dispose();
+      h._engines.remove(reopened);
 
       h.media.failWith = null;
       engine.retryFailed();
@@ -541,6 +548,52 @@ void main() {
         expect(engine.jobs, isEmpty);
       },
     );
+
+    test('a shot the photo library took just before the app stopped is not '
+        'saved again on restart; its job asks instead', () async {
+      h = await Harness.start(
+        config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
+      );
+      final crashing = _StoppingSaver();
+      final first = DownloadEngine(
+        dataDir: h.data,
+        cacheDir: h.cache,
+        media: crashing,
+        link: h.link,
+        progressInterval: Duration.zero,
+      );
+      await first.enqueue(serial, [h.shot('R0000002')]);
+      await crashing.saved.future;
+      // The app stops here, before recording the save: a restart reads what
+      // reached the disk so far.
+      final restarted = Directory('${h.root.path}/restarted')..createSync();
+      File('${h.data.path}/downloads.json')
+          .copySync('${restarted.path}/downloads.json');
+      first.dispose();
+
+      final second = DownloadEngine(
+        dataDir: restarted,
+        cacheDir: h.cache,
+        media: h.media,
+        link: h.link,
+        progressInterval: Duration.zero,
+      );
+      h._engines.add(second);
+      await second.whenIdle();
+      expect(h.saved, isEmpty, reason: 'not saved a second time');
+      final job = second.jobs.single;
+      expect(job.state, DownloadState.failed);
+      expect(job.failure, isA<DownloadSaveInterrupted>());
+
+      // The user can still save it again.
+      second.retry(job);
+      await until(() => h.saved.isNotEmpty, reason: 'retry');
+      await second.whenIdle();
+      expect(h.saved, [
+        ['R0000002.JPG'],
+      ]);
+      expect(second.jobs, isEmpty);
+    });
   });
 
   group('connection', () {
@@ -780,4 +833,16 @@ void main() {
     expect(moving.any((p) => p.fraction > .5), isTrue);
     expect(moving.any((p) => p.bytesPerSecond > 0), isTrue);
   });
+}
+
+/// A photo library that takes the shot and then never answers, as when the
+/// app is stopped right after the save.
+final class _StoppingSaver implements MediaSaver {
+  final saved = Completer<void>();
+
+  @override
+  Future<void> saveShot(List<File> files, {required String album}) {
+    if (!saved.isCompleted) saved.complete();
+    return Completer<void>().future;
+  }
 }

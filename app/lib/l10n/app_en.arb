@@ -845,6 +845,10 @@
   "@downloadErrorSaveFailed": {
     "description": "Why a download failed: the phone failed to save the shot to its photo library."
   },
+  "downloadErrorSaveInterrupted": "GR Lab closed while saving; the shot may already be in your photo library",
+  "@downloadErrorSaveInterrupted": {
+    "description": "Why a download stopped: the app closed while handing the shot to the photo library, so it cannot tell whether the save happened. Retrying saves it again."
+  },
   "downloadErrorSaveUnsupported": "These files can't be saved to the photo library",
   "@downloadErrorSaveUnsupported": {
     "description": "Why a download failed: the phone cannot save these files to its photo library."

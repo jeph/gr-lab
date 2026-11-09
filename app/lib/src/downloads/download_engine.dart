@@ -35,6 +35,12 @@ final class DownloadSaveFailed extends DownloadFailure {
   final MediaSaveFailure reason;
 }
 
+/// The app stopped while the photo library was taking the shot, so whether
+/// it took it is unknown; retrying saves it again.
+final class DownloadSaveInterrupted extends DownloadFailure {
+  const new();
+}
+
 /// One shot's files in the download queue.
 final class DownloadJob {
   new _({
@@ -63,15 +69,28 @@ final class DownloadJob {
 
   bool get active => state != DownloadState.failed;
 
+  /// The shot is being handed to the photo library. Saved with the queue
+  /// before the hand-over, so a restart after a crash in it knows the save
+  /// may have happened.
+  bool _saving = false;
+
   Map<String, Object?> _toJson() => {
     'id': id,
     'serial': serial,
     'shot': [for (final f in shot.files) _fileToJson(f)],
     'files': [for (final f in _files) _fileToJson(f)],
-    'state': state == DownloadState.failed ? 'failed' : 'queued',
+    'state': _saving
+        ? 'saving'
+        : state == DownloadState.failed
+        ? 'failed'
+        : 'queued',
     'error': ?_failureToJson(failure),
   };
 
+  /// A job saved while [_saving] comes back failed with
+  /// [DownloadSaveInterrupted]: the platforms give no way to ask the photo
+  /// library whether the save happened, so the user decides instead of the
+  /// shot being saved twice.
   static DownloadJob? _fromJson(Object? json) {
     if (json is! Map<String, Object?>) return null;
     final id = json['id'];
@@ -81,14 +100,19 @@ final class DownloadJob {
     final files = _filesFromJson(json['files']);
     final shots = groupShots(shotFiles);
     if (shots.length != 1 || files.isEmpty) return null;
-    final failed = json['state'] == 'failed';
+    final failure = switch (json['state']) {
+      'saving' => const DownloadSaveInterrupted(),
+      'failed' => _failureFromJson(json['error']),
+      _ => null,
+    };
+    final failed = failure != null || json['state'] == 'failed';
     return DownloadJob._(
       id: id,
       serial: serial,
       shot: shots.single,
       files: files,
       state: failed ? DownloadState.failed : DownloadState.queued,
-      failure: failed ? _failureFromJson(json['error']) : null,
+      failure: failure,
     );
   }
 }
@@ -97,6 +121,7 @@ Map<String, Object?>? _failureToJson(DownloadFailure? failure) =>
     switch (failure) {
       null => null,
       DownloadSaveFailed(:final reason) => {'save': reason.name},
+      DownloadSaveInterrupted() => {'save': 'interrupted'},
       DownloadTransferFailed(:final reason) => switch (reason) {
         TransferRefused(:final errCode, :final errMsg) => {
           'transfer': 'refused',
@@ -120,6 +145,7 @@ Map<String, Object?>? _failureToJson(DownloadFailure? failure) =>
 DownloadFailure? _failureFromJson(Object? json) {
   if (json is! Map<String, Object?>) return null;
   if (json['save'] case final String save) {
+    if (save == 'interrupted') return const DownloadSaveInterrupted();
     final reason = MediaSaveFailure.values.asNameMap()[save];
     return reason == null ? null : DownloadSaveFailed(reason);
   }
@@ -198,7 +224,10 @@ final class DownloadProgress {
 /// what is already on the phone. Files go to `<cacheDir>/downloads/<job>/`
 /// first and are handed to [MediaSaver] per shot. A transfer interrupted by
 /// a lost connection or a pause restarts that file from the beginning once
-/// the camera is back (the camera has no ranged downloads).
+/// the camera is back (the camera has no ranged downloads). A shot the app
+/// stopped while saving comes back failed with [DownloadSaveInterrupted]
+/// instead of being saved again, as the photo library cannot be asked
+/// whether it took the shot.
 final class DownloadEngine extends ChangeNotifier {
   new({
     required this.dataDir,
@@ -544,7 +573,12 @@ final class DownloadEngine extends ChangeNotifier {
       // perhaps after deleting it from the phone.
       final files = List.of(job._files);
       final local = await _transfer(job, files, current);
-      await media.saveShot(local, album: album);
+      await _markSaving(job);
+      try {
+        await media.saveShot(local, album: album);
+      } finally {
+        job._saving = false;
+      }
       _downloaded.putIfAbsent(job.serial, () => {}).addAll([
         for (final f in files) f.key,
       ]);
@@ -585,6 +619,21 @@ final class DownloadEngine extends ChangeNotifier {
       _setProgress(const DownloadProgress());
       _save();
       _notify();
+    }
+  }
+
+  /// Writes the queue with [job] marked as being saved before the photo
+  /// library gets it, so a crash before the save is recorded leaves a job
+  /// that asks instead of one that saves the shot again. The save goes
+  /// ahead even when that write fails (the queue file logs it): stopping
+  /// would keep the shot from the phone over a risk of saving it twice.
+  Future<void> _markSaving(DownloadJob job) async {
+    job._saving = true;
+    _save();
+    try {
+      await _file.flush();
+    } on FileSystemException {
+      // Already in the debug log.
     }
   }
 
