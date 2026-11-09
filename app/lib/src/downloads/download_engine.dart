@@ -624,16 +624,18 @@ final class DownloadEngine extends ChangeNotifier {
 
   /// Writes the queue with [job] marked as being saved before the photo
   /// library gets it, so a crash before the save is recorded leaves a job
-  /// that asks instead of one that saves the shot again. The save goes
-  /// ahead even when that write fails (the queue file logs it): stopping
-  /// would keep the shot from the phone over a risk of saving it twice.
+  /// that asks instead of one that saves the shot again. When that write
+  /// fails (the queue file logs it), the shot is not saved: the job fails
+  /// as a write failure and keeps its copies for a retry, since a save the
+  /// queue cannot record could be repeated after a restart.
   Future<void> _markSaving(DownloadJob job) async {
     job._saving = true;
     _save();
     try {
       await _file.flush();
-    } on FileSystemException {
-      // Already in the debug log.
+    } on Object {
+      job._saving = false;
+      rethrow;
     }
   }
 

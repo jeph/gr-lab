@@ -594,6 +594,50 @@ void main() {
       ]);
       expect(second.jobs, isEmpty);
     });
+
+    test('a save the queue cannot record first is not made; the job fails '
+        'and keeps its copy for a retry', () async {
+      final stall = (stall: Completer<void>(), stalled: Completer<void>());
+      h = await Harness.start(
+        config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
+        stall: stall,
+      );
+      final engine = h.engine();
+      await engine.enqueue(serial, [h.shot('R0000002')]);
+      await stall.stalled.future;
+      await engine.flush();
+      // A folder where downloads.json goes: no write can replace it.
+      final queueFile = File('${h.data.path}/downloads.json');
+      await queueFile.delete();
+      final blocker = await Directory(queueFile.path).create();
+      stall.stall.complete();
+      await engine.whenIdle();
+      expect(h.saved, isEmpty, reason: 'a save it could not record');
+      final job = engine.jobs.single;
+      expect(
+        job.failure,
+        isA<DownloadTransferFailed>().having(
+          (f) => f.reason,
+          'reason',
+          isA<TransferWriteFailed>(),
+        ),
+      );
+      expect(
+        Directory('${h.cache.path}/downloads/${job.id}')
+            .listSync(recursive: true)
+            .whereType<File>(),
+        isNotEmpty,
+        reason: 'the copy stays for the retry',
+      );
+
+      await blocker.delete();
+      engine.retry(job);
+      await until(() => h.saved.isNotEmpty, reason: 'retry');
+      await engine.whenIdle();
+      expect(h.saved, [
+        ['R0000002.JPG'],
+      ]);
+    });
   });
 
   group('connection', () {
