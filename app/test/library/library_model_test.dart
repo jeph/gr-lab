@@ -439,6 +439,36 @@ void main() {
       expect(downloads.isFileDownloaded(serial, pair.raw!), isTrue);
     });
 
+    test('copies made on an earlier link of a file whose info never came '
+        'go when its first info arrives', () async {
+      final m = await listed();
+      final pair = m.shots!.firstWhere((s) => s.isPair);
+      final jpeg = pair.jpeg!;
+      final movie = m.shots!.firstWhere((s) => s.isVideo).primary;
+      // Cached while the file's /info is never asked for (or fails).
+      expect(await thumbOf(jpeg), contains(_day1.toIso8601String()));
+      await movies.download(link.value!, movie).done;
+      expect(m.info(jpeg), isNull);
+
+      link.value = null;
+      replace('R0000001.JPG', _day3);
+      replace('R0000002.MOV', _day3, videoLength: const Duration(seconds: 9));
+      final listedBefore = m.listedAt;
+      link.value = connected();
+      await until(() => m.listedAt != listedBefore, reason: 'listing');
+      // Fetched on this link before its first info: kept.
+      expect(await thumbOf(pair.raw!), contains(_day1.toIso8601String()));
+
+      expect((await m.ensureInfo(jpeg))?.taken, _day3);
+      expect(m.revision(jpeg), 1);
+      expect(await thumbOf(jpeg), contains(_day3.toIso8601String()));
+      await m.ensureInfo(movie);
+      expect(m.revision(movie), 1);
+      expect(movies.cached(serial, movie), isNull);
+      await m.ensureInfo(pair.raw!);
+      expect(m.revision(pair.raw!), 0);
+    });
+
     test('a file deleted and shot again drops its thumbnail and download '
         'mark', () async {
       final m = await listed();

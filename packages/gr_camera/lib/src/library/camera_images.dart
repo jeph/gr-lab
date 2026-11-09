@@ -130,6 +130,10 @@ final class CameraImages {
   /// images, so a disk read begun before is not kept.
   final _forgotten = <String, int>{};
 
+  /// Per disk path, the link its image was last fetched from, so one cached
+  /// on an earlier link can be told apart ([forgetUnlessFrom]).
+  final _fetchedFrom = <String, CameraLibrary>{};
+
   static String _dirName(GrImageSize size) => switch (size) {
     GrImageSize.thumb => 'thumbs',
     GrImageSize.view => 'views',
@@ -276,6 +280,7 @@ final class CameraImages {
     if (signal.abandoned) throw const RequestCancelled();
     if (!_onDisk(size)) return _remember(size, key, bytes);
     final stored = await _store(file, bytes);
+    _fetchedFrom[key] = library;
     // Remembered before the disk budget hears of it, so it counts as shown.
     _remember(size, key, bytes);
     if (stored) _disk.added(file, bytes.length);
@@ -329,6 +334,7 @@ final class CameraImages {
   /// Forgets an image that turned out not to decode, in memory and on
   /// disk, so the next [load] asks the camera again.
   void evict(String serial, CameraFile f, GrImageSize size) {
+    _fetchedFrom.remove(_key(serial, f, size));
     final removed = _memory(size).remove(_key(serial, f, size));
     if (removed != null &&
         (size == GrImageSize.view || size == GrImageSize.xs)) {
@@ -355,6 +361,27 @@ final class CameraImages {
     for (final size in GrImageSize.values) {
       evict(serial, f, size);
     }
+  }
+
+  /// Forgets each image of [f] not fetched from [current], the link whose
+  /// camera just gave the first info of [f]: an image cached on an earlier
+  /// link may be of another file that was at its path then. True when one
+  /// was dropped.
+  bool forgetUnlessFrom(CameraLibrary current, CameraFile f) {
+    final serial = current.serial;
+    var dropped = false;
+    for (final size in GrImageSize.values) {
+      final key = _key(serial, f, size);
+      if (identical(_fetchedFrom[key], current)) continue;
+      if (!isLocal(serial, f, size)) continue;
+      if (!dropped) {
+        final id = '$serial|${f.key}';
+        _forgotten[id] = (_forgotten[id] ?? 0) + 1;
+      }
+      dropped = true;
+      evict(serial, f, size);
+    }
+    return dropped;
   }
 
   /// Forgets every image in memory (the disk cache stays).

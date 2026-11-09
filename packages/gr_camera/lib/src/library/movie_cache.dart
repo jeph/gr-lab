@@ -74,6 +74,9 @@ final class MovieCache {
   int _attempts = 0;
   late final DiskBudget _disk;
 
+  /// Per path, the link the copy there was made from.
+  final _copiedFrom = <String, CameraLibrary>{};
+
   /// The copy [cached] or [download] handed out last.
   String? _lastUsed;
 
@@ -134,6 +137,7 @@ final class MovieCache {
         );
         if (download._cancelled) throw const MovieDownloadCancelled();
         await staging.rename(file.path);
+        _copiedFrom[file.path] = library;
       } catch (_) {
         if (staging.existsSync()) await staging.delete();
         rethrow;
@@ -159,6 +163,7 @@ final class MovieCache {
   /// movie. A copy in progress is the camera's current file and stays.
   void forget(String serial, CameraFile f) {
     final file = fileFor(serial, f);
+    _copiedFrom.remove(file.path);
     try {
       if (!file.existsSync()) return;
       file.deleteSync();
@@ -166,6 +171,18 @@ final class MovieCache {
     } on FileSystemException {
       // Already gone.
     }
+  }
+
+  /// Deletes the copy of [f] unless it was made from [current], the link
+  /// whose camera just gave the first info of [f]: a copy made on an
+  /// earlier link may be of another movie that was at its path then. True
+  /// when one was deleted.
+  bool forgetUnlessFrom(CameraLibrary current, CameraFile f) {
+    final file = fileFor(current.serial, f);
+    if (identical(_copiedFrom[file.path], current)) return false;
+    if (!file.existsSync()) return false;
+    forget(current.serial, f);
+    return true;
   }
 
   /// Completes when the disk budget has caught up with every copy made or

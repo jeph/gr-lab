@@ -21,6 +21,12 @@ abstract interface class FileCopies {
   /// than the library's cached info describes.
   void stale(String serial, CameraFile f);
 
+  /// The camera of [current] gave the first info the library has of [f]:
+  /// copies made on an earlier link may be of another file that was at
+  /// its path then, so those go. True when one did. Download records are
+  /// left to [checked].
+  bool dropUnchecked(CameraLibrary current, CameraFile f);
+
   /// [serial]'s camera reports [now] for [f]. [vouched] when the library's
   /// info of the path, cached before, matches it.
   void checked(
@@ -44,9 +50,10 @@ abstract interface class FileCopies {
 /// When the answer differs from the cached info ([FileInfo.sameContent]),
 /// or the file left the listing, [copies] drops what it keeps of the file
 /// and [revision] changes. Until the answer comes, and offline, what is
-/// cached shows. \[design\] Not checked: images cached of a file whose
-/// info never arrived, and a path reused while one link lasts (until the
-/// user refreshes).
+/// cached shows. When the first info of a file arrives, copies of it made
+/// on an earlier link go, as nothing told what they were of. \[design\]
+/// Not checked: a path reused while one link lasts (until the user
+/// refreshes).
 final class LibraryModel extends ChangeNotifier {
   new({
     required this.cacheDir,
@@ -320,7 +327,14 @@ final class LibraryModel extends ChangeNotifier {
     final known = _info[f.key];
     _info[f.key] = info;
     final same = known != null && known.sameContent(info);
-    if (known != null && !same) _stale(f);
+    if (known == null) {
+      // Nothing told what copies from an earlier link were of.
+      if (copies?.dropUnchecked(from, f) ?? false) {
+        _revisions[f.key] = revision(f) + 1;
+      }
+    } else if (!same) {
+      _stale(f);
+    }
     if (identical(_confirming(), from)) _confirmed.add(f.key);
     copies?.checked(from.serial, f, info, vouched: same);
     _scheduleSave();

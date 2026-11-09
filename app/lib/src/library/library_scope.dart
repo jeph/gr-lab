@@ -115,6 +115,12 @@ final class LibraryCopies implements FileCopies {
   }
 
   @override
+  bool dropUnchecked(CameraLibrary current, CameraFile f) {
+    final droppedImages = images.forgetUnlessFrom(current, f);
+    return movies.forgetUnlessFrom(current, f) || droppedImages;
+  }
+
+  @override
   void checked(
     String serial,
     CameraFile f,
