@@ -300,6 +300,22 @@ final class FakeGrCamera {
     _apDown();
   }
 
+  /// Storages whose listing answers `errCode` 500, as GR IV webapid does
+  /// for a storage it cannot read at that moment
+  /// (research/protocol/http-api.md "Storage values"); `/v1/props` still
+  /// reports them as equipped and available.
+  final Set<String> failingListings = {};
+
+  /// The `/v1/changes` sockets drop while HTTP keeps answering. The
+  /// camera keeps no changes for a socket that is not open, so changes
+  /// until a client reopens one reach nobody.
+  void dropChangeSockets() {
+    for (final ws in _sockets.toList()) {
+      unawaited(ws.close(WebSocketStatus.goingAway));
+    }
+    _sockets.clear();
+  }
+
   /// Every open BLE link drops from the camera side (out of range, blip).
   void dropBluetooth() {
     for (final link in _links.toList()) {

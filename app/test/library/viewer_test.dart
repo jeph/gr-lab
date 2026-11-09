@@ -1,0 +1,205 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:gr_fake_camera/gr_fake_camera.dart';
+import 'package:grlab/src/library/library_screen.dart';
+import 'package:grlab/src/library/viewer.dart';
+
+import '../support/test_app.dart';
+
+final Finder _viewer = find.byType(ShotViewer);
+
+Finder _inViewer(Finder finder) =>
+    find.descendant(of: _viewer, matching: finder);
+
+/// The viewer shows the shot whose primary file is [name]: its title.
+Finder _showing(String name) => _inViewer(
+  find.descendant(of: find.byType(AppBar), matching: find.text(name)),
+);
+
+/// How many shots the viewer's pages swipe between.
+int _pageCount(WidgetTester tester) => tester
+    .widget<PageView>(_inViewer(find.byType(PageView)))
+    .childrenDelegate
+    .estimatedChildCount!;
+
+DateTime _taken(int n) => DateTime(2026, 11, 5, 8, n);
+
+/// Waits for the Library, tapping Library on the camera card when the app
+/// stops there instead of opening it by itself.
+Future<void> _openLibrary(WidgetTester tester) async {
+  final library = find.byType(LibraryScreen);
+  final button = find.byKey(const Key('camera-card-library'));
+  await pumpUntil(
+    tester,
+    () =>
+        library.evaluate().isNotEmpty ||
+        button.hitTestable().evaluate().isNotEmpty,
+    reason: 'the Library or its button on the camera card',
+  );
+  if (library.evaluate().isEmpty) await tapWhenReady(tester, button);
+  await pumpUntilFound(tester, library);
+}
+
+/// Deletes [file] on the camera, which tells the app with a `storage`
+/// `delete` change.
+void _delete(TestApp app, String file) {
+  final photo = app.camera.photos.singleWhere((p) => p.file == file);
+  expect(app.camera.removePhoto(photo.path), isTrue);
+}
+
+/// Opens the Library on a camera holding [photos] and the viewer on the
+/// shot keyed [shot].
+Future<TestApp> _openViewer(
+  WidgetTester tester,
+  List<FakePhoto> photos,
+  String shot,
+) async {
+  final app = (await tester.runAsync(
+    () => createTestApp(
+      config: FakeCameraConfig(bonded: true, photos: photos),
+      saveCamera: true,
+    ),
+  ))!;
+  await app.pumpApp(tester);
+  await _openLibrary(tester);
+  await tapWhenReady(tester, find.byKey(ValueKey(shot)));
+  await pumpUntilFound(tester, _viewer);
+  return app;
+}
+
+/// The pair `R0000001` loses [deleted]; the viewer shows the shot left,
+/// which offers one Download in place of the pair's two and downloads only
+/// [kept].
+Future<void> _pairLoses(
+  WidgetTester tester, {
+  required String deleted,
+  required String kept,
+}) async {
+  final app = await _openViewer(tester, [
+    FakePhoto('100RICOH', 'R0000001.JPG', _taken(1)),
+    FakePhoto('100RICOH', 'R0000001.DNG', _taken(1)),
+  ], 'sd1|100RICOH/R0000001');
+  Finder action(String key) => _inViewer(find.byKey(ValueKey(key)));
+  await pumpUntilFound(tester, action('viewer-download:raw'));
+  expect(action('viewer-download:jpeg'), findsOneWidget);
+
+  _delete(app, deleted);
+  final download = action('viewer-download');
+  await pumpUntilFound(tester, download);
+  expect(_showing(kept), findsOneWidget);
+  expect(action('viewer-download:jpeg'), findsNothing);
+  expect(action('viewer-download:raw'), findsNothing);
+
+  await tapWhenReady(tester, download);
+  await pumpUntil(
+    tester,
+    () => app.media.shots.isNotEmpty,
+    reason: 'the shot left saved',
+  );
+  expect(app.media.shots.single.names, [kept]);
+
+  await app.dispose();
+}
+
+void main() {
+  testWidgets('a shot deleted on the camera leaves the viewer, which shows '
+      'its neighbour and closes once none is left', (tester) async {
+    // Newest first: R0000003 (A), R0000002 (B), R0000001 (C).
+    final app = await _openViewer(tester, [
+      for (var n = 1; n <= 3; n++)
+        FakePhoto('100RICOH', 'R000000$n.JPG', _taken(n)),
+    ], 'sd1|100RICOH/R0000002');
+    await pumpUntilFound(tester, _showing('R0000002.JPG'));
+    expect(_pageCount(tester), 3);
+
+    _delete(app, 'R0000002.JPG');
+    await pumpUntilFound(tester, _showing('R0000001.JPG'));
+    expect(_pageCount(tester), 2);
+
+    // A is one page back; nothing follows C.
+    await tester.fling(
+      _inViewer(find.byType(PageView)),
+      const Offset(600, 0),
+      1000,
+    );
+    await pumpUntilFound(tester, _showing('R0000003.JPG'));
+    await tester.fling(
+      _inViewer(find.byType(PageView)),
+      const Offset(-600, 0),
+      1000,
+    );
+    await pumpUntilFound(tester, _showing('R0000001.JPG'));
+    await tester.fling(
+      _inViewer(find.byType(PageView)),
+      const Offset(-600, 0),
+      1000,
+    );
+    await pumpRounds(tester, 30);
+    expect(_showing('R0000001.JPG'), findsOneWidget);
+
+    _delete(app, 'R0000001.JPG');
+    _delete(app, 'R0000003.JPG');
+    await pumpUntil(
+      tester,
+      () => _viewer.evaluate().isEmpty,
+      reason: 'viewer closed',
+    );
+    expect(find.byType(LibraryScreen), findsOneWidget);
+
+    await app.dispose();
+  });
+
+  testWidgets('a shot deleted during a swipe away from it ends the swipe on '
+      'its neighbour', (tester) async {
+    // Newest first: R0000004 (A), R0000003 (B), R0000002 (C), R0000001 (D).
+    final app = await _openViewer(tester, [
+      for (var n = 1; n <= 4; n++)
+        FakePhoto('100RICOH', 'R000000$n.JPG', _taken(n)),
+    ], 'sd1|100RICOH/R0000003');
+    await pumpUntilFound(tester, _showing('R0000003.JPG'));
+    final pages = _inViewer(find.byType(PageView));
+    double page() => tester.widget<PageView>(pages).controller!.page!;
+    final width = tester.getSize(pages).width;
+    // The route has finished sliding in.
+    await pumpUntilFound(tester, pages.hitTestable());
+    await pumpRounds(tester, 30);
+
+    // A third of the way from B towards C, still held.
+    final swipe = await tester.startGesture(tester.getCenter(pages));
+    for (var i = 0; i < 10; i++) {
+      await swipe.moveBy(Offset(-width / 30, 0));
+      await tester.pump();
+    }
+    expect(page(), greaterThan(1.2));
+
+    _delete(app, 'R0000003.JPG');
+    await pumpUntilFound(tester, _showing('R0000002.JPG'));
+    expect(page(), 1);
+
+    // The rest of the swipe, measured against the old pages, would carry C
+    // past halfway towards D.
+    for (var i = 0; i < 10; i++) {
+      await swipe.moveBy(Offset(-width / 30, 0));
+      await tester.pump();
+    }
+    await swipe.up();
+    await pumpRounds(tester, 50);
+    expect(page(), 1);
+    expect(_showing('R0000002.JPG'), findsOneWidget);
+    expect(_pageCount(tester), 3);
+
+    await app.dispose();
+  });
+
+  testWidgets(
+    'a pair whose JPEG is deleted shows and downloads its RAW',
+    (tester) =>
+        _pairLoses(tester, deleted: 'R0000001.JPG', kept: 'R0000001.DNG'),
+  );
+
+  testWidgets(
+    'a pair whose RAW is deleted shows and downloads its JPEG',
+    (tester) =>
+        _pairLoses(tester, deleted: 'R0000001.DNG', kept: 'R0000001.JPG'),
+  );
+}

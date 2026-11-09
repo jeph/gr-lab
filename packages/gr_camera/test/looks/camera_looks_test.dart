@@ -144,7 +144,7 @@ void main() {
   test("the library reads a photo's Image Control over Wi-Fi", () async {
     rig = await ShootRig.start(wifi: true);
     final library = rig.session.library!;
-    final files = await library.listFiles();
+    final (:files, failed: _) = await library.listFiles();
     final still = files.firstWhere((f) => f.name == 'R0000231.JPG');
     final movie = files.firstWhere((f) => f.name.endsWith('.MOV'));
 

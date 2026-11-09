@@ -7,7 +7,10 @@ import 'package:gr_camera/src/library/camera_file.dart';
 import 'package:gr_camera/src/library/camera_library.dart';
 import 'package:gr_camera/src/library/disk_budget.dart';
 
-/// Thrown by [MovieDownload.done] after [MovieDownload.cancel].
+/// Thrown by [MovieDownload.done] after [MovieDownload.cancel], and when
+/// the movie or its camera was forgotten while it was copied
+/// ([MovieCache.forget], [MovieCache.forgetCamera]): the copy is not kept,
+/// and the next attempt copies whatever the camera has at the path then.
 final class MovieDownloadCancelled implements Exception {
   /// The only instance; carries no detail.
   const new();
@@ -81,6 +84,10 @@ final class MovieCache {
   /// begun before is not kept.
   final _forgottenCameras = <String, int>{};
 
+  /// Per path, how often [forget] dropped the copy there, so a copy begun
+  /// before is not kept.
+  final _forgotten = <String, int>{};
+
   /// The copy [cached] or [download] handed out last.
   String? _lastUsed;
 
@@ -116,6 +123,12 @@ final class MovieCache {
   /// Each attempt writes its own staging file and starts only after the
   /// previous attempt for the same movie has settled, so a cancelled copy
   /// that is still unwinding cannot delete or overwrite a retry's data.
+  ///
+  /// A copy [forget] dropped the movie during ends with
+  /// [MovieDownloadCancelled] and leaves nothing on disk: the movie left
+  /// the camera, or its path now holds another one, but the camera may
+  /// still finish sending the file it had (\[inferred\], as webapid's
+  /// `GetAndSendSmallImage` does for images).
   MovieDownload download(CameraLibrary library, CameraFile f) {
     final download = MovieDownload._();
     final serial = library.serial;
@@ -134,6 +147,11 @@ final class MovieCache {
         return file;
       }
       await file.parent.create(recursive: true);
+      // Read as the request goes out: a request sent after [forget] gets
+      // the movie now at the path.
+      final forgotten = _forgotten[key];
+      bool fileDropped() => _forgotten[key] != forgotten;
+      final int length;
       try {
         await library.downloadFile(
           f,
@@ -142,22 +160,35 @@ final class MovieCache {
               total == null || total == 0 ? null : received / total,
           abort: download._cancel.future,
         );
-        if (download._cancelled || cameraDropped()) {
+        if (download._cancelled || cameraDropped() || fileDropped()) {
           throw const MovieDownloadCancelled();
         }
         await staging.rename(file.path);
-        if (cameraDropped()) throw const MovieDownloadCancelled();
+        // Read before the last check, so nothing awaited lies between it
+        // and recording the copy.
+        length = await file.length();
+        if (cameraDropped() || fileDropped()) {
+          throw const MovieDownloadCancelled();
+        }
         _copiedFrom[file.path] = library;
       } catch (_) {
         if (staging.existsSync()) await staging.delete();
-        if (!cameraDropped()) rethrow;
-        // The camera was forgotten meanwhile, its folder deleted. A later
-        // copy of this movie waits for this one, so the file is this copy.
-        await _disk.discard(file);
+        if (cameraDropped()) {
+          // The camera was forgotten meanwhile, its folder deleted. A later
+          // copy of this movie waits for this one, so the file is this
+          // copy.
+          await _disk.discard(file);
+          throw const MovieDownloadCancelled();
+        }
+        if (!fileDropped()) rethrow;
+        // If it got as far as the rename, that came after [forget] deleted
+        // the path: the file is this copy, not counted by the disk budget.
+        await _delete(file);
+        library.event('movies.forgottenMeanwhile', {'file': '$f'});
         throw const MovieDownloadCancelled();
       }
       _lastUsed = file.path;
-      _disk.added(file, await file.length());
+      _disk.added(file, length);
       download._progress.value = 1;
       return file;
     }();
@@ -174,9 +205,11 @@ final class MovieCache {
 
   /// Deletes [serial]'s copy of [f], at once so [cached] no longer finds
   /// it: the file is gone from the camera, or its path now holds another
-  /// movie. A copy in progress is the camera's current file and stays.
+  /// movie. A copy in progress is not kept either: it may be of the file
+  /// that was there, and ends with [MovieDownloadCancelled].
   void forget(String serial, CameraFile f) {
     final file = fileFor(serial, f);
+    _forgotten[file.path] = (_forgotten[file.path] ?? 0) + 1;
     _copiedFrom.remove(file.path);
     try {
       if (!file.existsSync()) return;
@@ -185,6 +218,16 @@ final class MovieCache {
     } on FileSystemException {
       // Already gone.
     }
+  }
+
+  /// Deletes [file], which may be gone already, and tells the disk budget.
+  Future<void> _delete(File file) async {
+    try {
+      if (file.existsSync()) await file.delete();
+    } on FileSystemException {
+      // Indexed at the next start and trimmed with the rest.
+    }
+    _disk.removed(file);
   }
 
   /// Deletes the copy of [f] unless it was made from [current], the link
@@ -207,6 +250,7 @@ final class MovieCache {
     _forgottenCameras[serial] = (_forgottenCameras[serial] ?? 0) + 1;
     final prefix = '${cacheDir.path}/$serial/';
     _copiedFrom.removeWhere((path, _) => path.startsWith(prefix));
+    _forgotten.removeWhere((path, _) => path.startsWith(prefix));
     if (_lastUsed?.startsWith(prefix) ?? false) _lastUsed = null;
     return _disk.forgetCamera(serial);
   }

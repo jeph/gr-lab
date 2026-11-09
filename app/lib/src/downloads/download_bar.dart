@@ -346,6 +346,7 @@ String _failureMessage(AppLocalizations l10n, DownloadFailure failure) =>
         MediaSaveFailure.failed => l10n.downloadErrorSaveFailed,
       },
       DownloadSaveInterrupted() => l10n.downloadErrorSaveInterrupted,
+      DownloadFileGone() => l10n.downloadErrorNotOnCamera,
       DownloadTransferFailed(:final reason) => switch (reason) {
         TransferRefused(:final errCode, errMsg: null) =>
           l10n.downloadErrorRefused(errCode),

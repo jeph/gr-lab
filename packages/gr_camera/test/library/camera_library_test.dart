@@ -10,9 +10,12 @@ import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart'
     show
         GrApiException,
+        GrBackoffReconnect,
+        GrChangesSocket,
         GrHttpClient,
         GrHttpStatusException,
-        GrMalformedResponseException;
+        GrMalformedResponseException,
+        GrSocketState;
 
 const serial = '1234567';
 final _day1 = DateTime(2026, 11, 4, 9, 30);
@@ -50,14 +53,16 @@ void main() {
   late RequestQueue queue;
   final trace = <TraceEvent>[];
   var requests = 0;
-  // Faults for the next thumbnail requests: no answer until the test ends,
-  // or bytes that are not a JPEG.
+  // Faults for the next thumbnail requests: no answer until the test ends
+  // (or [hang] completes), or bytes that are not a JPEG.
   var stallThumbs = 0;
   var junkThumbs = 0;
+  // The next full-size requests (movies included) wait for [hang] too.
+  var stallFull = 0;
   var hang = Completer<void>();
 
   CameraLibrary connected({
-    Stream<GrChangeEvent>? changes,
+    GrChangesSocket? changes,
     List<String?> storages = const [GrStorageId.internal, GrStorageId.sd],
     Future<bool> Function()? checkWifi,
   }) => CameraLibrary.overHttp(
@@ -92,6 +97,7 @@ void main() {
     requests = 0;
     stallThumbs = 0;
     junkThumbs = 0;
+    stallFull = 0;
     hang = Completer<void>();
     final media = syntheticMedia(jpegBytes: 4096, rawBytes: 8192);
     camera = FakeGrCamera(
@@ -100,6 +106,10 @@ void main() {
         requests++;
         if (size == GrImageSize.thumb && stallThumbs > 0) {
           stallThumbs--;
+          await hang.future;
+        }
+        if (size == GrImageSize.full && stallFull > 0) {
+          stallFull--;
           await hang.future;
         }
         if (size == GrImageSize.thumb && junkThumbs > 0) {
@@ -126,13 +136,14 @@ void main() {
 
   group('CameraLibrary', () {
     test('lists every file of each storage, tracing why', () async {
-      final files = await connected().listFiles(reason: 'connected');
-      expect(files.map((f) => '$f'), [
+      final listing = await connected().listFiles(reason: 'connected');
+      expect(listing.files.map((f) => '$f'), [
         'in:100RICOH/R0000001.JPG',
         'sd1:100RICOH/R0000001.JPG',
         'sd1:100RICOH/R0000001.DNG',
         'sd1:100RICOH/R0000002.MOV',
       ]);
+      expect(listing.failed, isEmpty);
       expect(events('library.list'), [
         {
           'reason': 'connected',
@@ -140,12 +151,12 @@ void main() {
         },
       ]);
       expect(events('library.listed'), [
-        {'reason': 'connected', 'files': 4},
+        {'reason': 'connected', 'files': 4, 'failed': <String?>[]},
       ]);
     });
 
-    test('a storage that answers with an error is left out while another '
-        'lists; alone, its error is thrown', () async {
+    test('a storage that answers with an error is left out and named while '
+        'another lists; alone, its error is thrown', () async {
       await restartCamera(
         FakeCameraConfig(
           httpLatency: Duration.zero,
@@ -161,13 +172,14 @@ void main() {
         ),
         syntheticMedia(),
       );
-      final files = await connected().listFiles();
-      expect(files, [
+      final listing = await connected().listFiles();
+      expect(listing.files, [
         CameraFile(
           GrStorageId.internal,
           GrPhotoPath('100RICOH', 'R0000001.JPG'),
         ),
       ]);
+      expect(listing.failed, {GrStorageId.sd});
       expect(
         events('library.storageSkipped').single['storage'],
         GrStorageId.sd,
@@ -194,22 +206,52 @@ void main() {
       expect(jpeg.taken, _day1);
     });
 
-    test(
-      'storageChanges carries storage changes from /v1/changes only',
-      () async {
-        await expectLater(connected().storageChanges, emitsDone);
-        final socket = http.changesSocket();
-        await socket.connect();
-        addTearDown(socket.close);
-        var changes = 0;
-        final sub = connected(changes: socket.events).storageChanges
-            .listen((_) => changes++);
-        addTearDown(sub.cancel);
-        camera.addPhoto(FakePhoto('101RICOH', 'R0000003.JPG', _day2));
-        await until(() => changes > 0, reason: 'storage change');
-        expect(changes, 1);
-      },
-    );
+    test('listingChanges carries storage changes from /v1/changes only, '
+        'until the socket closes', () async {
+      await expectLater(connected().listingChanges, emitsDone);
+      final socket = http.changesSocket();
+      await socket.connect();
+      addTearDown(socket.close);
+      var changes = 0;
+      var done = false;
+      final sub = connected(changes: socket).listingChanges
+          .listen((_) => changes++, onDone: () => done = true);
+      addTearDown(sub.cancel);
+      camera
+        ..battery = 50
+        ..addPhoto(FakePhoto('101RICOH', 'R0000003.JPG', _day2));
+      await until(() => changes > 0, reason: 'storage change');
+      expect(changes, 1);
+      await socket.close();
+      await until(() => done, reason: 'done with the socket');
+    });
+
+    test('listingChanges emits when the socket opens again, as the camera '
+        'does not send again what changed while it was closed', () async {
+      final socket = http.changesSocket(
+        reconnect: const GrBackoffReconnect(
+          delays: [Duration(milliseconds: 20)],
+        ),
+      );
+      await socket.connect();
+      addTearDown(socket.close);
+      var changes = 0;
+      final sub = connected(changes: socket).listingChanges
+          .listen((_) => changes++);
+      addTearDown(sub.cancel);
+      camera.dropChangeSockets();
+      await until(
+        () => socket.status.state != GrSocketState.open,
+        reason: 'socket dropped',
+      );
+      expect(
+        camera.removePhoto(GrPhotoPath('100RICOH', 'R0000001.DNG')),
+        isTrue,
+      );
+      await until(() => changes > 0, reason: 'socket reopened');
+      expect(changes, 1);
+      expect(events('library.changesReopened'), hasLength(1));
+    });
 
     test('checkWifi asks the session and records why', () async {
       var answers = false;
@@ -655,6 +697,48 @@ void main() {
       expect(loader.cached(serial, raw, GrImageSize.thumb), isNull);
       expect(other.existsSync(), isTrue);
     });
+
+    test('an image the camera sends after its file was forgotten reaches '
+        'the caller but is kept neither on disk nor in memory', () async {
+      final library = connected();
+      link.value = library;
+      final loader = images();
+      stallThumbs = 1;
+      final inFlight = loader.load(serial, file, GrImageSize.thumb);
+      await until(() => requests == 1, reason: 'thumbnail asked');
+
+      // Deleted on the camera while the camera was answering.
+      loader.forget(serial, file);
+      hang.complete();
+      expect(await inFlight.future, isNotNull, reason: 'the caller asked');
+      await loader.diskSettled;
+      final onDisk = CameraImages.diskFile(
+        cache,
+        serial,
+        file,
+        GrImageSize.thumb,
+      );
+      expect(onDisk.existsSync(), isFalse);
+      expect(
+        onDisk.parent.existsSync()
+            ? onDisk.parent.listSync()
+            : const <FileSystemEntity>[],
+        isEmpty,
+        reason: 'no staging file left behind',
+      );
+      expect(loader.cached(serial, file, GrImageSize.thumb), isNull);
+      expect(loader.isLocal(serial, file, GrImageSize.thumb), isFalse);
+      expect(
+        loader.forgetUnlessFrom(library, file),
+        isFalse,
+        reason: 'nothing kept that the same link could vouch for',
+      );
+      expect(events('images.forgottenMeanwhile'), hasLength(1));
+
+      final asked = requests;
+      await loader.load(serial, file, GrImageSize.thumb).future;
+      expect(requests, asked + 1, reason: 'the next load asks the camera');
+    });
   });
 
   group('MovieCache', () {
@@ -750,6 +834,32 @@ void main() {
         reason: 'nothing of the forgotten copy',
       );
       expect(listing.existsSync(), isTrue);
+    });
+
+    test('a copy running while its movie is forgotten ends as cancelled and '
+        'leaves nothing on disk', () async {
+      final movies = MovieCache(cacheDir: cache);
+      final library = connected();
+      stallFull = 1;
+      final download = movies.download(library, movie);
+      await until(() => requests == 1, reason: 'movie asked');
+
+      // Deleted on the camera while the camera was sending it.
+      movies.forget(serial, movie);
+      hang.complete();
+      await expectLater(download.done, throwsA(isA<MovieDownloadCancelled>()));
+      await movies.diskSettled;
+      expect(movies.cached(serial, movie), isNull);
+      expect(movies.forgetUnlessFrom(library, movie), isFalse);
+      expect(
+        movies.fileFor(serial, movie).parent.listSync(),
+        isEmpty,
+        reason: 'neither the copy nor its staging file left behind',
+      );
+      expect(events('movies.forgottenMeanwhile'), hasLength(1));
+
+      final again = await movies.download(library, movie).done;
+      expect(again.existsSync(), isTrue, reason: 'a later copy is kept');
     });
 
     test('cancelling a stalled copy closes its connection at once', () async {

@@ -6,7 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:gr_protocol/gr_protocol.dart' show GrHttpClient;
+import 'package:gr_protocol/gr_protocol.dart'
+    show GrChangesSocket, GrHttpClient;
 import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/downloads/download_engine.dart';
 import 'package:grlab/src/library/library_model.dart';
@@ -65,13 +66,12 @@ void main() {
   late RequestQueue queue;
   final models = <LibraryModel>[];
 
-  CameraLibrary connected({Stream<GrChangeEvent>? changes}) =>
-      CameraLibrary.overHttp(
-        http,
-        serial: serial,
-        storages: const [GrStorageId.internal, GrStorageId.sd],
-        changes: changes,
-      );
+  CameraLibrary connected({GrChangesSocket? changes}) => CameraLibrary.overHttp(
+    http,
+    serial: serial,
+    storages: const [GrStorageId.internal, GrStorageId.sd],
+    changes: changes,
+  );
 
   /// A model whose current camera is [current] (none for null), once it
   /// has read that camera's cached listing.
@@ -238,12 +238,12 @@ void main() {
     expect((await old.ensureInfo(held))?.orientation, 6);
   });
 
-  test('refreshes on a storage change from /v1/changes', () async {
+  test('refreshes when /v1/changes reports a storage change', () async {
     final socket = http.changesSocket();
     await socket.connect();
     addTearDown(socket.close);
     final m = await model();
-    link.value = connected(changes: socket.events);
+    link.value = connected(changes: socket);
     await until(() => m.shots != null && !m.refreshing);
     expect(m.shots, hasLength(3));
 
@@ -324,7 +324,7 @@ void main() {
     await until(() => queue.running == 0, reason: 'slot freed');
   });
 
-  group('a path that comes back with another file', () {
+  group('the caches of a camera path', () {
     late DownloadEngine downloads;
     late CameraImages images;
     late MovieCache movies;
@@ -535,6 +535,51 @@ void main() {
       await until(() => fresh.info(f) != null, reason: 'recorded file checked');
       await pumpEventQueue();
       expect(downloads.isFileDownloaded(serial, f), isTrue);
+    });
+
+    test('a storage that fails to list keeps its shots and their images; '
+        'they go once it lists without them', () async {
+      final m = await listed();
+      final shot = m.shots!.firstWhere(
+        (s) => s.storage == GrStorageId.internal,
+      );
+      final f = shot.primary;
+      expect(await thumbOf(f), contains(_day2.toIso8601String()));
+
+      camera.failingListings.add(GrStorageId.internal);
+      await m.refresh();
+      expect(m.shots!.map((s) => s.key), contains(shot.key));
+      expect(m.revision(f), 0);
+      expect(images.isLocal(serial, f, GrImageSize.thumb), isTrue);
+
+      camera.failingListings.clear();
+      expect(camera.removePhoto(f.path, storage: GrStorageId.internal), isTrue);
+      await m.refresh();
+      expect(m.shots!.map((s) => s.key), isNot(contains(shot.key)));
+      expect(images.isLocal(serial, f, GrImageSize.thumb), isFalse);
+    });
+
+    test('a waiting download of a file that left the listing fails as no '
+        'longer on the camera; other downloads carry on', () async {
+      final m = await listed();
+      final pair = m.shots!.firstWhere((s) => s.isPair);
+      final movie = m.shots!.firstWhere((s) => s.isVideo);
+      downloads.pause();
+      await downloads.enqueue(serial, [pair, movie]);
+
+      expect(camera.removePhoto(pair.raw!.path), isTrue);
+      await m.refresh();
+      await until(
+        () => downloads.jobFor(serial, pair)?.state == DownloadState.failed,
+        reason: 'job failed',
+      );
+      expect(downloads.jobFor(serial, pair)!.failure, isA<DownloadFileGone>());
+      expect(downloads.jobFor(serial, movie)!.state, DownloadState.queued);
+
+      downloads.resume();
+      await downloads.whenIdle();
+      expect(downloads.jobFor(serial, movie), isNull, reason: 'saved');
+      expect(downloads.isFileDownloaded(serial, movie.primary), isTrue);
     });
   });
 }

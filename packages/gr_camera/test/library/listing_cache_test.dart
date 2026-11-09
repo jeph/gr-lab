@@ -26,7 +26,8 @@ void main() {
     GrProps props(List<Map<String, Object?>> storages) =>
         GrProps({'errCode': 200, 'storages': storages});
 
-    test('lists each equipped storage of a two-storage camera', () {
+    test('lists each equipped and available storage of a two-storage '
+        'camera', () {
       expect(
         listedStorages(
           props([
@@ -41,6 +42,15 @@ void main() {
           props([
             {'name': 'in', 'equipped': true},
             {'name': 'sd1', 'equipped': false},
+          ]),
+        ),
+        ['in'],
+      );
+      expect(
+        listedStorages(
+          props([
+            {'name': 'in', 'equipped': true, 'available': true},
+            {'name': 'sd1', 'equipped': true, 'available': false},
           ]),
         ),
         ['in'],

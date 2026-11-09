@@ -63,6 +63,7 @@ export 'src/library/camera_images.dart'
 export 'src/library/camera_library.dart'
     show
         CameraLibrary,
+        CameraListing,
         NoImageControl,
         TransferConnectionLost,
         TransferCutOff,

@@ -869,6 +869,10 @@
   "@downloadErrorNoPhotoAccess": {
     "description": "Why a download failed: the user has not allowed GR Lab to add to the photo library."
   },
+  "downloadErrorNotOnCamera": "No longer on the camera",
+  "@downloadErrorNotOnCamera": {
+    "description": "Why a download failed: the camera's list of files no longer has one of its files, because it was deleted on the camera or its card was taken out."
+  },
   "downloadErrorOther": "The download failed",
   "@downloadErrorOther": {
     "description": "Why a download failed, for an unexpected error."

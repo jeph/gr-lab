@@ -82,6 +82,14 @@ final class CameraLiveView extends ChangeNotifier {
   final _settings = SettingWrites();
   FocusMark? _focus;
   Uint8List? _lastShot;
+
+  /// Path and storage, as the camera named them, [_lastShot] is of.
+  (GrPhotoPath, String?)? _lastShotOf;
+
+  /// Thumbnail loads running, with the file each is for. A `delete` of
+  /// that file removes its load, so a thumbnail that comes in after the
+  /// file left the camera is not shown.
+  final _shotLoads = <Object, (GrPhotoPath, String?)>{};
   String? _streamError;
 
   /// Whether [start] was called and [stop] not since.
@@ -102,7 +110,8 @@ final class CameraLiveView extends ChangeNotifier {
   /// without a result, and after [stop].
   FocusMark? get focus => _focus;
 
-  /// Thumbnail of the newest picture taken while live view runs.
+  /// Thumbnail of the newest picture taken while live view runs; null
+  /// again once the camera reports that file deleted.
   Uint8List? get lastShot => _lastShot;
 
   /// Whether [setSetting] can send a change now: live view runs and has
@@ -417,7 +426,9 @@ final class CameraLiveView extends ChangeNotifier {
         }
         if (!_sameFocus(running.$2, captureId)) return;
         _focusEnded(focused ? FocusState.focused : FocusState.missed);
-      case GrStorageChange(:final path?) when e.action != 'delete':
+      case GrStorageChange(:final path?, action: 'delete'):
+        _shotDeleted(path, e.storage);
+      case GrStorageChange(:final path?):
         unawaited(_loadThumb(http, path, e.storage));
       default:
     }
@@ -502,6 +513,8 @@ final class CameraLiveView extends ChangeNotifier {
     GrPhotoPath path,
     String? storage,
   ) async {
+    final load = Object();
+    _shotLoads[load] = (path, storage);
     final sink = StreamController<List<int>>();
     final bytes = sink.stream.fold(BytesBuilder(copy: false), (b, chunk) {
       b.add(chunk);
@@ -516,14 +529,44 @@ final class CameraLiveView extends ChangeNotifier {
       );
       await sink.close();
       final data = (await bytes).takeBytes();
+      // Gone when the file was deleted meanwhile ([_shotDeleted]).
+      final shot = _shotLoads.remove(load);
       if (_closed || data.isEmpty) return;
+      if (shot == null) {
+        _log('thumb.dropped', {'path': '$path', 'storage': storage});
+        return;
+      }
       _lastShot = data;
+      _lastShotOf = shot;
       notifyListeners();
     } on Object catch (e) {
+      _shotLoads.remove(load);
       await sink.close();
       _log('thumb.failed', {'path': '$path', 'error': '$e'});
       // Only the thumbnail is missing; the picture is on the camera.
     }
+  }
+
+  /// The camera deleted [path] on [storage] (on the body, or by another
+  /// app): its thumbnail is no longer the last shot, and one still loading
+  /// is not shown. The camera may still send it, finishing a request it
+  /// accepted before the delete (\[inferred\] from the GR IV firmware).
+  void _shotDeleted(GrPhotoPath path, String? storage) {
+    final deleted = (path, storage);
+    final loads = _shotLoads.length;
+    _shotLoads.removeWhere((_, shot) => shot == deleted);
+    final wasShown = _lastShotOf == deleted;
+    if (!wasShown && loads == _shotLoads.length) return;
+    _log('thumb.deleted', {
+      'path': '$path',
+      'storage': storage,
+      'shown': wasShown,
+      'loadsDropped': loads - _shotLoads.length,
+    });
+    if (!wasShown) return;
+    _lastShot = null;
+    _lastShotOf = null;
+    notifyListeners();
   }
 
   void _close() {

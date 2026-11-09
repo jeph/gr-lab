@@ -409,6 +409,9 @@ extension on FakeGrCamera {
         (afterText != null && after == null)) {
       return await _error(request, 400, 'Bad Request');
     }
+    if (failingListings.contains(storage)) {
+      return await _error(request, 500, 'Internal Server Error');
+    }
     final sorted = [
       for (final p in _photos)
         if (p.storage == storage) p.path,

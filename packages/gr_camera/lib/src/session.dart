@@ -217,7 +217,7 @@ final class CameraSession {
       props: () => _session.props,
       // Read when a view-model listens; a later link's socket must not
       // reach this library.
-      changes: () => identical(_session.changes, link) ? link.events : null,
+      changes: () => identical(_session.changes, link) ? link : null,
       // A request on a link that has gone failed with it; only the current
       // link is probed.
       checkWifi: () async =>

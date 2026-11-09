@@ -17,9 +17,13 @@ abstract interface class FileCopies {
   /// each link even without cached info.
   bool isRecorded(String serial, CameraFile f);
 
-  /// [serial]'s [f] left the listing, or its path now holds another file
-  /// than the library's cached info describes.
+  /// [serial]'s [f] now holds another file than the library's cached info
+  /// describes.
   void stale(String serial, CameraFile f);
+
+  /// [serial]'s [f] left the listing: deleted on the camera, or its card
+  /// taken out. What is kept of it is stale too.
+  void gone(String serial, CameraFile f);
 
   /// The camera of [current] gave the first info the library has of [f]:
   /// copies made on an earlier link may be of another file that was at
@@ -40,7 +44,7 @@ abstract interface class FileCopies {
 /// The current camera's ([CameraStore.current]) photos as shots, kept per
 /// camera serial in `<cacheDir>/<serial>/library.json` so the grid appears
 /// at once and offline. Refreshes whenever the camera connects and when its
-/// `/v1/changes` socket reports a storage change.
+/// listing may have changed ([CameraLibrary.listingChanges]).
 ///
 /// A camera path can come back with another file (a card swapped, a shot
 /// deleted and taken again), and the listing gives names only. So on each
@@ -239,8 +243,15 @@ final class LibraryModel extends ChangeNotifier {
     _refreshing = true;
     _notify();
     try {
-      final files = await current.listFiles(reason: reason);
+      final listing = await current.listFiles(reason: reason);
       if (generation != _generation) return;
+      // A storage that answered with an error keeps the files it had: they
+      // are unknown, not gone.
+      final files = [
+        ...listing.files,
+        for (final f in _files)
+          if (listing.failed.contains(f.storage)) f,
+      ];
       final keys = {for (final f in files) f.key};
       final gone = [
         for (final f in _files)
@@ -251,7 +262,9 @@ final class LibraryModel extends ChangeNotifier {
       _listedAt = DateTime.now();
       _error = null;
       _info.removeWhere((k, _) => !keys.contains(k));
-      gone.forEach(_stale);
+      for (final f in gone) {
+        _stale(f, gone: true);
+      }
       _revalidate(current);
       _scheduleSave(immediately: true);
     } on Object catch (e) {
@@ -364,11 +377,18 @@ final class LibraryModel extends ChangeNotifier {
     }
   }
 
-  /// [f]'s cached copies no longer show what is at its path.
-  void _stale(CameraFile f) {
+  /// [f]'s cached copies no longer show what is at its path; [gone] when
+  /// it left the listing.
+  void _stale(CameraFile f, {bool gone = false}) {
     _revisions[f.key] = revision(f) + 1;
     _confirmed.remove(f.key);
-    if (_serial case final serial?) copies?.stale(serial, f);
+    final serial = _serial;
+    if (serial == null) return;
+    if (gone) {
+      copies?.gone(serial, f);
+    } else {
+      copies?.stale(serial, f);
+    }
   }
 
   void _onLink() {
@@ -389,11 +409,11 @@ final class LibraryModel extends ChangeNotifier {
     _subscribedLink = current;
     _changeTimer?.cancel();
     unawaited(_changes?.cancel());
-    _changes = current?.storageChanges.listen((_) {
+    _changes = current?.listingChanges.listen((_) {
       _changeTimer?.cancel();
       _changeTimer = Timer(
         changeDebounce,
-        () => unawaited(_refresh('storageChange')),
+        () => unawaited(_refresh('listingChange')),
       );
     });
   }

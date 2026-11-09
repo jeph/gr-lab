@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
+import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:grlab/l10n/l10n.dart';
@@ -23,6 +24,13 @@ import 'package:video_player/video_player.dart';
 /// zoom, file details, and Download. A RAW+JPEG pair offers its JPEG and
 /// its RAW separately. A photo shown larger than its preview, or zoomed,
 /// is replaced by the full JPEG once it arrives.
+///
+/// The viewer follows the camera's listing: a shot that leaves it (deleted
+/// on the camera, or its card taken out) leaves the swipe list, a pair
+/// that lost one half shows the other, and the viewer closes once no shot
+/// is left. It also closes when the Library switches to another camera:
+/// its shots are not on that camera, and it has no listing of theirs to
+/// follow any more \[design\].
 class ShotViewer extends StatefulWidget {
   const new({required this.shots, required this.initialIndex, super.key});
 
@@ -34,23 +42,108 @@ class ShotViewer extends StatefulWidget {
 }
 
 class _ShotViewerState extends State<ShotViewer> {
+  late final LibraryContext _library = LibraryScope.of(context);
+
+  /// The camera of [_shots]: the listing's camera when the viewer opened.
+  late final String? _serial;
+
+  /// [ShotViewer.shots] still in the listing, in their order, as the
+  /// listing has them now.
+  late final List<Shot> _shots = [...widget.shots];
   late final PageController _pages = PageController(
     initialPage: widget.initialIndex,
   );
   late int _index = widget.initialIndex;
   bool _zoomed = false;
 
+  /// Set once nothing is left to show: the route is on its way out and
+  /// shows none of [_shots] any more.
+  bool _closing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _serial = _library.model.serial;
+    _library.model.addListener(_followListing);
+  }
+
   @override
   void dispose() {
+    _library.model.removeListener(_followListing);
     _pages.dispose();
     super.dispose();
   }
 
+  /// Takes each shot as [_serial]'s listing has it now and drops those it
+  /// no longer has. A dropped shown shot gives way to the next one kept,
+  /// or to the last one when none follows. Dropping shots settles the page
+  /// on [_index] at once, ending a swipe under way: its offset and fling
+  /// were measured against pages that moved. Without a listing (still
+  /// being read) the shots stay.
+  void _followListing() {
+    if (_closing) return;
+    final model = _library.model;
+    if (model.serial != _serial) {
+      _close();
+      return;
+    }
+    final listing = model.shots;
+    if (listing == null) return;
+    final listed = {for (final s in listing) s.key: s};
+    final kept = [for (final s in _shots) ?listed[s.key]];
+    if (listEquals(kept, _shots)) return;
+    if (kept.isEmpty) {
+      _close();
+      return;
+    }
+    final shown = _shots[_index];
+    final keptBefore = _shots
+        .take(_index)
+        .where((s) => listed.containsKey(s.key))
+        .length;
+    final index = min(keptBefore, kept.length - 1);
+    final dropped = kept.length != _shots.length;
+    setState(() {
+      _shots
+        ..clear()
+        ..addAll(kept);
+      _index = index;
+      // A changed shot gets a new page (keyed by the shot), unzoomed.
+      if (kept[index] != shown) _zoomed = false;
+    });
+    if (dropped && _pages.hasClients) _pages.jumpToPage(index);
+  }
+
+  /// Closes the viewer's route, also when another route covers it.
+  void _close() {
+    setState(() => _closing = true);
+    final route = ModalRoute.of(context);
+    if (route == null) return;
+    final navigator = Navigator.of(context);
+    if (route.isCurrent) {
+      navigator.pop();
+    } else {
+      navigator.removeRoute(route);
+    }
+  }
+
+  void _onPageChanged(int index) {
+    // Also reported after [_followListing] jumped to [_index].
+    if (index == _index) return;
+    setState(() {
+      _index = index;
+      _zoomed = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final library = LibraryScope.of(context);
-    final serial = library.model.serial;
-    final shot = widget.shots[_index];
+    if (_closing) {
+      return Scaffold(appBar: AppBar(leading: const BackButton()));
+    }
+    final library = _library;
+    final serial = _serial;
+    final shot = _shots[_index];
     return ListenableBuilder(
       listenable: Listenable.merge([library.model, library.engine]),
       builder: (context, _) {
@@ -91,22 +184,27 @@ class _ShotViewerState extends State<ShotViewer> {
                         physics: _zoomed
                             ? const NeverScrollableScrollPhysics()
                             : const PageScrollPhysics(),
-                        itemCount: widget.shots.length,
-                        onPageChanged: (i) => setState(() {
-                          _index = i;
-                          _zoomed = false;
-                        }),
+                        itemCount: _shots.length,
+                        onPageChanged: _onPageChanged,
+                        // A page whose shot stays keeps its state (zoom,
+                        // playback) when shots before it are dropped.
+                        findChildIndexCallback: (key) {
+                          final i = _shots.indexWhere(
+                            (s) => ValueKey(s) == key,
+                          );
+                          return i < 0 ? null : i;
+                        },
                         itemBuilder: (context, i) {
-                          final s = widget.shots[i];
+                          final s = _shots[i];
                           return s.isVideo
                               ? _VideoPage(
-                                  key: ValueKey(s.key),
+                                  key: ValueKey(s),
                                   serial: serial,
                                   shot: s,
                                   active: i == _index,
                                 )
                               : _PhotoPage(
-                                  key: ValueKey(s.key),
+                                  key: ValueKey(s),
                                   serial: serial,
                                   shot: s,
                                   onZoom: (zoomed) {
@@ -562,7 +660,9 @@ class _Details extends StatelessWidget {
           ),
         ),
         if (!shot.isVideo)
-          _ImageControlRow(key: ValueKey(shot.key), shot: shot),
+          // Read again when the primary changes: a pair whose JPEG left
+          // the camera shows its RAW.
+          _ImageControlRow(key: ValueKey(shot.primary.key), shot: shot),
       ],
     );
   }

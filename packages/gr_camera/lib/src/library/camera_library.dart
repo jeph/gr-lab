@@ -7,7 +7,7 @@ import 'package:gr_camera/src/looks/look.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 
 /// The photos of one camera over one verified Wi-Fi link: listing, file
-/// info, storage-change notices and transfers. A `CameraSession` gives a
+/// info, listing-change notices and transfers. A `CameraSession` gives a
 /// new one each time its Wi-Fi comes up (`CameraSession.library`), so work
 /// begun on a link that has since gone is told apart with `identical`.
 final class CameraLibrary {
@@ -30,7 +30,7 @@ final class CameraLibrary {
     GrHttpClient http, {
     required String serial,
     List<String?> storages = const [null],
-    Stream<GrChangeEvent>? changes,
+    GrChangesSocket? changes,
     Future<bool> Function()? checkWifi,
     TraceSink? trace,
   }) => CameraLibrary._(
@@ -51,7 +51,7 @@ final class CameraLibrary {
 
   final GrHttpClient _http;
   final List<String?> Function() _storages;
-  final Stream<GrChangeEvent>? Function() _changes;
+  final GrChangesSocket? Function() _changes;
   final Future<bool> Function()? _checkWifi;
   final void Function(String kind, Map<String, Object?> fields) _event;
 
@@ -62,21 +62,54 @@ final class CameraLibrary {
   /// null (no `storage=` parameter) on a camera with one.
   List<String?> get storages => _storages();
 
-  /// Emits when the camera's `/v1/changes` socket reports a storage change
-  /// (a shot taken or deleted). Empty when the socket is not open.
-  Stream<void> get storageChanges =>
-      _changes()?.where((e) => e is GrStorageChange) ?? const Stream.empty();
+  /// Emits when the listing may have changed: the camera's `/v1/changes`
+  /// socket reports a storage change (a shot taken or deleted), or the
+  /// socket opens again after a drop or a failed first open. The camera
+  /// sends each change only to the sockets open at that moment and replays
+  /// nothing (research/protocol/http-api.md §5), so what changed while it
+  /// was closed shows only in a new listing. Done when the socket closes;
+  /// empty when none is open.
+  Stream<void> get listingChanges {
+    final socket = _changes();
+    if (socket == null) return const Stream.empty();
+    final out = StreamController<void>();
+    final subscriptions = <StreamSubscription<Object?>>[];
+    void emit() {
+      if (!out.isClosed) out.add(null);
+    }
+
+    out
+      ..onListen = () {
+        subscriptions
+          ..add(
+            socket.events.listen((e) {
+              if (e is GrStorageChange) emit();
+            }, onDone: out.close),
+          )
+          ..add(
+            socket.statuses.listen((s) {
+              if (s.state != GrSocketState.open) return;
+              _event('library.changesReopened', {'socket': '$s'});
+              emit();
+            }),
+          );
+      }
+      ..onCancel = () =>
+          Future.wait([for (final s in subscriptions) s.cancel()]);
+    return out.stream;
+  }
 
   /// Lists every file on [storages], in the camera's order. A storage that
-  /// answers with an error (no card) is left out while another one lists;
-  /// the error is thrown when none does. [reason] says why the listing is
-  /// read (`connected`, `storageChange`, `user`), for the trace.
-  Future<List<CameraFile>> listFiles({String reason = 'request'}) async {
+  /// answers with an error is left out while another one lists, and named
+  /// in the result's `failed`: its files are unknown, not gone. The error
+  /// is thrown when no storage lists. [reason] says why the listing is
+  /// read (`connected`, `listingChange`, `user`), for the trace.
+  Future<CameraListing> listFiles({String reason = 'request'}) async {
     final storages = this.storages;
     _event('library.list', {'reason': reason, 'storages': storages});
     final files = <CameraFile>[];
+    final failed = <String?>{};
     GrApiException? failure;
-    var listed = 0;
     for (final storage in storages) {
       final found = <CameraFile>[];
       try {
@@ -86,17 +119,21 @@ final class CameraLibrary {
           }
         }
         files.addAll(found);
-        listed++;
       } on GrApiException catch (e) {
-        // A storage without a card answers with an error; the other one
-        // still lists.
+        // [listedStorages] leaves out storages the camera reports as not
+        // available, so this one should list; another storage still does.
         _event('library.storageSkipped', {'storage': storage, 'error': '$e'});
+        failed.add(storage);
         failure = e;
       }
     }
-    if (listed == 0 && failure != null) throw failure;
-    _event('library.listed', {'reason': reason, 'files': files.length});
-    return files;
+    if (failure != null && failed.length == storages.length) throw failure;
+    _event('library.listed', {
+      'reason': reason,
+      'files': files.length,
+      'failed': failed.toList(),
+    });
+    return (files: files, failed: failed);
   }
 
   /// The camera's `/info` for [f]. Once [abort] completes, the request
@@ -210,6 +247,11 @@ extension LibraryInternals on CameraLibrary {
       _event(kind, fields);
 }
 
+/// What [CameraLibrary.listFiles] read: the files of every storage that
+/// listed, in the camera's order, and the storages that answered with an
+/// error instead (`failed`), whose files are unknown rather than gone.
+typedef CameraListing = ({List<CameraFile> files, Set<String?> failed});
+
 /// Builds a session's library; see [CameraLibrary]. [props] gives the
 /// session's newest `/v1/props`, which decides the storages each listing
 /// reads.
@@ -217,7 +259,7 @@ CameraLibrary newCameraLibrary(
   GrHttpClient http, {
   required String serial,
   required GrProps? Function() props,
-  required Stream<GrChangeEvent>? Function() changes,
+  required GrChangesSocket? Function() changes,
   required Future<bool> Function() checkWifi,
   required void Function(String kind, Map<String, Object?> fields) event,
 }) => CameraLibrary._(
@@ -231,14 +273,19 @@ CameraLibrary newCameraLibrary(
 
 /// Which storages to list, from `/v1/props`. GR WORLD adds `storage=` only
 /// on cameras with two storages (http-api.md "Storage values"); a GR IV
-/// lists only the SD card without it, so each equipped storage is listed on
-/// its own.
+/// lists only the SD card without it, so each storage is listed on its
+/// own. A storage reported as not equipped or not available is left out:
+/// GR IV webapid answers a listing of it with an error
+/// (research/protocol/http-api.md "Storage values"), so its files are gone
+/// for now rather than unknown.
 List<String?> listedStorages(GrProps? props) {
   final storages = props?.storages ?? const <GrStorageInfo>[];
   if (storages.length < 2) return const [null];
   final names = [
     for (final s in storages)
-      if (s.name case final name? when s.equipped != false) name,
+      if (s.name case final name?
+          when s.equipped != false && s.available != false)
+        name,
   ];
   return names.isEmpty ? const [null] : names;
 }

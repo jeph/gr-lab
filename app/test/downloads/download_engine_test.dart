@@ -540,6 +540,26 @@ void main() {
       );
     });
 
+    test('a job failed for a file no longer on the camera says so after a '
+        'restart', () async {
+      h = (await Harness.start(
+        config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
+      ))..disconnect();
+      final first = h.engine();
+      final shot = h.shot('R0000002');
+      await first.enqueue(serial, [shot]);
+      await first.fileGone(serial, shot.primary);
+      expect(first.jobs.single.failure, isA<DownloadFileGone>());
+      await first.flush();
+      first.dispose();
+      h._engines.remove(first);
+
+      final second = h.engine();
+      await second.ready;
+      expect(second.jobs.single.state, DownloadState.failed);
+      expect(second.jobs.single.failure, isA<DownloadFileGone>());
+    });
+
     test('a transfer cut off while still connected fails after the grace '
         'period', () async {
       h = await Harness.start(

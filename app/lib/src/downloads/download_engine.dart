@@ -41,6 +41,13 @@ final class DownloadSaveInterrupted extends DownloadFailure {
   const new();
 }
 
+/// A file of the job left the camera's listing: it was deleted on the
+/// camera, or its card was taken out. Retrying asks the camera again, so a
+/// card put back still downloads.
+final class DownloadFileGone extends DownloadFailure {
+  const new();
+}
+
 /// One shot's files in the download queue.
 final class DownloadJob {
   new _({
@@ -127,6 +134,7 @@ Map<String, Object?>? _failureToJson(DownloadFailure? failure) =>
       null => null,
       DownloadSaveFailed(:final reason) => {'save': reason.name},
       DownloadSaveInterrupted() => {'save': 'interrupted'},
+      DownloadFileGone() => {'gone': true},
       DownloadTransferFailed(:final reason) => switch (reason) {
         TransferRefused(:final errCode, :final errMsg) => {
           'transfer': 'refused',
@@ -149,6 +157,7 @@ Map<String, Object?>? _failureToJson(DownloadFailure? failure) =>
 /// English sentences saved before failures were typed.
 DownloadFailure? _failureFromJson(Object? json) {
   if (json is! Map<String, Object?>) return null;
+  if (json['gone'] == true) return const DownloadFileGone();
   if (json['save'] case final String save) {
     if (save == 'interrupted') return const DownloadSaveInterrupted();
     final reason = MediaSaveFailure.values.asNameMap()[save];
@@ -369,6 +378,27 @@ final class DownloadEngine extends ChangeNotifier {
     records.remove(f.key);
     _save();
     _notify();
+  }
+
+  /// [serial]'s camera no longer lists [f]: it was deleted on the camera
+  /// or its card was taken out. A job waiting to copy it, or one whose copy
+  /// failed, fails with [DownloadFileGone] rather than asking the camera
+  /// for a file it no longer has; a retry asks again. A running job fails
+  /// by itself, and one whose files were copied (a failed save) still
+  /// saves its copies on a retry.
+  Future<void> fileGone(String serial, CameraFile f) async {
+    await _ready;
+    var failed = false;
+    for (final j in _jobs) {
+      if (j.serial != serial || !j._files.contains(f)) continue;
+      final waiting =
+          j.state == DownloadState.queued ||
+          j.failure is DownloadTransferFailed;
+      if (!waiting || identical(j, _current)) continue;
+      _fail(j, const DownloadFileGone(), '$f left the listing');
+      failed = true;
+    }
+    if (failed) _changed();
   }
 
   /// [serial]'s camera reports [now] for its path [f]. A download recorded

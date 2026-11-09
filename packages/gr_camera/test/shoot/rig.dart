@@ -11,14 +11,19 @@ final class ShootRig {
 
   /// Links [config]'s camera over Bluetooth; with [wifi], turns it on in
   /// shooting mode, as Shoot does before live view, and joins its Wi-Fi.
+  /// [media] serves the camera's images, synthetic ones by default.
   static Future<ShootRig> start({
     FakeCameraConfig config = const FakeCameraConfig(bonded: true),
     bool wifi = false,
+    FakeMediaSource? media,
   }) async {
     // flutter_test blocks real HTTP; the simulated camera serves it on
     // loopback.
     HttpOverrides.global = null;
-    final camera = FakeGrCamera(config: config, media: syntheticMedia());
+    final camera = FakeGrCamera(
+      config: config,
+      media: media ?? syntheticMedia(),
+    );
     await camera.startHttp();
     final trace = <TraceEvent>[];
     final session = CameraSession(

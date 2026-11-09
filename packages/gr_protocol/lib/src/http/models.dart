@@ -268,7 +268,9 @@ final class GrStorageInfo {
   /// Whether the camera can write to it.
   bool? get writable => fields.boolean('writable');
 
-  /// Whether it is usable; how it differs from [equipped] is unknown.
+  /// Whether it can be read now: equipped, accessible, formatted and
+  /// without error. GR IV webapid refuses to list a storage that is not
+  /// (research/protocol/http-api.md "Storage values").
   bool? get available => fields.boolean('available');
 
   /// Whether it is the storage the camera records to; inferred from the key.

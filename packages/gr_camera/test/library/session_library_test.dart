@@ -48,8 +48,8 @@ void main() {
     expect(first.serial, camera.config.serial);
     expect(first.storages, [GrStorageId.internal, GrStorageId.sd]);
     expect(identical(session.library, first), isTrue);
-    final files = await first.listFiles();
-    expect(files, hasLength(camera.photos.length));
+    final listing = await first.listFiles();
+    expect(listing.files, hasLength(camera.photos.length));
 
     await session.stopWifi();
     expect(session.library, isNull);
@@ -58,7 +58,7 @@ void main() {
     final second = session.library!;
     expect(identical(second, first), isFalse, reason: 'a new link');
     var changes = 0;
-    final sub = second.storageChanges.listen((_) => changes++);
+    final sub = second.listingChanges.listen((_) => changes++);
     addTearDown(sub.cancel);
     camera.addPhoto(
       FakePhoto('101RICOH', 'R0000100.JPG', DateTime(2026, 11, 8, 10)),
@@ -69,7 +69,7 @@ void main() {
     }
     expect(changes, 1);
     await expectLater(
-      first.storageChanges,
+      first.listingChanges,
       emitsDone,
       reason: "the first link's socket is gone",
     );
@@ -93,12 +93,12 @@ void main() {
     expect(identical(session.library, second), isTrue);
 
     await expectLater(
-      first.storageChanges,
+      first.listingChanges,
       emitsDone,
       reason: 'the old library must not subscribe to the new socket',
     );
     var changes = 0;
-    final sub = second.storageChanges.listen((_) => changes++);
+    final sub = second.listingChanges.listen((_) => changes++);
     addTearDown(sub.cancel);
     camera.addPhoto(
       FakePhoto('101RICOH', 'R0000101.JPG', DateTime(2026, 11, 8, 11)),

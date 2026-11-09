@@ -127,7 +127,7 @@ final class CameraImages {
   int _viewBytes = 0;
 
   /// Per `<serial>|<file key>`, how often [forget] dropped the file's
-  /// images, so a disk read begun before is not kept.
+  /// images, so a disk read or a camera request begun before is not kept.
   final _forgotten = <String, int>{};
 
   /// Per serial, how often [forgetCamera] dropped the camera, so a load
@@ -257,8 +257,17 @@ final class CameraImages {
     return request;
   }
 
-  /// [cameraDropped] says [forgetCamera] dropped the camera while it was
-  /// fetched; the image is then kept neither on disk nor in memory.
+  /// Fetches [f]'s image from [library]'s camera. Every caller that joined
+  /// the request gets the bytes; they are kept on disk and in memory only
+  /// while neither [forget] dropped the file nor [cameraDropped] says
+  /// [forgetCamera] dropped the camera since the request went out.
+  ///
+  /// A file forgotten meanwhile left the camera, or its path now holds
+  /// another shot, but the camera still answers the request it accepted
+  /// with the file it had (\[inferred\] from the GR IV firmware:
+  /// `GetAndSendSmallImage` copies the image before sending it). Those
+  /// bytes are what the callers asked for, so they get them, but a cached
+  /// copy would outlive the file: the next [load] asks the camera again.
   Future<Uint8List> _fetch(
     CameraLibrary library,
     CameraFile f,
@@ -268,6 +277,11 @@ final class CameraImages {
     RequestSignal signal,
     bool Function() cameraDropped,
   ) async {
+    // Read as the request goes out, not when the first caller asked: a
+    // request sent after [forget] gets the file now at the path.
+    final id = '${library.serial}|${f.key}';
+    final forgotten = _forgotten[id];
+    bool fileDropped() => _forgotten[id] != forgotten;
     // Into memory rather than through `<file>.part`: a run that missed its
     // deadline may still be writing when the next attempt starts.
     final sink = _BytesSink();
@@ -289,6 +303,7 @@ final class CameraImages {
     }
     if (signal.abandoned) throw const RequestCancelled();
     if (cameraDropped()) return bytes;
+    if (fileDropped()) return _forgottenMeanwhile(library, f, size, bytes);
     if (!_onDisk(size)) return _remember(size, key, bytes);
     final stored = await _store(file, bytes);
     if (cameraDropped()) {
@@ -297,11 +312,44 @@ final class CameraImages {
       await _disk.discard(file);
       return bytes;
     }
+    if (fileDropped()) {
+      // Written after [forget] deleted the path; the file is this copy,
+      // which the disk budget has not counted yet.
+      if (stored) await _unstore(file);
+      return _forgottenMeanwhile(library, f, size, bytes);
+    }
     _fetchedFrom[key] = library;
     // Remembered before the disk budget hears of it, so it counts as shown.
     _remember(size, key, bytes);
     if (stored) _disk.added(file, bytes.length);
     return bytes;
+  }
+
+  /// Records that [f]'s image came in after [forget] dropped the file;
+  /// the bytes go to the callers only.
+  Uint8List _forgottenMeanwhile(
+    CameraLibrary library,
+    CameraFile f,
+    GrImageSize size,
+    Uint8List bytes,
+  ) {
+    library.event('images.forgottenMeanwhile', {
+      'file': '$f',
+      'size': size.name,
+      'length': bytes.length,
+    });
+    return bytes;
+  }
+
+  /// Deletes [file], which [_store] wrote but the disk budget never heard
+  /// of; [forget] may have deleted it already.
+  Future<void> _unstore(File file) async {
+    try {
+      if (file.existsSync()) await file.delete();
+    } on FileSystemException {
+      // Indexed at the next start and trimmed with the rest.
+    }
+    _disk.removed(file);
   }
 
   /// Writes [bytes] under a name of its own first, so a reader never sees a
@@ -371,7 +419,8 @@ final class CameraImages {
 
   /// Forgets every image of [serial]'s [f], in memory and on disk, so the
   /// next [load] asks the camera: the file is gone from the camera, or its
-  /// path now holds another shot. A disk read begun before is not shown.
+  /// path now holds another shot. A disk read begun before is not shown,
+  /// and an image a camera request begun before brings in is not kept.
   void forget(String serial, CameraFile f) {
     final id = '$serial|${f.key}';
     _forgotten[id] = (_forgotten[id] ?? 0) + 1;

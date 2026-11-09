@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
@@ -182,6 +184,70 @@ void main() {
     expect(live.lastShot, isNull);
     await rig.remote.shutter();
     await until(() => live.lastShot != null, reason: 'thumbnail');
+  });
+
+  test('the last shot goes once the camera deletes its file', () async {
+    rig = await ShootRig.start(wifi: true);
+    final live = rig.liveView;
+    await rig.remote.wake();
+    await rig.startLiveView();
+    await rig.remote.shutter();
+    await until(() => live.lastShot != null, reason: 'thumbnail');
+    final shot = rig.camera.photos.last;
+
+    var notified = 0;
+    live.addListener(() => notified++);
+    expect(rig.camera.removePhoto(shot.path, storage: shot.storage), isTrue);
+    await until(() => live.lastShot == null, reason: 'last shot cleared');
+    expect(notified, greaterThan(0));
+    expect(rig.events('shoot.thumb.deleted'), [
+      {
+        'path': '${shot.path}',
+        'storage': shot.storage,
+        'shown': true,
+        'loadsDropped': 0,
+      },
+    ]);
+  });
+
+  test('a thumbnail still loading when the camera deletes its file is not '
+      'shown', () async {
+    final asked = Completer<void>();
+    final release = Completer<void>();
+    final media = syntheticMedia();
+    rig = await ShootRig.start(
+      wifi: true,
+      media: (photo, size) async {
+        if (size == GrImageSize.thumb && !asked.isCompleted) {
+          asked.complete();
+          await release.future;
+        }
+        return await media(photo, size);
+      },
+    );
+    addTearDown(() {
+      if (!release.isCompleted) release.complete();
+    });
+    final live = rig.liveView;
+    await rig.remote.wake();
+    await rig.startLiveView();
+    await rig.remote.shutter();
+    await asked.future;
+    final shot = rig.camera.photos.last;
+
+    rig.camera.removePhoto(shot.path, storage: shot.storage);
+    await until(
+      () => rig.events('shoot.thumb.deleted').isNotEmpty,
+      reason: 'delete seen',
+    );
+    // The camera finishes the request it accepted before the delete.
+    release.complete();
+    await until(
+      () => rig.events('shoot.thumb.dropped').isNotEmpty,
+      reason: 'load ended',
+    );
+    expect(live.lastShot, isNull);
+    expect(rig.events('shoot.thumb.deleted').single['loadsDropped'], 1);
   });
 
   test('closing the session stops live view', () async {
