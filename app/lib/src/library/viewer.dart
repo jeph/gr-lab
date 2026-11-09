@@ -255,9 +255,13 @@ class _VideoPageState extends State<_VideoPage> {
     super.dispose();
   }
 
-  /// Plays the cached copy, copying the movie from the camera first.
+  /// Plays the cached copy, copying the movie from the camera first. While
+  /// connected, the camera first confirms the cached copy is of the movie
+  /// now at its path (the library drops it otherwise).
   Future<void> _play() async {
     final file = widget.shot.primary;
+    await _library.model.ensureInfo(file);
+    if (!mounted) return;
     var local = _library.movies.cached(widget.serial, file);
     if (local == null) {
       final link = _library.link.value;

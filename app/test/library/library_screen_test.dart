@@ -280,7 +280,7 @@ void main() {
     await pumpUntil(tester, () {
       final json = jsonDecode(manifest.readAsStringSync()) as Map;
       final downloaded = (json['downloaded'] as Map).values.expand(
-        (keys) => keys as List,
+        (records) => (records as Map).keys,
       );
       return (json['jobs'] as List).isEmpty &&
           downloaded.contains('$jpeg.JPG') &&
@@ -547,6 +547,63 @@ void main() {
       reason: 'decoded thumbnail',
     );
     expect(retry, findsNothing);
+
+    await app.dispose();
+  });
+
+  testWidgets('a shot replaced at its path while the Wi-Fi was down shows '
+      'the new picture and loses its downloaded mark', (tester) async {
+    final taken = DateTime(2026, 11, 5, 8);
+    final app = (await tester.runAsync(
+      () => createTestApp(
+        config: FakeCameraConfig(
+          bonded: true,
+          photos: [FakePhoto('100RICOH', 'R0000001.JPG', taken)],
+        ),
+        saveCamera: true,
+      ),
+    ))!;
+    await app.pumpApp(tester);
+    await _openLibrary(tester);
+    const shot = 'sd1|100RICOH/R0000001';
+    final picture = find.byKey(const ValueKey('image:view:$shot.JPG'));
+    String shown() => latin1.decode(
+      (tester.widget<Image>(picture).image as MemoryImage).bytes,
+    );
+    await pumpUntilFound(tester, picture);
+    expect(shown(), contains(taken.toIso8601String()));
+    await tester.longPress(_cell(shot));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('selection-download:jpeg')));
+    await tester.pump();
+    await pumpUntilFound(tester, _downloadedBadge(shot));
+
+    // Another card, with another shot under the same name, while the
+    // Wi-Fi is down.
+    app.camera.dropWifi();
+    await pumpUntil(
+      tester,
+      () => app.models.library.link.value == null,
+      reason: 'link lost',
+    );
+    final old = app.camera.photos.single;
+    final again = taken.add(const Duration(days: 1));
+    app.camera
+      ..removePhoto(old.path)
+      ..addPhoto(FakePhoto('100RICOH', 'R0000001.JPG', again));
+
+    await pumpUntil(
+      tester,
+      () =>
+          picture.evaluate().isNotEmpty &&
+          shown().contains(again.toIso8601String()),
+      reason: 'the new picture',
+    );
+    await pumpUntil(
+      tester,
+      () => _downloadedBadge(shot).evaluate().isEmpty,
+      reason: 'downloaded mark gone',
+    );
 
     await app.dispose();
   });

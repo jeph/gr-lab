@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:gr_camera/gr_camera.dart';
 
@@ -33,6 +35,12 @@ final class LibraryContext {
     required IdleDisconnect idle,
   }) {
     final queue = RequestQueue();
+    final images = CameraImages(
+      cacheDir: services.cacheDir,
+      link: link,
+      queue: queue,
+    );
+    final movies = MovieCache(cacheDir: services.cacheDir);
     return LibraryContext._(
       idle: idle,
       link: link,
@@ -41,13 +49,14 @@ final class LibraryContext {
         cameras: cameras,
         link: link,
         queue: queue,
+        copies: LibraryCopies(
+          images: images,
+          movies: movies,
+          downloads: downloads,
+        ),
       ),
-      images: CameraImages(
-        cacheDir: services.cacheDir,
-        link: link,
-        queue: queue,
-      ),
-      movies: MovieCache(cacheDir: services.cacheDir),
+      images: images,
+      movies: movies,
       engine: downloads,
     );
   }
@@ -83,6 +92,35 @@ final class LibraryContext {
     _release = null;
     model.dispose();
   }
+}
+
+/// The library's copies of camera files: what [LibraryModel] finds out
+/// about a path reaches its images, movie and download record.
+final class LibraryCopies implements FileCopies {
+  new({required this.images, required this.movies, required this.downloads});
+
+  final CameraImages images;
+  final MovieCache movies;
+  final DownloadEngine downloads;
+
+  @override
+  bool isRecorded(String serial, CameraFile f) =>
+      downloads.isFileDownloaded(serial, f);
+
+  @override
+  void stale(String serial, CameraFile f) {
+    images.forget(serial, f);
+    movies.forget(serial, f);
+    unawaited(downloads.fileStale(serial, f));
+  }
+
+  @override
+  void checked(
+    String serial,
+    CameraFile f,
+    FileInfo now, {
+    required bool vouched,
+  }) => unawaited(downloads.checkFile(serial, f, now, vouched: vouched));
 }
 
 /// Hands the [LibraryContext] to the Library's widgets and the routes it

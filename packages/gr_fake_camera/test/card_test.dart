@@ -89,7 +89,11 @@ void main() {
       for (final size in [GrImageSize.thumb, GrImageSize.view]) {
         final preview = await media(held, size);
         expect(preview.take(4), isNot(app1), reason: '$size has no EXIF');
-        expect(preview, await media(upright, size));
+        // Each preview names its shot in a comment; the picture is one.
+        expect(
+          withoutComment(preview),
+          withoutComment(await media(upright, size)),
+        );
       }
       expect((await media(upright, GrImageSize.full)).take(4), isNot(app1));
 
@@ -104,10 +108,26 @@ void main() {
     },
   );
 
+  test('a shot at a path another shot had has its own previews and full '
+      'file', () async {
+    final media = syntheticMedia(jpegBytes: 1000);
+    final before = FakePhoto('100RICOH', 'R0000001.JPG', DateTime(2026));
+    final after = FakePhoto('100RICOH', 'R0000001.JPG', DateTime(2026, 2));
+    for (final size in GrImageSize.values) {
+      expect(await media(after, size), isNot(await media(before, size)));
+    }
+  });
+
   test('withExifOrientation rejects bytes that are not a JPEG', () {
     expect(
       () => withExifOrientation(Uint8List.fromList([0x89, 0x50]), 6),
       throwsArgumentError,
     );
   });
+}
+
+/// [jpeg] without the comment segment after its SOI marker.
+List<int> withoutComment(List<int> jpeg) {
+  expect(jpeg.sublist(0, 4), [0xFF, 0xD8, 0xFF, 0xFE]);
+  return [...jpeg.take(2), ...jpeg.skip(4 + (jpeg[4] << 8 | jpeg[5]))];
 }

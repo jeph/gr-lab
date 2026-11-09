@@ -105,6 +105,9 @@ class _CameraImageState extends State<CameraImage> {
   /// known; for another camera's file the image shows as stored.
   bool _infoAvailable = false;
 
+  /// The library's `LibraryModel.revision` of the file shown.
+  int _revision = 0;
+
   /// The box in physical pixels, as last laid out.
   Size _box = Size.zero;
 
@@ -115,6 +118,7 @@ class _CameraImageState extends State<CameraImage> {
       _listening = true;
       _library.link.addListener(_onLink);
       _library.model.addListener(_onModel);
+      _revision = _currentRevision();
       _readInfo();
       _start();
     }
@@ -127,17 +131,28 @@ class _CameraImageState extends State<CameraImage> {
         old.file != widget.file ||
         old.size != widget.size ||
         old.sharper != widget.sharper) {
-      _stop();
-      _base = null;
-      _sharp = null;
-      _sharpTried = false;
-      _failures = 0;
-      _failed = false;
-      _readInfo();
-      _start();
+      _restart();
     } else if (widget.wantSharper && !old.wantSharper) {
       _considerSharper();
     }
+  }
+
+  int _currentRevision() {
+    final model = _library.model;
+    return model.serial == widget.serial ? model.revision(widget.file) : 0;
+  }
+
+  /// Drops what is shown and loads the image again.
+  void _restart() {
+    _stop();
+    _base = null;
+    _sharp = null;
+    _sharpTried = false;
+    _failures = 0;
+    _failed = false;
+    _revision = _currentRevision();
+    _readInfo();
+    _start();
   }
 
   @override
@@ -188,7 +203,7 @@ class _CameraImageState extends State<CameraImage> {
   void _start() {
     _failed = false;
     if (_base == null) _loadImage();
-    if (!_infoKnown) _loadInfo();
+    _loadInfo();
   }
 
   void _loadImage() {
@@ -231,8 +246,11 @@ class _CameraImageState extends State<CameraImage> {
     );
   }
 
+  /// Asks the library for the file's info, also when it is cached: on a
+  /// new link the camera confirms it, and the library reloads what it
+  /// shows if the path now holds another file.
   void _loadInfo() {
-    if (_info != null || _infoKnown || !_infoAvailable) return;
+    if (_info != null || !_infoAvailable) return;
     final ticket = _library.model.requestInfo(widget.file);
     if (ticket == null) return;
     _info = ticket;
@@ -287,18 +305,25 @@ class _CameraImageState extends State<CameraImage> {
     final link = _library.link.value;
     if (link == null || link.serial != widget.serial) return;
     // Requests made on the previous connection may never answer.
-    if (!_ready) {
+    _info?.cancel();
+    _info = null;
+    if (_ready) {
+      _loadInfo();
+    } else {
       _retry?.cancel();
       _retry = null;
       _failures = 0;
-      _info?.cancel();
-      _info = null;
       setState(_start);
     }
     _considerSharper();
   }
 
   void _onModel() {
+    // The file's path holds another file than the one shown.
+    if (_currentRevision() != _revision) {
+      setState(_restart);
+      return;
+    }
     if (!_readInfo()) return;
     setState(() {});
     // The library switched to this camera after the widget started.

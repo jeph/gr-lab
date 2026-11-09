@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -297,6 +298,77 @@ void main() {
       await second.ready;
       expect(second.isShotDownloaded(serial, pair), isTrue);
       expect(second.isFileDownloaded('other-camera', pair.jpeg!), isFalse);
+    });
+
+    test('a download keeps what the camera said of each file, across a '
+        'restart, and goes when another file is at its path', () async {
+      h = await Harness.start(
+        config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
+      );
+      final first = h.engine();
+      final jpeg = h.shot('R0000001').jpeg!;
+      await first.enqueue(serial, [h.shot('R0000001')]);
+      await first.whenIdle();
+      await first.flush();
+
+      final second = h.engine();
+      await second.ready;
+      final info = await h.link.value!.fileInfo(jpeg);
+      // Even without the library's cached info to vouch for it.
+      await second.checkFile(serial, jpeg, info, vouched: false);
+      await second.fileStale(serial, jpeg);
+      expect(second.isFileDownloaded(serial, jpeg), isTrue);
+      await second.checkFile(
+        serial,
+        jpeg,
+        FileInfo(taken: info.taken, size: info.size! + 1),
+        vouched: true,
+      );
+      expect(second.isFileDownloaded(serial, jpeg), isFalse);
+    });
+
+    test("a record from before the camera's info was kept stays only where "
+        'the library vouches for the file', () async {
+      h = (await Harness.start(
+        config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
+      ))..disconnect();
+      final pair = h.shot('R0000001');
+      final jpeg = pair.jpeg!;
+      final raw = pair.raw!;
+      final single = h.shot('R0000002').jpeg!;
+      await h.data.create(recursive: true);
+      await File('${h.data.path}/downloads.json').writeAsString(
+        jsonEncode({
+          'version': 1,
+          'jobs': <Object?>[],
+          'downloaded': {
+            serial: [jpeg.key, raw.key, single.key],
+          },
+        }),
+      );
+      final engine = h.engine();
+      await engine.ready;
+      expect(engine.areFilesDownloaded(serial, [jpeg, raw, single]), isTrue);
+
+      final now = FileInfo(taken: _pair, size: 1000);
+      await engine.checkFile(serial, jpeg, now, vouched: true);
+      await engine.checkFile(serial, raw, now, vouched: false);
+      await engine.fileStale(serial, single);
+      expect(engine.isFileDownloaded(serial, jpeg), isTrue);
+      expect(engine.isFileDownloaded(serial, raw), isFalse);
+      expect(engine.isFileDownloaded(serial, single), isFalse);
+
+      // The vouched record took the camera's info: it outlives the file
+      // leaving the listing, and goes when another file is at its path.
+      await engine.fileStale(serial, jpeg);
+      expect(engine.isFileDownloaded(serial, jpeg), isTrue);
+      await engine.checkFile(
+        serial,
+        jpeg,
+        FileInfo(taken: _pair, size: 1001),
+        vouched: true,
+      );
+      expect(engine.isFileDownloaded(serial, jpeg), isFalse);
     });
   });
 
@@ -675,6 +747,46 @@ void main() {
       );
       expect(h.media.shots.single.sizes, [expected.length]);
       expect(engine.jobs, isEmpty);
+    });
+
+    test("a shot's files copied before a lost connection are copied again, "
+        'as their paths may hold other files by then', () async {
+      h = await Harness.start(
+        config: FakeCameraConfig(
+          httpLatency: Duration.zero,
+          photos: card(),
+          downloadBytesPerSecond: 40 * 1024,
+        ),
+      );
+      final engine = h.engine();
+      await engine.enqueue(serial, [h.shot('R0000001')]);
+      await until(
+        () => engine.progress.value.fraction > 0.5,
+        reason: 'JPEG copied, DNG started',
+      );
+      h.disconnect();
+      await engine.whenIdle();
+      expect(h.saved, isEmpty);
+
+      // Another card, with another shot under the JPEG's name.
+      final old = h.camera.photos.firstWhere(
+        (p) => p.file == 'R0000001.JPG' && p.storage == GrStorageId.sd,
+      );
+      final replacement = FakePhoto(
+        '100RICOH',
+        'R0000001.JPG',
+        _pair.add(const Duration(days: 1)),
+      );
+      expect(h.camera.removePhoto(old.path), isTrue);
+      h.camera.addPhoto(replacement);
+      final oldBytes = await h.camera.media(old, GrImageSize.full);
+      final newBytes = await h.camera.media(replacement, GrImageSize.full);
+      expect(newBytes.length, isNot(oldBytes.length));
+
+      h.connect();
+      await until(() => h.saved.isNotEmpty, reason: 'resume');
+      expect(h.saved.single, ['R0000001.JPG', 'R0000001.DNG']);
+      expect(h.media.shots.single.sizes.first, newBytes.length);
     });
 
     test('queued jobs wait for their own camera', () async {

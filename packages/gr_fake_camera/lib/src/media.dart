@@ -41,16 +41,19 @@ Uint8List withExifOrientation(Uint8List jpeg, int orientation) {
 /// around [jpegBytes] / [rawBytes] / [movieBytes] long. Full JPEGs decode
 /// (the padding follows the EOI marker) and carry the photo's orientation
 /// as an EXIF tag unless it is 1 or null; DNG and MOV bodies do not decode.
+///
+/// The bytes follow the file's storage, path and capture time, so a shot
+/// that replaces another at the same path (another card, a file deleted
+/// and shot again) has other previews and another full file; previews
+/// carry that identity in a JPEG comment.
 FakeMediaSource syntheticMedia({
   int jpegBytes = 300 * 1024,
   int rawBytes = 600 * 1024,
   int movieBytes = 1024 * 1024,
 }) => (photo, size) async {
-  if (size != GrImageSize.full) return Uint8List.fromList(_tinyJpeg);
-  final seed = photo.toString().codeUnits.fold(
-    17,
-    (h, c) => (h * 31 + c) & 0x7fffffff,
-  );
+  final identity = '$photo@${photo.dateTime.toIso8601String()}';
+  if (size != GrImageSize.full) return _withComment(_tinyJpeg, identity);
+  final seed = identity.codeUnits.fold(17, (h, c) => (h * 31 + c) & 0x7fffffff);
   final jitter = seed & 0x7fff;
   final head = switch (photo.extension) {
     'DNG' => const [0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00],
@@ -76,3 +79,14 @@ FakeMediaSource syntheticMedia({
   }
   return bytes;
 };
+
+/// [jpeg] with a COM segment holding [text] right after its SOI marker.
+Uint8List _withComment(Uint8List jpeg, String text) {
+  final payload = utf8.encode(text);
+  final length = payload.length + 2;
+  return Uint8List.fromList([
+    0xFF, 0xD8, //
+    0xFF, 0xFE, length >> 8, length & 0xFF, ...payload,
+    ...jpeg.sublist(2),
+  ]);
+}

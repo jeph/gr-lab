@@ -126,6 +126,10 @@ final class CameraImages {
   final _full = <String, Uint8List>{};
   int _viewBytes = 0;
 
+  /// Per `<serial>|<file key>`, how often [forget] dropped the file's
+  /// images, so a disk read begun before is not kept.
+  final _forgotten = <String, int>{};
+
   static String _dirName(GrImageSize size) => switch (size) {
     GrImageSize.thumb => 'thumbs',
     GrImageSize.view => 'views',
@@ -183,19 +187,25 @@ final class CameraImages {
     if (hit != null) return ImageRequest._done(hit);
     final key = _key(serial, f, size);
     final request = ImageRequest._();
+    final id = '$serial|${f.key}';
+    final forgotten = _forgotten[id];
     Future<Uint8List?> run() async {
       final file = _file(serial, f, size);
       if (_onDisk(size)) {
         try {
           if (file.existsSync()) {
             final bytes = await file.readAsBytes();
-            if (isJpeg(bytes)) {
+            // A copy [forget] dropped while it was read is never shown.
+            final kept = _forgotten[id] == forgotten;
+            if (kept && isJpeg(bytes)) {
               _disk.used(file);
               return _remember(size, key, bytes);
             }
-            // A broken copy would be shown (as nothing) forever.
-            await file.delete();
-            _disk.removed(file);
+            if (kept) {
+              // A broken copy would be shown (as nothing) forever.
+              await file.delete();
+              _disk.removed(file);
+            }
           }
         } on FileSystemException {
           // Fall through to the camera.
@@ -333,6 +343,17 @@ final class CameraImages {
       }
     } on FileSystemException {
       // Replaced on the next successful load.
+    }
+  }
+
+  /// Forgets every image of [serial]'s [f], in memory and on disk, so the
+  /// next [load] asks the camera: the file is gone from the camera, or its
+  /// path now holds another shot. A disk read begun before is not shown.
+  void forget(String serial, CameraFile f) {
+    final id = '$serial|${f.key}';
+    _forgotten[id] = (_forgotten[id] ?? 0) + 1;
+    for (final size in GrImageSize.values) {
+      evict(serial, f, size);
     }
   }
 

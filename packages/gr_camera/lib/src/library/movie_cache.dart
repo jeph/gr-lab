@@ -158,6 +158,20 @@ final class MovieCache {
     return download;
   }
 
+  /// Deletes [serial]'s copy of [f], at once so [cached] no longer finds
+  /// it: the file is gone from the camera, or its path now holds another
+  /// movie. A copy in progress is the camera's current file and stays.
+  void forget(String serial, CameraFile f) {
+    final file = fileFor(serial, f);
+    try {
+      if (!file.existsSync()) return;
+      file.deleteSync();
+      _disk.removed(file);
+    } on FileSystemException {
+      // Already gone.
+    }
+  }
+
   /// Completes when the disk budget has caught up with every copy made or
   /// handed out so far.
   @visibleForTesting

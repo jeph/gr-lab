@@ -80,6 +80,16 @@ final class FileInfo {
   /// thumbnails and previews are stored unrotated.
   final int? orientation;
 
+  /// \[design\] Whether this and [other], read for one camera path at
+  /// different times, describe the same file. The listing gives names only
+  /// (http-api.md §2.1), so a path that comes back with different content
+  /// (another card, a file deleted and shot again) shows only in `/info`:
+  /// the size and capture time are what it reports per file that tell two
+  /// shots apart. Two shots at one path with the same size, taken in the
+  /// same second, count as one.
+  bool sameContent(FileInfo other) =>
+      size == other.size && taken == other.taken;
+
   /// Compact form for the on-device cache, read back by [FileInfo.fromJson].
   Map<String, Object?> toJson() => {
     if (taken != null) 't': taken!.toIso8601String(),

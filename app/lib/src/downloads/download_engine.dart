@@ -74,6 +74,11 @@ final class DownloadJob {
   /// may have happened.
   bool _saving = false;
 
+  /// The link the copies kept in the job's folder were made on. A copy
+  /// from an earlier link may be of another file than the one now at its
+  /// path (another card, a file deleted and shot again).
+  CameraLibrary? _copiedOn;
+
   Map<String, Object?> _toJson() => {
     'id': id,
     'serial': serial,
@@ -221,13 +226,17 @@ final class DownloadProgress {
 ///
 /// The queue and the record of downloaded files live in
 /// `<dataDir>/downloads.json`, so the queue survives restarts and badges know
-/// what is already on the phone. Files go to `<cacheDir>/downloads/<job>/`
-/// first and are handed to [MediaSaver] per shot. A transfer interrupted by
-/// a lost connection or a pause restarts that file from the beginning once
-/// the camera is back (the camera has no ranged downloads). A shot the app
-/// stopped while saving comes back failed with [DownloadSaveInterrupted]
-/// instead of being saved again, as the photo library cannot be asked
-/// whether it took the shot.
+/// what is already on the phone. A camera path can come back with another
+/// file, so each record keeps what the camera reported of the file saved,
+/// and the library's checks ([fileStale], [checkFile]) drop a record that
+/// no longer matches. Files go to `<cacheDir>/downloads/<job>/` first and
+/// are handed to [MediaSaver] per shot. A transfer interrupted by a pause
+/// restarts that file from the beginning (the camera has no ranged
+/// downloads) and keeps the shot's files finished before it; after a lost
+/// connection the whole shot is copied again, as the camera may hold other
+/// files at those paths by then. A shot the app stopped while saving comes
+/// back failed with [DownloadSaveInterrupted] instead of being saved again,
+/// as the photo library cannot be asked whether it took the shot.
 final class DownloadEngine extends ChangeNotifier {
   new({
     required this.dataDir,
@@ -262,7 +271,11 @@ final class DownloadEngine extends ChangeNotifier {
   late final Future<void> _ready;
   late final JsonFile _file = JsonFile(File('${dataDir.path}/downloads.json'));
   final List<DownloadJob> _jobs = [];
-  final Map<String, Set<String>> _downloaded = {};
+
+  /// Per camera, the files saved to the phone, each with the size and
+  /// capture time its camera reported when it was saved (null when the
+  /// camera did not answer, and for records from before they were kept).
+  final Map<String, Map<String, FileInfo?>> _downloaded = {};
   int _nextId = 0;
 
   bool _looping = false;
@@ -324,7 +337,7 @@ final class DownloadEngine extends ChangeNotifier {
   }
 
   bool isFileDownloaded(String serial, CameraFile f) =>
-      _downloaded[serial]?.contains(f.key) ?? false;
+      _downloaded[serial]?.containsKey(f.key) ?? false;
 
   /// Some file of [shot] was saved to the phone: the grid's mark and the
   /// "Not downloaded" filter use this. The app cannot see whether it is
@@ -338,6 +351,54 @@ final class DownloadEngine extends ChangeNotifier {
   /// only the JPEG saved still offers its RAW.
   bool areFilesDownloaded(String serial, Iterable<CameraFile> files) =>
       files.every((f) => isFileDownloaded(serial, f));
+
+  /// The library found that [serial]'s camera path [f] left the listing,
+  /// or now holds another file than its cached info describes. A download
+  /// recorded without the camera's info cannot be told apart from a file
+  /// that comes to that path later, so its record goes; one recorded with
+  /// it waits for [checkFile], so a card taken out and put back keeps its
+  /// marks.
+  Future<void> fileStale(String serial, CameraFile f) async {
+    await _ready;
+    final records = _downloaded[serial];
+    if (records == null ||
+        !records.containsKey(f.key) ||
+        records[f.key] != null) {
+      return;
+    }
+    records.remove(f.key);
+    _save();
+    _notify();
+  }
+
+  /// [serial]'s camera reports [now] for its path [f]. A download recorded
+  /// for another file at that path ([FileInfo.sameContent]) no longer
+  /// counts. One recorded without the camera's info takes [now] when
+  /// [vouched] (the library's info of the file, cached before, matches
+  /// [now]) and goes otherwise.
+  Future<void> checkFile(
+    String serial,
+    CameraFile f,
+    FileInfo now, {
+    required bool vouched,
+  }) async {
+    await _ready;
+    final records = _downloaded[serial];
+    if (records == null || !records.containsKey(f.key)) return;
+    final recorded = records[f.key];
+    if (recorded != null && recorded.sameContent(now)) return;
+    if (recorded == null && vouched) {
+      records[f.key] = _identity(now);
+      _save();
+      return;
+    }
+    records.remove(f.key);
+    _save();
+    _notify();
+  }
+
+  static FileInfo _identity(FileInfo info) =>
+      FileInfo(taken: info.taken, size: info.size);
 
   /// Files of [serial]'s camera in a queued or running job.
   bool isFileQueued(String serial, CameraFile f) =>
@@ -572,16 +633,22 @@ final class DownloadEngine extends ChangeNotifier {
       // Every file comes, even one saved before: the user asked again,
       // perhaps after deleting it from the phone.
       final files = List.of(job._files);
+      // Copies kept on an earlier link may be of other files.
+      if (!identical(job._copiedOn, current)) await _deleteTemp(job);
+      job._copiedOn = current;
       final local = await _transfer(job, files, current);
+      final identities = [for (final f in files) await _identify(f, current)];
+      if (_stop case final reason?) throw _StopSignal(reason);
       await _markSaving(job);
       try {
         await media.saveShot(local, album: album);
       } finally {
         job._saving = false;
       }
-      _downloaded.putIfAbsent(job.serial, () => {}).addAll([
-        for (final f in files) f.key,
-      ]);
+      final records = _downloaded.putIfAbsent(job.serial, () => {});
+      for (var i = 0; i < files.length; i++) {
+        records[files[i].key] = identities[i];
+      }
       if (_stop == _Stop.cancel) throw const _StopSignal(_Stop.cancel);
       _jobs.remove(job);
       _batchDone++;
@@ -666,6 +733,17 @@ final class DownloadEngine extends ChangeNotifier {
     return !identical(link.value, current);
   }
 
+  /// The size and capture time [current]'s camera reports for [f], kept
+  /// with its record; null when the camera does not answer, or the
+  /// transfer is stopped meanwhile.
+  Future<FileInfo?> _identify(CameraFile f, CameraLibrary current) async {
+    try {
+      return _identity(await current.fileInfo(f, abort: _abort?.future));
+    } on Object {
+      return null;
+    }
+  }
+
   Future<List<File>> _transfer(
     DownloadJob job,
     List<CameraFile> files,
@@ -718,10 +796,20 @@ final class DownloadEngine extends ChangeNotifier {
     }
     final downloaded = json['downloaded'];
     if (downloaded is Map<String, Object?>) {
-      for (final MapEntry(:key, :value) in downloaded.entries) {
-        if (value is List<Object?>) {
-          _downloaded[key] = {...value.whereType<String>()};
-        }
+      for (final MapEntry(key: serial, :value) in downloaded.entries) {
+        _downloaded[serial] = switch (value) {
+          // Version 1 kept the file keys only.
+          final List<Object?> keys => {
+            for (final key in keys.whereType<String>()) key: null,
+          },
+          final Map<String, Object?> records => {
+            for (final MapEntry(:key, :value) in records.entries)
+              key: value is Map<String, Object?>
+                  ? FileInfo.fromJson(value)
+                  : null,
+          },
+          _ => {},
+        };
       }
     }
   }
@@ -740,11 +828,14 @@ final class DownloadEngine extends ChangeNotifier {
   }
 
   Map<String, Object?> _snapshot() => {
-    'version': 1,
+    'version': 2,
     'jobs': [for (final j in _jobs) j._toJson()],
     'downloaded': {
-      for (final MapEntry(:key, :value) in _downloaded.entries)
-        key: value.toList(),
+      for (final MapEntry(key: serial, value: records) in _downloaded.entries)
+        serial: {
+          for (final MapEntry(:key, :value) in records.entries)
+            key: value?.toJson(),
+        },
     },
   };
 

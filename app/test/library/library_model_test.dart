@@ -8,12 +8,17 @@ import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart' show GrHttpClient;
 import 'package:grlab/src/data/cameras.dart';
+import 'package:grlab/src/downloads/download_engine.dart';
 import 'package:grlab/src/library/library_model.dart';
+import 'package:grlab/src/library/library_scope.dart';
 import 'package:grlab/src/library/shot.dart';
+
+import '../support/test_app.dart' show RecordingMediaSaver;
 
 const serial = '1234567';
 final _day1 = DateTime(2026, 11, 4, 9, 30);
 final _day2 = DateTime(2026, 11, 5, 18, 2, 7);
+final _day3 = DateTime(2026, 11, 6, 7, 45, 12);
 
 List<FakePhoto> card() => [
   FakePhoto('100RICOH', 'R0000001.JPG', _day1, orientation: 6),
@@ -73,6 +78,7 @@ void main() {
   Future<LibraryModel> model([
     String? current = serial,
     Duration infoTimeout = const Duration(seconds: 10),
+    FileCopies? copies,
   ]) async {
     final cameras = await CameraStore.load(await data.createTemp());
     if (current != null) await cameras.add(saved(current));
@@ -81,6 +87,7 @@ void main() {
       cameras: cameras,
       link: link,
       queue: queue,
+      copies: copies,
       changeDebounce: const Duration(milliseconds: 10),
       saveDelay: Duration.zero,
       infoTimeout: infoTimeout,
@@ -315,6 +322,190 @@ void main() {
     // client's own 15-second deadline.
     await stalling.closed.future.timeout(const Duration(seconds: 5));
     await until(() => queue.running == 0, reason: 'slot freed');
+  });
+
+  group('a path that comes back with another file', () {
+    late DownloadEngine downloads;
+    late CameraImages images;
+    late MovieCache movies;
+
+    setUp(() async {
+      downloads = DownloadEngine(
+        dataDir: await data.createTemp(),
+        cacheDir: cache,
+        media: RecordingMediaSaver(),
+        link: link,
+        transportGrace: Duration.zero,
+      );
+      images = CameraImages(cacheDir: cache, link: link, queue: queue);
+      movies = MovieCache(cacheDir: cache);
+    });
+
+    tearDown(() async {
+      await downloads.whenIdle();
+      await downloads.flush();
+      downloads.dispose();
+      await images.diskSettled;
+      await movies.diskSettled;
+    });
+
+    /// A model whose checks reach the caches, as in the app.
+    Future<LibraryModel> checked() => model(
+      serial,
+      const Duration(seconds: 10),
+      LibraryCopies(images: images, movies: movies, downloads: downloads),
+    );
+
+    Future<LibraryModel> listed() async {
+      final m = await checked();
+      link.value = connected();
+      await until(() => m.shots != null && !m.refreshing, reason: 'listing');
+      return m;
+    }
+
+    /// When the shot [f]'s cached thumbnail shows was taken.
+    Future<String> thumbOf(CameraFile f) async => latin1.decode(
+      (await images.load(serial, f, GrImageSize.thumb).future)!,
+    );
+
+    /// Puts another shot, taken at [taken], at [file]'s path.
+    void replace(
+      String file,
+      DateTime taken, {
+      String storage = GrStorageId.sd,
+      Duration? videoLength,
+    }) {
+      expect(
+        camera.removePhoto(GrPhotoPath('100RICOH', file), storage: storage),
+        isTrue,
+      );
+      camera.addPhoto(
+        FakePhoto(
+          '100RICOH',
+          file,
+          taken,
+          storage: storage,
+          videoLength: videoLength,
+        ),
+      );
+    }
+
+    test('after a card swap offline, the thumbnail, movie and download mark '
+        'follow the new files once connected again', () async {
+      final m = await listed();
+      final pair = m.shots!.firstWhere((s) => s.isPair);
+      final jpeg = pair.jpeg!;
+      final movie = m.shots!.firstWhere((s) => s.isVideo).primary;
+      // As the grid and the viewer do.
+      for (final f in [...pair.files, movie]) {
+        await m.ensureInfo(f);
+      }
+      expect(await thumbOf(jpeg), contains(_day1.toIso8601String()));
+      final oldMovie = await (await movies.download(link.value!, movie).done)
+          .readAsBytes();
+      await downloads.enqueue(serial, [pair]);
+      await downloads.whenIdle();
+      expect(downloads.areFilesDownloaded(serial, pair.files), isTrue);
+      await m.flush();
+
+      // Another card holds other shots under the JPEG's and the movie's
+      // names; the DNG is the same file.
+      link.value = null;
+      replace('R0000001.JPG', _day3);
+      replace('R0000002.MOV', _day3, videoLength: const Duration(seconds: 9));
+      // Offline, what is cached still shows.
+      expect(await thumbOf(jpeg), contains(_day1.toIso8601String()));
+      expect(movies.cached(serial, movie), isNotNull);
+      expect(downloads.isFileDownloaded(serial, jpeg), isTrue);
+
+      link.value = connected();
+      await until(
+        () => m.revision(jpeg) > 0 && m.revision(movie) > 0,
+        reason: 'background checks',
+      );
+      expect(m.revision(pair.raw!), 0);
+      expect(m.info(jpeg)?.taken, _day3);
+      expect(await thumbOf(jpeg), contains(_day3.toIso8601String()));
+      expect(movies.cached(serial, movie), isNull);
+      final newMovie = await (await movies.download(link.value!, movie).done)
+          .readAsBytes();
+      expect(newMovie, isNot(oldMovie));
+      await until(
+        () => !downloads.isFileDownloaded(serial, jpeg),
+        reason: 'JPEG mark dropped',
+      );
+      await until(() => m.info(pair.raw!) != null, reason: 'DNG checked');
+      await pumpEventQueue();
+      expect(downloads.isFileDownloaded(serial, pair.raw!), isTrue);
+    });
+
+    test('a file deleted and shot again drops its thumbnail and download '
+        'mark', () async {
+      final m = await listed();
+      final shot = m.shots!.firstWhere(
+        (s) => s.storage == GrStorageId.internal,
+      );
+      final f = shot.primary;
+      await m.ensureInfo(f);
+      expect(await thumbOf(f), contains(_day2.toIso8601String()));
+      await downloads.enqueue(serial, [shot]);
+      await downloads.whenIdle();
+      expect(downloads.isFileDownloaded(serial, f), isTrue);
+
+      expect(camera.removePhoto(f.path, storage: GrStorageId.internal), isTrue);
+      await m.refresh();
+      expect(m.shots!.map((s) => s.key), isNot(contains(shot.key)));
+      expect(m.revision(f), 1);
+
+      camera.addPhoto(
+        FakePhoto(
+          '100RICOH',
+          'R0000001.JPG',
+          _day3,
+          storage: GrStorageId.internal,
+        ),
+      );
+      await m.refresh();
+      expect(m.shots!.map((s) => s.key), contains(shot.key));
+      expect(await thumbOf(f), contains(_day3.toIso8601String()));
+      await until(
+        () => !downloads.isFileDownloaded(serial, f),
+        reason: 'mark dropped',
+      );
+    });
+
+    test('download marks stay for a card taken out and put back, and after '
+        'the cached listing is cleared', () async {
+      final m = await listed();
+      final shot = m.shots!.firstWhere(
+        (s) => s.storage == GrStorageId.internal,
+      );
+      final f = shot.primary;
+      final photo = camera.photos.firstWhere(
+        (p) => p.storage == GrStorageId.internal,
+      );
+      await downloads.enqueue(serial, [shot]);
+      await downloads.whenIdle();
+
+      camera.removePhoto(f.path, storage: GrStorageId.internal);
+      await m.refresh();
+      camera.addPhoto(photo);
+      await m.refresh();
+      await until(() => m.info(f) != null, reason: 'check');
+      await pumpEventQueue();
+      expect(downloads.isFileDownloaded(serial, f), isTrue);
+      await m.flush();
+
+      // The phone clears the app's cache; the record of downloads stays.
+      link.value = null;
+      await File('${cache.path}/$serial/library.json').delete();
+      final fresh = await checked();
+      expect(fresh.shots, isNull);
+      link.value = connected();
+      await until(() => fresh.info(f) != null, reason: 'recorded file checked');
+      await pumpEventQueue();
+      expect(downloads.isFileDownloaded(serial, f), isTrue);
+    });
   });
 }
 

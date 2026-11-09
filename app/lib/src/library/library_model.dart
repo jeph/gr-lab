@@ -9,16 +9,51 @@ import 'package:grlab/src/library/shot.dart';
 
 enum LibraryFilter { all, jpeg, raw, video, notDownloaded }
 
+/// What keeps copies of camera files (images, movies, download records),
+/// told what [LibraryModel] finds out about the file at each path.
+abstract interface class FileCopies {
+  /// Something besides the library's cached info, such as a download,
+  /// depends on which file [serial]'s [f] is, so its path is checked on
+  /// each link even without cached info.
+  bool isRecorded(String serial, CameraFile f);
+
+  /// [serial]'s [f] left the listing, or its path now holds another file
+  /// than the library's cached info describes.
+  void stale(String serial, CameraFile f);
+
+  /// [serial]'s camera reports [now] for [f]. [vouched] when the library's
+  /// info of the path, cached before, matches it.
+  void checked(
+    String serial,
+    CameraFile f,
+    FileInfo now, {
+    required bool vouched,
+  });
+}
+
 /// The current camera's ([CameraStore.current]) photos as shots, kept per
 /// camera serial in `<cacheDir>/<serial>/library.json` so the grid appears
 /// at once and offline. Refreshes whenever the camera connects and when its
 /// `/v1/changes` socket reports a storage change.
+///
+/// A camera path can come back with another file (a card swapped, a shot
+/// deleted and taken again), and the listing gives names only. So on each
+/// link, and again on a refresh the user asks for, the camera's `/info` of
+/// every listed file with cached info or a record in [copies] is read
+/// again in the background, and a cell shown asks for its own at once.
+/// When the answer differs from the cached info ([FileInfo.sameContent]),
+/// or the file left the listing, [copies] drops what it keeps of the file
+/// and [revision] changes. Until the answer comes, and offline, what is
+/// cached shows. \[design\] Not checked: images cached of a file whose
+/// info never arrived, and a path reused while one link lasts (until the
+/// user refreshes).
 final class LibraryModel extends ChangeNotifier {
   new({
     required this.cacheDir,
     required this.cameras,
     required this.link,
     required this.queue,
+    this.copies,
     this.changeDebounce = const Duration(milliseconds: 800),
     this.saveDelay = const Duration(seconds: 2),
     this.infoTimeout = const Duration(seconds: 10),
@@ -27,6 +62,10 @@ final class LibraryModel extends ChangeNotifier {
     cameras.addListener(_followCurrent);
     _followCurrent();
   }
+
+  /// Told what the checks find, so it drops what it keeps of a file that
+  /// is gone or replaced.
+  final FileCopies? copies;
 
   final Directory cacheDir;
 
@@ -67,6 +106,15 @@ final class LibraryModel extends ChangeNotifier {
   int _generation = 0;
   bool _disposed = false;
 
+  /// Keys of the files whose cached copies the camera confirmed on
+  /// [_confirmedOn], the link they were checked on.
+  final Set<String> _confirmed = {};
+  CameraLibrary? _confirmedOn;
+
+  /// Background `/info` checks on [_confirmedOn].
+  final List<RequestTicket<FileInfo>> _checks = [];
+  final Map<String, int> _revisions = {};
+
   /// The camera whose listing this is. Lags behind [CameraStore.current]
   /// while the previous camera's listing is saved.
   String? get serial => _serial;
@@ -88,6 +136,10 @@ final class LibraryModel extends ChangeNotifier {
 
   FileInfo? info(CameraFile f) => _info[f.key];
 
+  /// Changes each time [f]'s path turns out to hold another file than the
+  /// one cached, so an image of it shown is loaded again.
+  int revision(CameraFile f) => _revisions[f.key] ?? 0;
+
   /// Completes when the model has switched to the current camera's
   /// library: its cached listing is read and, when it is connected, its
   /// refresh has started.
@@ -101,6 +153,20 @@ final class LibraryModel extends ChangeNotifier {
   CameraLibrary? get _ownLink {
     final current = link.value;
     return current != null && current.serial == _serial ? current : null;
+  }
+
+  /// [_ownLink], after dropping the confirmations and checks of a previous
+  /// link: a new link may reach another card.
+  CameraLibrary? _confirming() {
+    final current = _ownLink;
+    if (identical(current, _confirmedOn)) return current;
+    _confirmedOn = current;
+    _confirmed.clear();
+    for (final check in _checks) {
+      check.cancel();
+    }
+    _checks.clear();
+    return current;
   }
 
   void _followCurrent() {
@@ -122,6 +188,7 @@ final class LibraryModel extends ChangeNotifier {
     _shots = null;
     _files = const [];
     _info.clear();
+    _revisions.clear();
     _listedAt = null;
     _error = null;
     // A refresh or cache read for the previous camera may still be pending;
@@ -145,9 +212,13 @@ final class LibraryModel extends ChangeNotifier {
     _onLink();
   }
 
-  /// Reads the camera's listing again. Does nothing while offline; a
-  /// refresh requested during one runs once more afterwards.
-  Future<void> refresh() => _refresh('user');
+  /// Reads the camera's listing again and checks every cached file against
+  /// it once more. Does nothing while offline; a refresh requested during
+  /// one runs once more afterwards.
+  Future<void> refresh() {
+    _confirmed.clear();
+    return _refresh('user');
+  }
 
   /// [reason] says why the listing is read, for the trace.
   Future<void> _refresh(String reason) async {
@@ -163,12 +234,18 @@ final class LibraryModel extends ChangeNotifier {
     try {
       final files = await current.listFiles(reason: reason);
       if (generation != _generation) return;
+      final keys = {for (final f in files) f.key};
+      final gone = [
+        for (final f in _files)
+          if (!keys.contains(f.key)) f,
+      ];
       _files = files;
       _shots = groupShots(files);
       _listedAt = DateTime.now();
       _error = null;
-      final keys = {for (final f in files) f.key};
       _info.removeWhere((k, _) => !keys.contains(k));
+      gone.forEach(_stale);
+      _revalidate(current);
       _scheduleSave(immediately: true);
     } on Object catch (e) {
       if (generation != _generation) return;
@@ -190,41 +267,99 @@ final class LibraryModel extends ChangeNotifier {
     }
   }
 
-  /// Fetches a file's info from the camera if it is not known yet. Returns
-  /// the known info, or null when offline or the request failed.
+  /// Fetches a file's info from the camera if it is not known, or not
+  /// confirmed on this link yet. Returns the info, the cached info when the
+  /// request failed, or null when offline and nothing is cached.
   Future<FileInfo?> ensureInfo(CameraFile f) {
     final known = _info[f.key];
-    if (known != null) return Future.value(known);
     final ticket = requestInfo(f);
-    if (ticket == null) return Future.value();
-    return ticket.future.then<FileInfo?>((i) => i, onError: (Object _) => null);
+    if (ticket == null) return Future.value(known);
+    return ticket.future.then<FileInfo?>(
+      (i) => i,
+      onError: (Object _) => known,
+    );
   }
 
   /// Fetches a file's info from the camera, shared with every other caller
   /// asking for it; cancelling the ticket drops the request if nobody else
-  /// waits. Null when offline. The ticket fails when the request did.
+  /// waits. The cached info when offline or already confirmed on this link;
+  /// null when offline without it. The ticket fails when the request did.
   RequestTicket<FileInfo>? requestInfo(CameraFile f) {
     final known = _info[f.key];
-    if (known != null) return RequestTicket.done(known);
-    final current = _ownLink;
+    final current = _confirming();
+    if (known != null && (current == null || _confirmed.contains(f.key))) {
+      return RequestTicket.done(known);
+    }
     if (current == null) return null;
+    return _requestInfo(f, current);
+  }
+
+  RequestTicket<FileInfo> _requestInfo(
+    CameraFile f,
+    CameraLibrary current, {
+    bool background = false,
+  }) {
     final generation = _generation;
     final key = '${current.serial}|$generation|${f.key}';
-    return _infoRequests.join(key, current, (signal) async {
-      // Past the deadline the request closes at once, freeing its slot.
-      final info = await current.fileInfo(f, abort: signal.aborted);
-      if (generation == _generation) {
-        _info[f.key] = info;
-        _scheduleSave();
-        _notify();
+    return _infoRequests.join(
+      key,
+      current,
+      (signal) async {
+        // Past the deadline the request closes at once, freeing its slot.
+        final info = await current.fileInfo(f, abort: signal.aborted);
+        if (generation == _generation) _accept(f, info, current);
+        return info;
+      },
+      timeout: infoTimeout,
+      background: background,
+    );
+  }
+
+  /// [info] is what [from]'s camera says of [f] now.
+  void _accept(CameraFile f, FileInfo info, CameraLibrary from) {
+    final known = _info[f.key];
+    _info[f.key] = info;
+    final same = known != null && known.sameContent(info);
+    if (known != null && !same) _stale(f);
+    if (identical(_confirming(), from)) _confirmed.add(f.key);
+    copies?.checked(from.serial, f, info, vouched: same);
+    _scheduleSave();
+    _notify();
+  }
+
+  /// Reads again, in the background, the info of every listed file not
+  /// confirmed on [current] yet that has cached info or a record in
+  /// [copies]. Without either, there is nothing the answer could disprove.
+  void _revalidate(CameraLibrary current) {
+    if (!identical(_confirming(), current)) return;
+    for (final f in _files) {
+      if (_confirmed.contains(f.key)) continue;
+      if (!_info.containsKey(f.key) &&
+          !(copies?.isRecorded(current.serial, f) ?? false)) {
+        continue;
       }
-      return info;
-    }, timeout: infoTimeout);
+      final check = _requestInfo(f, current, background: true);
+      _checks.add(check);
+      // A check that fails leaves the file unconfirmed: the next link, or
+      // a cell showing it, asks again.
+      unawaited(
+        check.future
+            .then<void>((_) {}, onError: (Object _) {})
+            .whenComplete(() => _checks.remove(check)),
+      );
+    }
+  }
+
+  /// [f]'s cached copies no longer show what is at its path.
+  void _stale(CameraFile f) {
+    _revisions[f.key] = revision(f) + 1;
+    _confirmed.remove(f.key);
+    if (_serial case final serial?) copies?.stale(serial, f);
   }
 
   void _onLink() {
     if (_loadingCache) return;
-    final current = _ownLink;
+    final current = _confirming();
     if (current == null) {
       _subscribeChanges(null);
       _notify();
@@ -307,6 +442,9 @@ final class LibraryModel extends ChangeNotifier {
     cameras.removeListener(_followCurrent);
     _changeTimer?.cancel();
     unawaited(_changes?.cancel());
+    for (final check in _checks) {
+      check.cancel();
+    }
     if (_saveTimer != null) {
       _saveTimer!.cancel();
       _save();
