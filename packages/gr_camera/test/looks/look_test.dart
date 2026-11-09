@@ -1,0 +1,231 @@
+import 'dart:typed_data';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:gr_camera/gr_camera.dart';
+import 'package:gr_camera/src/looks/look.dart';
+import 'package:gr_fake_camera/gr_fake_camera.dart';
+import 'package:gr_protocol/gr_protocol.dart';
+
+Look _preset(int i) =>
+    Look.fromBytes(Uint8List.fromList(FakeLook.presets[i].data))!;
+
+/// Header `[version][byte 1][base][count]`, then `[id][value]` pairs.
+Uint8List _bytes(List<int> header, List<int> parameters) =>
+    Uint8List.fromList([...header, ...parameters]);
+
+void main() {
+  test('a look reads its base and the parameters GR Lab knows, in the '
+      'order it lists them', () {
+    final look = Look.fromBytes(
+      _bytes([1, 0, 0x06], [3, 0x02, 0xff, 0x00, 0x01, 0x17, 0x02]),
+    )!;
+    expect(look.base, LookBase.positiveFilm);
+    expect(look.unknownBaseNumber, isNull);
+    expect(look.values, {
+      LookParameter.key: -1,
+      LookParameter.saturation: 1,
+      LookParameter.grainStrength: 2,
+    });
+    expect(look.values.keys.first, LookParameter.key, reason: 'look order');
+    expect(look.valueOf(LookParameter.hue), isNull);
+  });
+
+  test('a look writes the header, each parameter, then zeros up to the '
+      "slot's 56 bytes", () {
+    final look = Look.fromBytes(_bytes([2, 5, 0x00, 1], [0x03, 0xfe]))!;
+    expect(look.toBytes(), [
+      2, 5, 0x00, 1, 0x03, 0xfe, //
+      ...List.filled(50, 0),
+    ]);
+  });
+
+  test('a camera look with a base, parameter and header GR Lab does not '
+      'know writes back unchanged', () {
+    final wire = Uint8List.fromList([
+      4, 9, 0x7a, 3, 0x02, 0x01, 0x6f, 0x05, 0x14, 0xfd, //
+      ...List.filled(46, 0),
+    ]);
+    final look = Look.fromBytes(wire)!;
+    expect(look.base, isNull);
+    expect(look.unknownBaseNumber, 0x7a);
+    expect(look.values, {LookParameter.key: 1, LookParameter.clarity: -3});
+    expect(look.toBytes(), wire);
+    expect(look.withValue(LookParameter.key, 2).toBytes(), [
+      4,
+      9,
+      0x7a,
+      3,
+      0x02,
+      0x02,
+      0x6f,
+      0x05,
+      0x14,
+      0xfd,
+      ...wire.skip(10),
+    ], reason: 'an edit keeps what GR Lab does not know');
+  });
+
+  test('a look saved shorter, before looks were padded, still reads and '
+      'writes back padded', () {
+    final saved = _bytes([1, 0, 0x01, 1], [0x00, 0x02]);
+    final look = Look.fromBytes(saved)!;
+    expect(look.base, LookBase.vivid);
+    expect(look.valueOf(LookParameter.saturation), 2);
+    expect(look.toBytes(), [...saved, ...List.filled(50, 0)]);
+    expect(Look.fromBytes(Uint8List.fromList([1, 0, 0x01])), isNull);
+  });
+
+  test('a new base keeps the values both bases share, drops the rest and '
+      'starts the others in range', () {
+    final positive = _preset(0).withValue(LookParameter.sharpness, 3);
+    final bleach = positive.withBase(LookBase.bleachBypass);
+
+    expect(bleach.base, LookBase.bleachBypass);
+    expect(bleach.blob.version, positive.blob.version);
+    expect(bleach.blob.reserved, positive.blob.reserved);
+    expect(bleach.values, {
+      LookParameter.saturation: 1,
+      LookParameter.hue: 0,
+      LookParameter.key: -1,
+      LookParameter.contrast: 0,
+      LookParameter.contrastHigh: 0,
+      LookParameter.contrastLow: 0,
+      LookParameter.sharpness: 3,
+      // Bleach-bypass toning has no 0 on the camera: Normal is 1.
+      LookParameter.toningBleachBypass: 1,
+      LookParameter.shading: 0,
+      LookParameter.clarity: 0,
+    });
+    expect(
+      [for (final e in bleach.blob.parameters) e.parameter.raw],
+      [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x09, 0x13, 0x14],
+      reason: 'wire-id order',
+    );
+  });
+
+  test('a filter base carries the custom filter bytes', () {
+    final mono = _preset(4).withBase(LookBase.monotone);
+    expect(mono.valueOf(LookParameter.filterEffectBlueLow), 0);
+    expect(mono.valueOf(LookParameter.saturation), isNull);
+  });
+
+  test('a new look copies the header of a camera look and starts every '
+      'parameter in range', () {
+    final template = Look.fromBytes(_bytes([4, 7, 0x00, 0], []))!;
+    final hdr = Look.onBase(LookBase.hdrTone, template: template);
+    expect(hdr.toBytes().take(4), [4, 7, 0x09, 4]);
+    expect(hdr.values, {
+      LookParameter.saturation: 0,
+      LookParameter.hue: 0,
+      LookParameter.toningHdr: 0,
+      LookParameter.hdrStrength: 1,
+    });
+  });
+
+  test('a value is set in place, or added when the look lacks it', () {
+    final look = _preset(0);
+    final keyed = look.withValue(LookParameter.key, 2);
+    expect(keyed.values.keys.toList().indexOf(LookParameter.key), 2);
+    expect(keyed.valueOf(LookParameter.key), 2);
+    expect(keyed.values, hasLength(look.values.length));
+
+    final toned = look.withValue(LookParameter.toningRetro, -3);
+    expect(toned.values.keys.last, LookParameter.toningRetro);
+    expect(toned.valueOf(LookParameter.toningRetro), -3);
+  });
+
+  test('the same look in another order or format version still matches', () {
+    final look = _preset(2);
+    final shuffled = lookOf(
+      BleImageControlBlob(
+        version: 1,
+        reserved: look.blob.reserved,
+        base: look.blob.base,
+        parameters: look.blob.parameters.reversed.toList(),
+      ),
+    );
+    expect(look.sameAs(shuffled), isTrue);
+    expect(look.sameAs(look.withValue(LookParameter.hue, 0)), isFalse);
+    expect(look.sameAs(look.withBase(LookBase.positiveFilm)), isFalse);
+    expect(
+      look.sameAs(
+        lookOf(
+          BleImageControlBlob(
+            version: look.blob.version,
+            reserved: look.blob.reserved,
+            base: look.blob.base,
+            parameters: look.blob.parameters.skip(1).toList(),
+          ),
+        ),
+      ),
+      isFalse,
+    );
+  });
+
+  test('the GR IV Monochrome offers the monochrome bases GR WORLD gives it, '
+      'the GR IV the colour ones', () {
+    expect(
+      lookBases(GrModel.gr4Monochrome),
+      containsAllInOrder([LookBase.standardMono, LookBase.solarization]),
+    );
+    expect(
+      lookBases(GrModel.gr4Monochrome),
+      isNot(contains(LookBase.pictorialist)),
+      reason: 'GR WORLD gives Pictorialist to the GR IVx Monochrome only',
+    );
+    expect(lookBases(GrModel.gr4Monochrome), isNot(contains(LookBase.vivid)));
+    expect(
+      lookBases(GrModel.gr4),
+      containsAllInOrder([LookBase.standard, LookBase.crossProcess]),
+    );
+    expect(lookBases(GrModel.gr4), hasLength(14));
+    expect(lookBases(GrModel.gr4), isNot(contains(LookBase.standardMono)));
+    expect(lookBases(GrModel.gr4x), isNot(contains(LookBase.palette)));
+  });
+
+  test("a look is offered by a body whose bases include the look's", () {
+    final positive = _preset(0);
+    expect(positive.offeredBy(GrModel.gr4), isTrue);
+    expect(positive.offeredBy(GrModel.gr4Monochrome), isFalse);
+    final solid = positive.withBase(LookBase.solid);
+    expect(solid.offeredBy(GrModel.gr4Monochrome), isTrue);
+    expect(solid.offeredBy(GrModel.gr4Hdf), isFalse);
+    final unknown = Look.fromBytes(_bytes([1, 0, 0x7a, 0], []))!;
+    expect(unknown.offeredBy(GrModel.gr4), isFalse);
+  });
+
+  test('a choice range covers its named values up to the last one', () {
+    for (final p in LookParameter.values) {
+      final range = lookRange(p);
+      final choices = lookChoices(p);
+      if (range?.kind != LookValueKind.choice) {
+        expect(
+          range == null || choices == null,
+          isTrue,
+          reason: '$p: a number has no names',
+        );
+        continue;
+      }
+      expect(choices, isNotNull, reason: '$p');
+      expect(range!.min, greaterThanOrEqualTo(0), reason: '$p');
+      expect(range.max, choices!.length - 1, reason: '$p');
+    }
+    // Named, but its custom filters' values are unknown, so not editable.
+    expect(lookChoices(LookParameter.filterEffect), [
+      LookChoice.off,
+      LookChoice.customFilter1,
+      LookChoice.customFilter2,
+      LookChoice.customFilter3,
+      LookChoice.customFilter4,
+    ]);
+    expect(lookRange(LookParameter.filterEffect), isNull);
+    // GR WORLD names Off, but the camera starts these at 1.
+    for (final p in [
+      LookParameter.toningBleachBypass,
+      LookParameter.hdrStrength,
+    ]) {
+      expect(lookChoices(p)?.first, LookChoice.off);
+      expect((lookRange(p)!.min, lookRange(p)!.max), (1, 3));
+    }
+  });
+}

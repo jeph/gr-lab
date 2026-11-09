@@ -583,7 +583,7 @@ class _ImageControlRow extends StatefulWidget {
 
 class _ImageControlRowState extends State<_ImageControlRow> {
   late final LibraryContext _library = LibraryScope.of(context);
-  BleImageControlBlob? _look;
+  Look? _look;
   bool _saving = false;
   bool _started = false;
 
@@ -607,14 +607,11 @@ class _ImageControlRowState extends State<_ImageControlRow> {
     }
   }
 
-  Future<void> _save(BleImageControlBlob look) async {
+  Future<void> _save(Look look) async {
     final l10n = context.l10n;
     final store = AppScope.of(context).looks;
     final messenger = ScaffoldMessenger.of(context);
-    final name = await askLookName(
-      context,
-      initial: baseLabel(l10n, look.base),
-    );
+    final name = await askLookName(context, initial: lookBaseLabel(l10n, look));
     if (name == null || !mounted) return;
     setState(() => _saving = true);
     final serial = _library.model.serial;
@@ -629,7 +626,7 @@ class _ImageControlRowState extends State<_ImageControlRow> {
     try {
       await store.add(
         name: name,
-        data: imageControlToBytes(look),
+        data: look.toBytes(),
         source: file.name,
         photo: photo,
       );

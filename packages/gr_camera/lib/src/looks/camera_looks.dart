@@ -1,15 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/src/environment.dart';
+import 'package:gr_camera/src/looks/look.dart';
 import 'package:gr_protocol/gr_protocol.dart';
-
-/// Decodes an Image Control blob, as the Custom slots and `/imgctrl` carry
-/// it (ble.md § Image Control blob); null when [bytes] are not one.
-BleImageControlBlob? imageControlFromBytes(Uint8List bytes) =>
-    GrBleCatalog.imageControl1Data.codec.decode(bytes).value;
-
-/// Encodes [look] as the Custom slots and `/imgctrl` carry it.
-Uint8List imageControlToBytes(BleImageControlBlob look) =>
-    GrBleCatalog.imageControl1Data.codec.encode(look);
 
 /// The longest slot name, in characters: GR WORLD's name editor stops at
 /// 32 (code 0x960724), and Ricoh's GR WORLD page says "up to 32
@@ -22,6 +14,24 @@ const lookNameMaxLength = 32;
 final lookNameCharacters = RegExp(
   r'''[a-zA-Z0-9@#%:.,/+\\"'`~^*=()<>\[\]!?&_\s-]''',
 );
+
+/// [CameraLooks.load] refused a look the connected camera does not offer
+/// ([Look.offeredBy]): its base image is not one the camera's model has,
+/// or is one GR Lab does not know. Nothing was written.
+final class LookNotOffered implements Exception {
+  /// A look on [base] refused by a camera of [model].
+  const new({required this.base, required this.model});
+
+  /// The look's base image; null when GR Lab does not know it.
+  final LookBase? base;
+
+  /// The connected camera's model; null when GR Lab does not know it.
+  final GrModel? model;
+
+  @override
+  String toString() =>
+      'LookNotOffered(base: ${base?.name}, model: ${model?.name})';
+}
 
 /// One Image Control Custom slot (C1–C3) as the camera reported it.
 @immutable
@@ -44,8 +54,8 @@ final class LookSlot {
   /// The slot's Image Control blob as read.
   final Uint8List data;
 
-  /// [data] decoded; null when it is not a blob the layer can read.
-  final BleImageControlBlob? look;
+  /// [data] read as a look; null when it is not one.
+  final Look? look;
 }
 
 /// The camera's Image Control Custom slots C1–C3 over Bluetooth, for one
@@ -105,25 +115,40 @@ final class CameraLooks extends ChangeNotifier {
   /// then the name, as GR WORLD writes them, then reads the slot back into
   /// [slots] and returns it. The camera may keep the look in a form of its
   /// own, so the slot read back can differ from [look]; the trace records
-  /// whether it does. Throws when a write or the read fails, or without a
-  /// link ([BleException] `notConnected`).
+  /// whether it does. Throws [LookNotOffered], before writing anything,
+  /// when the camera's model does not offer [look]'s base image; throws
+  /// when a write or the read fails, or without a link ([BleException]
+  /// `notConnected`).
   Future<LookSlot> load(
     int number, {
     required String name,
-    required BleImageControlBlob look,
+    required Look look,
   }) async {
     RangeError.checkValueInInterval(number, 1, 3, 'number');
     final ble = _session.ble;
     if (ble == null) {
       throw const BleException(BleErrorCode.notConnected, 'no link');
     }
-    final bytes = imageControlToBytes(look);
+    final bytes = look.toBytes();
+    final model = _model;
+    if (!look.offeredBy(model)) {
+      _camera.event('looks.refused', {
+        'slot': number,
+        'name': name,
+        'hex': BleBytes.toHex(bytes),
+        'model': model?.name,
+        'reason': look.base == null
+            ? 'base ${look.unknownBaseNumber} unknown'
+            : '${look.base!.name} not offered by this model',
+      });
+      throw LookNotOffered(base: look.base, model: model);
+    }
     _camera.event('looks.load', {
       'slot': number,
       'name': name,
       'hex': BleBytes.toHex(bytes),
     });
-    await ble.writeImageControlData(number, look);
+    await ble.writeImageControlData(number, look.blob);
     await ble.writeImageControlName(number, name);
     final slot = await _read(ble, number);
     _camera.event('looks.loaded', {
@@ -142,6 +167,12 @@ final class CameraLooks extends ChangeNotifier {
     return slot;
   }
 
+  /// The linked camera's model, as it reported it at connect.
+  GrModel? get _model => switch (_session.identity?.modelName) {
+    final name? => GrModel.fromModelString(name),
+    null => null,
+  };
+
   static Future<LookSlot> _read(GrBleClient ble, int number) async {
     final read = await ble.readImageControl(number);
     final data = read.data.raw;
@@ -149,7 +180,10 @@ final class CameraLooks extends ChangeNotifier {
       number: number,
       name: (read.name.value ?? '').replaceAll('\u0000', ''),
       data: Uint8List.fromList(data),
-      look: read.data.value,
+      look: switch (read.data.value) {
+        final blob? => lookOf(blob),
+        null => null,
+      },
     );
   }
 

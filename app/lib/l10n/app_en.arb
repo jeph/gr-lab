@@ -1565,6 +1565,16 @@
   "@looksNew": {
     "description": "Tooltip of the button that makes a new look in the app."
   },
+  "looksNotOffered": "The camera doesn't offer {base}, so this look can't be loaded into it.",
+  "@looksNotOffered": {
+    "description": "In the look editor, why Load is off: the connected camera's model has no such base image.",
+    "placeholders": {
+      "base": {
+        "type": "String",
+        "description": "The look's base image, as the camera's menu names it."
+      }
+    }
+  },
   "looksOnCamera": "On the camera",
   "@looksOnCamera": {
     "description": "Section label above the camera's three Custom slots."

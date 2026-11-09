@@ -1,8 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:gr_camera/src/looks/look.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 
 /// How a parameter's wire values read.
-enum ImageControlValueKind {
+enum LookValueKind {
   /// A signed adjustment the camera shows as the number itself (`-4`..`+4`).
   steps,
 
@@ -12,12 +13,12 @@ enum ImageControlValueKind {
 
 /// The values a parameter takes on the wire, [min] to [max] in steps of 1.
 @immutable
-final class ImageControlRange {
+final class LookRange {
   /// A range of [kind] from [min] to [max].
   const new(this.kind, this.min, this.max);
 
   /// How the values read.
-  final ImageControlValueKind kind;
+  final LookValueKind kind;
 
   /// The lowest value.
   final int min;
@@ -32,11 +33,11 @@ final class ImageControlRange {
   int get initial => 0.clamp(min, max);
 }
 
-const _steps = ImageControlRange(ImageControlValueKind.steps, -4, 4);
+const _steps = LookRange(LookValueKind.steps, -4, 4);
 
 /// A named value of a choice parameter, as GR WORLD's value formatter
 /// names it (research/protocol/image-control.md §4).
-enum ImageControlChoice {
+enum LookChoice {
   /// Off.
   off,
 
@@ -111,147 +112,133 @@ enum ImageControlChoice {
 /// the camera shows its value as a number. These are the cases of GR
 /// WORLD's value formatter (code 0x95abc8–0x95b7f8,
 /// research/protocol/image-control.md §4).
-List<ImageControlChoice>? imageControlChoices(
-  BleImageControlParameter parameter,
-) => switch (parameter) {
-  BleImageControlParameter.toningMonotone => const [
-    ImageControlChoice.off,
-    ImageControlChoice.sepia,
-    ImageControlChoice.red,
-    ImageControlChoice.green,
-    ImageControlChoice.blue,
-    ImageControlChoice.purple,
+List<LookChoice>? lookChoices(LookParameter parameter) => switch (parameter) {
+  LookParameter.toningMonotone => const [
+    LookChoice.off,
+    LookChoice.sepia,
+    LookChoice.red,
+    LookChoice.green,
+    LookChoice.blue,
+    LookChoice.purple,
   ],
-  BleImageControlParameter.toningCinema ||
-  BleImageControlParameter.grainStrength => const [
-    ImageControlChoice.low,
-    ImageControlChoice.medium,
-    ImageControlChoice.high,
+  LookParameter.toningCinema || LookParameter.grainStrength => const [
+    LookChoice.low,
+    LookChoice.medium,
+    LookChoice.high,
   ],
-  BleImageControlParameter.toningBleachBypass => const [
-    ImageControlChoice.off,
-    ImageControlChoice.normal,
-    ImageControlChoice.cool,
-    ImageControlChoice.warm,
+  LookParameter.toningBleachBypass => const [
+    LookChoice.off,
+    LookChoice.normal,
+    LookChoice.cool,
+    LookChoice.warm,
   ],
-  BleImageControlParameter.toningHdr => const [
-    ImageControlChoice.off,
-    ImageControlChoice.blackAndWhite,
-    ImageControlChoice.sepia,
+  LookParameter.toningHdr => const [
+    LookChoice.off,
+    LookChoice.blackAndWhite,
+    LookChoice.sepia,
   ],
   // GR WORLD tells only 0 (Off) from anything else (On); that 1–4 select
   // custom filters 1–4 is \[inferred\] from the GR IIIx firmware.
-  BleImageControlParameter.filterEffect => const [
-    ImageControlChoice.off,
-    ImageControlChoice.customFilter1,
-    ImageControlChoice.customFilter2,
-    ImageControlChoice.customFilter3,
-    ImageControlChoice.customFilter4,
+  LookParameter.filterEffect => const [
+    LookChoice.off,
+    LookChoice.customFilter1,
+    LookChoice.customFilter2,
+    LookChoice.customFilter3,
+    LookChoice.customFilter4,
   ],
   // That On is 1 is \[inferred\].
-  BleImageControlParameter.grain => const [
-    ImageControlChoice.off,
-    ImageControlChoice.on,
+  LookParameter.grain => const [LookChoice.off, LookChoice.on],
+  LookParameter.grainSize => const [
+    LookChoice.small,
+    LookChoice.medium,
+    LookChoice.large,
   ],
-  BleImageControlParameter.grainSize => const [
-    ImageControlChoice.small,
-    ImageControlChoice.medium,
-    ImageControlChoice.large,
+  LookParameter.hdrStrength => const [
+    LookChoice.off,
+    LookChoice.low,
+    LookChoice.medium,
+    LookChoice.high,
   ],
-  BleImageControlParameter.hdrStrength => const [
-    ImageControlChoice.off,
-    ImageControlChoice.low,
-    ImageControlChoice.medium,
-    ImageControlChoice.high,
-  ],
-  BleImageControlParameter.crossProcess => const [
-    ImageControlChoice.basic,
-    ImageControlChoice.magenta,
-    ImageControlChoice.yellow,
+  LookParameter.crossProcess => const [
+    LookChoice.basic,
+    LookChoice.magenta,
+    LookChoice.yellow,
   ],
   _ => null,
 };
 
-/// [parameter]'s [imageControlChoices] from [min] to the last one, or null
+/// [parameter]'s [lookChoices] from [min] to the last one, or null
 /// when it has none.
-ImageControlRange? _choices(BleImageControlParameter parameter, {int min = 0}) {
-  final choices = imageControlChoices(parameter);
+LookRange? _choices(LookParameter parameter, {int min = 0}) {
+  final choices = lookChoices(parameter);
   if (choices == null) return null;
-  return ImageControlRange(
-    ImageControlValueKind.choice,
-    min,
-    choices.length - 1,
-  );
+  return LookRange(LookValueKind.choice, min, choices.length - 1);
 }
 
 /// The values [parameter] takes, or null when they are not known well
 /// enough to edit; such parameters keep the value the camera gave them.
 ///
-/// Choices run over [imageControlChoices]; where the GR IIIx firmware's
+/// Choices run over [lookChoices]; where the GR IIIx firmware's
 /// settings start a choice at 1, so does the range
 /// (research/protocol/image-control.md §4).
 /// Steps are −4..+4 \[inferred\]: GR WORLD shows the wire value itself and
 /// has no range table; −4..+4 is the GR IIIx firmware's vocabulary (`M4`
 /// to `P4`) as a third-party settings dump reads it.
-ImageControlRange? imageControlRange(BleImageControlParameter parameter) =>
-    switch (parameter) {
-      BleImageControlParameter.saturation ||
-      BleImageControlParameter.hue ||
-      BleImageControlParameter.key ||
-      BleImageControlParameter.contrast ||
-      BleImageControlParameter.contrastHigh ||
-      BleImageControlParameter.contrastLow ||
-      BleImageControlParameter.sharpness ||
-      BleImageControlParameter.toningRetro ||
-      BleImageControlParameter.shading ||
-      BleImageControlParameter.clarity => _steps,
-      // GR WORLD names 0 Off; that the camera takes only 1..3, as the GR
-      // IIIx firmware's settings do, is \[inferred\].
-      BleImageControlParameter.toningBleachBypass ||
-      BleImageControlParameter.hdrStrength => _choices(parameter, min: 1),
-      // The filter effect picks one of four custom filters whose R, G and
-      // B values have an unknown range.
-      BleImageControlParameter.filterEffect => null,
-      // The rest are choices where GR WORLD names the values. The custom
-      // filter values, the solarization type and the GR IVx's Palette
-      // parameters have no names and unknown ranges.
-      _ => _choices(parameter),
-    };
+LookRange? lookRange(LookParameter parameter) => switch (parameter) {
+  LookParameter.saturation ||
+  LookParameter.hue ||
+  LookParameter.key ||
+  LookParameter.contrast ||
+  LookParameter.contrastHigh ||
+  LookParameter.contrastLow ||
+  LookParameter.sharpness ||
+  LookParameter.toningRetro ||
+  LookParameter.shading ||
+  LookParameter.clarity => _steps,
+  // GR WORLD names 0 Off; that the camera takes only 1..3, as the GR
+  // IIIx firmware's settings do, is \[inferred\].
+  LookParameter.toningBleachBypass ||
+  LookParameter.hdrStrength => _choices(parameter, min: 1),
+  // The filter effect picks one of four custom filters whose R, G and
+  // B values have an unknown range.
+  LookParameter.filterEffect => null,
+  // The rest are choices where GR WORLD names the values. The custom
+  // filter values, the solarization type and the GR IVx's Palette
+  // parameters have no names and unknown ranges.
+  _ => _choices(parameter),
+};
 
-const List<BleImageControlParameter> _filter = [
-  BleImageControlParameter.filterEffect,
-  BleImageControlParameter.filterEffectRedHigh,
-  BleImageControlParameter.filterEffectRedLow,
-  BleImageControlParameter.filterEffectGreenHigh,
-  BleImageControlParameter.filterEffectGreenLow,
-  BleImageControlParameter.filterEffectBlueHigh,
-  BleImageControlParameter.filterEffectBlueLow,
+const List<LookParameter> _filter = [
+  LookParameter.filterEffect,
+  LookParameter.filterEffectRedHigh,
+  LookParameter.filterEffectRedLow,
+  LookParameter.filterEffectGreenHigh,
+  LookParameter.filterEffectGreenLow,
+  LookParameter.filterEffectBlueHigh,
+  LookParameter.filterEffectBlueLow,
 ];
 
-const List<BleImageControlParameter> _grain = [
-  BleImageControlParameter.grain,
-  BleImageControlParameter.grainSize,
-  BleImageControlParameter.grainStrength,
+const List<LookParameter> _grain = [
+  LookParameter.grain,
+  LookParameter.grainSize,
+  LookParameter.grainStrength,
 ];
 
-const List<BleImageControlParameter> _tone = [
-  BleImageControlParameter.key,
-  BleImageControlParameter.contrast,
-  BleImageControlParameter.contrastHigh,
-  BleImageControlParameter.contrastLow,
-  BleImageControlParameter.sharpness,
+const List<LookParameter> _tone = [
+  LookParameter.key,
+  LookParameter.contrast,
+  LookParameter.contrastHigh,
+  LookParameter.contrastLow,
+  LookParameter.sharpness,
 ];
 
-const List<BleImageControlParameter> _colour = [
-  BleImageControlParameter.saturation,
-  BleImageControlParameter.hue,
+const List<LookParameter> _colour = [
+  LookParameter.saturation,
+  LookParameter.hue,
   ..._tone,
 ];
 
-const List<BleImageControlParameter> _monoBase = [
-  ..._tone,
-  BleImageControlParameter.toningMonotone,
-];
+const List<LookParameter> _monoBase = [..._tone, LookParameter.toningMonotone];
 
 /// The parameters the camera keeps for [base], in wire-id order: the GR IV
 /// firmware 1.20 setting keys `StillImageControlNo0Param<Base><Param>` and
@@ -259,206 +246,131 @@ const List<BleImageControlParameter> _monoBase = [
 /// matches GR WORLD's parameter ids (research/protocol/image-control.md
 /// §3). A base with the filter effect also carries its custom R, G and B
 /// values. Empty for Palette, whose parameters are \[unknown\].
-List<BleImageControlParameter> imageControlParameters(
-  BleImageControlBase base,
-) => switch (base) {
-  BleImageControlBase.standard || BleImageControlBase.vivid => const [
+List<LookParameter> lookParameters(LookBase base) => switch (base) {
+  LookBase.standard || LookBase.vivid => const [
     ..._colour,
-    BleImageControlParameter.shading,
-    BleImageControlParameter.clarity,
+    LookParameter.shading,
+    LookParameter.clarity,
   ],
-  BleImageControlBase.monotone || BleImageControlBase.highContrast => const [
+  LookBase.monotone || LookBase.highContrast => const [
     ..._monoBase,
     ..._filter,
-    BleImageControlParameter.shading,
-    BleImageControlParameter.clarity,
+    LookParameter.shading,
+    LookParameter.clarity,
     ..._grain,
   ],
-  BleImageControlBase.softMonotone => const [
+  LookBase.softMonotone => const [
     ..._monoBase,
     ..._filter,
-    BleImageControlParameter.shading,
+    LookParameter.shading,
     ..._grain,
   ],
-  BleImageControlBase.hardMonotone ||
-  BleImageControlBase.standardMono ||
-  BleImageControlBase.highContrastMono ||
-  BleImageControlBase.grainy ||
-  BleImageControlBase.solid => const [
+  LookBase.hardMonotone ||
+  LookBase.standardMono ||
+  LookBase.highContrastMono ||
+  LookBase.grainy ||
+  LookBase.solid => const [
     ..._monoBase,
-    BleImageControlParameter.shading,
-    BleImageControlParameter.clarity,
+    LookParameter.shading,
+    LookParameter.clarity,
     ..._grain,
   ],
-  BleImageControlBase.softMono || BleImageControlBase.pictorialist => const [
+  LookBase.softMono || LookBase.pictorialist => const [
     ..._monoBase,
-    BleImageControlParameter.shading,
+    LookParameter.shading,
     ..._grain,
   ],
-  BleImageControlBase.positiveFilm ||
-  BleImageControlBase.negativeFilm => const [
+  LookBase.positiveFilm || LookBase.negativeFilm => const [
     ..._colour,
-    BleImageControlParameter.shading,
-    BleImageControlParameter.clarity,
+    LookParameter.shading,
+    LookParameter.clarity,
     ..._grain,
   ],
-  BleImageControlBase.bleachBypass => const [
+  LookBase.bleachBypass => const [
     ..._colour,
-    BleImageControlParameter.toningBleachBypass,
-    BleImageControlParameter.shading,
-    BleImageControlParameter.clarity,
+    LookParameter.toningBleachBypass,
+    LookParameter.shading,
+    LookParameter.clarity,
   ],
-  BleImageControlBase.retro => const [
+  LookBase.retro => const [
     ..._colour,
-    BleImageControlParameter.toningRetro,
-    BleImageControlParameter.shading,
-    BleImageControlParameter.clarity,
+    LookParameter.toningRetro,
+    LookParameter.shading,
+    LookParameter.clarity,
   ],
-  BleImageControlBase.hdrTone => const [
-    BleImageControlParameter.saturation,
-    BleImageControlParameter.hue,
-    BleImageControlParameter.toningHdr,
-    BleImageControlParameter.hdrStrength,
+  LookBase.hdrTone => const [
+    LookParameter.saturation,
+    LookParameter.hue,
+    LookParameter.toningHdr,
+    LookParameter.hdrStrength,
   ],
-  BleImageControlBase.cineYellow || BleImageControlBase.cineGreen => const [
+  LookBase.cineYellow || LookBase.cineGreen => const [
     ..._colour,
-    BleImageControlParameter.toningCinema,
-    BleImageControlParameter.shading,
-    BleImageControlParameter.clarity,
+    LookParameter.toningCinema,
+    LookParameter.shading,
+    LookParameter.clarity,
     ..._grain,
   ],
-  BleImageControlBase.crossProcess => const [
+  LookBase.crossProcess => const [
     ..._colour,
-    BleImageControlParameter.shading,
-    BleImageControlParameter.clarity,
-    BleImageControlParameter.crossProcess,
+    LookParameter.shading,
+    LookParameter.clarity,
+    LookParameter.crossProcess,
   ],
-  BleImageControlBase.hdrMono => const [
-    BleImageControlParameter.toningHdr,
-    BleImageControlParameter.hdrStrength,
+  LookBase.hdrMono => const [
+    LookParameter.toningHdr,
+    LookParameter.hdrStrength,
   ],
-  BleImageControlBase.solarization => const [
-    BleImageControlParameter.key,
-    BleImageControlParameter.sharpness,
-    BleImageControlParameter.toningMonotone,
-    BleImageControlParameter.clarity,
+  LookBase.solarization => const [
+    LookParameter.key,
+    LookParameter.sharpness,
+    LookParameter.toningMonotone,
+    LookParameter.clarity,
     ..._grain,
-    BleImageControlParameter.solarizationType,
+    LookParameter.solarizationType,
   ],
-  BleImageControlBase.pallet => const [],
+  LookBase.palette => const [],
 };
 
-const List<BleImageControlBase> _colourBases = [
-  BleImageControlBase.standard,
-  BleImageControlBase.vivid,
-  BleImageControlBase.monotone,
-  BleImageControlBase.softMonotone,
-  BleImageControlBase.hardMonotone,
-  BleImageControlBase.highContrast,
-  BleImageControlBase.positiveFilm,
-  BleImageControlBase.bleachBypass,
-  BleImageControlBase.retro,
-  BleImageControlBase.hdrTone,
-  BleImageControlBase.negativeFilm,
-  BleImageControlBase.cineYellow,
-  BleImageControlBase.cineGreen,
-  BleImageControlBase.crossProcess,
+const List<LookBase> _colourBases = [
+  LookBase.standard,
+  LookBase.vivid,
+  LookBase.monotone,
+  LookBase.softMonotone,
+  LookBase.hardMonotone,
+  LookBase.highContrast,
+  LookBase.positiveFilm,
+  LookBase.bleachBypass,
+  LookBase.retro,
+  LookBase.hdrTone,
+  LookBase.negativeFilm,
+  LookBase.cineYellow,
+  LookBase.cineGreen,
+  LookBase.crossProcess,
 ];
 
-const List<BleImageControlBase> _monochromeBases = [
-  BleImageControlBase.standardMono,
-  BleImageControlBase.solid,
-  BleImageControlBase.softMono,
-  BleImageControlBase.highContrastMono,
-  BleImageControlBase.grainy,
-  BleImageControlBase.hdrMono,
-  BleImageControlBase.solarization,
-  BleImageControlBase.pictorialist,
+const List<LookBase> _monochromeBases = [
+  LookBase.standardMono,
+  LookBase.solid,
+  LookBase.softMono,
+  LookBase.highContrastMono,
+  LookBase.grainy,
+  LookBase.hdrMono,
+  LookBase.solarization,
 ];
 
-/// The base images [model] offers: the GR IV Monochrome's monochrome
-/// bases (its manual p.90, plus Solarized and Pictorialist in firmware
-/// 1.10), every other body the colour bases of the GR IV manual p.94.
-/// The GR III family and the GR IVx get the GR IV's list \[inferred\];
-/// GR Lab cannot load looks into a GR III, and the GR IVx's Palette has
-/// \[unknown\] parameters.
-List<BleImageControlBase> imageControlBases(GrModel? model) =>
+/// The base images a camera of [model] offers, split by body as GR WORLD
+/// splits them (table 0x82ca84, `findSupportedByCameraType` 0xda1db4,
+/// observed in GR WORLD 2.0.0's code; research/protocol/image-control.md
+/// §3): the GR IV Monochrome its monochrome bases (0x11–0x16, its manual
+/// p.90) and Solarized, every other body the 14 colour bases. GR WORLD
+/// gives Pictorialist to the GR IVx Monochrome only, a body GR Lab does
+/// not know. The colour list is the GR IV manual's (p.94), and a GR IV HDF
+/// on firmware 1.20 offered exactly it in its `/v1/props` effectList
+/// (observed 2026-11-09). GR WORLD adds Palette for the GR IVx; it is left
+/// out here because its parameters are \[unknown\]. The GR III and GR IIIx
+/// have no way to read or write their slots from outside the camera
+/// (observed in their firmware), so GR Lab cannot load looks into them;
+/// the colour list they get only serves editing saved looks.
+List<LookBase> lookBases(GrModel? model) =>
     model == GrModel.gr4Monochrome ? _monochromeBases : _colourBases;
-
-int _initial(BleImageControlParameter p) => imageControlRange(p)?.initial ?? 0;
-
-/// A look on [base] with every parameter the base has at its
-/// [ImageControlRange.initial] value (0 where the range is unknown). The
-/// header bytes (format version and byte 1) are copied from [template], a
-/// blob the camera produced: GR WORLD never builds a blob itself, so which
-/// header the camera expects of a new one is \[unknown\]
-/// (research/protocol/image-control.md §1).
-BleImageControlBlob newImageControl(
-  BleImageControlBase base, {
-  required BleImageControlBlob template,
-}) => BleImageControlBlob(
-  version: template.version,
-  reserved: template.reserved,
-  base: BleEnumValue.of(base),
-  parameters: [
-    for (final p in imageControlParameters(base))
-      BleImageControlEntry(BleEnumValue.of(p), _initial(p)),
-  ],
-);
-
-/// Reading and editing a look's parameters.
-extension ImageControlEdits on BleImageControlBlob {
-  /// The value of [parameter], or null when the look does not have it.
-  int? valueOf(BleImageControlParameter parameter) {
-    for (final e in parameters) {
-      if (e.parameter.known == parameter) return e.value;
-    }
-    return null;
-  }
-
-  /// This look with [parameter] set to [value], in place when the look has
-  /// it, else added at the end.
-  BleImageControlBlob withValue(BleImageControlParameter parameter, int value) {
-    final entry = BleImageControlEntry(BleEnumValue.of(parameter), value);
-    final has = valueOf(parameter) != null;
-    return _withParameters([
-      for (final e in parameters)
-        if (e.parameter.known == parameter) entry else e,
-      if (!has) entry,
-    ]);
-  }
-
-  /// This look on [base] instead: the parameters [base] has, in wire-id
-  /// order, each keeping its value when this look has it and starting at
-  /// its initial value when not. The header bytes stay. That the camera
-  /// wants exactly its base's parameters is \[inferred\] from the
-  /// firmware's per-base settings.
-  BleImageControlBlob withBase(BleImageControlBase base) => BleImageControlBlob(
-    version: version,
-    reserved: reserved,
-    base: BleEnumValue.of(base),
-    parameters: [
-      for (final p in imageControlParameters(base))
-        BleImageControlEntry(BleEnumValue.of(p), valueOf(p) ?? _initial(p)),
-    ],
-  );
-
-  /// Whether [other] is the same look: the same base image and the same
-  /// value for every parameter, in any order. The header bytes are not
-  /// compared, so a look still matches after the camera stored it in its
-  /// own format version.
-  bool sameLookAs(BleImageControlBlob other) {
-    if (base.raw != other.base.raw) return false;
-    if (parameters.length != other.parameters.length) return false;
-    final values = {for (final e in parameters) e.parameter.raw: e.value};
-    return other.parameters.every((e) => values[e.parameter.raw] == e.value);
-  }
-
-  BleImageControlBlob _withParameters(List<BleImageControlEntry> entries) =>
-      BleImageControlBlob(
-        version: version,
-        reserved: reserved,
-        base: base,
-        parameters: entries,
-      );
-}

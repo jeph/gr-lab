@@ -38,8 +38,8 @@ final class SavedLook {
   /// read from; null for a look made in the app.
   final String? source;
 
-  /// [data] decoded; null when it is not a blob the camera layer can read.
-  BleImageControlBlob? get look => imageControlFromBytes(data);
+  /// [data] read as a look; null when it is not one.
+  Look? get look => Look.fromBytes(data);
 
   SavedLook copyWith({String? name, Uint8List? data}) => SavedLook(
     id: id,

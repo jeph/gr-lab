@@ -161,7 +161,7 @@ class _LooksScreenState extends State<LooksScreen> {
 
   bool _matches(SavedLook saved) {
     if (_filter == LooksFilter.all) return true;
-    final base = saved.look?.base.known;
+    final base = saved.look?.base;
     if (base == null) return false;
     return isMonoBase(base) == (_filter == LooksFilter.mono);
   }
@@ -287,7 +287,10 @@ class _SlotCard extends StatelessWidget {
     final loading = model.loading == number;
     final reading = slot == null;
     return DragTarget<SavedLook>(
-      onWillAcceptWithDetails: (_) => !reading && model.loading == null,
+      onWillAcceptWithDetails: (d) =>
+          !reading &&
+          model.loading == null &&
+          (d.data.look?.offeredBy(model.model) ?? false),
       onAcceptWithDetails: (d) {
         final look = d.data.look;
         if (look == null) return;
@@ -389,7 +392,7 @@ class _SlotCard extends StatelessWidget {
                         Text(
                           look == null
                               ? (reading ? ' ' : l10n.looksUnreadable)
-                              : baseLabel(l10n, look.base),
+                              : lookBaseLabel(l10n, look),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -477,7 +480,7 @@ class _LookRowBody extends StatelessWidget {
   });
 
   final SavedLook saved;
-  final BleImageControlBlob? look;
+  final Look? look;
   final File? photo;
   final List<int> inSlots;
   final Widget menu;
@@ -568,6 +571,7 @@ class _LookMenu extends StatelessWidget {
     final look = saved.look;
     final canLoad =
         look != null &&
+        look.offeredBy(model.model) &&
         model.state == SlotsState.ready &&
         model.loading == null;
     return PopupMenuButton<_LookAction>(

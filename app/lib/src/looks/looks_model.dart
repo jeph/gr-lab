@@ -80,10 +80,10 @@ final class LooksModel extends ChangeNotifier {
   /// The model the connected camera reports, for the base images it offers.
   GrModel? get model => connection.camera?.paired.model;
 
-  /// A blob the camera produced, whose header bytes a new look copies
-  /// (`newImageControl`): a slot's look, else a saved look's; null when
-  /// there is neither.
-  BleImageControlBlob? get template {
+  /// A look the camera produced, whose header a new look copies
+  /// (`Look.onBase`): a slot's look, else a saved look's; null when there
+  /// is neither.
+  Look? get template {
     for (final s in slots ?? const <LookSlot>[]) {
       if (s.look case final look?) return look;
     }
@@ -118,7 +118,7 @@ final class LooksModel extends ChangeNotifier {
     SavedLook? same;
     for (final saved in store.looks) {
       final look = saved.look;
-      if (look == null || !look.sameLookAs(inSlot)) continue;
+      if (look == null || !look.sameAs(inSlot)) continue;
       if (saved.name == slot.name) return saved;
       same ??= saved;
     }
@@ -136,7 +136,7 @@ final class LooksModel extends ChangeNotifier {
   Future<bool> load(
     int number, {
     required String name,
-    required BleImageControlBlob look,
+    required Look look,
   }) async {
     final looks = _looks;
     if (looks == null || _loading != null) return false;

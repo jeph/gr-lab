@@ -13,15 +13,19 @@ const _quietLiveness = GrSessionOptions(
   livenessLossAfter: Duration(hours: 2),
 );
 
-/// The whole app with the fake GR IV paired and off, on the Looks tab.
-Future<TestApp> _inLooks(WidgetTester tester) async {
+/// The whole app with the fake camera ([model], a GR IV by default) paired
+/// and off, on the Looks tab.
+Future<TestApp> _inLooks(
+  WidgetTester tester, {
+  String model = 'RICOH GR IV',
+}) async {
   tester.view
     ..physicalSize = const Size(1170, 2532)
     ..devicePixelRatio = 3;
   addTearDown(tester.view.reset);
   final app = (await tester.runAsync(
     () => createTestApp(
-      config: const FakeCameraConfig(bonded: true, poweredOn: false),
+      config: FakeCameraConfig(bonded: true, poweredOn: false, model: model),
       saveCamera: true,
       sessionOptions: _quietLiveness,
     ),
@@ -38,9 +42,8 @@ Finder _inSlot(int number, String text) => find.descendant(
   matching: find.text(text),
 );
 
-BleImageControlBlob _slotLook(TestApp app, int number) => imageControlFromBytes(
-  Uint8List.fromList(app.camera.lookSlot(number).data),
-)!;
+Look _slotLook(TestApp app, int number) =>
+    Look.fromBytes(Uint8List.fromList(app.camera.lookSlot(number).data))!;
 
 void main() {
   testWidgets('Looks turns the camera on and shows what C1-C3 hold', (
@@ -91,12 +94,46 @@ void main() {
     await pumpUntilFound(tester, find.text('Loaded Tokyo Night into C1'));
 
     final look = _slotLook(app, 1);
-    expect(look.base.known, BleImageControlBase.bleachBypass);
-    expect(look.valueOf(BleImageControlParameter.toningBleachBypass), 3);
-    expect(look.valueOf(BleImageControlParameter.saturation), 1);
-    expect(look.valueOf(BleImageControlParameter.grain), isNull);
+    expect(look.base, LookBase.bleachBypass);
+    expect(look.valueOf(LookParameter.toningBleachBypass), 3);
+    expect(look.valueOf(LookParameter.saturation), 1);
+    expect(look.valueOf(LookParameter.grain), isNull);
     expect(app.camera.lookSlot(1).name, 'Tokyo Night');
     expect(app.camera.lookSlot(2).name, 'Daido', reason: 'C2 untouched');
+  });
+
+  testWidgets('a look on a base the camera does not offer cannot be loaded '
+      'until it is moved to one it does', (tester) async {
+    final app = await _inLooks(tester, model: 'RICOH GR IV Monochrome');
+    final held = app.camera.lookSlot(1).data;
+    await tapWhenReady(tester, _inSlot(1, 'Tokyo Night'));
+    await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
+
+    final load = find.byKey(const Key('look-load'));
+    expect(tester.widget<ButtonStyleButton>(load).onPressed, isNull);
+    expect(
+      find.text(
+        "The camera doesn't offer Positive Film, so this look can't be "
+        'loaded into it.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('look-base:positiveFilm')),
+      findsNothing,
+      reason: 'the editor offers the monochrome bases only',
+    );
+
+    await tapWhenReady(
+      tester,
+      find.byKey(const ValueKey('look-base:standardMono')),
+    );
+    expect(find.byKey(const Key('look-not-offered')), findsNothing);
+    await tapWhenReady(tester, load);
+    await tapWhenReady(tester, find.byKey(const Key('looks-load-confirm')));
+    await pumpUntilFound(tester, find.text('Loaded Tokyo Night into C1'));
+    expect(_slotLook(app, 1).base, LookBase.standardMono);
+    expect(app.camera.lookSlot(1).data, isNot(held));
   });
 
   testWidgets('a slot saved from the editor joins the library, from C2 and '

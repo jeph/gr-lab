@@ -6,6 +6,9 @@ import 'package:gr_fake_camera/gr_fake_camera.dart';
 
 import '../shoot/rig.dart';
 
+Look _held(ShootRig rig, int number) =>
+    Look.fromBytes(Uint8List.fromList(rig.camera.lookSlot(number).data))!;
+
 void main() {
   late ShootRig rig;
 
@@ -28,11 +31,11 @@ void main() {
       ['Tokyo Night', 'Daido', 'Soft Summer'],
     );
     final c1 = slots[0].look!;
-    expect(c1.base.known, BleImageControlBase.positiveFilm);
-    expect(c1.valueOf(BleImageControlParameter.saturation), 1);
-    expect(c1.valueOf(BleImageControlParameter.key), -1);
-    expect(c1.valueOf(BleImageControlParameter.grainStrength), 2);
-    expect(c1.parameters, hasLength(12));
+    expect(c1.base, LookBase.positiveFilm);
+    expect(c1.valueOf(LookParameter.saturation), 1);
+    expect(c1.valueOf(LookParameter.key), -1);
+    expect(c1.valueOf(LookParameter.grainStrength), 2);
+    expect(c1.values, hasLength(12));
   });
 
   test('a camera that is off does not answer for its slots', () async {
@@ -52,9 +55,7 @@ void main() {
     final looks = rig.session.looks;
     await looks.wake();
     await looks.readSlots();
-    final cine = imageControlFromBytes(
-      Uint8List.fromList(FakeLook.presets[3].data),
-    )!;
+    final cine = Look.fromBytes(Uint8List.fromList(FakeLook.presets[3].data))!;
 
     final slot = await looks.load(2, name: 'Cine Teal', look: cine);
 
@@ -79,35 +80,66 @@ void main() {
     await looks.wake();
     await looks.readSlots();
     final held = looks.slots![0].look!;
-    final rebased = held.withBase(BleImageControlBase.highContrast);
-    final fresh = newImageControl(BleImageControlBase.standard, template: held);
-    expect(rebased.parameters.length, greaterThan(held.parameters.length));
-    expect(fresh.parameters.length, lessThan(held.parameters.length));
+    final rebased = held.withBase(LookBase.highContrast);
+    final fresh = Look.onBase(LookBase.standard, template: held);
+    expect(rebased.values.length, greaterThan(held.values.length));
+    expect(fresh.values.length, lessThan(held.values.length));
 
     final first = await looks.load(1, name: 'Rebased', look: rebased);
     final second = await looks.load(2, name: 'Fresh', look: fresh);
 
-    expect(first.look!.sameLookAs(rebased), isTrue);
-    expect(second.look!.sameLookAs(fresh), isTrue);
-    expect(rig.camera.lookSlot(1).look.sameLookAs(rebased), isTrue);
-    expect(rig.camera.lookSlot(2).look.sameLookAs(fresh), isTrue);
+    expect(first.look!.sameAs(rebased), isTrue);
+    expect(second.look!.sameAs(fresh), isTrue);
+    expect(_held(rig, 1).sameAs(rebased), isTrue);
+    expect(_held(rig, 2).sameAs(fresh), isTrue);
   });
 
   test('a blob the camera refuses leaves the slot as it was', () async {
     rig = await ShootRig.start();
     final looks = rig.session.looks;
     await looks.wake();
-    final unsupported = BleImageControlBlob(
-      version: 3,
-      reserved: 0,
-      base: BleEnumValue.of(BleImageControlBase.vivid),
-      parameters: const [],
-    );
+    final unsupported = Look.fromBytes(Uint8List.fromList([3, 0, 0x01, 0]))!;
     await expectLater(
       looks.load(1, name: 'Nope', look: unsupported),
       throwsA(isA<BleException>()),
     );
     expect(rig.camera.lookSlot(1).name, 'Tokyo Night');
+  });
+
+  test('a look on a base the camera does not offer is refused before '
+      'anything is written', () async {
+    rig = await ShootRig.start(
+      config: const FakeCameraConfig(
+        bonded: true,
+        model: 'RICOH GR IV Monochrome',
+      ),
+    );
+    final looks = rig.session.looks;
+    await looks.wake();
+    final positive = Look.fromBytes(
+      Uint8List.fromList(FakeLook.presets[0].data),
+    )!;
+    final held = rig.camera.lookSlot(1).data;
+
+    await expectLater(
+      looks.load(1, name: 'Colour', look: positive),
+      throwsA(
+        isA<LookNotOffered>()
+            .having((e) => e.base, 'base', LookBase.positiveFilm)
+            .having((e) => e.model, 'model', GrModel.gr4Monochrome),
+      ),
+    );
+    expect(rig.camera.lookSlot(1).data, held);
+    expect(rig.camera.lookSlot(1).name, 'Tokyo Night');
+    expect(rig.events('looks.load'), isEmpty);
+    expect(rig.events('looks.refused').single, containsPair('slot', 1));
+
+    final mono = await looks.load(
+      1,
+      name: 'Mono',
+      look: positive.withBase(LookBase.standardMono),
+    );
+    expect(mono.look!.base, LookBase.standardMono);
   });
 
   test('a GR III has no slots', () async {
@@ -125,7 +157,7 @@ void main() {
     final movie = files.firstWhere((f) => f.name.endsWith('.MOV'));
 
     final look = await library.imageControl(still);
-    expect(look.base.known, BleImageControlBase.positiveFilm);
+    expect(look.base, LookBase.positiveFilm);
     await expectLater(
       library.imageControl(movie),
       throwsA(isA<GrApiException>()),

@@ -20,7 +20,7 @@ Future<void> openLookEditor(
   BuildContext context, {
   required LooksModel model,
   required String name,
-  required BleImageControlBlob look,
+  required Look look,
   required int target,
   SavedLook? saved,
   String? source,
@@ -43,12 +43,12 @@ Future<void> openLookEditor(
 Future<void> openNewLook(BuildContext context, LooksModel model) async {
   final template = model.template;
   if (template == null) return;
-  final base = imageControlBases(model.model).first;
+  final base = lookBases(model.model).first;
   await openLookEditor(
     context,
     model: model,
-    name: baseLabel(context.l10n, BleEnumValue.of(base)),
-    look: newImageControl(base, template: template),
+    name: baseLabel(context.l10n, base),
+    look: Look.onBase(base, template: template),
     target: 1,
   );
 }
@@ -69,7 +69,7 @@ class LookEditor extends StatefulWidget {
 
   final LooksModel model;
   final String name;
-  final BleImageControlBlob look;
+  final Look look;
   final SavedLook? saved;
   final int target;
   final String? source;
@@ -81,7 +81,7 @@ class LookEditor extends StatefulWidget {
 enum _EditorAction { rename, load1, load2, load3, delete }
 
 class _LookEditorState extends State<LookEditor> {
-  late BleImageControlBlob _look = widget.look;
+  late Look _look = widget.look;
   late String _name = widget.name;
   late SavedLook? _saved = widget.saved;
   late int _target = widget.target;
@@ -106,7 +106,7 @@ class _LookEditorState extends State<LookEditor> {
     final saved = _saved;
     if (saved == null) return true;
     final look = saved.look;
-    return saved.name != _name || look == null || !look.sameLookAs(_look);
+    return saved.name != _name || look == null || !look.sameAs(_look);
   }
 
   File? get _photo {
@@ -120,7 +120,7 @@ class _LookEditorState extends State<LookEditor> {
     final l10n = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
     final saved = _saved;
-    final data = imageControlToBytes(_look);
+    final data = _look.toBytes();
     final name = saved != null
         ? _name
         : await askLookName(context, initial: _name);
@@ -189,18 +189,19 @@ class _LookEditorState extends State<LookEditor> {
     builder: (context, _) {
       final c = GrColors.of(context);
       final l10n = context.l10n;
-      final base = _look.base.known;
+      final base = _look.base;
       final params = [
-        for (final e in _look.parameters)
-          if (e.parameter.known case final p? when shownIn(_look, p)) p,
+        for (final p in _look.values.keys)
+          if (shownIn(_look, p)) p,
       ];
       final groups = [
         for (final g in LookGroup.values)
           if (params.any((p) => groupOf(p) == g)) g,
       ];
       final group = groups.contains(_group) ? _group! : groups.firstOrNull;
+      final offered = _look.offeredBy(_model.model);
       final canLoad =
-          _model.state == SlotsState.ready && _model.loading == null;
+          offered && _model.state == SlotsState.ready && _model.loading == null;
       return Scaffold(
         key: const Key('look-editor'),
         appBar: AppBar(
@@ -271,13 +272,13 @@ class _LookEditorState extends State<LookEditor> {
                 height: 40,
                 child: Row(
                   children: [
-                    for (final b in imageControlBases(_model.model))
+                    for (final b in lookBases(_model.model))
                       Padding(
-                        key: b == widget.look.base.known ? _openedBase : null,
+                        key: b == widget.look.base ? _openedBase : null,
                         padding: const EdgeInsets.only(right: 8),
                         child: _BaseChip(
                           key: ValueKey('look-base:${b.name}'),
-                          label: baseLabel(l10n, BleEnumValue.of(b)),
+                          label: baseLabel(l10n, b),
                           selected: base == b,
                           onTap: () =>
                               setState(() => _look = _look.withBase(b)),
@@ -322,6 +323,15 @@ class _LookEditorState extends State<LookEditor> {
                 ],
               ),
             ),
+            if (!offered)
+              Padding(
+                key: const Key('look-not-offered'),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                child: Text(
+                  l10n.looksNotOffered(lookBaseLabel(l10n, _look)),
+                  style: TextStyle(fontSize: 12.5, color: c.t2),
+                ),
+              ),
             SafeArea(
               top: false,
               child: Padding(
@@ -374,7 +384,7 @@ class _PreviewPane extends StatelessWidget {
   final File? photo;
 
   /// The look to approximate; null shows the photo as it is.
-  final BleImageControlBlob? look;
+  final Look? look;
 
   @override
   Widget build(BuildContext context) {
@@ -446,7 +456,7 @@ class _ParameterRow extends StatelessWidget {
     super.key,
   });
 
-  final BleImageControlParameter parameter;
+  final LookParameter parameter;
   final int value;
   final ValueChanged<int> onChanged;
 
@@ -454,7 +464,7 @@ class _ParameterRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
-    final range = imageControlRange(parameter);
+    final range = lookRange(parameter);
     final header = Row(
       children: [
         Expanded(
@@ -483,13 +493,13 @@ class _ParameterRow extends StatelessWidget {
                 style: TextStyle(fontSize: 12, color: c.t3),
               ),
             ),
-            ImageControlValueKind.steps => _StepSlider(
+            LookValueKind.steps => _StepSlider(
               parameter: parameter,
               range: range!,
               value: value,
               onChanged: onChanged,
             ),
-            ImageControlValueKind.choice => Padding(
+            LookValueKind.choice => Padding(
               padding: const EdgeInsets.only(top: 10),
               child: ShootSegmented<int>(
                 values: [for (var v = range!.min; v <= range.max; v++) v],
@@ -515,8 +525,8 @@ class _StepSlider extends StatelessWidget {
     required this.onChanged,
   });
 
-  final BleImageControlParameter parameter;
-  final ImageControlRange range;
+  final LookParameter parameter;
+  final LookRange range;
   final int value;
   final ValueChanged<int> onChanged;
 

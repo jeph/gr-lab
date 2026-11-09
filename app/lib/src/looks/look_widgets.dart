@@ -16,7 +16,7 @@ class LookThumb extends StatelessWidget {
   const new({required this.photo, required this.look, super.key});
 
   final File? photo;
-  final BleImageControlBlob? look;
+  final Look? look;
 
   @override
   Widget build(BuildContext context) {
@@ -36,12 +36,12 @@ class LookThumb extends StatelessWidget {
 class _Swatch extends StatelessWidget {
   const new({required this.look});
 
-  final BleImageControlBlob? look;
+  final Look? look;
 
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    final base = look?.base.known;
+    final base = look?.base;
     final colors = base == null ? [c.s3, c.s2] : swatchColors(base);
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -129,7 +129,7 @@ Future<bool> confirmAndLoad(
   BuildContext context,
   LooksModel model, {
   required String name,
-  required BleImageControlBlob look,
+  required Look look,
   required int number,
 }) async {
   final current = model.slots?[number - 1];

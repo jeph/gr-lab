@@ -8,14 +8,14 @@ void main() {
   final en = lookupAppLocalizations(const Locale('en'));
   final number = RegExp(r'^[+-]?\d+$');
 
-  List<String> offered(BleImageControlParameter p) {
-    final range = imageControlRange(p)!;
+  List<String> offered(LookParameter p) {
+    final range = lookRange(p)!;
     return [for (var v = range.min; v <= range.max; v++) valueLabel(en, p, v)];
   }
 
   test('every value the editor offers for a choice has a name', () {
-    for (final p in BleImageControlParameter.values) {
-      if (imageControlRange(p)?.kind != ImageControlValueKind.choice) continue;
+    for (final p in LookParameter.values) {
+      if (lookRange(p)?.kind != LookValueKind.choice) continue;
       for (final label in offered(p)) {
         expect(label, isNot(matches(number)), reason: '$p');
       }
@@ -24,23 +24,19 @@ void main() {
 
   test('names follow the wire value, and the editor skips Off where the '
       'camera starts at 1', () {
-    const bleach = BleImageControlParameter.toningBleachBypass;
+    const bleach = LookParameter.toningBleachBypass;
     expect(
       [for (var v = 0; v <= 3; v++) valueLabel(en, bleach, v)],
       ['Off', 'Normal', 'Cool', 'Warm'],
     );
     expect(offered(bleach), ['Normal', 'Cool', 'Warm']);
-    expect(offered(BleImageControlParameter.hdrStrength), [
-      'Low',
-      'Medium',
-      'High',
-    ]);
-    expect(valueLabel(en, BleImageControlParameter.filterEffect, 0), 'Off');
+    expect(offered(LookParameter.hdrStrength), ['Low', 'Medium', 'High']);
+    expect(valueLabel(en, LookParameter.filterEffect, 0), 'Off');
   });
 
   test('a value past the last name, or of a number, reads as the number', () {
-    expect(valueLabel(en, BleImageControlParameter.toningMonotone, 6), '+6');
-    expect(valueLabel(en, BleImageControlParameter.contrast, -2), '-2');
-    expect(valueLabel(en, BleImageControlParameter.contrast, 0), '0');
+    expect(valueLabel(en, LookParameter.toningMonotone, 6), '+6');
+    expect(valueLabel(en, LookParameter.contrast, -2), '-2');
+    expect(valueLabel(en, LookParameter.contrast, 0), '0');
   });
 }

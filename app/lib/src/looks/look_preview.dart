@@ -9,7 +9,7 @@ import 'package:gr_camera/gr_camera.dart';
 class LookPreview extends StatelessWidget {
   const new({required this.look, required this.child, super.key});
 
-  final BleImageControlBlob look;
+  final Look look;
   final Widget child;
 
   @override
@@ -20,15 +20,15 @@ class LookPreview extends StatelessWidget {
 }
 
 /// The 4×5 colour matrix [LookPreview] applies for [look].
-List<double> lookMatrix(BleImageControlBlob look) {
-  int v(BleImageControlParameter p) => look.valueOf(p) ?? 0;
-  final base = look.base.known ?? BleImageControlBase.standard;
+List<double> lookMatrix(Look look) {
+  int v(LookParameter p) => look.valueOf(p) ?? 0;
+  final base = look.base ?? LookBase.standard;
   var m = _identity;
   m = _mul(_baseMatrix(base), m);
-  m = _mul(_saturation(1 + v(BleImageControlParameter.saturation) * .1), m);
-  m = _mul(_hue(v(BleImageControlParameter.hue) * 6), m);
-  m = _mul(_contrast(1 + v(BleImageControlParameter.contrast) * .07), m);
-  m = _mul(_brightness(v(BleImageControlParameter.key) * 7), m);
+  m = _mul(_saturation(1 + v(LookParameter.saturation) * .1), m);
+  m = _mul(_hue(v(LookParameter.hue) * 6), m);
+  m = _mul(_contrast(1 + v(LookParameter.contrast) * .07), m);
+  m = _mul(_brightness(v(LookParameter.key) * 7), m);
   final toning = _toning(look);
   if (toning != null) m = _mul(toning, m);
   return m;
@@ -46,50 +46,47 @@ const _lr = .2126;
 const _lg = .7152;
 const _lb = .0722;
 
-List<double> _baseMatrix(BleImageControlBase base) => switch (base) {
-  BleImageControlBase.standard => _identity,
-  BleImageControlBase.vivid => _mul(_contrast(1.08), _saturation(1.4)),
-  BleImageControlBase.positiveFilm => _mul(
+List<double> _baseMatrix(LookBase base) => switch (base) {
+  LookBase.standard => _identity,
+  LookBase.vivid => _mul(_contrast(1.08), _saturation(1.4)),
+  LookBase.positiveFilm => _mul(
     _tint(1.04, 1, .94),
     _mul(_contrast(1.12), _saturation(1.2)),
   ),
-  BleImageControlBase.negativeFilm => _mul(
+  LookBase.negativeFilm => _mul(
     _tint(1.03, 1.01, .95),
     _mul(_contrast(.88), _saturation(.85)),
   ),
-  BleImageControlBase.bleachBypass => _mul(_contrast(1.25), _saturation(.45)),
-  BleImageControlBase.retro => _mul(
+  LookBase.bleachBypass => _mul(_contrast(1.25), _saturation(.45)),
+  LookBase.retro => _mul(
     _tint(1.08, 1, .82),
     _mul(_contrast(.92), _saturation(.7)),
   ),
-  BleImageControlBase.hdrTone => _mul(_contrast(.85), _saturation(1.15)),
-  BleImageControlBase.cineYellow => _mul(
-    _tint(1.06, 1.03, .86),
-    _saturation(.85),
-  ),
-  BleImageControlBase.cineGreen => _mul(_tint(.94, 1.04, .98), _saturation(.8)),
-  BleImageControlBase.crossProcess => _mul(
+  LookBase.hdrTone => _mul(_contrast(.85), _saturation(1.15)),
+  LookBase.cineYellow => _mul(_tint(1.06, 1.03, .86), _saturation(.85)),
+  LookBase.cineGreen => _mul(_tint(.94, 1.04, .98), _saturation(.8)),
+  LookBase.crossProcess => _mul(
     _tint(1.05, 1.06, .8),
     _mul(_contrast(1.15), _saturation(1.25)),
   ),
-  BleImageControlBase.softMonotone ||
-  BleImageControlBase.softMono => _mul(_contrast(.85), _saturation(0)),
-  BleImageControlBase.hardMonotone ||
-  BleImageControlBase.highContrastMono ||
-  BleImageControlBase.solid => _mul(_contrast(1.3), _saturation(0)),
-  BleImageControlBase.highContrast => _mul(_contrast(1.6), _saturation(0)),
-  BleImageControlBase.solarization => _mul(_contrast(1.4), _saturation(0)),
-  BleImageControlBase.monotone ||
-  BleImageControlBase.standardMono ||
-  BleImageControlBase.grainy ||
-  BleImageControlBase.hdrMono ||
-  BleImageControlBase.pictorialist => _saturation(0),
-  BleImageControlBase.pallet => _identity,
+  LookBase.softMonotone ||
+  LookBase.softMono => _mul(_contrast(.85), _saturation(0)),
+  LookBase.hardMonotone ||
+  LookBase.highContrastMono ||
+  LookBase.solid => _mul(_contrast(1.3), _saturation(0)),
+  LookBase.highContrast => _mul(_contrast(1.6), _saturation(0)),
+  LookBase.solarization => _mul(_contrast(1.4), _saturation(0)),
+  LookBase.monotone ||
+  LookBase.standardMono ||
+  LookBase.grainy ||
+  LookBase.hdrMono ||
+  LookBase.pictorialist => _saturation(0),
+  LookBase.palette => _identity,
 };
 
 /// A toning tint over the result, when the look has one set.
-List<double>? _toning(BleImageControlBlob look) {
-  final mono = look.valueOf(BleImageControlParameter.toningMonotone) ?? 0;
+List<double>? _toning(Look look) {
+  final mono = look.valueOf(LookParameter.toningMonotone) ?? 0;
   final tint = switch (mono) {
     1 => _tint(1.1, 1, .82),
     2 => _tint(1.12, .95, .95),
@@ -99,10 +96,10 @@ List<double>? _toning(BleImageControlBlob look) {
     _ => null,
   };
   if (tint != null) return tint;
-  final hdr = look.valueOf(BleImageControlParameter.toningHdr) ?? 0;
+  final hdr = look.valueOf(LookParameter.toningHdr) ?? 0;
   if (hdr == 1) return _saturation(0);
   if (hdr == 2) return _mul(_tint(1.1, 1, .82), _saturation(0));
-  return switch (look.valueOf(BleImageControlParameter.crossProcess)) {
+  return switch (look.valueOf(LookParameter.crossProcess)) {
     1 => _tint(1.06, .94, 1.04),
     2 => _tint(1.04, 1.04, .88),
     _ => null,

@@ -512,12 +512,30 @@ final class BleImageControlEntry {
   /// Entry for one parameter id and its value.
   const new(this.parameter, this.value);
 
+  /// Reads `[id][value]`.
+  factory readFrom(BleByteReader input) {
+    final id = input.readInt(BleIntFormat.uint8);
+    final value = input.readInt(BleIntFormat.sint8);
+    return BleImageControlEntry(
+      BleEnumValue.decode(id, BleImageControlParameter.values),
+      value,
+    );
+  }
+
+  /// Bytes one entry takes on the wire.
+  static const width = 2;
+
   /// Parameter id (saturation, hue, key, contrast, …). GR WORLD skips ids
   /// it does not know; they keep their raw value here.
   final BleEnumValue<BleImageControlParameter> parameter;
 
   /// Signed adjustment (sint8); per-parameter range not documented.
   final int value;
+
+  /// Writes `[id][value]`.
+  void writeTo(BleByteWriter out) => out
+    ..writeInt(parameter.raw, BleIntFormat.uint8, 'parameter')
+    ..writeInt(value, BleIntFormat.sint8, 'value');
 
   /// `{parameter, value}`.
   Map<String, Object?> toJson() => {
@@ -547,8 +565,12 @@ final class BleImageControlBlob {
   /// Control blob).
   static const length = 56;
 
+  /// Bytes before the parameters: version, byte 1, base, count.
+  static const headerLength = 4;
+
   /// The most parameters that fit in [length].
-  static const int maxParameters = (length - 4) ~/ 2;
+  static const int maxParameters =
+      (length - headerLength) ~/ BleImageControlEntry.width;
 
   /// Byte 0: blob format version, see [supportedVersions].
   final int version;
@@ -561,6 +583,69 @@ final class BleImageControlBlob {
 
   /// Adjustments in wire order (count in byte 3); unmodifiable.
   final List<BleImageControlEntry> parameters;
+
+  /// Reads a blob from [input], adding to [issues] each way it departs
+  /// from the layout; null when the header is incomplete.
+  static BleImageControlBlob? readFrom(
+    BleByteReader input,
+    List<String> issues,
+  ) {
+    if (input.remaining < headerLength) {
+      issues.add('expected $headerLength header bytes, got ${input.remaining}');
+      return null;
+    }
+    final version = input.readInt(BleIntFormat.uint8);
+    if (!supportedVersions.contains(version)) {
+      issues.add('version $version is not 1, 2 or 4 (GR WORLD ignores it)');
+    }
+    final reserved = input.readInt(BleIntFormat.uint8);
+    final base = input.readInt(BleIntFormat.uint8);
+    final count = input.readInt(BleIntFormat.uint8);
+    final parameters = <BleImageControlEntry>[
+      for (
+        var i = 0;
+        i < count && input.remaining >= BleImageControlEntry.width;
+        i++
+      )
+        BleImageControlEntry.readFrom(input),
+    ];
+    if (parameters.length < count) {
+      issues.add(
+        'declares $count parameters, only ${parameters.length} present',
+      );
+    }
+    if (input.readRest().any((b) => b != 0)) {
+      issues.add('non-zero byte(s) after the parameters');
+    }
+    return BleImageControlBlob(
+      version: version,
+      reserved: reserved,
+      base: BleEnumValue.decode(base, BleImageControlBase.values),
+      parameters: parameters,
+    );
+  }
+
+  /// Writes the header, each parameter, then zeros up to [length]. Throws
+  /// [ArgumentError] when there are more than [maxParameters] parameters
+  /// or a field does not fit its byte.
+  void writeTo(BleByteWriter out) {
+    if (parameters.length > maxParameters) {
+      throw ArgumentError.value(
+        parameters.length,
+        'parameters',
+        'at most $maxParameters fit in $length bytes',
+      );
+    }
+    out
+      ..writeInt(version, BleIntFormat.uint8, 'version')
+      ..writeInt(reserved, BleIntFormat.uint8, 'reserved')
+      ..writeInt(base.raw, BleIntFormat.uint8, 'base')
+      ..writeInt(parameters.length, BleIntFormat.uint8, 'count');
+    for (final p in parameters) {
+      p.writeTo(out);
+    }
+    out.padTo(length);
+  }
 
   /// Header fields and parameters.
   Map<String, Object?> toJson() => {
@@ -578,71 +663,19 @@ final class BleImageControlCodec extends BleCodec<BleImageControlBlob> {
 
   @override
   BleDecoded<BleImageControlBlob> decode(Uint8List bytes) {
-    final issues = <String>[];
-    if (bytes.length < 4) {
-      return result(bytes, null, [
-        'expected at least 4 header bytes, got ${bytes.length}',
-      ]);
-    }
-    if (bytes.length != BleImageControlBlob.length) {
-      issues.add('${bytes.length} bytes, not ${BleImageControlBlob.length}');
-    }
-    final version = bytes[0];
-    if (!BleImageControlBlob.supportedVersions.contains(version)) {
-      issues.add('version $version is not 1, 2 or 4 (GR WORLD ignores it)');
-    }
-    final count = bytes[3];
-    final available = (bytes.length - 4) ~/ 2;
-    if (available < count) {
-      issues.add('declares $count parameters, only $available present');
-    }
-    final n = count < available ? count : available;
-    final params = <BleImageControlEntry>[
-      for (var i = 0; i < n; i++)
-        BleImageControlEntry(
-          BleEnumValue.decode(
-            bytes[4 + 2 * i],
-            BleImageControlParameter.values,
-          ),
-          BleIntFormat.sint8.read(bytes, 5 + 2 * i),
-        ),
+    final issues = <String>[
+      if (bytes.length != BleImageControlBlob.length)
+        '${bytes.length} bytes, not ${BleImageControlBlob.length}',
     ];
-    if (bytes.skip(4 + 2 * n).any((b) => b != 0)) {
-      issues.add('non-zero byte(s) after the parameters');
-    }
-    return result(
-      bytes,
-      BleImageControlBlob(
-        version: version,
-        reserved: bytes[1],
-        base: BleEnumValue.decode(bytes[2], BleImageControlBase.values),
-        parameters: params,
-      ),
-      issues,
-    );
+    final blob = BleImageControlBlob.readFrom(BleByteReader(bytes), issues);
+    return result(bytes, blob, issues);
   }
 
   @override
   Uint8List encode(BleImageControlBlob value) {
-    if (value.parameters.length > BleImageControlBlob.maxParameters) {
-      throw ArgumentError.value(
-        value.parameters.length,
-        'parameters',
-        'at most ${BleImageControlBlob.maxParameters} fit in '
-            '${BleImageControlBlob.length} bytes',
-      );
-    }
-    final out = Uint8List(BleImageControlBlob.length);
-    _put(out, 0, value.version, 'version', BleIntFormat.uint8);
-    _put(out, 1, value.reserved, 'reserved', BleIntFormat.uint8);
-    _put(out, 2, value.base.raw, 'base', BleIntFormat.uint8);
-    _put(out, 3, value.parameters.length, 'count', BleIntFormat.uint8);
-    for (var i = 0; i < value.parameters.length; i++) {
-      final p = value.parameters[i];
-      _put(out, 4 + 2 * i, p.parameter.raw, 'parameter', BleIntFormat.uint8);
-      _put(out, 5 + 2 * i, p.value, 'value');
-    }
-    return out;
+    final out = BleByteWriter();
+    value.writeTo(out);
+    return out.toBytes();
   }
 
   @override

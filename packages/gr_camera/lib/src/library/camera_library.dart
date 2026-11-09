@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/src/library/camera_file.dart';
-import 'package:gr_camera/src/looks/camera_looks.dart';
+import 'package:gr_camera/src/looks/look.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 
 /// The photos of one camera over one verified Wi-Fi link: listing, file
@@ -110,9 +110,9 @@ final class CameraLibrary {
   /// §4.3), as GR WORLD reads it to save a look from a photo. Throws
   /// [NoImageControl] when the camera's answer is not a blob GR Lab can
   /// read, and the HTTP client's errors otherwise.
-  Future<BleImageControlBlob> imageControl(CameraFile f) async {
+  Future<Look> imageControl(CameraFile f) async {
     final bytes = await _http.imageControl(f.path, storage: f.storage);
-    final look = imageControlFromBytes(bytes);
+    final look = Look.fromBytes(bytes);
     _event('library.imageControl', {
       'file': '$f',
       'hex': BleBytes.toHex(bytes),
