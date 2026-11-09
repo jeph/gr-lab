@@ -179,6 +179,8 @@ final class ConnectionController extends ChangeNotifier {
   /// The Bluetooth attempt [connect] started last; [joinWifi] waits for it.
   Future<void> _linking = Future.value();
 
+  /// Every session close still running; the next Bluetooth attempt waits
+  /// for all of them ([_endSession]).
   Future<void> _closing = Future.value();
   Future<void> _stoppingWifi = Future.value();
 
@@ -512,7 +514,8 @@ final class ConnectionController extends ChangeNotifier {
   /// Ends the session or cancels an attempt; used when the current camera
   /// changes or is forgotten. The state goes offline at once so a
   /// [connect] issued in the same tick (switching cameras) starts a new
-  /// attempt instead of seeing the old one.
+  /// attempt instead of seeing the old one. Completes once every session
+  /// close still running has finished.
   Future<void> disconnect() {
     _generation++;
     _wifiRun++;
@@ -524,7 +527,7 @@ final class ConnectionController extends ChangeNotifier {
     _reconnecting = false;
     _idleClosedAfter = null;
     _declineConsent();
-    final closing = _closing = _closeSession();
+    final closing = _endSession();
     notifyListeners();
     return closing;
   }
@@ -580,7 +583,7 @@ final class ConnectionController extends ChangeNotifier {
         // With the Library open, Wi-Fi carries on without Bluetooth; the
         // link is dealt with when the Library closes.
         if (_status == ConnectionStatus.bluetooth) {
-          _closing = _closeSession();
+          unawaited(_endSession());
           return _fail(
             generation,
             ConnectFailure(
@@ -689,7 +692,7 @@ final class ConnectionController extends ChangeNotifier {
       loss: ConnectLoss.bluetooth,
     );
     notifyListeners();
-    await (_closing = _closeSession());
+    await _endSession();
   }
 
   /// Shows a quiet rejoin as pending; false when the tries are used up.
@@ -751,6 +754,13 @@ final class ConnectionController extends ChangeNotifier {
       }
     }
   }
+
+  /// Closes the session and adds that to [_closing], so the next Bluetooth
+  /// attempt waits for every close still running: a later close with no
+  /// session left (a second [disconnect]) must not let it reuse a link the
+  /// first is still releasing.
+  Future<void> _endSession() =>
+      _closing = Future.wait([_closing, _closeSession()]);
 
   void _onCamerasChanged() {
     final serial = cameras.current?.serial;

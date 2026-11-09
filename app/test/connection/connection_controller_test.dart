@@ -176,6 +176,39 @@ void main() {
     });
   });
 
+  test('a new link waits for a close still releasing the last one, '
+      'through a second disconnect', () async {
+    late _GatedTransport ble;
+    final app = await createTestApp(
+      config: const FakeCameraConfig(bonded: true),
+      saveCamera: true,
+      transport: (camera) => ble = _GatedTransport(camera),
+    );
+    addTearDown(app.dispose);
+    final connection = app.models.connection;
+    await connection.connect();
+    expect(connection.status, ConnectionStatus.bluetooth);
+
+    // Switching away while the camera's link is slow to close, then
+    // cancelling the attempt that waits for it and linking again.
+    final closeGate = ble.closeGate = Completer<void>();
+    final closed = connection.disconnect();
+    await ble.disconnectCalled.future;
+    unawaited(connection.connect());
+    unawaited(connection.disconnect());
+    final again = connection.connect();
+    final checks = ble.adapterChecks;
+    await pumpEventQueue();
+    expect(ble.adapterChecks, checks, reason: 'linked before the close');
+    expect(app.ble.connects, 1);
+
+    closeGate.complete();
+    await closed;
+    await again;
+    expect(connection.status, ConnectionStatus.bluetooth);
+    expect(app.ble.connects, 2);
+  });
+
   test('switching cameras while connected starts a new attempt', () async {
     final app = await createTestApp(
       config: const FakeCameraConfig(bonded: true),
