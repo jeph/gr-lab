@@ -1,9 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:gr_fake_camera/src/config.dart';
 import 'package:gr_protocol/gr_protocol.dart';
-
-import 'config.dart';
 
 /// A decodable 24×16 grey baseline JPEG without EXIF: a frame in the
 /// camera's stored (landscape, 3:2) layout.
@@ -53,7 +52,7 @@ FakeMediaSource syntheticMedia({
     (h, c) => (h * 31 + c) & 0x7fffffff,
   );
   final jitter = seed & 0x7fff;
-  final List<int> head = switch (photo.extension) {
+  final head = switch (photo.extension) {
     'DNG' => const [0x49, 0x49, 0x2A, 0x00, 0x08, 0x00, 0x00, 0x00],
     'MOV' => const [0, 0, 0, 0x14, 0x66, 0x74, 0x79, 0x70, 0x71, 0x74, 0x20],
     _ => switch (photo.orientation) {

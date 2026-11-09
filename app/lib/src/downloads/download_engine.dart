@@ -2,15 +2,15 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:gr_protocol/gr_protocol.dart';
+import 'package:gr_camera/gr_camera.dart';
 
-import '../data/json_file.dart';
-import '../library/camera_link.dart';
-import '../library/shot.dart';
-import '../services.dart';
+import 'package:grlab/src/data/json_file.dart';
+import 'package:grlab/src/library/shot.dart';
+import 'package:grlab/src/services.dart';
 
 enum DownloadState {
-  /// Waiting for its turn, for its camera to connect, or for [resume].
+  /// Waiting for its turn, for its camera to connect, or for
+  /// [DownloadEngine.resume].
   queued,
   running,
 
@@ -20,7 +20,7 @@ enum DownloadState {
 
 /// One shot's files in the download queue.
 final class DownloadJob {
-  DownloadJob._({
+  new _({
     required this.id,
     required this.serial,
     required this.shot,
@@ -57,7 +57,8 @@ final class DownloadJob {
 
   static DownloadJob? _fromJson(Object? json) {
     if (json is! Map<String, Object?>) return null;
-    final id = json['id'], serial = json['serial'];
+    final id = json['id'];
+    final serial = json['serial'];
     if (id is! String || serial is! String) return null;
     final shotFiles = _filesFromJson(json['shot']);
     final files = _filesFromJson(json['files']);
@@ -91,7 +92,9 @@ List<CameraFile> _filesFromJson(Object? json) {
   if (json is! List<Object?>) return files;
   for (final e in json) {
     if (e is! Map<String, Object?>) continue;
-    final storage = e['s'], dir = e['d'], file = e['f'];
+    final storage = e['s'];
+    final dir = e['d'];
+    final file = e['f'];
     if (dir is! String || file is! String) continue;
     try {
       files.add(
@@ -108,18 +111,14 @@ List<CameraFile> _filesFromJson(Object? json) {
 enum _Stop { cancel, pause }
 
 final class _StopSignal implements Exception {
-  const _StopSignal(this.reason);
+  const new(this.reason);
   final _Stop reason;
 }
 
 /// Transfer progress of the running job.
 @immutable
 final class DownloadProgress {
-  const DownloadProgress({
-    this.received = 0,
-    this.fraction = 0,
-    this.bytesPerSecond = 0,
-  });
+  const new({this.received = 0, this.fraction = 0, this.bytesPerSecond = 0});
 
   /// Bytes of the running job received so far.
   final int received;
@@ -139,7 +138,7 @@ final class DownloadProgress {
 /// a lost connection or a pause restarts that file from the beginning once
 /// the camera is back (the camera has no ranged downloads).
 final class DownloadEngine extends ChangeNotifier {
-  DownloadEngine({
+  new({
     required this.dataDir,
     required this.cacheDir,
     required this.media,
@@ -161,7 +160,7 @@ final class DownloadEngine extends ChangeNotifier {
   final Directory dataDir;
   final Directory cacheDir;
   final MediaSaver media;
-  final ValueListenable<CameraLink?> link;
+  final ValueListenable<CameraLibrary?> link;
   final String album;
 
   /// After a network error, how long to wait for the connection to report
@@ -180,7 +179,7 @@ final class DownloadEngine extends ChangeNotifier {
   Completer<void>? _idle;
   bool _paused = false;
   DownloadJob? _current;
-  CameraLink? _currentLink;
+  CameraLibrary? _currentLink;
   _Stop? _stop;
   int _batchDone = 0;
   MediaSaveException? _permissionProblem;
@@ -449,7 +448,7 @@ final class DownloadEngine extends ChangeNotifier {
     }
   }
 
-  Future<void> _run(DownloadJob job, CameraLink current) async {
+  Future<void> _run(DownloadJob job, CameraLibrary current) async {
     _current = job;
     _currentLink = current;
     _stop = null;
@@ -500,7 +499,7 @@ final class DownloadEngine extends ChangeNotifier {
       } else if (lost) {
         job.state = DownloadState.queued;
       } else {
-        _fail(job, _describe(e));
+        _fail(job, describeTransferError(e));
       }
     } finally {
       _current = null;
@@ -530,14 +529,9 @@ final class DownloadEngine extends ChangeNotifier {
 
   /// Network errors usually mean the camera's Wi-Fi went away; give the
   /// connection a moment to notice before blaming the job.
-  Future<bool> _connectionLost(Object error, CameraLink current) async {
+  Future<bool> _connectionLost(Object error, CameraLibrary current) async {
     if (!identical(link.value, current)) return true;
-    final transport =
-        error is SocketException ||
-        error is HttpException ||
-        error is TimeoutException ||
-        error is GrMalformedResponseException;
-    if (!transport) return false;
+    if (!isConnectionError(error)) return false;
     await Future<void>.delayed(transportGrace);
     return !identical(link.value, current);
   }
@@ -545,34 +539,18 @@ final class DownloadEngine extends ChangeNotifier {
   Future<List<File>> _transfer(
     DownloadJob job,
     List<CameraFile> files,
-    CameraLink current,
-  ) async {
-    final dir = _tempDir(job);
-    await dir.create(recursive: true);
-    final local = <File>[];
-    var before = 0;
-    for (var i = 0; i < files.length; i++) {
-      final f = files[i];
-      final out = File('${dir.path}/${f.name}');
-      // A file finished before a pause stays; only the interrupted one
-      // starts over.
-      if (!out.existsSync()) {
-        await current.http.downloadToFile(
-          f.path,
-          out,
-          storage: f.storage,
-          onProgress: (received, total) {
-            if (_stop case final reason?) throw _StopSignal(reason);
-            _progress(before + received, i, files.length, received, total);
-          },
-        );
-      }
+    CameraLibrary current,
+  ) => current.downloadFiles(
+    files,
+    _tempDir(job),
+    onProgress: (bytes, index, received, total) {
       if (_stop case final reason?) throw _StopSignal(reason);
-      before += await out.length();
-      local.add(out);
-    }
-    return local;
-  }
+      _progress(bytes, index, files.length, received, total);
+    },
+    afterFile: () {
+      if (_stop case final reason?) throw _StopSignal(reason);
+    },
+  );
 
   void _progress(int jobBytes, int index, int count, int received, int? total) {
     final now = _clock.elapsed;
@@ -598,18 +576,6 @@ final class DownloadEngine extends ChangeNotifier {
   void _setProgress(DownloadProgress value) {
     if (!_disposed) progress.value = value;
   }
-
-  String _describe(Object e) => switch (e) {
-    GrApiException(:final errCode, :final errMsg) =>
-      'The camera refused the file ($errCode${errMsg == null ? '' : ' $errMsg'})',
-    GrHttpStatusException(:final httpStatus) =>
-      'The camera answered HTTP $httpStatus',
-    GrMalformedResponseException() => 'The transfer was cut off',
-    SocketException() || HttpException() => 'Lost the connection to the camera',
-    TimeoutException() => 'The camera stopped sending',
-    FileSystemException(:final message) => 'Could not write the file: $message',
-    _ => '$e',
-  };
 
   Future<void> _load() async {
     final json = await _file.read();

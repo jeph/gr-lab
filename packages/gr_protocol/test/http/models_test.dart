@@ -36,7 +36,8 @@ void main() {
     test('reads errCode, errMsg and detail.reason', () {
       final e = GrEnvelope(
         obj(
-          '{"errCode":400,"errMsg":"Bad Request","detail":{"reason":"err_fw_same"}}',
+          '{"errCode":400,"errMsg":"Bad Request", '
+          '"detail":{"reason":"err_fw_same"}}',
         ),
       );
       expect(
@@ -57,7 +58,8 @@ void main() {
 
   group('GrProps', () {
     final props = GrProps(
-      obj('''{
+      obj('''
+{
         "errCode":200,"model":"RICOH GR IV HDF","serialNo":"12345678",
         "firmwareVersion":"1.10","macAddress":"00:11:22:33:44:55",
         "bdName":"GR_123456","ssid":"GR_123456","key":"secret",
@@ -142,8 +144,10 @@ void main() {
     test('photo list paths and after-cursor', () {
       final list = GrPhotoList(
         obj(
-          '{"errCode":200,"dirs":[{"name":"100RICOH","files":["R0000001.JPG","R0000002.DNG"]},'
-          '{"name":"101RICOH","files":["R0000003.MOV"]},{"name":"102RICOH","files":[]}]}',
+          '{"errCode":200,"dirs":['
+          '{"name":"100RICOH","files":["R0000001.JPG","R0000002.DNG"]},'
+          '{"name":"101RICOH","files":["R0000003.MOV"]},'
+          '{"name":"102RICOH","files":[]}]}',
         ),
       );
       expect(list.fileCount, 3);

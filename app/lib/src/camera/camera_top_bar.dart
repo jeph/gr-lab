@@ -1,15 +1,13 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
-import '../connection/camera_pill.dart';
-import '../settings/settings_screen.dart';
-import '../theme/tokens.dart';
+import 'package:grlab/src/connection/camera_pill.dart';
+import 'package:grlab/src/settings/settings_screen.dart';
+import 'package:grlab/src/theme/tokens.dart';
 
 /// The row at the top of the camera's pages (mock `.topbar`): back to the
 /// Cameras screen, the camera pill, and Settings.
 class CameraTopBar extends StatelessWidget {
-  const CameraTopBar({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -21,7 +19,7 @@ class CameraTopBar extends StatelessWidget {
           icon: Icons.arrow_back_ios_new_rounded,
           iconSize: 16,
           label: 'Cameras',
-          onTap: () => unawaited(Navigator.of(context).maybePop()),
+          onTap: () => Navigator.of(context).maybePop(),
         ),
         const SizedBox(width: 8),
         const Expanded(
@@ -35,10 +33,8 @@ class CameraTopBar extends StatelessWidget {
           key: const Key('camera-settings'),
           icon: Icons.settings_outlined,
           label: 'Settings',
-          onTap: () => unawaited(
-            Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
-            ),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
           ),
         ),
       ],
@@ -48,11 +44,11 @@ class CameraTopBar extends StatelessWidget {
 
 /// A 36 pt round button on a raised surface (mock `.iconbtn`).
 class RoundIconButton extends StatelessWidget {
-  const RoundIconButton({
-    super.key,
+  const new({
     required this.icon,
     required this.label,
     required this.onTap,
+    super.key,
     this.iconSize = 18,
     this.color,
     this.iconColor,
@@ -96,7 +92,7 @@ class RoundIconButton extends StatelessWidget {
 
 /// The large title under [CameraTopBar] (mock `.h1`).
 class PageTitle extends StatelessWidget {
-  const PageTitle(this.text, {super.key});
+  const new(this.text, {super.key});
 
   final String text;
 

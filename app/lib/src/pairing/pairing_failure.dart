@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
-import 'package:gr_protocol/gr_protocol.dart';
+import 'package:gr_camera/gr_camera.dart';
 
 /// What the failure page shows for one failed pairing run: a title, a
 /// sentence on what happened, numbered steps for the next attempt and an
 /// optional extra hint.
 @immutable
 final class PairingFailureInfo {
-  const PairingFailureInfo({
+  const new({
     required this.title,
     required this.body,
     required this.steps,
@@ -18,7 +18,7 @@ final class PairingFailureInfo {
   /// Maps a `pairCamera` error. Anything that is not a
   /// [GrPairingException] (a scan error, Bluetooth turning off) gets the
   /// generic page with the error text as [detail].
-  factory PairingFailureInfo.from(Object error, {required String camera}) {
+  factory from(Object error, {required String camera}) {
     if (error is! GrPairingException) {
       return PairingFailureInfo(
         title: "Pairing didn't finish",
@@ -39,8 +39,7 @@ final class PairingFailureInfo {
           body: 'The camera stopped showing up nearby. To try again:',
           steps: const [
             'Turn the camera on and keep it close to the phone',
-            'Check Action Mode is On (MENU → E6 Wireless Connection → '
-                'Wireless Communication)',
+            _actionModeStep,
             'Reopen Execute Pairing on the camera',
           ],
           detail: detail,
@@ -151,3 +150,9 @@ final class PairingFailureInfo {
     _ => '$error',
   };
 }
+
+/// A step too long for one line; a list literal may not hold adjacent strings
+/// (no_adjacent_strings_in_list), so it lives here.
+const _actionModeStep =
+    'Check Action Mode is On (MENU → E6 Wireless Connection → '
+    'Wireless Communication)';

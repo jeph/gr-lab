@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gr_protocol/gr_protocol.dart';
-import 'package:grlab/src/library/camera_link.dart';
+import 'package:gr_camera/gr_camera.dart';
 import 'package:grlab/src/library/library_model.dart';
 import 'package:grlab/src/library/shot.dart';
 
@@ -195,58 +194,5 @@ void main() {
       LibraryFilter.notDownloaded: 3,
     });
     expect(filtered.shots.map((s) => s.base), ['R0000003', 'R0000001']);
-  });
-
-  group('parseCameraTime', () {
-    test('accepts ISO and EXIF forms as local wall time', () {
-      expect(
-        parseCameraTime('2026-11-05T14:03:22'),
-        DateTime(2026, 11, 5, 14, 3, 22),
-      );
-      expect(
-        parseCameraTime('2026:11:05 14:03:22'),
-        DateTime(2026, 11, 5, 14, 3, 22),
-      );
-      expect(parseCameraTime(''), isNull);
-      expect(parseCameraTime('soon'), isNull);
-    });
-  });
-
-  group('listedStorages', () {
-    GrProps props(List<Map<String, Object?>> storages) =>
-        GrProps({'errCode': 200, 'storages': storages});
-
-    test('lists each equipped storage of a two-storage camera', () {
-      expect(
-        listedStorages(
-          props([
-            {'name': 'in', 'equipped': true},
-            {'name': 'sd1', 'equipped': true},
-          ]),
-        ),
-        ['in', 'sd1'],
-      );
-      expect(
-        listedStorages(
-          props([
-            {'name': 'in', 'equipped': true},
-            {'name': 'sd1', 'equipped': false},
-          ]),
-        ),
-        ['in'],
-      );
-    });
-
-    test('a one-storage camera is listed without storage=', () {
-      expect(
-        listedStorages(
-          props([
-            {'name': 'sd1', 'equipped': true},
-          ]),
-        ),
-        [null],
-      );
-      expect(listedStorages(null), [null]);
-    });
   });
 }

@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-
-import '../app_scope.dart';
-import '../theme/tokens.dart';
-import 'camera_sheet.dart';
-import 'connection_controller.dart';
+import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/connection/camera_sheet.dart';
+import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/theme/tokens.dart';
 
 /// Camera name, link state and battery at the top of the Library (mock
 /// `.pill` in `b-library-*`, `b-connect`). Tapping opens the camera sheet.
 class CameraPill extends StatelessWidget {
-  const CameraPill({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -111,45 +110,41 @@ class CameraPill extends StatelessWidget {
 /// What the pill says about the link, derived from the controller.
 @immutable
 final class PillLinkState {
-  const PillLinkState._(this.kind, this.label, {this.battery});
+  const new _(this.kind, this.label, {this.battery});
 
-  factory PillLinkState.of(ConnectionController connection) =>
-      switch (connection.status) {
-        ConnectionStatus.offline => const PillLinkState._(
-          PillLinkKind.offline,
-          'Offline',
-        ),
-        ConnectionStatus.failed => const PillLinkState._(
-          PillLinkKind.failed,
-          'Not connected',
-        ),
-        ConnectionStatus.connecting when connection.reconnecting =>
-          const PillLinkState._(PillLinkKind.reconnecting, 'Reconnecting…'),
-        ConnectionStatus.connecting => PillLinkState._(
-          PillLinkKind.connecting,
-          connection.step == ConnectStep.wifi
-              ? 'Connecting to Wi-Fi…'
-              : 'Connecting…',
-        ),
-        ConnectionStatus.bluetooth => const PillLinkState._(
-          PillLinkKind.connected,
-          'Bluetooth',
-        ),
-        // Switched off with the Library open: red while it is woken and
-        // its Wi-Fi joined again.
-        ConnectionStatus.connected when connection.reconnecting =>
-          connection.cameraOff
-              ? const PillLinkState._(PillLinkKind.failed, 'Camera off')
-              : const PillLinkState._(
-                  PillLinkKind.reconnecting,
-                  'Reconnecting…',
-                ),
-        ConnectionStatus.connected => PillLinkState._(
-          PillLinkKind.connected,
-          'Wi-Fi',
-          battery: connection.props?.battery,
-        ),
-      };
+  factory of(ConnectionController connection) => switch (connection.status) {
+    ConnectionStatus.offline => const PillLinkState._(
+      PillLinkKind.offline,
+      'Offline',
+    ),
+    ConnectionStatus.failed => const PillLinkState._(
+      PillLinkKind.failed,
+      'Not connected',
+    ),
+    ConnectionStatus.connecting when connection.reconnecting =>
+      const PillLinkState._(PillLinkKind.reconnecting, 'Reconnecting…'),
+    ConnectionStatus.connecting => PillLinkState._(
+      PillLinkKind.connecting,
+      connection.step == ConnectStep.wifi
+          ? 'Connecting to Wi-Fi…'
+          : 'Connecting…',
+    ),
+    ConnectionStatus.bluetooth => const PillLinkState._(
+      PillLinkKind.connected,
+      'Bluetooth',
+    ),
+    // Switched off with the Library open: red while it is woken and
+    // its Wi-Fi joined again.
+    ConnectionStatus.connected when connection.reconnecting =>
+      connection.cameraOff
+          ? const PillLinkState._(PillLinkKind.failed, 'Camera off')
+          : const PillLinkState._(PillLinkKind.reconnecting, 'Reconnecting…'),
+    ConnectionStatus.connected => PillLinkState._(
+      PillLinkKind.connected,
+      'Wi-Fi',
+      battery: connection.props?.battery,
+    ),
+  };
 
   final PillLinkKind kind;
   final String label;
@@ -161,7 +156,7 @@ final class PillLinkState {
 enum PillLinkKind { offline, connecting, connected, reconnecting, failed }
 
 class _Meta extends StatelessWidget {
-  const _Meta({required this.link});
+  const new({required this.link});
 
   final PillLinkState link;
 

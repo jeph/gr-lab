@@ -1,18 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:gr_protocol/gr_protocol.dart';
-
-import '../app_scope.dart';
-import '../connection/connection_controller.dart';
-import '../data/cameras.dart';
-import '../theme/tokens.dart';
-import '../widgets/group.dart';
-import 'cancellable_transport.dart';
-import 'nearby_scanner.dart';
-import 'pairing_done.dart';
-import 'pairing_failure.dart';
-import 'pairing_widgets.dart';
+import 'package:gr_camera/gr_camera.dart';
+import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/data/cameras.dart';
+import 'package:grlab/src/pairing/pairing_done.dart';
+import 'package:grlab/src/pairing/pairing_failure.dart';
+import 'package:grlab/src/pairing/pairing_widgets.dart';
+import 'package:grlab/src/theme/tokens.dart';
+import 'package:grlab/src/widgets/group.dart';
 
 enum _Page { find, instructions, pairing, failed }
 
@@ -27,7 +24,7 @@ enum _Bluetooth { checking, ready, off, denied, unsupported, error }
 /// camera's pairing mode is one-shot, so every attempt starts from the
 /// user reopening Execute Pairing.
 class PairingFlow extends StatefulWidget {
-  const PairingFlow({super.key});
+  const new({super.key});
 
   /// Pushes the flow over the current screen.
   static Future<void> push(BuildContext context) =>
@@ -48,7 +45,7 @@ class _PairingFlowState extends State<PairingFlow> {
   NearbyScanner? _scanner;
 
   NearbyCamera? _selected;
-  CancellableTransport? _run;
+  PairingRun? _run;
   GrPairingStage _stage = GrPairingStage.scanning;
   PairingFailureInfo? _failure;
 
@@ -93,25 +90,10 @@ class _PairingFlowState extends State<PairingFlow> {
 
   Future<void> _checkBluetooth(int generation) async {
     bool current() => mounted && generation == _findGeneration;
-    final services = _models.services;
+    final camera = _models.services.camera;
     try {
-      if (!await services.ensureBluetoothPermission()) {
-        if (current()) setState(() => _bluetooth = _Bluetooth.denied);
-        return;
-      }
-      var state = await services.ble.adapterState();
-      // CoreBluetooth reports unknown until its manager has started.
-      for (
-        var i = 0;
-        i < 10 &&
-            (state == BleAdapterState.unknown ||
-                state == BleAdapterState.resetting);
-        i++
-      ) {
-        await Future<void>.delayed(const Duration(milliseconds: 300));
-        if (!current()) return;
-        state = await services.ble.adapterState();
-      }
+      // A denied permission reads as unauthorized.
+      final state = await camera.bluetoothState(waitForStartup: true);
       if (!current()) return;
       switch (state) {
         case BleAdapterState.poweredOff:
@@ -125,7 +107,7 @@ class _PairingFlowState extends State<PairingFlow> {
             BleAdapterState.resetting:
           setState(() {
             _bluetooth = _Bluetooth.ready;
-            _scanner = NearbyScanner(services.ble)..start();
+            _scanner = NearbyScanner(camera)..start();
           });
       }
     } on Object catch (e) {
@@ -156,9 +138,10 @@ class _PairingFlowState extends State<PairingFlow> {
   Future<void> _pair() async {
     final selected = _selected;
     if (selected == null || _run != null) return;
-    final run = CancellableTransport(
-      _models.services.ble,
-      onlyDeviceId: selected.serial == null ? selected.deviceId : null,
+    final run = PairingRun(
+      _models.services.camera,
+      target: selected,
+      clientName: _models.services.clientName,
     );
     setState(() {
       _run = run;
@@ -174,12 +157,9 @@ class _PairingFlowState extends State<PairingFlow> {
     // The session may hold a link to this very camera; pairing needs it.
     await connection.disconnect();
     if (run.cancelled) return;
-    final GrPairing pairing;
+    final GrPairedCamera paired;
     try {
-      pairing = await pairCamera(
-        run,
-        clientName: _models.services.clientName,
-        serial: selected.serial,
+      paired = await run.start(
         onStage: (stage) {
           if (mounted && _run == run) setState(() => _stage = stage);
         },
@@ -193,15 +173,8 @@ class _PairingFlowState extends State<PairingFlow> {
       });
       return;
     }
-    // The ConnectionController opens its own link; the camera may not
-    // accept a second one while this stays open.
-    try {
-      await pairing.client.connection.disconnect();
-    } on Object {
-      // Already dropped.
-    }
     if (!mounted || run.cancelled) return;
-    await _finish(pairing.camera);
+    await _finish(paired);
   }
 
   Future<void> _finish(GrPairedCamera paired) async {
@@ -217,8 +190,8 @@ class _PairingFlowState extends State<PairingFlow> {
       name: existing?.name ?? SavedCamera.defaultName(paired),
       pairedAt: DateTime.now(),
     );
-    final navigator = Navigator.of(context);
-    unawaited(navigator.pushReplacement(PairingDoneScreen.route(saved.serial)));
+    Navigator.of(context)
+        .pushReplacement(PairingDoneScreen.route(saved.serial));
     await cameras.add(saved);
     // Connects to the new camera, which saving made the current one; the
     // Cameras screen shows the steps once Done is pressed.
@@ -323,7 +296,7 @@ class _PairingFlowState extends State<PairingFlow> {
 
 /// Top bar, scrolling content and an optional bottom area.
 class _PageLayout extends StatelessWidget {
-  const _PageLayout({
+  const new({
     required this.pageKey,
     required this.step,
     required this.leading,
@@ -360,7 +333,7 @@ class _PageLayout extends StatelessWidget {
 // -------------------------------------------------------------------- find
 
 class _FindPage extends StatelessWidget {
-  const _FindPage({
+  const new({
     required this.leading,
     required this.bluetooth,
     required this.bluetoothError,
@@ -539,11 +512,7 @@ class _FindPage extends StatelessWidget {
 }
 
 class _NearbyRow extends StatelessWidget {
-  const _NearbyRow({
-    required this.camera,
-    required this.paired,
-    required this.onAdd,
-  });
+  const new({required this.camera, required this.paired, required this.onAdd});
 
   final NearbyCamera camera;
   final bool paired;
@@ -605,7 +574,7 @@ class _NearbyRow extends StatelessWidget {
 }
 
 class _SmallButton extends StatelessWidget {
-  const _SmallButton({super.key, required this.label, this.onPressed});
+  const new({required this.label, super.key, this.onPressed});
 
   final String label;
   final VoidCallback? onPressed;
@@ -629,7 +598,7 @@ class _SmallButton extends StatelessWidget {
 // ------------------------------------------------------------ instructions
 
 class _InstructionsPage extends StatelessWidget {
-  const _InstructionsPage({
+  const new({
     required this.leading,
     required this.trailing,
     required this.camera,
@@ -718,7 +687,7 @@ class _InstructionsPage extends StatelessWidget {
 // ----------------------------------------------------------------- pairing
 
 class _PairingPage extends StatelessWidget {
-  const _PairingPage({
+  const new({
     required this.leading,
     required this.trailing,
     required this.cameraName,
@@ -810,7 +779,7 @@ class _PairingPage extends StatelessWidget {
 // ----------------------------------------------------------------- failure
 
 class _FailurePage extends StatelessWidget {
-  const _FailurePage({
+  const new({
     required this.leading,
     required this.info,
     required this.onPairAgain,

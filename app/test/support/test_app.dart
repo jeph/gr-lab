@@ -3,8 +3,15 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:gr_protocol/gr_protocol.dart';
+import 'package:gr_protocol/gr_protocol.dart'
+    show
+        BleAdapterState,
+        BleAdvertisement,
+        BleConnection,
+        BleTransport,
+        WifiNetworkControl;
 import 'package:grlab/src/app.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/data/cameras.dart';
@@ -23,7 +30,7 @@ import 'package:grlab/src/theme/tokens.dart';
 /// - finish every test with `await app.dispose()`, which tears the app
 ///   down and leaves no timers pending.
 final class TestApp {
-  TestApp._({
+  new _({
     required this.models,
     required this.camera,
     required this.ble,
@@ -42,7 +49,8 @@ final class TestApp {
   final Directory _root;
   WidgetTester? _tester;
 
-  /// What `AppServices.ensureBluetoothPermission` answers (default true).
+  /// What the camera environment's Bluetooth permission request answers
+  /// (default true).
   bool get bluetoothPermission => _permission.granted;
   set bluetoothPermission(bool granted) => _permission.granted = granted;
 
@@ -70,8 +78,8 @@ final class TestApp {
     await tester.pump();
   }
 
-  /// Unmounts the app, ends the session, stops the camera and removes the
-  /// temporary data.
+  /// Unmounts the app, ends the session, stops the camera, closes the debug
+  /// log and removes the temporary data.
   Future<void> dispose() async {
     final tester = _tester;
     if (tester != null) {
@@ -86,12 +94,18 @@ final class TestApp {
       await tester.runAsync(camera.close);
       // Lets timers the camera or session started run out.
       await tester.pump(const Duration(minutes: 2));
+      // Its writes were queued in the test's fake-time zone, so they need
+      // pumping too.
+      var logClosed = false;
+      unawaited(models.debugLog.close().whenComplete(() => logClosed = true));
+      await pumpUntil(tester, () => logClosed, reason: 'debug log close');
       await tester.runAsync(_deleteRoot);
     } else {
       await models.connection.disconnect();
       models.idle.dispose();
       models.connection.dispose();
       await camera.close();
+      await models.debugLog.close();
       await _deleteRoot();
     }
   }
@@ -112,8 +126,8 @@ final class TestApp {
 /// or without it for one that needs pairing again). [sessionOptions]
 /// shortens session timeouts for failure tests. [transport] wraps the
 /// camera's BLE transport, e.g. to add a second camera; [wifi] wraps its
-/// Wi-Fi control. [askBeforeWifiJoin], [wifiApprovalShown] and
-/// [redialDelays] are passed to [AppServices].
+/// Wi-Fi control. [wifiApprovalShown] goes to the [GrCameraEnvironment],
+/// [askBeforeWifiJoin] and [redialDelays] to [AppServices].
 Future<TestApp> createTestApp({
   FakeCameraConfig config = const FakeCameraConfig(),
   bool saveCamera = false,
@@ -154,18 +168,24 @@ Future<TestApp> createTestApp({
     transport == null ? camera.transport : transport(camera.transport),
   );
   final media = RecordingMediaSaver();
+  final trace = TraceRelay();
   final services = AppServices(
-    ble: ble,
-    wifi: wifi == null ? camera.wifi : wifi(camera.wifi),
+    camera: GrCameraEnvironment(
+      ble: ble,
+      wifi: wifi == null ? camera.wifi : wifi(camera.wifi),
+      trace: trace.call,
+      httpFactory: camera.httpClient,
+      sessionOptions: sessionOptions,
+      wifiApprovalShown: wifiApprovalShown,
+      ensureBluetoothPermission: () async => permission.granted,
+    ),
+    trace: trace,
     media: media,
     clientName: 'GR Lab',
     dataDir: data,
     cacheDir: cache,
-    ensureBluetoothPermission: () async => permission.granted,
-    httpFactory: camera.httpClient,
-    sessionOptions: sessionOptions,
+    debugLogDir: Directory('${data.path}/debug-log'),
     askBeforeWifiJoin: askBeforeWifiJoin,
-    wifiApprovalShown: wifiApprovalShown,
     redialDelays: redialDelays,
   );
   return TestApp._(
@@ -232,7 +252,7 @@ Future<void> pumpRounds(WidgetTester tester, int rounds) async {
 
 /// Forwards to the camera's transport, counting scans and connects.
 final class CountingTransport implements BleTransport {
-  CountingTransport(this._inner);
+  new(this._inner);
 
   final BleTransport _inner;
   int scans = 0;

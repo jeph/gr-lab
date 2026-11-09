@@ -3,11 +3,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import '../trace.dart';
-import 'errors.dart';
-import 'json.dart';
-import 'mjpeg.dart';
-import 'request.dart';
+import 'package:gr_protocol/src/http/errors.dart';
+import 'package:gr_protocol/src/http/json.dart';
+import 'package:gr_protocol/src/http/mjpeg.dart';
+import 'package:gr_protocol/src/http/request.dart';
+import 'package:gr_protocol/src/trace.dart';
 
 /// Opens a TCP connection to the camera. Supply one that binds to the camera
 /// network (e.g. an Android `Network.socketFactory`) when the platform needs
@@ -18,6 +18,7 @@ typedef GrSocketConnector = Future<Socket> Function(
   Duration timeout,
 );
 
+/// Plain `Socket.connect`, without binding to a particular network.
 Future<Socket> defaultSocketConnector(
   String host,
   int port,
@@ -26,7 +27,8 @@ Future<Socket> defaultSocketConnector(
 
 /// One live-view JPEG.
 final class LiveViewFrame {
-  LiveViewFrame({
+  /// Frame [sequence] with its bytes and arrival times.
+  new({
     required this.sequence,
     required this.jpeg,
     required this.receivedAt,
@@ -35,20 +37,30 @@ final class LiveViewFrame {
 
   /// 1-based frame number within this stream.
   final int sequence;
+
+  /// The frame's JPEG bytes, SOI through EOI.
   final Uint8List jpeg;
+
+  /// Local time the frame was complete.
   final DateTime receivedAt;
 
   /// Time since the response head arrived.
   final Duration sinceOpen;
 
+  /// Size from the JPEG's SOF segment, or `null` when it has none.
   late final JpegDimensions? dimensions = readJpegDimensions(jpeg);
 }
 
 /// A frame exceeded [LiveViewStream.maxFrameBytes] and was discarded. The
 /// stream continues with the next frame.
 final class LiveViewFrameTooLargeException implements Exception {
-  const LiveViewFrameTooLargeException(this.bytes, this.limit);
+  /// [bytes] were discarded because they passed [limit].
+  const new(this.bytes, this.limit);
+
+  /// Bytes discarded.
   final int bytes;
+
+  /// The [LiveViewStream.maxFrameBytes] in force.
   final int limit;
 
   @override
@@ -59,29 +71,50 @@ final class LiveViewFrameTooLargeException implements Exception {
 
 /// Counters for a live-view session.
 final class LiveViewStats {
+  /// Frames delivered.
   int frames = 0;
+
+  /// Total bytes of delivered frames.
   int frameBytes = 0;
+
+  /// Smallest delivered frame in bytes; 0 before the first frame.
   int minFrameBytes = 0;
+
+  /// Largest delivered frame in bytes.
   int maxFrameBytes = 0;
+
+  /// Frames dropped for exceeding [LiveViewStream.maxFrameBytes].
   int tooLarge = 0;
+
+  /// Partial frames dropped because a new frame started before their end.
   int interrupted = 0;
 
   /// Response body bytes received (after de-chunking).
   int bodyBytes = 0;
+
+  /// Time from the response head to the first frame.
   Duration? firstFrame;
+
+  /// Time from the response head to the latest frame.
   Duration? lastFrame;
+
+  /// Size of the latest frame that had one.
   JpegDimensions? lastDimensions;
+
+  /// Every distinct frame size seen, as `WxH`.
   final Set<String> resolutions = {};
 
   /// Average frame rate between the first and last frame.
   double? get fps {
-    final first = firstFrame, last = lastFrame;
+    final first = firstFrame;
+    final last = lastFrame;
     if (first == null || last == null || frames < 2 || last <= first) {
       return null;
     }
     return (frames - 1) * 1e6 / (last - first).inMicroseconds;
   }
 
+  /// Trace/log form, with average frame size.
   Map<String, Object?> toJson() => {
     'frames': frames,
     'frameBytes': frameBytes,
@@ -105,7 +138,7 @@ final class LiveViewStats {
 /// tolerantly: no Content-Length is needed, chunked transfer is decoded, and
 /// frames are split by JPEG markers ([MjpegSplitter]).
 final class LiveViewStream {
-  LiveViewStream._(
+  new _(
     this._socket,
     this.uri,
     this.maxFrameBytes,
@@ -120,7 +153,7 @@ final class LiveViewStream {
   /// and transport exceptions as thrown by [connector].
   ///
   /// [maxFps]: the firmware accepts 1..90 and defaults to 90 when absent
-  /// (§1.3); other values are rejected here. [reso]: syntax is [unknown]
+  /// (§1.3); other values are rejected here. [reso]: syntax is \[unknown\]
   /// (third-party clients send `720x480`); it is sent as given after
   /// query-encoding. [idleTimeout] ends the stream with a
   /// [TimeoutException] when no bytes arrive for that long; `null` waits
@@ -144,10 +177,27 @@ final class LiveViewStream {
         channel: TraceChannel.liveview,
         direction: TraceDirection.outbound,
         kind: 'request',
-        fields: {'method': 'GET', 'url': uri.toString()},
+        fields: {
+          'method': 'GET',
+          'url': uri.toString(),
+          'head': _requestHead(uri),
+        },
       ),
     );
-    final socket = await connector(host, port, connectTimeout);
+    final Socket socket;
+    try {
+      socket = await connector(host, port, connectTimeout);
+    } catch (e) {
+      trace?.call(
+        TraceEvent(
+          channel: TraceChannel.liveview,
+          direction: TraceDirection.internal,
+          kind: 'error',
+          fields: {'error': e.toString()},
+        ),
+      );
+      rethrow;
+    }
     final stream = LiveViewStream._(
       socket,
       uri,
@@ -158,12 +208,27 @@ final class LiveViewStream {
     );
     try {
       await stream._start(connectTimeout);
-    } catch (_) {
+    } catch (e) {
+      trace?.call(
+        TraceEvent(
+          channel: TraceChannel.liveview,
+          direction: TraceDirection.internal,
+          kind: 'error',
+          fields: {'error': e.toString()},
+        ),
+      );
       socket.destroy();
       rethrow;
     }
     return stream;
   }
+
+  /// The request as written to the socket, also traced in full.
+  static String _requestHead(Uri uri) =>
+      'GET ${uri.path}${uri.hasQuery ? '?${uri.query}' : ''} HTTP/1.1\r\n'
+      'Host: ${uri.host}${uri.port == 80 ? '' : ':${uri.port}'}\r\n'
+      'Accept: */*\r\n'
+      'Connection: close\r\n\r\n';
 
   /// Builds the live-view URL; throws [ArgumentError] for invalid options.
   static Uri liveViewUri(
@@ -189,7 +254,11 @@ final class LiveViewStream {
   }
 
   final Socket _socket;
+
+  /// The request URL.
   final Uri uri;
+
+  /// Largest frame kept; longer frames are dropped and reported.
   final int maxFrameBytes;
   final Duration? _idleTimeout;
   final TraceSink? _trace;
@@ -200,6 +269,8 @@ final class LiveViewStream {
   final Stopwatch _clock = Stopwatch();
   final BytesBuilder _headBuf = BytesBuilder();
   final BytesBuilder _errorBody = BytesBuilder();
+
+  /// Counters, updated as frames arrive.
   final LiveViewStats stats = LiveViewStats();
   StreamSubscription<Uint8List>? _sub;
   HttpChunkedDecoder? _chunked;
@@ -223,12 +294,7 @@ final class LiveViewStream {
   Future<void> get done => _frames.done;
 
   Future<void> _start(Duration headTimeout) async {
-    _socket.write(
-      'GET ${uri.path}${uri.hasQuery ? '?${uri.query}' : ''} HTTP/1.1\r\n'
-      'Host: ${uri.host}${uri.port == 80 ? '' : ':${uri.port}'}\r\n'
-      'Accept: */*\r\n'
-      'Connection: close\r\n\r\n',
-    );
+    _socket.write(_requestHead(uri));
     _sub = _socket.listen(_onData, onError: _onError, onDone: _onDone);
     await _head.future.timeout(
       headTimeout,
@@ -277,7 +343,7 @@ final class LiveViewStream {
     if (end < 0) {
       if (bytes.length > 16 * 1024) {
         _failHead(
-          GrMalformedResponseException(
+          const GrMalformedResponseException(
             route: 'GET /v1/liveview',
             httpStatus: null,
             issue: 'response head exceeds 16 KiB',
@@ -360,8 +426,8 @@ final class LiveViewStream {
     stats.bodyBytes += payload.length;
     for (final event in _splitter.add(payload)) {
       switch (event) {
-        case MjpegFrame(:final jpeg):
-          _emit(jpeg);
+        case MjpegFrame(:final jpeg, :final partHeader):
+          _emit(jpeg, partHeader);
         case MjpegDropped(:final reason, :final bytes):
           _trace?.call(
             TraceEvent(
@@ -389,7 +455,7 @@ final class LiveViewStream {
     }
   }
 
-  void _emit(Uint8List jpeg) {
+  void _emit(Uint8List jpeg, String partHeader) {
     if (_closed) return;
     final since = _clock.elapsed;
     final frame = LiveViewFrame(
@@ -423,14 +489,19 @@ final class LiveViewStream {
           'elapsedMs': since.inMilliseconds,
           if (dims != null) 'width': dims.width,
           if (dims != null) 'height': dims.height,
+          if (partHeader.isNotEmpty) 'partHeader': partHeader,
         },
       ),
     );
     _frames.add(frame);
   }
 
+  /// The most of a non-200 body kept, as for every other HTTP response; the
+  /// body is traced in full up to this.
+  static const int _maxErrorBodyBytes = 32 * 1024 * 1024;
+
   void _addErrorBody(Uint8List data) {
-    final room = 64 * 1024 - _errorBody.length;
+    final room = _maxErrorBodyBytes - _errorBody.length;
     if (room > 0) {
       _errorBody.add(
         data.length <= room ? data : Uint8List.sublistView(data, 0, room),
@@ -438,12 +509,24 @@ final class LiveViewStream {
     }
     final limit = _contentLength;
     if (room <= data.length || (limit != null && _errorBody.length >= limit)) {
-      _finishErrorBody();
+      _finishErrorBody(truncated: room < data.length);
     }
   }
 
-  void _finishErrorBody() {
+  void _finishErrorBody({bool truncated = false}) {
     final body = _errorBody.takeBytes();
+    _trace?.call(
+      TraceEvent(
+        channel: TraceChannel.liveview,
+        direction: TraceDirection.inbound,
+        kind: 'errorBody',
+        fields: {
+          'status': statusCode,
+          'body': utf8.decode(body, allowMalformed: true),
+          if (truncated) 'truncated': true,
+        },
+      ),
+    );
     final json = decodeCameraJsonBytes(body);
     final map = json.object;
     final errCode = map == null ? null : JsonFields(map).integer('errCode');
@@ -491,7 +574,7 @@ final class LiveViewStream {
         _finishErrorBody();
       } else {
         _failHead(
-          GrMalformedResponseException(
+          const GrMalformedResponseException(
             route: 'GET /v1/liveview',
             httpStatus: null,
             issue: 'connection closed before the response head ended',

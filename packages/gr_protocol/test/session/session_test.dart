@@ -8,7 +8,7 @@ import 'package:test/test.dart';
 /// A bonded camera reached by device id. [operationMode] is what Operation
 /// Mode reads (`02` = off, BT-only); writes to it are recorded.
 final class BondedCamera implements BleTransport {
-  BondedCamera({
+  new({
     this.operationMode = 1,
     this.connectError,
     this.bonded = true,
@@ -25,7 +25,7 @@ final class BondedCamera implements BleTransport {
 
   /// Links whose discovery fails as if the camera dropped them (waking).
   int dropLinks;
-  var scans = 0;
+  int scans = 0;
   final ops = <String>[];
 
   /// While set, a connect waits for it before the link opens.
@@ -75,7 +75,7 @@ final class BondedCamera implements BleTransport {
 }
 
 final class _Link implements BleConnection {
-  _Link(this.camera, this.deviceId);
+  new(this.camera, this.deviceId);
 
   final BondedCamera camera;
   @override
@@ -202,9 +202,9 @@ final class FailingWifi implements WifiNetworkControl {
 /// Records the security of every join and fails each one, the first with
 /// [first] when given.
 final class RecordingWifi implements WifiNetworkControl {
-  RecordingWifi({this.first});
+  new({this.first});
 
-  final Object? first;
+  final Exception? first;
   final joins = <WifiSecurity>[];
 
   @override
@@ -374,8 +374,9 @@ void main() {
           .connect(deviceId: 'cam')
           .then<void>((_) {}, onError: (_) {});
       await until(() => s.phase == GrSessionPhase.joining);
-      camera.holdConnect = Completer<void>();
-      camera.dropAll();
+      camera
+        ..holdConnect = Completer<void>()
+        ..dropAll();
       await until(
         () => camera.ops.where((o) => o == 'connect cam').length == 2,
       );
@@ -810,7 +811,7 @@ void main() {
       await s.close();
     });
 
-    test('a wake during a Wi-Fi start waits for the start\'s own wake and '
+    test("a wake during a Wi-Fi start waits for the start's own wake and "
         'its watch over the link, then ensures the mode', () async {
       final camera = BondedCamera(operationMode: 2)
         ..holdModeWrite = Completer<void>();

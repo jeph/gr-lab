@@ -2,19 +2,14 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-
-import '../data/settings.dart';
-import '../theme/tokens.dart';
-import 'shoot_format.dart';
-import 'shoot_model.dart';
+import 'package:grlab/src/data/settings.dart';
+import 'package:grlab/src/shoot/shoot_format.dart';
+import 'package:grlab/src/shoot/shoot_model.dart';
+import 'package:grlab/src/theme/tokens.dart';
 
 /// Remote / Live view, at the top of Shoot in both modes (mock `.modeseg`).
 class ShootModeSwitch extends StatelessWidget {
-  const ShootModeSwitch({
-    super.key,
-    required this.mode,
-    required this.onChanged,
-  });
+  const new({required this.mode, required this.onChanged, super.key});
 
   final ShootMode mode;
   final ValueChanged<ShootMode> onChanged;
@@ -80,12 +75,12 @@ class ShootModeSwitch extends StatelessWidget {
 
 /// A row of equal choices (mock `.segc`).
 class ShootSegmented<T> extends StatelessWidget {
-  const ShootSegmented({
-    super.key,
+  const new({
     required this.values,
     required this.selected,
     required this.label,
     required this.onSelect,
+    super.key,
     this.enabled = true,
   });
 
@@ -148,12 +143,12 @@ class ShootSegmented<T> extends StatelessWidget {
 /// The shutter. While a self-timer runs it is a ring counting down the
 /// seconds left, and tapping it cancels (mock `b-remote` notes).
 class ShutterButton extends StatefulWidget {
-  const ShutterButton({
-    super.key,
+  const new({
     required this.model,
     required this.size,
     required this.color,
     required this.ringGap,
+    super.key,
   });
 
   final ShootModel model;
@@ -286,7 +281,7 @@ class _ShutterButtonState extends State<ShutterButton> {
 }
 
 class _RingPainter extends CustomPainter {
-  _RingPainter({
+  new({
     required this.fraction,
     required this.color,
     required this.track,
@@ -305,14 +300,15 @@ class _RingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = width
       ..strokeCap = StrokeCap.round;
-    canvas.drawArc(rect, 0, math.pi * 2, false, paint..color = track);
-    canvas.drawArc(
-      rect,
-      -math.pi / 2,
-      math.pi * 2 * fraction,
-      false,
-      paint..color = color,
-    );
+    canvas
+      ..drawArc(rect, 0, math.pi * 2, false, paint..color = track)
+      ..drawArc(
+        rect,
+        -math.pi / 2,
+        math.pi * 2 * fraction,
+        false,
+        paint..color = color,
+      );
   }
 
   @override
@@ -320,7 +316,7 @@ class _RingPainter extends CustomPainter {
       old.fraction != fraction || old.color != color || old.track != track;
 }
 
-/// Picks a drive mode (bottom sheet). [current] is checked.
+/// Picks a drive mode (bottom sheet); the current one is checked.
 Future<void> showDrivePicker(BuildContext context, ShootModel model) async {
   final current = model.driveAndTimer?.$1;
   final picked = await showModalBottomSheet<ShootDrive>(

@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
-import 'bytes.dart';
-import 'codecs.dart';
-import 'enums.dart';
+import 'package:gr_protocol/src/ble/bytes.dart';
+import 'package:gr_protocol/src/ble/codecs.dart';
+import 'package:gr_protocol/src/ble/enums.dart';
 
 // Multi-field characteristic values. Layouts: docs/protocol/ble.md
 // §Service and characteristic map / §Payload details (GR WORLD) and
@@ -42,8 +42,12 @@ void _checkRange(int value, int min, int max, String name) {
 /// Shared shape of record codecs: `hex:<bytes>` input is accepted by every
 /// record codec in addition to its field syntax.
 abstract class BleRecordCodec<T extends Object> extends BleCodec<T> {
-  const BleRecordCodec();
+  /// Const constructor for subclasses.
+  const new();
 
+  /// Parses the codec's field syntax (see [syntax]). [parse] strips
+  /// surrounding whitespace and handles `hex:` input before calling this.
+  /// Throws [FormatException].
   T parseFields(String text);
 
   @override
@@ -60,9 +64,11 @@ abstract class BleRecordCodec<T extends Object> extends BleCodec<T> {
 /// Operation Request: `[OperationCode sint8][Parameter sint8]`
 /// (ble-imagesync.md §1, §4.5; GR WORLD sends `01 01`).
 final class BleOperationRequest {
-  const BleOperationRequest(this.code, this.parameter);
+  /// Request from decoded or parsed wire values, which may be undocumented.
+  const new(this.code, this.parameter);
 
-  BleOperationRequest.of(BleOperationCode code, BleOperationParameter parameter)
+  /// Request from documented enum members.
+  new of(BleOperationCode code, BleOperationParameter parameter)
     : this(BleEnumValue.of(code), BleEnumValue.of(parameter));
 
   /// Release with AF, `01 01` (both apps).
@@ -89,18 +95,24 @@ final class BleOperationRequest {
     BleOperationParameter.greenButton,
   );
 
+  /// Byte 0: 0 NOP, 1 start shooting/recording, 2 stop.
   final BleEnumValue<BleOperationCode> code;
+
+  /// Byte 1: 0 no AF, 1 AF, 2 green-button function.
   final BleEnumValue<BleOperationParameter> parameter;
 
+  /// `{code, parameter}`.
   Map<String, Object?> toJson() => {
     'code': code.toJson(),
     'parameter': parameter.toJson(),
   };
 }
 
+/// Codec for [BleOperationRequest].
 final class BleOperationRequestCodec
     extends BleRecordCodec<BleOperationRequest> {
-  const BleOperationRequestCodec();
+  /// Creates the codec.
+  const new();
 
   @override
   BleDecoded<BleOperationRequest> decode(Uint8List bytes) {
@@ -154,17 +166,26 @@ final class BleOperationRequestCodec
 /// [option] is null when the camera sent the 2-byte form, and encoding
 /// preserves that length.
 final class BleShootingMode {
-  const BleShootingMode(this.mode, this.userMode, [this.option]);
+  /// Pass [option] only for the 3-byte Image Sync form.
+  const new(this.mode, this.userMode, [this.option]);
 
+  /// Byte 0 (uint8): exposure mode (P, Av, Tv, M, …, AstroTracer, movie).
   final BleEnumValue<BleExposureMode> mode;
+
+  /// Byte 1: active user mode, 0 none or 1–5 for U1–U5.
   final BleEnumValue<BleUserMode> userMode;
+
+  /// Byte 2 (Image Sync only): 0 none, 1 hyper, 2 shift.
   final BleEnumValue<BleShootingModeOption>? option;
 
+  /// Copy with [mode] and/or [userMode] replaced. [option] is kept, so the
+  /// encoded length does not change.
   BleShootingMode copyWith({
     BleEnumValue<BleExposureMode>? mode,
     BleEnumValue<BleUserMode>? userMode,
   }) => BleShootingMode(mode ?? this.mode, userMode ?? this.userMode, option);
 
+  /// `{mode, userMode, option}`; option is null for the 2-byte form.
   Map<String, Object?> toJson() => {
     'mode': mode.toJson(),
     'userMode': userMode.toJson(),
@@ -172,8 +193,10 @@ final class BleShootingMode {
   };
 }
 
+/// Codec for [BleShootingMode], accepting both lengths.
 final class BleShootingModeCodec extends BleRecordCodec<BleShootingMode> {
-  const BleShootingModeCodec();
+  /// Creates the codec.
+  const new();
 
   @override
   BleDecoded<BleShootingMode> decode(Uint8List bytes) {
@@ -241,7 +264,9 @@ final class BleShootingModeCodec extends BleRecordCodec<BleShootingMode> {
 /// state/result and a uint16 tracking time. Extended fields are null for
 /// the 2-byte form.
 final class BleCaptureStatus {
-  const BleCaptureStatus({
+  /// Leave the extended fields null for the 2-byte GR WORLD form; setting
+  /// [still] selects the 8-byte form.
+  const new({
     required this.capturing,
     required this.countdown,
     this.still,
@@ -251,18 +276,35 @@ final class BleCaptureStatus {
     this.astroTrackingTime,
   });
 
+  /// Byte 0: 0 idle, 1 shooting in progress.
   final BleEnumValue<BleCapturing> capturing;
+
+  /// Byte 1: 0 none, 1 self-timer counting down, 2 waiting for scheduled
+  /// time.
   final BleEnumValue<BleCountdown> countdown;
+
+  /// Byte 2: 0 other, 1 continuous, 2 bracket, 3 multi-exposure,
+  /// 4 interval, 5 interval-composite.
   final BleEnumValue<BleStillCaptureState>? still;
+
+  /// Byte 3: 0 other, 1 recording.
   final BleEnumValue<BleMovieCaptureState>? movie;
+
+  /// Byte 4: AstroTracer Type 3 state, 0 idle, 1 pre-capture, 2 main
+  /// capture.
   final BleEnumValue<BleType3CaptureState>? type3CaptureState;
+
+  /// Byte 5: AstroTracer Type 3 pre-capture result, 0 ok, 1 motion not
+  /// detectable, 2 exposure-time error.
   final BleEnumValue<BleType3PreCaptureResult>? type3PreCaptureResult;
 
-  /// Unit not documented.
+  /// Bytes 6–7 (uint16): AstroTracer tracking time. Unit not documented.
   final int? astroTrackingTime;
 
+  /// Whether this is the 8-byte Image Sync form (keyed on [still]).
   bool get isExtended => still != null;
 
+  /// Extended fields are included only when [isExtended].
   Map<String, Object?> toJson() => {
     'capturing': capturing.toJson(),
     'countdown': countdown.toJson(),
@@ -276,8 +318,10 @@ final class BleCaptureStatus {
   };
 }
 
+/// Codec for [BleCaptureStatus], accepting both lengths.
 final class BleCaptureStatusCodec extends BleRecordCodec<BleCaptureStatus> {
-  const BleCaptureStatusCodec();
+  /// Creates the codec.
+  const new();
 
   @override
   BleDecoded<BleCaptureStatus> decode(Uint8List bytes) {
@@ -376,6 +420,7 @@ enum BleSelfTimerCancelFormat {
   /// 2 bytes `01 01` = [cancel][remocon on] (Image Sync, GR III).
   imageSync;
 
+  /// The command this app's format sends to cancel a countdown.
   BleSelfTimerCommand get command => switch (this) {
     BleSelfTimerCancelFormat.grWorld => BleSelfTimerCommand(
       BleEnumValue.of(BleCountdownCancel.cancel),
@@ -390,19 +435,26 @@ enum BleSelfTimerCancelFormat {
 /// Self Timer command: `[Countdown Cancel]` (GR WORLD) or
 /// `[Countdown Cancel][Remocon]` (Image Sync). [remocon] null = 1-byte form.
 final class BleSelfTimerCommand {
-  const BleSelfTimerCommand(this.cancel, [this.remocon]);
+  /// Omit [remocon] for the 1-byte GR WORLD form.
+  const new(this.cancel, [this.remocon]);
 
+  /// Byte 0: 0 other, 1 cancel the running countdown.
   final BleEnumValue<BleCountdownCancel> cancel;
+
+  /// Byte 1 (Image Sync only): remote control 0 off, 1 on.
   final BleEnumValue<BleRemocon>? remocon;
 
+  /// `{cancel, remocon}`; remocon is null for the 1-byte form.
   Map<String, Object?> toJson() => {
     'cancel': cancel.toJson(),
     'remocon': remocon?.toJson(),
   };
 }
 
+/// Codec for [BleSelfTimerCommand], accepting both lengths.
 final class BleSelfTimerCodec extends BleRecordCodec<BleSelfTimerCommand> {
-  const BleSelfTimerCodec();
+  /// Creates the codec.
+  const new();
 
   @override
   BleDecoded<BleSelfTimerCommand> decode(Uint8List bytes) {
@@ -443,8 +495,10 @@ final class BleSelfTimerCodec extends BleRecordCodec<BleSelfTimerCommand> {
   Object? valueToJson(BleSelfTimerCommand value) => value.toJson();
 
   @override
-  String describeValue(BleSelfTimerCommand value) =>
-      '${value.cancel}${value.remocon == null ? '' : ' remocon=${value.remocon}'}';
+  String describeValue(BleSelfTimerCommand value) => [
+    '${value.cancel}',
+    if (value.remocon != null) 'remocon=${value.remocon}',
+  ].join(' ');
 
   @override
   String get syntax => '<cancel>[,<remocon>] e.g. cancel | cancel,on';
@@ -455,11 +509,17 @@ final class BleSelfTimerCodec extends BleRecordCodec<BleSelfTimerCommand> {
 
 /// One Image Control parameter: id byte and signed value.
 final class BleImageControlEntry {
-  const BleImageControlEntry(this.parameter, this.value);
+  /// Entry for one parameter id and its value.
+  const new(this.parameter, this.value);
 
+  /// Parameter id (saturation, hue, key, contrast, …). GR WORLD skips ids
+  /// it does not know; they keep their raw value here.
   final BleEnumValue<BleImageControlParameter> parameter;
+
+  /// Signed adjustment (sint8); per-parameter range not documented.
   final int value;
 
+  /// `{parameter, value}`.
   Map<String, Object?> toJson() => {
     'parameter': parameter.toJson(),
     'value': value,
@@ -470,7 +530,9 @@ final class BleImageControlEntry {
 /// `[version][unknown][base image][N][N × (id, sint8 value)]`.
 /// GR WORLD accepts versions 1, 2 and 4 only.
 final class BleImageControlBlob {
-  BleImageControlBlob({
+  /// Copies [parameters] into an unmodifiable list; [trailing] defaults to
+  /// no bytes.
+  new({
     required this.version,
     required this.reserved,
     required this.base,
@@ -479,18 +541,26 @@ final class BleImageControlBlob {
   }) : parameters = List.unmodifiable(parameters),
        trailing = trailing ?? Uint8List(0);
 
+  /// Versions GR WORLD accepts; it ignores blobs with any other version.
   static const supportedVersions = {1, 2, 4};
 
+  /// Byte 0: blob format version, see [supportedVersions].
   final int version;
 
   /// Byte 1; GR WORLD never reads it, meaning unknown.
   final int reserved;
+
+  /// Byte 2: base image (standard, vivid, monotone, positive film, …).
   final BleEnumValue<BleImageControlBase> base;
+
+  /// Adjustments in wire order (count in byte 3); unmodifiable.
   final List<BleImageControlEntry> parameters;
 
   /// Bytes after the declared parameters; not documented, kept verbatim.
   final Uint8List trailing;
 
+  /// Header fields and parameters; `trailingHex` only when [trailing] is
+  /// not empty.
   Map<String, Object?> toJson() => {
     'version': version,
     'reserved': reserved,
@@ -500,8 +570,10 @@ final class BleImageControlBlob {
   };
 }
 
+/// Codec for [BleImageControlBlob]. Text input is hex only.
 final class BleImageControlCodec extends BleCodec<BleImageControlBlob> {
-  const BleImageControlCodec();
+  /// Creates the codec.
+  const new();
 
   @override
   BleDecoded<BleImageControlBlob> decode(Uint8List bytes) {
@@ -574,9 +646,12 @@ final class BleImageControlCodec extends BleCodec<BleImageControlBlob> {
   Object? valueToJson(BleImageControlBlob value) => value.toJson();
 
   @override
-  String describeValue(BleImageControlBlob value) =>
-      'v${value.version} ${value.base} '
-      '${value.parameters.map((p) => '${p.parameter.label}=${p.value}').join(' ')}';
+  String describeValue(BleImageControlBlob value) {
+    final params = value.parameters
+        .map((p) => '${p.parameter.label}=${p.value}')
+        .join(' ');
+    return 'v${value.version} ${value.base} $params';
+  }
 
   @override
   String get syntax => 'hex bytes of the whole blob';
@@ -589,7 +664,8 @@ final class BleImageControlCodec extends BleCodec<BleImageControlBlob> {
 /// the camera's local time; no zone, weekday or milliseconds (ble.md
 /// §Date/time sync; both apps send phone local time).
 final class BleDateTime {
-  const BleDateTime({
+  /// Fields are range-checked only by [BleDateTimeCodec.encode].
+  const new({
     required this.year,
     required this.month,
     required this.day,
@@ -600,7 +676,7 @@ final class BleDateTime {
 
   /// Uses [time]'s own calendar fields; pass a local [DateTime] to match
   /// both apps.
-  factory BleDateTime.fromDateTime(DateTime time) => BleDateTime(
+  factory fromDateTime(DateTime time) => BleDateTime(
     year: time.year,
     month: time.month,
     day: time.day,
@@ -609,11 +685,22 @@ final class BleDateTime {
     second: time.second,
   );
 
+  /// Bytes 0–1 (uint16).
   final int year;
+
+  /// Byte 2, 1–12.
   final int month;
+
+  /// Byte 3, 1–31.
   final int day;
+
+  /// Byte 4, 0–23.
   final int hour;
+
+  /// Byte 5, 0–59.
   final int minute;
+
+  /// Byte 6, 0–59.
   final int second;
 
   /// Local [DateTime], or null when a field is out of calendar range.
@@ -630,12 +717,14 @@ final class BleDateTime {
     if (second > 59) 'second $second out of range',
   ];
 
+  /// `YYYY-MM-DDTHH:MM:SS` with no zone suffix; the camera clock has none.
   String get iso =>
       '${year.toString().padLeft(4, '0')}-${_pad2(month)}-${_pad2(day)}'
       'T${_pad2(hour)}:${_pad2(minute)}:${_pad2(second)}';
 
   static String _pad2(int v) => v.toString().padLeft(2, '0');
 
+  /// Calendar fields plus [iso].
   Map<String, Object?> toJson() => {
     'year': year,
     'month': month,
@@ -647,8 +736,10 @@ final class BleDateTime {
   };
 }
 
+/// Codec for [BleDateTime].
 final class BleDateTimeCodec extends BleRecordCodec<BleDateTime> {
-  const BleDateTimeCodec();
+  /// Creates the codec.
+  const new();
 
   @override
   BleDecoded<BleDateTime> decode(Uint8List bytes) {
@@ -730,14 +821,20 @@ final class BleDateTimeCodec extends BleRecordCodec<BleDateTime> {
 ///
 /// Both readings are exposed; [byte1] keeps the raw value.
 final class BleBatteryLevel {
-  const BleBatteryLevel({
+  /// Set [powerSource] or [endScreenData] only for their wire form. When
+  /// encoding, [byte1] wins over [powerSource].
+  const new({
     required this.level,
     this.byte1,
     this.powerSource,
     this.endScreenData,
   });
 
+  /// Byte 0 (sint8): battery charge level. Shown as a percentage; neither
+  /// app documents the scale.
   final int level;
+
+  /// Raw byte 1, or null for the 1-byte form; see the class doc.
   final int? byte1;
 
   /// Image Sync reading of byte 1; set only for the 2-byte form.
@@ -746,6 +843,8 @@ final class BleBatteryLevel {
   /// GR WORLD long form; null otherwise.
   final Uint8List? endScreenData;
 
+  /// `{level, byte1, powerSource}`, plus `endScreenDataHex` for the long
+  /// form.
   Map<String, Object?> toJson() => {
     'level': level,
     'byte1': byte1,
@@ -755,8 +854,11 @@ final class BleBatteryLevel {
   };
 }
 
+/// Codec for [BleBatteryLevel], accepting the 1-byte, 2-byte and long
+/// forms.
 final class BleBatteryLevelCodec extends BleRecordCodec<BleBatteryLevel> {
-  const BleBatteryLevelCodec();
+  /// Creates the codec.
+  const new();
 
   @override
   BleDecoded<BleBatteryLevel> decode(Uint8List bytes) {
@@ -841,7 +943,8 @@ final class BleBatteryLevelCodec extends BleRecordCodec<BleBatteryLevel> {
 /// One storage entry. The first 14 bytes are common to both apps; the
 /// 15-byte Image Sync form adds [active] (write target).
 final class BleStorageEntry {
-  const BleStorageEntry({
+  /// Pass [active] only for the 15-byte Image Sync form.
+  const new({
     required this.type,
     required this.exists,
     required this.locked,
@@ -853,18 +956,35 @@ final class BleStorageEntry {
     this.active,
   });
 
+  /// Byte 0: 0 internal memory, 1 SD slot 1, 2 SD slot 2.
   final BleEnumValue<BleStorageType> type;
+
+  /// Byte 1 == 1: the storage is present.
   final bool exists;
+
+  /// Byte 2 == 1: the storage is locked.
   final bool locked;
+
+  /// Byte 3 == 1: the storage is available.
   final bool available;
+
+  /// Byte 4 == 1: the storage is formatted.
   final bool formatted;
+
+  /// Bytes 5–8 (sint32): remaining still-picture capacity.
   final int remainingPictures;
+
+  /// Bytes 9–12 (sint32): remaining video recording time in seconds.
   final int remainingVideoSeconds;
 
   /// Raw int8; meaning unknown in both apps.
   final int fileType;
+
+  /// Byte 14 == 1: the camera writes to this storage. Null for 14-byte
+  /// entries.
   final bool? active;
 
+  /// All fields; `fileTypeRaw` holds [fileType].
   Map<String, Object?> toJson() => {
     'type': type.toJson(),
     'exists': exists,
@@ -882,21 +1002,30 @@ final class BleStorageEntry {
 /// Sync's padding code) or 15-byte (Image Sync) entries. [entrySize] is the
 /// size the payload length matched, or null when N is 0.
 final class BleStorageInformation {
-  BleStorageInformation(List<BleStorageEntry> entries, this.entrySize)
+  /// Copies [entries] into an unmodifiable list.
+  new(List<BleStorageEntry> entries, this.entrySize)
     : entries = List.unmodifiable(entries);
 
+  /// Entries in wire order; unmodifiable.
   final List<BleStorageEntry> entries;
+
+  /// 14 or 15. Encoding ignores it and uses 15 when any entry has
+  /// [BleStorageEntry.active].
   final int? entrySize;
 
+  /// `{entrySize, entries}`.
   Map<String, Object?> toJson() => {
     'entrySize': entrySize,
     'entries': [for (final e in entries) e.toJson()],
   };
 }
 
+/// Codec for [BleStorageInformation], accepting 14- and 15-byte entries.
+/// Text input is hex only.
 final class BleStorageInformationCodec
     extends BleRecordCodec<BleStorageInformation> {
-  const BleStorageInformationCodec();
+  /// Creates the codec.
+  const new();
 
   @override
   BleDecoded<BleStorageInformation> decode(Uint8List bytes) {
@@ -911,10 +1040,8 @@ final class BleStorageInformationCodec
     } else if (rest == n * 14) {
       size = 14;
     } else {
-      return result(bytes, null, [
-        'count $n with $rest entry byte(s) matches neither 14- nor 15-byte '
-            'entries',
-      ]);
+      const sizes = 'matches neither 14- nor 15-byte entries';
+      return result(bytes, null, ['count $n with $rest entry byte(s) $sizes']);
     }
     final entries = <BleStorageEntry>[];
     for (var i = 0; i < n; i++) {
@@ -997,17 +1124,24 @@ final class BleStorageInformationCodec
 
 /// File Transfer List: `[not empty][changed]`, each `== 1`.
 final class BleFileTransferList {
-  const BleFileTransferList({required this.notEmpty, required this.changed});
+  /// Record from both flags.
+  const new({required this.notEmpty, required this.changed});
 
+  /// Byte 0 == 1: the camera's file transfer list has entries.
   final bool notEmpty;
+
+  /// Byte 1 == 1: the list changed.
   final bool changed;
 
+  /// `{notEmpty, changed}`.
   Map<String, Object?> toJson() => {'notEmpty': notEmpty, 'changed': changed};
 }
 
+/// Codec for [BleFileTransferList].
 final class BleFileTransferListCodec
     extends BleRecordCodec<BleFileTransferList> {
-  const BleFileTransferListCodec();
+  /// Creates the codec.
+  const new();
 
   @override
   BleDecoded<BleFileTransferList> decode(Uint8List bytes) {
@@ -1023,8 +1157,10 @@ final class BleFileTransferListCodec
   }
 
   @override
-  Uint8List encode(BleFileTransferList value) =>
-      Uint8List.fromList([value.notEmpty ? 1 : 0, value.changed ? 1 : 0]);
+  Uint8List encode(BleFileTransferList value) => Uint8List.fromList([
+    if (value.notEmpty) 1 else 0,
+    if (value.changed) 1 else 0,
+  ]);
 
   @override
   BleFileTransferList parseFields(String text) {
@@ -1048,20 +1184,28 @@ final class BleFileTransferListCodec
 
 /// Power Off During File Transfer: `[behavior][auto resize]`.
 final class BlePowerOffDuringTransfer {
-  const BlePowerOffDuringTransfer(this.behavior, this.autoResize);
+  /// Record from both fields.
+  const new(this.behavior, {required this.autoResize});
 
+  /// Byte 0: 0 abort the transfer and power off, 1 power off after the
+  /// transfer (Image Sync). GR WORLD only tests `== 1`.
   final BleEnumValue<BleTransferPowerOffBehavior> behavior;
+
+  /// Byte 1 == 1: auto resize is on.
   final bool autoResize;
 
+  /// `{behavior, autoResize}`.
   Map<String, Object?> toJson() => {
     'behavior': behavior.toJson(),
     'autoResize': autoResize,
   };
 }
 
+/// Codec for [BlePowerOffDuringTransfer].
 final class BlePowerOffDuringTransferCodec
     extends BleRecordCodec<BlePowerOffDuringTransfer> {
-  const BlePowerOffDuringTransferCodec();
+  /// Creates the codec.
+  const new();
 
   @override
   BleDecoded<BlePowerOffDuringTransfer> decode(Uint8List bytes) {
@@ -1073,7 +1217,7 @@ final class BlePowerOffDuringTransferCodec
       bytes,
       BlePowerOffDuringTransfer(
         _enumAt(bytes, 0, BleTransferPowerOffBehavior.values),
-        bytes[1] == 1,
+        autoResize: bytes[1] == 1,
       ),
       issues,
     );
@@ -1092,7 +1236,7 @@ final class BlePowerOffDuringTransferCodec
     final f = _fields(text, 2, 2);
     return BlePowerOffDuringTransfer(
       BleEnumValue.parse(f[0], BleTransferPowerOffBehavior.values),
-      parseBoolText(f[1]),
+      autoResize: parseBoolText(f[1]),
     );
   }
 
@@ -1110,19 +1254,28 @@ final class BlePowerOffDuringTransferCodec
 
 /// Focus Mode (`89458F80`, R/N only): `[focus mode][focus setting]`.
 final class BleFocus {
-  const BleFocus(this.mode, this.setting);
+  /// Record from both fields.
+  const new(this.mode, this.setting);
 
+  /// Byte 0: 0 MF, 1 AF.
   final BleEnumValue<BleFocusMode> mode;
+
+  /// Byte 1: 0 MF, 1 auto-area, 2 select, 3 pinpoint, 4 tracking,
+  /// 5 continuous, 6 snap, 7 infinity, 8 movie, 9 auto-area (center),
+  /// 10 star AF.
   final BleEnumValue<BleFocusSetting> setting;
 
+  /// `{mode, setting}`.
   Map<String, Object?> toJson() => {
     'mode': mode.toJson(),
     'setting': setting.toJson(),
   };
 }
 
+/// Codec for [BleFocus].
 final class BleFocusCodec extends BleRecordCodec<BleFocus> {
-  const BleFocusCodec();
+  /// Creates the codec.
+  const new();
 
   @override
   BleDecoded<BleFocus> decode(Uint8List bytes) {
@@ -1169,19 +1322,26 @@ final class BleFocusCodec extends BleRecordCodec<BleFocus> {
 
 /// Auto Focus Status (`CDFC734E`): `[running][in focus]`.
 final class BleAfStatus {
-  const BleAfStatus(this.running, this.inFocus);
+  /// Record from both fields.
+  const new(this.running, this.inFocus);
 
+  /// Byte 0: 0 stopped, 1 AF running.
   final BleEnumValue<BleAfRunning> running;
+
+  /// Byte 1: 0 not in focus, 1 in focus.
   final BleEnumValue<BleAfInFocus> inFocus;
 
+  /// `{running, inFocus}`.
   Map<String, Object?> toJson() => {
     'running': running.toJson(),
     'inFocus': inFocus.toJson(),
   };
 }
 
+/// Codec for [BleAfStatus].
 final class BleAfStatusCodec extends BleRecordCodec<BleAfStatus> {
-  const BleAfStatusCodec();
+  /// Creates the codec.
+  const new();
 
   @override
   BleDecoded<BleAfStatus> decode(Uint8List bytes) {
@@ -1227,18 +1387,26 @@ final class BleAfStatusCodec extends BleRecordCodec<BleAfStatus> {
   String get syntax => '<stopped|running>,<notInFocus|inFocus>';
 }
 
-/// Shot Count (`12D262BA`): `[current sint8][total sint8]`.
+/// Shot Count (`12D262BA`): `[current sint8][total sint8]`. Image Sync
+/// names the fields only; what they count is not documented.
 final class BleShotCount {
-  const BleShotCount(this.current, this.total);
+  /// Record from both counts.
+  const new(this.current, this.total);
 
+  /// Byte 0: current shot.
   final int current;
+
+  /// Byte 1: total shots.
   final int total;
 
+  /// `{current, total}`.
   Map<String, Object?> toJson() => {'current': current, 'total': total};
 }
 
+/// Codec for [BleShotCount].
 final class BleShotCountCodec extends BleRecordCodec<BleShotCount> {
-  const BleShotCountCodec();
+  /// Creates the codec.
+  const new();
 
   @override
   BleDecoded<BleShotCount> decode(Uint8List bytes) {
@@ -1282,13 +1450,22 @@ final class BleShotCountCodec extends BleRecordCodec<BleShotCount> {
 
 /// File Type (`95BFA8CA`): `[file type][raw type][card slot][slot mode]`.
 final class BleFileType {
-  const BleFileType(this.fileType, this.rawType, this.cardSlot, this.slotMode);
+  /// Record from all four fields.
+  const new(this.fileType, this.rawType, this.cardSlot, this.slotMode);
 
+  /// Byte 0: 0 JPEG, 1 PEF, 2 DNG, 3 JPEG+PEF, 4 JPEG+DNG.
   final BleEnumValue<BleStillFileType> fileType;
+
+  /// Byte 1: 0 PEF, 1 DNG.
   final BleEnumValue<BleRawType> rawType;
+
+  /// Byte 2: 0 SD slot 1, 1 SD slot 2.
   final BleEnumValue<BleCardSlot> cardSlot;
+
+  /// Byte 3: 0 sequential, 1 duplicate, 2 RAW/JPEG split.
   final BleEnumValue<BleSlotMode> slotMode;
 
+  /// Copy with [fileType] and/or [rawType] replaced; slot fields are kept.
   BleFileType copyWith({
     BleEnumValue<BleStillFileType>? fileType,
     BleEnumValue<BleRawType>? rawType,
@@ -1299,6 +1476,7 @@ final class BleFileType {
     slotMode,
   );
 
+  /// `{fileType, rawType, cardSlot, slotMode}`.
   Map<String, Object?> toJson() => {
     'fileType': fileType.toJson(),
     'rawType': rawType.toJson(),
@@ -1307,8 +1485,10 @@ final class BleFileType {
   };
 }
 
+/// Codec for [BleFileType].
 final class BleFileTypeCodec extends BleRecordCodec<BleFileType> {
-  const BleFileTypeCodec();
+  /// Creates the codec.
+  const new();
 
   @override
   BleDecoded<BleFileType> decode(Uint8List bytes) {
@@ -1370,7 +1550,8 @@ final class BleFileTypeCodec extends BleRecordCodec<BleFileType> {
 /// byte (0 WGS84). Image Sync sends the fix time in UTC; GR WORLD's basis
 /// is unknown, so callers choose it when building the record.
 final class BleGpsInformation {
-  const BleGpsInformation({
+  /// Fields are range-checked only by [BleGpsInformationCodec.encode].
+  const new({
     required this.latitude,
     required this.longitude,
     required this.altitude,
@@ -1385,7 +1566,7 @@ final class BleGpsInformation {
 
   /// Takes calendar fields from [time] as given; convert it to UTC or local
   /// first.
-  factory BleGpsInformation.at({
+  factory at({
     required double latitude,
     required double longitude,
     required double altitude,
@@ -1403,17 +1584,37 @@ final class BleGpsInformation {
     datum: BleEnumValue.of(BleGpsDatum.wgs84),
   );
 
+  /// Bytes 0–7: degrees, -90..90.
   final double latitude;
+
+  /// Bytes 8–15: degrees, -180..180.
   final double longitude;
+
+  /// Bytes 16–23: metres.
   final double altitude;
+
+  /// Bytes 24–25 (sint16): fix time year.
   final int year;
+
+  /// Byte 26: fix time month, 1–12.
   final int month;
+
+  /// Byte 27: fix time day, 1–31.
   final int day;
+
+  /// Byte 28: fix time hour, 0–23.
   final int hour;
+
+  /// Byte 29: fix time minute, 0–59.
   final int minute;
+
+  /// Byte 30: fix time second, 0–59.
   final int second;
+
+  /// Byte 31: 0 WGS84, the only value either app sends.
   final BleEnumValue<BleGpsDatum> datum;
 
+  /// Coordinates, fix `time` as ISO-8601 without a zone, and datum.
   Map<String, Object?> toJson() => {
     'latitude': latitude,
     'longitude': longitude,
@@ -1430,8 +1631,10 @@ final class BleGpsInformation {
   };
 }
 
+/// Codec for [BleGpsInformation].
 final class BleGpsInformationCodec extends BleRecordCodec<BleGpsInformation> {
-  const BleGpsInformationCodec();
+  /// Creates the codec.
+  const new();
 
   @override
   BleDecoded<BleGpsInformation> decode(Uint8List bytes) {
@@ -1441,9 +1644,9 @@ final class BleGpsInformationCodec extends BleRecordCodec<BleGpsInformation> {
     }
     final data = ByteData.sublistView(bytes);
     final value = BleGpsInformation(
-      latitude: data.getFloat64(0, Endian.big),
-      longitude: data.getFloat64(8, Endian.big),
-      altitude: data.getFloat64(16, Endian.big),
+      latitude: data.getFloat64(0),
+      longitude: data.getFloat64(8),
+      altitude: data.getFloat64(16),
       year: BleIntFormat.sint16.read(bytes, 24),
       month: bytes[26],
       day: bytes[27],
@@ -1477,9 +1680,9 @@ final class BleGpsInformationCodec extends BleRecordCodec<BleGpsInformation> {
     _checkRange(value.second, 0, 59, 'second');
     final out = Uint8List(32);
     ByteData.sublistView(out)
-      ..setFloat64(0, value.latitude, Endian.big)
-      ..setFloat64(8, value.longitude, Endian.big)
-      ..setFloat64(16, value.altitude, Endian.big);
+      ..setFloat64(0, value.latitude)
+      ..setFloat64(8, value.longitude)
+      ..setFloat64(16, value.altitude);
     _put(out, 24, value.year, 'year', BleIntFormat.sint16);
     out
       ..[26] = value.month

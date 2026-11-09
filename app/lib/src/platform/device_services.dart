@@ -1,30 +1,26 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-import 'package:gr_protocol/gr_protocol.dart';
+import 'package:gr_camera/gr_camera.dart';
+import 'package:grlab/src/debug/debug_log.dart';
+import 'package:grlab/src/platform/app_dirs.dart';
+import 'package:grlab/src/platform/media_saver.dart';
+import 'package:grlab/src/services.dart';
 
-import '../services.dart';
-import 'app_dirs.dart';
-import 'ble_transport.dart';
-import 'media_saver.dart';
-import 'permissions.dart';
-import 'wifi_control.dart';
-
-/// Services for a real camera: BLE through `universal_ble`, the camera AP
-/// joined natively, downloads saved to the photo library.
+/// Services for a real camera: the camera layer on the phone's Bluetooth
+/// and Wi-Fi, downloads saved to the photo library.
 Future<AppServices> buildDeviceServices() async {
   final dirs = await appDirectories();
-  final wifi = PlatformWifiControl();
+  final trace = TraceRelay();
   return AppServices(
-    ble: UniversalBleTransport(),
-    wifi: wifi,
+    camera: GrCameraEnvironment.device(trace: trace.call),
+    trace: trace,
     media: PlatformMediaSaver(),
     clientName: await deviceClientName(),
     dataDir: dirs.data,
     cacheDir: dirs.cache,
-    ensureBluetoothPermission: ensureBluetoothPermission,
+    debugLogDir: await DebugLog.platformDirectory(),
     askBeforeWifiJoin: Platform.isAndroid,
-    wifiApprovalShown: wifi.approvalShown,
   );
 }
 
@@ -45,6 +41,6 @@ Future<String> deviceClientName({
     return fallback;
   }
   if (name == null || name.trim().isEmpty) return fallback;
-  final clean = GrBleClient.sanitizePairedDeviceName(name);
+  final clean = pairedDeviceName(name);
   return clean == 'Unknown' ? fallback : clean;
 }

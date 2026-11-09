@@ -2,8 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:gr_protocol/gr_protocol.dart';
+// Only to check the simulated camera's Operation Mode.
+import 'package:gr_protocol/gr_protocol.dart' show BleOperationMode;
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/library/library_screen.dart';
 
@@ -113,7 +115,7 @@ void main() {
     await tester.tap(find.text('10 s'));
     await pumpUntil(
       tester,
-      () => app.models.connection.session != null,
+      () => app.models.connection.cameraSession != null,
       reason: 'session',
     );
     final before = app.camera.photos.length;
@@ -215,14 +217,15 @@ void main() {
       String key,
       String value,
     ) async {
+      // The camera's own answer, on a client of the test's.
+      final http = app.camera.httpClient('', null);
       String? current;
       for (var i = 0; i < 50 && current != value; i++) {
-        final props = (await tester.runAsync(
-          () => app.models.connection.http!.props(),
-        ))!;
+        final props = (await tester.runAsync(http.props))!;
         current = props.setting(key)!.current;
         await tester.pump(const Duration(milliseconds: 20));
       }
+      http.close();
       expect(current, value);
     }
 

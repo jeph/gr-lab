@@ -24,7 +24,7 @@ const _shootModes = [
 
 /// Writable settings and the values `/v1/props` lists for them. Spelling
 /// follows Image Sync's GR III tables (remote-shooting.md §4.3); the
-/// ranges are a GR IV's [design]: f/2.8–16 and ISO 100–204800 in 1/3 steps,
+/// ranges are a GR IV's \[design\]: f/2.8–16 and ISO 100–204800 in 1/3 steps,
 /// 1/4000–30 s, ±5 EV. A real camera's lists come from its own props.
 const _settingLists = <String, List<String>>{
   'av': [
@@ -65,7 +65,7 @@ const _settingLists = <String, List<String>>{
 };
 
 /// Mode-dial positions `/v1/props` lists for the read-only `exposureMode`
-/// (Image Sync's GR III spelling; a GR IV dial [design]).
+/// (Image Sync's GR III spelling; a GR IV dial \[design\]).
 const _exposureModes = [
   'P', 'AV', 'TV', 'M', 'B', 'T', 'BT', 'SFP', 'U1', 'U2', 'U3', //
 ];
@@ -77,12 +77,12 @@ const _internalRecordableTime = 3600;
 const _sdRecordableTime = 72000;
 
 /// `focusEffectiveArea` `[W, H]` in percent (remote-shooting.md §3.2):
-/// Image Sync's default rectangle (0.111,0.125)–(0.889,0.875) [design].
+/// Image Sync's default rectangle (0.111,0.125)–(0.889,0.875) \[design\].
 const _focusEffectiveArea = [78, 75];
 
 /// The camera's own live-view rate; `maxfps` only lowers it. The firmware
 /// default is 90 (remote-shooting.md §1.3); a GR IV's real rate is
-/// [unknown] and 10 fps keeps the fake light.
+/// \[unknown\] and 10 fps keeps the fake light.
 const _liveViewFps = 10;
 
 /// Why a release cannot start: errCode and text.
@@ -116,7 +116,7 @@ extension on FakeGrCamera {
   /// them itself (Av locks the shutter speed), so a write of another value
   /// is refused. On a GR IV HDF the shutter speed could not be changed in
   /// Av and a write was refused (2026-11-08); the single-value list is
-  /// [inferred].
+  /// \[inferred\].
   List<String>? _listFor(String key) {
     final list = _settingLists[key];
     final free = switch (key) {
@@ -173,7 +173,7 @@ extension on FakeGrCamera {
 
   /// Capture Status in GR WORLD's 2-byte form (ble.md, Capture status row).
   List<int> get _captureStatus => [
-    _capturing ? BleCapturing.capturing.wire : BleCapturing.idle.wire,
+    if (_capturing) BleCapturing.capturing.wire else BleCapturing.idle.wire,
     _countdown.wire,
   ];
 
@@ -185,7 +185,7 @@ extension on FakeGrCamera {
   /// Storage Information, 14-byte entries as GR WORLD parses them (ble.md
   /// §Storage information): SD slot 1 when a card is in, then internal
   /// memory. The storage pictures go to comes first, since the 14-byte form
-  /// has no active flag; a GR IV's order is [unknown].
+  /// has no active flag; a GR IV's order is \[unknown\].
   Uint8List _storageInformation() {
     BleStorageEntry entry(BleStorageType type, String storage, int seconds) =>
         BleStorageEntry(
@@ -214,7 +214,7 @@ extension on FakeGrCamera {
   /// A release is possible only with the camera on, in capture mode, idle
   /// and with room on the card. Refusing a busy camera, and the errCodes
   /// other than 412 (Image Sync's no-space code, remote-shooting.md §2.2),
-  /// are [design].
+  /// are \[design\].
   _Refusal? _releaseRefusal() {
     if (!_poweredOn) return (400, 'camera is off');
     if (_mode != BleOperationMode.capture.wire) {
@@ -227,7 +227,7 @@ extension on FakeGrCamera {
 
   /// Starts a release (check [_releaseRefusal] first): a self-timer drive
   /// mode counts down first, every other drive mode takes one picture at
-  /// once [design]. Returns the capture id the change events carry.
+  /// once \[design\]. Returns the capture id the change events carry.
   String _release() {
     final id = '${++_captureIds}';
     final timer = _selfTimer;
@@ -257,7 +257,7 @@ extension on FakeGrCamera {
   /// The picture is on the card: Storage Information and Capture Status
   /// notify, and the WebSocket sees `storage` `add`, `capture` and an idle
   /// `cameraDirect` (remote-shooting.md §2.3; whether a GR IV sends the
-  /// last two is [unknown]).
+  /// last two is \[unknown\]).
   void _finishCapture(String id) {
     final photo = _newPhoto();
     _photos.add(photo);
@@ -365,7 +365,7 @@ extension on FakeGrCamera {
   /// null when every value was in its `<key>List` and has been set.
   /// Read-only keys (`exposureMode`: the dial decides, remote-shooting.md
   /// §4.2) and keys without a list are refused like unlisted values
-  /// [design].
+  /// \[design\].
   String? _applyCameraParams(Map<String, String> params) {
     for (final MapEntry(:key, :value) in params.entries) {
       if (!(_listFor(key)?.contains(value) ?? false)) {

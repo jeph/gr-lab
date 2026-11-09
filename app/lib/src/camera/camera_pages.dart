@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
-
-import '../app_scope.dart';
-import '../connection/connection_controller.dart';
-import '../data/settings.dart';
-import '../library/library_screen.dart';
-import '../shoot/shoot_model.dart';
-import '../shoot/shoot_screen.dart';
-import 'camera_tab_bar.dart';
+import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/camera/camera_tab_bar.dart';
+import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/data/settings.dart';
+import 'package:grlab/src/library/library_screen.dart';
+import 'package:grlab/src/shoot/shoot_model.dart';
+import 'package:grlab/src/shoot/shoot_screen.dart';
 
 /// The camera's pages, Library and Shoot, switched with the floating tab
 /// bar ([ConnectionController.tab]). A page is built the first time it is
 /// shown and kept while the pages are open, so switching keeps the
 /// Library's scroll position and Shoot's state.
 class CameraPages extends StatefulWidget {
-  const CameraPages({super.key});
+  const new({super.key});
 
   @override
   State<CameraPages> createState() => _CameraPagesState();
@@ -27,7 +26,8 @@ class _CameraPagesState extends State<CameraPages> {
   );
   final Set<CameraTab> _built = {};
 
-  /// The tab last shown; kept while the pages close ([tab] is then null).
+  /// The tab last shown; kept while the pages close
+  /// ([ConnectionController.tab] is then null).
   CameraTab _tab = CameraTab.library;
 
   @override

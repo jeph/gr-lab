@@ -1,7 +1,7 @@
 part of 'fake_camera.dart';
 
 final class _FakeWifi implements WifiNetworkControl {
-  _FakeWifi(this._camera);
+  new(this._camera);
 
   final FakeGrCamera _camera;
 

@@ -1,14 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:gr_protocol/gr_protocol.dart';
-
-import '../app_scope.dart';
-import '../data/cameras.dart';
-import '../pairing/pairing_widgets.dart';
-import '../theme/tokens.dart';
-import '../widgets/group.dart';
-import 'connection_controller.dart';
+import 'package:gr_camera/gr_camera.dart';
+import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/data/cameras.dart';
+import 'package:grlab/src/pairing/pairing_widgets.dart';
+import 'package:grlab/src/theme/tokens.dart';
+import 'package:grlab/src/widgets/group.dart';
 
 /// Opens the camera sheet over the current screen.
 Future<void> showCameraSheet(BuildContext context) =>
@@ -24,7 +23,7 @@ Future<void> showCameraSheet(BuildContext context) =>
 /// camera's name and power-on choice. Disconnecting Wi-Fi returns to the
 /// Cameras screen; Bluetooth stays.
 class CameraSheet extends StatelessWidget {
-  const CameraSheet({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -224,11 +223,7 @@ class CameraSheet extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({
-    required this.title,
-    required this.subtitle,
-    this.large = false,
-  });
+  const new({required this.title, required this.subtitle, this.large = false});
 
   final String title;
   final String subtitle;
@@ -278,7 +273,7 @@ class _Header extends StatelessWidget {
 
 /// One of the three status tiles (battery, storage, link).
 class _Tile extends StatelessWidget {
-  const _Tile({required this.label, required this.value, this.caption});
+  const new({required this.label, required this.value, this.caption});
 
   final String label;
   final Widget value;
@@ -321,7 +316,7 @@ class _Tile extends StatelessWidget {
 /// Shrinks one line of tile content to the tile's width instead of
 /// wrapping or overflowing it at large text sizes.
 class _Fit extends StatelessWidget {
-  const _Fit({super.key, required this.child});
+  const new({required this.child, super.key});
 
   final Widget child;
 
@@ -335,7 +330,7 @@ class _Fit extends StatelessWidget {
 
 /// The camera's name.
 class _CameraRows extends StatelessWidget {
-  const _CameraRows({required this.camera});
+  const new({required this.camera});
 
   final SavedCamera camera;
 
@@ -369,7 +364,7 @@ Future<void> showRenameCameraDialog(
 }
 
 class _RenameDialog extends StatefulWidget {
-  const _RenameDialog({required this.initial});
+  const new({required this.initial});
 
   final String initial;
 

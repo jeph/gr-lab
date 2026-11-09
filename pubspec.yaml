@@ -6,5 +6,6 @@ environment:
 
 workspace:
   - packages/gr_protocol
+  - packages/gr_camera
   - packages/gr_fake_camera
   - app

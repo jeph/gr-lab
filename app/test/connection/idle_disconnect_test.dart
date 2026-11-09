@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:gr_protocol/gr_protocol.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/data/settings.dart';
 import 'package:grlab/src/library/library_screen.dart';
@@ -110,9 +110,7 @@ void main() {
     tester,
   ) async {
     final app = await _inLibrary(tester);
-    final settings = app.models.settings;
-
-    settings.autoDisconnect = AutoDisconnect.never;
+    final settings = app.models.settings..autoDisconnect = AutoDisconnect.never;
     await tester.pump(const Duration(minutes: 30));
     expect(find.byType(LibraryScreen), findsOneWidget);
 

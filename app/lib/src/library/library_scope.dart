@@ -1,18 +1,16 @@
 import 'package:flutter/widgets.dart';
+import 'package:gr_camera/gr_camera.dart';
 
-import '../app_scope.dart';
-import '../connection/idle_disconnect.dart';
-import '../downloads/download_engine.dart';
-import 'camera_images.dart';
-import 'camera_link.dart';
-import 'library_model.dart';
-import 'movie_cache.dart';
-import 'request_queue.dart';
+import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/connection/idle_disconnect.dart';
+import 'package:grlab/src/downloads/download_engine.dart';
+import 'package:grlab/src/library/camera_link.dart';
+import 'package:grlab/src/library/library_model.dart';
 
 /// The library's models, created by the Library screen for the app's
 /// lifetime with a paired camera.
 final class LibraryContext {
-  LibraryContext({
+  new({
     required this.link,
     required this.model,
     required this.images,
@@ -23,7 +21,7 @@ final class LibraryContext {
     if (idle != null) engine.addListener(_holdWhileDownloading);
   }
 
-  factory LibraryContext.create(AppModels app) {
+  factory create(AppModels app) {
     final services = app.services;
     final link = ConnectionLink(app.connection);
     final queue = RequestQueue();
@@ -51,7 +49,7 @@ final class LibraryContext {
   }
 
   /// Owned: disposed with the context.
-  final ValueNotifier<CameraLink?> link;
+  final ValueNotifier<CameraLibrary?> link;
   final LibraryModel model;
   final CameraImages images;
   final MovieCache movies;
@@ -83,7 +81,7 @@ final class LibraryContext {
 }
 
 class LibraryScope extends InheritedWidget {
-  const LibraryScope({super.key, required this.library, required super.child});
+  const new({required this.library, required super.child, super.key});
 
   final LibraryContext library;
 

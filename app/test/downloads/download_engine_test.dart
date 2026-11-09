@@ -2,10 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:gr_protocol/gr_protocol.dart';
+import 'package:gr_protocol/gr_protocol.dart' show GrHttpClient;
 import 'package:grlab/src/downloads/download_engine.dart';
-import 'package:grlab/src/library/camera_link.dart';
 import 'package:grlab/src/library/shot.dart';
 import 'package:grlab/src/services.dart';
 
@@ -45,7 +45,7 @@ Future<void> until(
 }
 
 final class Harness {
-  Harness._(this.camera, this.http, this.root, this.media, this.link);
+  new _(this.camera, this.http, this.root, this.media, this.link);
 
   static Future<Harness> start({
     FakeCameraConfig config = const FakeCameraConfig(
@@ -66,37 +66,35 @@ final class Harness {
             (failing?.contains(photo.file) ?? false)) {
           throw StateError('card read error');
         }
-        return source(photo, size);
+        return await source(photo, size);
       },
     );
     await camera.startHttp();
     final http = camera.httpClient('127.0.0.1', null);
     final root = await Directory.systemTemp.createTemp('grlab_dl_');
-    final h = Harness._(
+    return Harness._(
       camera,
       http,
       root,
       RecordingMediaSaver(),
       ValueNotifier(null),
-    );
-    h.connect();
-    return h;
+    )..connect();
   }
 
   final FakeGrCamera camera;
   final GrHttpClient http;
   final Directory root;
   final RecordingMediaSaver media;
-  final ValueNotifier<CameraLink?> link;
+  final ValueNotifier<CameraLibrary?> link;
   final List<DownloadEngine> _engines = [];
 
   Directory get data => Directory('${root.path}/data');
   Directory get cache => Directory('${root.path}/cache');
 
   /// A fresh link, as after every (re)connection.
-  void connect() => link.value = CameraLink(
+  void connect() => link.value = CameraLibrary.overHttp(
+    http,
     serial: serial,
-    http: http,
     storages: const [GrStorageId.internal, GrStorageId.sd],
   );
 
@@ -245,10 +243,9 @@ void main() {
     });
 
     test('queueing the same shot twice saves it once', () async {
-      h = await Harness.start(
+      h = (await Harness.start(
         config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
-      );
-      h.disconnect();
+      ))..disconnect();
       final engine = h.engine();
       final shot = h.shot('R0000002');
       expect(await engine.enqueue(serial, [shot]), 1);
@@ -331,10 +328,9 @@ void main() {
     });
 
     test('a waiting job is removed at once', () async {
-      h = await Harness.start(
+      h = (await Harness.start(
         config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
-      );
-      h.disconnect();
+      ))..disconnect();
       final engine = h.engine();
       await engine.enqueue(serial, [h.shot('R0000002')]);
       expect(engine.waitingForCamera, isTrue);
@@ -549,10 +545,9 @@ void main() {
     });
 
     test('the queue survives a restart', () async {
-      h = await Harness.start(
+      h = (await Harness.start(
         config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
-      );
-      h.disconnect();
+      ))..disconnect();
       final first = h.engine();
       await first.enqueue(serial, [h.shot('R0000001')]);
       await first.flush();
@@ -614,10 +609,9 @@ void main() {
   });
 
   test('a queue reopened while connected runs without a link change', () async {
-    h = await Harness.start(
+    h = (await Harness.start(
       config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
-    );
-    h.disconnect();
+    ))..disconnect();
     final first = h.engine();
     await first.enqueue(serial, [h.shot('R0000001')]);
     await first.flush();

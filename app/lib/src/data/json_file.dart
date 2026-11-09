@@ -4,7 +4,7 @@ import 'dart:io';
 /// One JSON document on disk, replaced atomically (write to a temporary
 /// file, then rename) so a crash mid-write never leaves a torn file.
 final class JsonFile {
-  JsonFile(this.file);
+  new(this.file);
 
   final File file;
 

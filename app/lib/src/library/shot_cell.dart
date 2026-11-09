@@ -2,16 +2,12 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:gr_protocol/gr_protocol.dart';
-
-import '../theme/tokens.dart';
-import 'camera_images.dart';
-import 'format.dart';
-import 'image_orientation.dart';
-import 'library_model.dart';
-import 'library_scope.dart';
-import 'request_queue.dart';
-import 'shot.dart';
+import 'package:gr_camera/gr_camera.dart';
+import 'package:grlab/src/library/format.dart';
+import 'package:grlab/src/library/image_orientation.dart';
+import 'package:grlab/src/library/library_scope.dart';
+import 'package:grlab/src/library/shot.dart';
+import 'package:grlab/src/theme/tokens.dart';
 
 /// Badge in a cell's top-right corner.
 enum CellMark { none, downloaded, queued, selected, unselected }
@@ -30,11 +26,11 @@ enum CellMark { none, downloaded, queued, selected, unselected }
 /// while [wantSharper], is followed by that size, loaded behind other
 /// camera requests and drawn over it once ready.
 class CameraImage extends StatefulWidget {
-  const CameraImage({
-    super.key,
+  const new({
     required this.serial,
     required this.file,
     required this.size,
+    super.key,
     this.sharper,
     this.wantSharper = false,
     this.fit = BoxFit.cover,
@@ -63,7 +59,7 @@ class CameraImage extends StatefulWidget {
 }
 
 final class _Loaded {
-  _Loaded(this.bytes, this.size) : layout = readJpegLayout(bytes);
+  new(this.bytes, this.size) : layout = readJpegLayout(bytes);
 
   final Uint8List bytes;
   final GrImageSize size;
@@ -215,20 +211,22 @@ class _CameraImageState extends State<CameraImage> {
     }
     final request = images.load(widget.serial, widget.file, widget.size);
     _image = request;
-    request.future.then(
-      (bytes) {
-        if (!mounted || !identical(_image, request)) return;
-        _image = null;
-        // Null: not connected; the link listener starts again.
-        if (bytes == null) return;
-        setState(() => _base = _Loaded(bytes, widget.size));
-        _progressed();
-      },
-      onError: (Object _) {
-        if (!mounted || !identical(_image, request)) return;
-        _image = null;
-        _failure();
-      },
+    unawaited(
+      request.future.then(
+        (bytes) {
+          if (!mounted || !identical(_image, request)) return;
+          _image = null;
+          // Null: not connected; the link listener starts again.
+          if (bytes == null) return;
+          setState(() => _base = _Loaded(bytes, widget.size));
+          _progressed();
+        },
+        onError: (Object _) {
+          if (!mounted || !identical(_image, request)) return;
+          _image = null;
+          _failure();
+        },
+      ),
     );
   }
 
@@ -237,17 +235,19 @@ class _CameraImageState extends State<CameraImage> {
     final ticket = _library.model.requestInfo(widget.file);
     if (ticket == null) return;
     _info = ticket;
-    ticket.future.then(
-      (_) {
-        if (!mounted || !identical(_info, ticket)) return;
-        _info = null;
-        _onModel();
-      },
-      onError: (Object _) {
-        if (!mounted || !identical(_info, ticket)) return;
-        _info = null;
-        if (!_ready) _failure();
-      },
+    unawaited(
+      ticket.future.then(
+        (_) {
+          if (!mounted || !identical(_info, ticket)) return;
+          _info = null;
+          _onModel();
+        },
+        onError: (Object _) {
+          if (!mounted || !identical(_info, ticket)) return;
+          _info = null;
+          if (!_ready) _failure();
+        },
+      ),
     );
   }
 
@@ -356,21 +356,25 @@ class _CameraImageState extends State<CameraImage> {
       background: true,
     );
     _sharpRequest = request;
-    request.future.then(
-      (bytes) {
-        if (!mounted || !identical(_sharpRequest, request)) return;
-        _sharpRequest = null;
-        if (bytes == null) {
-          // Not connected; tried again when the camera is back.
-          _sharpTried = false;
-          return;
-        }
-        setState(() => _sharp = _Loaded(bytes, sharper));
-      },
-      // The image already shown stays; the next visit tries again.
-      onError: (Object _) {
-        if (mounted && identical(_sharpRequest, request)) _sharpRequest = null;
-      },
+    unawaited(
+      request.future.then(
+        (bytes) {
+          if (!mounted || !identical(_sharpRequest, request)) return;
+          _sharpRequest = null;
+          if (bytes == null) {
+            // Not connected; tried again when the camera is back.
+            _sharpTried = false;
+            return;
+          }
+          setState(() => _sharp = _Loaded(bytes, sharper));
+        },
+        // The image already shown stays; the next visit tries again.
+        onError: (Object _) {
+          if (mounted && identical(_sharpRequest, request)) {
+            _sharpRequest = null;
+          }
+        },
+      ),
     );
   }
 
@@ -471,13 +475,13 @@ class _CameraImageState extends State<CameraImage> {
 
 /// One grid item: thumbnail, format tag and a status badge (mock `.cell`).
 class ShotCell extends StatelessWidget {
-  const ShotCell({
-    super.key,
+  const new({
     required this.serial,
     required this.shot,
     required this.mark,
     required this.onTap,
     required this.onLongPress,
+    super.key,
     this.duration,
   });
 
@@ -569,7 +573,7 @@ class ShotCell extends StatelessWidget {
 }
 
 class _Dot extends StatelessWidget {
-  const _Dot({required this.color, required this.child});
+  const new({required this.color, required this.child});
 
   final Color color;
   final Widget child;
@@ -586,7 +590,7 @@ class _Dot extends StatelessWidget {
 
 /// Small monospace label over a photo (mock `.tag`).
 class PhotoTag extends StatelessWidget {
-  const PhotoTag(this.text, {super.key});
+  const new(this.text, {super.key});
 
   final String text;
 

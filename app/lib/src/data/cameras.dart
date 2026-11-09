@@ -1,21 +1,21 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:gr_protocol/gr_protocol.dart';
+import 'package:gr_camera/gr_camera.dart';
 
-import 'json_file.dart';
+import 'package:grlab/src/data/json_file.dart';
 
 /// A paired camera as the app keeps it.
 @immutable
 final class SavedCamera {
-  const SavedCamera({
+  const new({
     required this.paired,
     required this.name,
     required this.pairedAt,
     this.wifiApproved = false,
   });
 
-  factory SavedCamera.fromJson(Map<String, Object?> json) => SavedCamera(
+  factory fromJson(Map<String, Object?> json) => SavedCamera(
     paired: GrPairedCamera.fromJson(json['paired']! as Map<String, Object?>),
     name: json['name']! as String,
     pairedAt: DateTime.parse(json['pairedAt']! as String),
@@ -77,7 +77,7 @@ extension on String {
 /// Paired cameras, the one used last first, persisted as `cameras.json`.
 /// The first one is the camera the app connects to.
 final class CameraStore extends ChangeNotifier {
-  CameraStore._(this._file);
+  new _(this._file);
 
   static Future<CameraStore> load(Directory dataDir) async {
     final s = CameraStore._(JsonFile(File('${dataDir.path}/cameras.json')));

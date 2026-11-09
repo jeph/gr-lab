@@ -24,22 +24,23 @@ void main() {
     });
 
     test('third consecutive failure at ≥ 40 s declares the loss once', () {
-      final t = LivenessTracker(start: t0);
-      t.recordFailure(at(1));
-      t.recordFailure(at(2));
+      final t = LivenessTracker(start: t0)
+        ..recordFailure(at(1))
+        ..recordFailure(at(2));
       expect(t.recordFailure(at(40)), isTrue);
       expect(t.lost, isTrue);
       expect(t.recordFailure(at(41)), isFalse);
     });
 
     test('a success resets the count and the 40 s window', () {
-      final t = LivenessTracker(start: t0);
-      t.recordFailure(at(1));
-      t.recordFailure(at(2));
-      t.recordSuccess(at(30));
+      final t = LivenessTracker(start: t0)
+        ..recordFailure(at(1))
+        ..recordFailure(at(2))
+        ..recordSuccess(at(30));
       expect(t.consecutiveFailures, 0);
-      t.recordFailure(at(50));
-      t.recordFailure(at(60));
+      t
+        ..recordFailure(at(50))
+        ..recordFailure(at(60));
       expect(t.recordFailure(at(69)), isFalse, reason: '39 s since success');
       expect(t.recordFailure(at(70)), isTrue);
     });
@@ -81,7 +82,7 @@ void main() {
         final monitor = LivenessMonitor.withProbe(() async {
           final a = answers[i++];
           if (a is GrProps) return a;
-          throw a;
+          throw a as Exception;
         }, clock: () => now);
         addTearDown(monitor.stop);
 

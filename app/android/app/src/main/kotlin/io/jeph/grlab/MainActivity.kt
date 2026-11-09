@@ -7,13 +7,11 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
-    private var wifi: WifiChannel? = null
     private var media: MediaChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         val messenger = flutterEngine.dartExecutor.binaryMessenger
-        wifi = WifiChannel(applicationContext, messenger)
         media = MediaChannel(applicationContext, messenger)
         // The name the camera shows under Paired Devices: the user-set device
         // name where there is one, otherwise the model.
@@ -26,19 +24,7 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        wifi?.onResume()
-    }
-
-    override fun onPause() {
-        wifi?.onPause()
-        super.onPause()
-    }
-
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
-        wifi?.dispose()
-        wifi = null
         media?.dispose()
         media = null
         super.cleanUpFlutterEngine(flutterEngine)

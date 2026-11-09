@@ -2,20 +2,28 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gr_protocol/gr_protocol.dart';
+import 'package:gr_camera/gr_camera.dart';
+import 'package:gr_protocol/gr_protocol.dart'
+    show BleAdvertisement, BleTransport, WifiNetworkControl, grRicohCompanyId;
 import 'package:grlab/src/cameras/camera_presence.dart';
 import 'package:grlab/src/data/cameras.dart';
 
 /// Hands the scan's advertisements to the test.
 final class _ScanTransport implements BleTransport {
   // Closed in tearDown.
-  // ignore: close_sinks
   final ads = StreamController<BleAdvertisement>.broadcast();
 
   @override
   Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) =>
       ads.stream;
 
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError(invocation.memberName.toString());
+}
+
+/// The presence scan never touches Wi-Fi.
+final class _NoWifi implements WifiNetworkControl {
   @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError(invocation.memberName.toString());
@@ -32,7 +40,7 @@ BleAdvertisement _ad(String deviceId, int serial, {required bool on}) =>
           0xDA, 0x01, 0x07, 0x02, //
           serial & 0xFF, (serial >> 8) & 0xFF,
           (serial >> 16) & 0xFF, (serial >> 24) & 0xFF,
-          0x03, on ? 1 : 0,
+          0x03, if (on) 1 else 0,
         ]),
       },
     );
@@ -50,7 +58,9 @@ void main() {
 
   setUp(() {
     transport = _ScanTransport();
-    presence = CameraPresence(transport)..start();
+    presence = CameraPresence(
+      GrCameraEnvironment(ble: transport, wifi: _NoWifi(), trace: (_) {}),
+    )..start();
   });
 
   tearDown(() async {

@@ -85,9 +85,9 @@ Uint8List sha256(List<int> data) {
   final padded = Uint8List(((data.length + 9 + 63) ~/ 64) * 64)
     ..setRange(0, data.length, data);
   padded[data.length] = 0x80;
-  final view = ByteData.sublistView(padded);
-  view.setUint32(padded.length - 8, bitLength ~/ 0x100000000);
-  view.setUint32(padded.length - 4, bitLength & 0xffffffff);
+  final view = ByteData.sublistView(padded)
+    ..setUint32(padded.length - 8, bitLength ~/ 0x100000000)
+    ..setUint32(padded.length - 4, bitLength & 0xffffffff);
 
   final w = Uint32List(64);
   int rotr(int x, int n) => ((x >> n) | (x << (32 - n))) & 0xffffffff;
@@ -100,8 +100,14 @@ Uint8List sha256(List<int> data) {
       final s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >> 10);
       w[i] = w[i - 16] + s0 + w[i - 7] + s1;
     }
-    var a = h[0], b = h[1], c = h[2], d = h[3];
-    var e = h[4], f = h[5], g = h[6], hh = h[7];
+    var a = h[0];
+    var b = h[1];
+    var c = h[2];
+    var d = h[3];
+    var e = h[4];
+    var f = h[5];
+    var g = h[6];
+    var hh = h[7];
     for (var i = 0; i < 64; i++) {
       final s1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
       final ch = (e & f) ^ (~e & 0xffffffff & g);

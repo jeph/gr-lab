@@ -5,7 +5,7 @@ part of 'fake_camera.dart';
 const _unreachableGiveUp = Duration(seconds: 2);
 
 final class _FakeTransport implements BleTransport {
-  _FakeTransport(this._camera);
+  new(this._camera);
 
   final FakeGrCamera _camera;
 
@@ -29,7 +29,7 @@ final class _FakeTransport implements BleTransport {
 }
 
 final class _FakeLink implements BleConnection {
-  _FakeLink(this._camera, this.deviceId);
+  new(this._camera, this.deviceId);
 
   final FakeGrCamera _camera;
   @override
@@ -111,8 +111,9 @@ final class _FakeLink implements BleConnection {
     if (!c.writable) {
       throw BleException(BleErrorCode.gatt, '${c.key}: write not permitted');
     }
-    _camera._requireBond(c);
-    _camera._write(this, c, Uint8List.fromList(value));
+    _camera
+      .._requireBond(c)
+      .._write(this, c, Uint8List.fromList(value));
   }
 
   @override
@@ -312,7 +313,7 @@ extension on FakeGrCamera {
   }
 
   Uint8List _read(GrBleCharacteristic<Object> c) {
-    final int? live = switch (c) {
+    final live = switch (c) {
       GrBleCatalog.cameraPower =>
         _poweredOn ? BleCameraPower.on.wire : BleCameraPower.off.wire,
       GrBleCatalog.operationMode => operationMode.wire,
@@ -323,7 +324,7 @@ extension on FakeGrCamera {
       _ => null,
     };
     if (live != null) return Uint8List.fromList([live]);
-    final List<int>? record = switch (c) {
+    final record = switch (c) {
       // GR WORLD's 2-byte forms (ble.md, Shooting mode / Capture status).
       GrBleCatalog.shootingMode => [_exposureMode.wire, _userMode.wire],
       GrBleCatalog.captureStatus => _captureStatus,

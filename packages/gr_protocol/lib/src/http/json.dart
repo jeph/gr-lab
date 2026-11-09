@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-final RegExp _uint32Max = RegExp(r'(?<![0-9.])4294967295(?![0-9.])');
+final RegExp _uint32Max = RegExp('(?<![0-9.])4294967295(?![0-9.])');
 
 /// Applies Image Sync's textual fix-up before JSON parsing: every
 /// `4294967295` (an unsigned 32-bit -1 the firmware serialises for "unset"
@@ -17,7 +17,7 @@ String applyUint32Quirk(String text) => text.contains('4294967295')
 /// Outcome of decoding a camera JSON body. Decoding never throws: a body that
 /// is not JSON yields [value] `null` and a human-readable [issue].
 final class CameraJson {
-  const CameraJson._(this.text, this.value, this.issue);
+  const new _(this.text, this.value, this.issue);
 
   /// Body text after UTF-8 decoding (malformed sequences replaced) and the
   /// `4294967295` quirk.
@@ -31,7 +31,7 @@ final class CameraJson {
 
   /// The parsed value when it is a JSON object.
   Map<String, Object?>? get object =>
-      value is Map<String, Object?> ? value as Map<String, Object?> : null;
+      value is Map<String, Object?> ? value! as Map<String, Object?> : null;
 }
 
 /// Decodes a camera response body (bytes) as JSON with the Image Sync quirk.
@@ -57,10 +57,13 @@ extension type const JsonFields(Map<String, Object?> map) {
   /// Strings as-is; numbers via [numberText]; bools as `true`/`false`.
   String? string(String key) => stringValue(map[key]);
 
+  /// Integer via [intValue]: whole doubles and numeric strings coerce.
   int? integer(String key) => intValue(map[key]);
 
+  /// Bool via [boolValue]: `"true"`/`"false"` strings coerce.
   bool? boolean(String key) => boolValue(map[key]);
 
+  /// Nested JSON object, or `null` when absent or not an object.
   Map<String, Object?>? object(String key) => objectValue(map[key]);
 
   /// Elements coerced with [stringValue]; elements that are not scalars are
@@ -71,12 +74,16 @@ extension type const JsonFields(Map<String, Object?> map) {
     return [for (final e in v) ?stringValue(e)];
   }
 
+  /// Elements coerced with [intValue]; elements that do not coerce are
+  /// skipped. `null` when the key is absent or not a list.
   List<int>? ints(String key) {
     final v = map[key];
     if (v is! List<Object?>) return null;
     return [for (final e in v) ?intValue(e)];
   }
 
+  /// Elements that are JSON objects; others are skipped. `null` when the key
+  /// is absent or not a list.
   List<Map<String, Object?>>? objects(String key) {
     final v = map[key];
     if (v is! List<Object?>) return null;
@@ -91,6 +98,8 @@ extension type const JsonFields(Map<String, Object?> map) {
 /// a firmware that sends bare numbers.
 String numberText(num n) => n.toString();
 
+/// Strings as-is, numbers via [numberText], bools as `true`/`false`; `null`
+/// for anything else.
 String? stringValue(Object? v) => switch (v) {
   final String s => s,
   final num n => numberText(n),
@@ -98,6 +107,8 @@ String? stringValue(Object? v) => switch (v) {
   _ => null,
 };
 
+/// Ints as-is, whole finite doubles truncated, numeric strings parsed after
+/// trimming; `null` for anything else.
 int? intValue(Object? v) => switch (v) {
   final int i => i,
   final double d when d.isFinite && d == d.truncateToDouble() => d.toInt(),
@@ -105,6 +116,7 @@ int? intValue(Object? v) => switch (v) {
   _ => null,
 };
 
+/// Bools as-is and the exact strings `true`/`false`; `null` otherwise.
 bool? boolValue(Object? v) => switch (v) {
   final bool b => b,
   'true' => true,
@@ -112,5 +124,6 @@ bool? boolValue(Object? v) => switch (v) {
   _ => null,
 };
 
+/// [v] when it is a JSON object, else `null`.
 Map<String, Object?>? objectValue(Object? v) =>
     v is Map<String, Object?> ? v : null;

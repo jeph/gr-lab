@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
-import 'bytes.dart';
-import 'catalog.dart';
-import 'model.dart';
-import 'transport.dart';
+import 'package:gr_protocol/src/ble/bytes.dart';
+import 'package:gr_protocol/src/ble/catalog.dart';
+import 'package:gr_protocol/src/ble/model.dart';
+import 'package:gr_protocol/src/ble/transport.dart';
 
 /// Bluetooth SIG company ID of Ricoh Company Ltd, carried in the camera's
 /// scan response (docs/camera-models.md §4.1).
@@ -12,15 +12,19 @@ const grRicohCompanyId = 0x065F;
 /// Marker byte that starts the Ricoh payload (`def_adv.yaml` format value).
 const grAdvertisingMarker = 0xDA;
 
-/// Decoded Ricoh manufacturer payload: `DA 01 [model] 02 [serial u32 LE]
-/// 03 [power]` with fixed, tag-implied widths and no length bytes.
+/// Decoded Ricoh manufacturer payload with fixed, tag-implied widths and no
+/// length bytes:
+///
+/// ```text
+/// DA 01 <model> 02 <serial u32 LE> 03 <power>
+/// ```
 ///
 /// Follows the parsing rule of docs/camera-models.md §4.1: tags are read
 /// only in that order, parsing stops at the first unexpected tag or short
 /// payload, already-decoded fields are kept, and later bytes are never
 /// reinterpreted. [raw] keeps the payload for diagnostics.
 final class GrManufacturerData {
-  const GrManufacturerData._({
+  const new _({
     required this.raw,
     required this.model,
     required this.serialNumber,
@@ -29,7 +33,7 @@ final class GrManufacturerData {
   });
 
   /// Payload without the 2-byte company ID.
-  factory GrManufacturerData.parse(Uint8List payload) {
+  factory parse(Uint8List payload) {
     final issues = <String>[];
     GrModelCode? model;
     int? serial;
@@ -89,7 +93,11 @@ final class GrManufacturerData {
     );
   }
 
+  /// Manufacturer payload as received, without the 2-byte company ID.
   final Uint8List raw;
+
+  /// Tag `01`: advertised model code, or null when parsing stopped before
+  /// it.
   final GrModelCode? model;
 
   /// Tag `02`: digits of the camera serial number as uint32 LE.
@@ -97,6 +105,9 @@ final class GrManufacturerData {
 
   /// Tag `03`: 1 = on (main firmware), 0 = off (BT-only firmware).
   final int? powerRaw;
+
+  /// Why parsing stopped early or what was left unparsed; empty for a
+  /// complete, well-formed payload.
   final List<String> issues;
 
   /// Serial rendered like Image Sync (`%07d`).
@@ -109,6 +120,7 @@ final class GrManufacturerData {
     _ => null,
   };
 
+  /// Diagnostic JSON with the payload hex and every decoded field.
   Map<String, Object?> toJson() => {
     'hex': BleBytes.toHex(raw),
     'model': model?.toJson(),
@@ -123,24 +135,37 @@ String _hex2(int b) => '0x${b.toRadixString(16).padLeft(2, '0').toUpperCase()}';
 
 /// A scanned advertisement with the camera-specific parts decoded.
 final class GrAdvertisement {
-  GrAdvertisement(this.advertisement)
+  /// Decodes the company-0x065F manufacturer data of [advertisement], if
+  /// present.
+  new(this.advertisement)
     : ricoh = switch (advertisement.manufacturerData[grRicohCompanyId]) {
         final Uint8List payload => GrManufacturerData.parse(payload),
         null => null,
       };
 
+  /// Advertisement as reported by the platform scanner.
   final BleAdvertisement advertisement;
 
   /// Null when the advertisement carries no company-0x065F data (for
   /// example a primary packet whose scan response has not arrived yet).
   final GrManufacturerData? ricoh;
 
+  /// Platform device identifier used to connect.
   String get deviceId => advertisement.deviceId;
+
+  /// Advertised local name, or null when none was received.
   String? get name => advertisement.name;
+
+  /// Received signal strength in dBm.
   int get rssi => advertisement.rssi;
 
+  /// GR body from tag `01`, or null when absent or not a GR model code.
   GrModel? get model => ricoh?.model?.model;
+
+  /// Tag `02` serial number digits, or null when absent.
   int? get serialNumber => ricoh?.serialNumber;
+
+  /// Serial number padded to seven digits like Image Sync shows it.
   String? get serialText => ricoh?.serialText;
 
   /// True when the Ricoh payload decoded a GR model code.
@@ -160,6 +185,7 @@ final class GrAdvertisement {
     return null;
   }
 
+  /// Diagnostic JSON with the scan fields and the decoded Ricoh payload.
   Map<String, Object?> toJson() => {
     'deviceId': deviceId,
     'name': name,

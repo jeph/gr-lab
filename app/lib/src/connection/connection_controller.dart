@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:gr_protocol/gr_protocol.dart';
+import 'package:gr_camera/gr_camera.dart';
 
-import '../data/cameras.dart';
-import '../services.dart';
+import 'package:grlab/src/data/cameras.dart';
+import 'package:grlab/src/services.dart';
 
 enum ConnectionStatus {
   /// No session (never connected, or ended by switching or forgetting the
@@ -18,7 +17,7 @@ enum ConnectionStatus {
   /// Linked over Bluetooth; the camera's Wi-Fi is not in use.
   bluetooth,
 
-  /// Wi-Fi and HTTP are up; [ConnectionController.http] is usable.
+  /// The camera's Wi-Fi is up and verified.
   connected,
 
   /// The Bluetooth link could not be made, or was lost for good.
@@ -58,7 +57,7 @@ enum ConnectFailureKind {
 
 @immutable
 final class ConnectFailure {
-  const ConnectFailure(
+  const new(
     this.kind,
     this.message, {
     this.step,
@@ -88,11 +87,7 @@ final class ConnectFailure {
 /// with [ConnectionController.answerWifiConsent].
 @immutable
 final class WifiConsentRequest {
-  const WifiConsentRequest({
-    required this.ssid,
-    required this.cameraName,
-    this.again = false,
-  });
+  const new({required this.ssid, required this.cameraName, this.again = false});
 
   final String ssid;
   final String cameraName;
@@ -103,7 +98,7 @@ final class WifiConsentRequest {
   final bool again;
 }
 
-/// One [GrSession] for the current camera, in two stages. Bluetooth
+/// One [CameraSession] for the current camera, in two stages. Bluetooth
 /// ([connect]) is meant to run by itself whenever a camera is current; the
 /// camera's Wi-Fi ([joinWifi]) is joined only when the user opens the
 /// Library or live view. [openCamera] opens the camera's pages ([tab]) over
@@ -122,7 +117,7 @@ final class WifiConsentRequest {
 /// ([AppServices.redialDelays]), since the OS only joins camera networks
 /// for the app in front.
 final class ConnectionController extends ChangeNotifier {
-  ConnectionController({required this.services, required this.cameras}) {
+  new({required this.services, required this.cameras}) {
     cameras.addListener(_onCamerasChanged);
     _cameraSerial = cameras.current?.serial;
   }
@@ -134,7 +129,7 @@ final class ConnectionController extends ChangeNotifier {
   ConnectStep? _step;
   bool _reconnecting = false;
   ConnectFailure? _failure;
-  GrSession? _session;
+  CameraSession? _session;
   StreamSubscription<GrSessionEvent>? _events;
   String? _cameraSerial;
 
@@ -147,7 +142,7 @@ final class ConnectionController extends ChangeNotifier {
 
   /// Bumped for every Wi-Fi start and [closeCamera].
   int _wifiRun = 0;
-  final _connected = StreamController<GrHttpClient>.broadcast();
+  final _wifiUp = StreamController<void>.broadcast();
   Future<void> _closing = Future.value();
   Future<void> _stoppingWifi = Future.value();
 
@@ -186,7 +181,7 @@ final class ConnectionController extends ChangeNotifier {
   Duration? _idleClosedAfter;
 
   /// Wi-Fi is up, or being got back after a loss ([reconnecting]): the
-  /// Library and live view can use [http].
+  /// Library and live view can use it.
   bool get inSession => _status == ConnectionStatus.connected;
 
   /// The camera is off (BT-only), or reported turning off.
@@ -200,7 +195,7 @@ final class ConnectionController extends ChangeNotifier {
     if (session == null || _status != ConnectionStatus.connected) {
       return false;
     }
-    return session.checkWifi();
+    return await session.checkWifi();
   }
 
   /// Non-null while a join waits for the user to agree to the camera
@@ -210,20 +205,18 @@ final class ConnectionController extends ChangeNotifier {
   /// The camera this controller connects to.
   SavedCamera? get camera => cameras.current;
 
-  GrSession? get session => _session;
-
-  /// Non-null while [status] is connected.
-  GrHttpClient? get http =>
-      _status == ConnectionStatus.connected ? _session?.http : null;
+  /// The camera layer's session for [camera], from the Bluetooth attempt
+  /// until the session ends.
+  CameraSession? get cameraSession => _session;
 
   /// `/v1/props` from the identity check.
   GrProps? get props => _session?.props;
 
   /// The camera network's name, once the session has read it.
-  String? get ssid => _session?.credentials?.ssid;
+  String? get ssid => _session?.ssid;
 
-  /// Emits the HTTP client every time the Wi-Fi link comes up.
-  Stream<GrHttpClient> get onConnected => _connected.stream;
+  /// Emits every time the Wi-Fi link comes up, or comes back after a loss.
+  Stream<void> get wifiUp => _wifiUp.stream;
 
   /// Whether the app is in front. A quiet rejoin that comes due in the
   /// background waits until this turns true again, and a camera that could
@@ -258,7 +251,7 @@ final class ConnectionController extends ChangeNotifier {
   /// previous one.
   Future<void> connectTo(String serial) async {
     if (cameras.current?.serial != serial) await cameras.select(serial);
-    return connect();
+    return await connect();
   }
 
   /// Opens the camera's pages on [tab] (the camera card's buttons). The
@@ -306,7 +299,7 @@ final class ConnectionController extends ChangeNotifier {
     }
     _cancelRedial();
     _redials = 0;
-    return _startWifi(quiet: false);
+    return await _startWifi(quiet: false);
   }
 
   /// Closes the camera's pages and leaves the camera's Wi-Fi, or stops
@@ -363,7 +356,7 @@ final class ConnectionController extends ChangeNotifier {
   }
 
   /// Answers [wifiConsent]: join the camera network, or not now.
-  void answerWifiConsent(bool join) {
+  void answerWifiConsent({required bool join}) {
     final answer = _consentAnswer;
     _consentAnswer = null;
     _consent = null;
@@ -386,17 +379,7 @@ final class ConnectionController extends ChangeNotifier {
     await _closing;
     if (generation != _generation) return;
 
-    if (!await services.ensureBluetoothPermission()) {
-      return _fail(
-        generation,
-        const ConnectFailure(
-          ConnectFailureKind.bluetoothDenied,
-          'Bluetooth permission was denied',
-          step: ConnectStep.bluetooth,
-        ),
-      );
-    }
-    final adapter = await services.ble.adapterState();
+    final adapter = await services.camera.bluetoothState();
     if (generation != _generation) return;
     if (adapter == BleAdapterState.poweredOff) {
       return _fail(
@@ -408,6 +391,7 @@ final class ConnectionController extends ChangeNotifier {
         ),
       );
     }
+    // Also a denied permission.
     if (adapter == BleAdapterState.unauthorized) {
       return _fail(
         generation,
@@ -419,29 +403,17 @@ final class ConnectionController extends ChangeNotifier {
       );
     }
 
-    final session = GrSession(
-      transport: services.ble,
-      wifi: _ConsentWifi(
-        services.wifi,
-        approvalShown: services.wifiApprovalShown,
+    final session = CameraSession(
+      services.camera,
+      consent: WifiConsent(
         ask: (ssid) => _askWifi(generation, target, ssid),
         askAgain: (ssid) => _askWifi(generation, target, ssid, again: true),
         cameraApproved: () => _wifiApproved(target),
         joined: () => cameras.markWifiApproved(target.serial),
       ),
-      host: services.cameraHost,
-      options: services.sessionOptions,
-      httpFactory: services.httpFactory,
     );
     _session = session;
-    _events = session.events.listen((e) {
-      // One line per step in the device log (logcat tag `flutter`), the
-      // only record of what a real camera did when connecting fails.
-      debugPrint(
-        'gr.session ${jsonEncode(e.toJson(), toEncodable: (o) => '$o')}',
-      );
-      _onEvent(generation, e);
-    });
+    _events = session.events.listen((e) => _onEvent(generation, e));
     try {
       await session.connectBluetooth(
         deviceId: target.paired.deviceId,
@@ -505,8 +477,7 @@ final class ConnectionController extends ChangeNotifier {
     _reconnecting = false;
     _redials = 0;
     notifyListeners();
-    final http = session.http;
-    if (http != null) _connected.add(http);
+    _wifiUp.add(null);
   }
 
   /// Ends the session or cancels an attempt; used when the current camera
@@ -596,8 +567,7 @@ final class ConnectionController extends ChangeNotifier {
       case 'recovery.done' when _status == ConnectionStatus.connected:
         _reconnecting = false;
         notifyListeners();
-        final http = _session?.http;
-        if (http != null) _connected.add(http);
+        _wifiUp.add(null);
         return;
       case 'recovery.gaveUp':
         return _wifiGaveUp(
@@ -770,88 +740,7 @@ final class ConnectionController extends ChangeNotifier {
     _cancelRedial();
     _declineConsent();
     unawaited(_closeSession());
-    unawaited(_connected.close());
+    unawaited(_wifiUp.close());
     super.dispose();
   }
-}
-
-/// The platform Wi-Fi control, asking the user first ([ask], once per
-/// session: the join loop retries) and recording a successful join
-/// ([joined]) so later joins skip the question.
-///
-/// Android can still show its network list for a network it approved
-/// before (after the user disconnected it in Wi-Fi settings). When that
-/// list covered a failed join of a camera approved before
-/// ([cameraApproved]), [askAgain] explains it and, if the user agrees, the
-/// join runs again, bringing the list back. Joins of an approved camera tell
-/// the platform so ([WifiNetworkControl.join]'s `approved`).
-final class _ConsentWifi implements WifiNetworkControl {
-  _ConsentWifi(
-    this._inner, {
-    required this.approvalShown,
-    required this.ask,
-    required this.askAgain,
-    required this.cameraApproved,
-    required this.joined,
-  });
-
-  final WifiNetworkControl _inner;
-  final Stream<void> approvalShown;
-  final Future<bool> Function(String ssid) ask;
-  final Future<bool> Function(String ssid) askAgain;
-  final bool Function() cameraApproved;
-  final Future<void> Function() joined;
-  bool _agreed = false;
-
-  @override
-  Future<void> join({
-    required String ssid,
-    required String passphrase,
-    required WifiSecurity security,
-    required Duration timeout,
-    bool approved = false,
-  }) async {
-    if (!_agreed) {
-      if (!await ask(ssid)) {
-        throw const WifiJoinDeclined("not joining the camera's Wi-Fi now");
-      }
-      _agreed = true;
-    }
-    while (true) {
-      final wasApproved = cameraApproved();
-      var shown = false;
-      final sub = approvalShown.listen((_) => shown = true);
-      try {
-        await _inner.join(
-          ssid: ssid,
-          passphrase: passphrase,
-          security: security,
-          timeout: timeout,
-          approved: wasApproved,
-        );
-        break;
-      } catch (e) {
-        // Backing out of Android's list, or leaving it open past the join
-        // window. Leaving during the join (Disconnect, a newer join) is
-        // not an answer to the list.
-        final listOutcome = e is WifiJoinDeclined || e is TimeoutException;
-        if (!shown || !wasApproved || !listOutcome) rethrow;
-        if (!await askAgain(ssid)) {
-          throw const WifiJoinDeclined("not joining the camera's Wi-Fi now");
-        }
-      } finally {
-        await sub.cancel();
-      }
-    }
-    await joined();
-  }
-
-  @override
-  Future<String?> currentSsid() => _inner.currentSsid();
-
-  @override
-  Future<void> leave() => _inner.leave();
-
-  @override
-  Stream<void> get lost => _inner.lost;
 }

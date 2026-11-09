@@ -2,26 +2,25 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:gr_protocol/gr_protocol.dart';
-
-import '../connection/camera_pill.dart';
-import '../connection/connect_failure_view.dart';
-import '../connection/connect_steps.dart';
-import '../connection/connection_controller.dart';
-import '../data/settings.dart';
-import '../theme/tokens.dart';
-import 'live_view_controller.dart';
-import 'shoot_format.dart';
-import 'shoot_model.dart';
-import 'shoot_screen.dart';
-import 'shoot_widgets.dart';
+import 'package:gr_camera/gr_camera.dart';
+import 'package:grlab/src/connection/camera_pill.dart';
+import 'package:grlab/src/connection/connect_failure_view.dart';
+import 'package:grlab/src/connection/connect_steps.dart';
+import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/data/settings.dart';
+import 'package:grlab/src/shoot/live_view_controller.dart';
+import 'package:grlab/src/shoot/shoot_format.dart';
+import 'package:grlab/src/shoot/shoot_model.dart';
+import 'package:grlab/src/shoot/shoot_screen.dart';
+import 'package:grlab/src/shoot/shoot_widgets.dart';
+import 'package:grlab/src/theme/tokens.dart';
 
 /// Live view (mock `b-shoot`): laid out like a phone's camera app and
 /// always dark. The picture fills the space between the controls, shown
 /// whole so that every part of it can be tapped to focus; the exposure
 /// readouts edit on a dial; × goes back to Remote.
 class LiveViewPage extends StatelessWidget {
-  const LiveViewPage({super.key, required this.model});
+  const new({required this.model, super.key});
 
   final ShootModel model;
 
@@ -42,7 +41,7 @@ class LiveViewPage extends StatelessWidget {
 }
 
 class _LiveLayout extends StatefulWidget {
-  const _LiveLayout({required this.model});
+  const new({required this.model});
 
   final ShootModel model;
 
@@ -68,7 +67,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
   /// value (Av lists apertures, not shutter speeds), and for the mode dial
   /// settings the camera has reported them since the dial last moved.
   GrSetting? _editable(String key) {
-    if (!_live.modeSettled && LiveViewController.modeSettings.contains(key)) {
+    if (!_live.modeSettled && CameraLiveView.modeSettings.contains(key)) {
       return null;
     }
     final s = _live.props?.setting(key);
@@ -275,7 +274,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
 /// The picture, whole and centred, with the focus mark; or, until frames
 /// come, the steps of joining the camera's Wi-Fi or why it failed.
 class _Picture extends StatelessWidget {
-  const _Picture({required this.model});
+  const new({required this.model});
 
   final ShootModel model;
 
@@ -374,7 +373,7 @@ class _Picture extends StatelessWidget {
 }
 
 class _FocusMark extends StatelessWidget {
-  const _FocusMark({required this.mark, required this.size});
+  const new({required this.mark, required this.size});
 
   final FocusMark mark;
   final Size size;
@@ -409,7 +408,7 @@ class _FocusMark extends StatelessWidget {
 /// Aperture, shutter, ISO and EV; tapping one the camera lets the app change
 /// opens the dial for it.
 class _Readouts extends StatelessWidget {
-  const _Readouts({
+  const new({
     required this.live,
     required this.readouts,
     required this.selected,
@@ -478,7 +477,7 @@ class _Readouts extends StatelessWidget {
 /// The values of one setting in a row, the current one centred
 /// (mock `.dial`).
 class _Dial extends StatefulWidget {
-  const _Dial({super.key, required this.setting, required this.onSelect});
+  const new({required this.setting, required this.onSelect, super.key});
 
   final GrSetting setting;
   final ValueChanged<String> onSelect;
@@ -506,12 +505,10 @@ class _DialState extends State<_Dial> {
   void didUpdateWidget(_Dial old) {
     super.didUpdateWidget(old);
     if (old.setting.current != widget.setting.current && _index >= 0) {
-      unawaited(
-        _scroll.animateTo(
-          _index * _item,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        ),
+      _scroll.animateTo(
+        _index * _item,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
       );
     }
   }
@@ -576,11 +573,11 @@ class _DialState extends State<_Dial> {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({
-    super.key,
+  const new({
     required this.icon,
     required this.label,
     required this.onTap,
+    super.key,
   });
 
   final IconData icon;
@@ -623,11 +620,11 @@ class _Chip extends StatelessWidget {
 }
 
 class _RoundButton extends StatelessWidget {
-  const _RoundButton({
-    super.key,
+  const new({
     required this.icon,
     required this.label,
     required this.onTap,
+    super.key,
   });
 
   final IconData icon;
@@ -657,7 +654,7 @@ class _RoundButton extends StatelessWidget {
 
 /// The newest picture taken while live view is on.
 class _LastShot extends StatelessWidget {
-  const _LastShot({required this.bytes});
+  const new({required this.bytes});
 
   final Uint8List? bytes;
 

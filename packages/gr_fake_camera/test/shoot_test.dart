@@ -9,9 +9,18 @@ import 'support.dart';
 
 typedef _Status = (BleCapturing?, BleCountdown?);
 
-const _capturing = (BleCapturing.capturing, BleCountdown.none);
-const _idle = (BleCapturing.idle, BleCountdown.none);
-const _counting = (BleCapturing.idle, BleCountdown.selfTimer);
+const (BleCapturing, BleCountdown) _capturing = (
+  BleCapturing.capturing,
+  BleCountdown.none,
+);
+const (BleCapturing, BleCountdown) _idle = (
+  BleCapturing.idle,
+  BleCountdown.none,
+);
+const (BleCapturing, BleCountdown) _counting = (
+  BleCapturing.idle,
+  BleCountdown.selfTimer,
+);
 
 void main() {
   late FakeGrCamera camera;
@@ -209,8 +218,9 @@ void main() {
           .watch(GrBleCatalog.shootingMode)
           .listen((n) => dial.add(n.decoded.value!));
       await Future<void>.delayed(Duration.zero);
-      camera.setExposureMode(BleExposureMode.m);
-      camera.setExposureMode(BleExposureMode.av, userMode: BleUserMode.u1);
+      camera
+        ..setExposureMode(BleExposureMode.m)
+        ..setExposureMode(BleExposureMode.av, userMode: BleUserMode.u1);
       await until(() => dial.length >= 2);
       expect(dial.map((m) => (m.mode.known, m.userMode.known)), [
         (BleExposureMode.m, BleUserMode.none),

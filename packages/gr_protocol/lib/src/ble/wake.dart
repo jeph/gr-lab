@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import '../trace.dart';
-import 'advertising.dart';
-import 'transport.dart';
+import 'package:gr_protocol/src/ble/advertising.dart';
+import 'package:gr_protocol/src/ble/transport.dart';
+import 'package:gr_protocol/src/trace.dart';
 
 /// GR WORLD never reconnects within 6 s of seeing the camera power off
 /// (ble.md §Turning the camera's Wi-Fi on, path B, 0xd2f2c0).
@@ -76,6 +76,7 @@ Future<GrAdvertisement?> findGrAdvertisement(
   }
 }
 
+/// How [wakeCamera] ended.
 enum GrWakeOutcome {
   /// The camera already advertised power on (tag 03 = 1); nothing was done.
   alreadyOn,
@@ -95,7 +96,8 @@ enum GrWakeOutcome {
 
 /// Observed wake sequence with timings relative to the start.
 final class GrWakeResult {
-  const GrWakeResult({
+  /// Creates a result; [wakeCamera] fills it as the sequence runs.
+  const new({
     required this.outcome,
     required this.startedAt,
     required this.notes,
@@ -110,11 +112,24 @@ final class GrWakeResult {
     this.error,
   });
 
+  /// How the wake ended.
   final GrWakeOutcome outcome;
+
+  /// Local time the wake started; every duration is relative to it.
   final DateTime startedAt;
+
+  /// First advertisement found with tag 03 = 0 (power off), if any.
   final GrAdvertisement? offAdvertisement;
+
+  /// Advertisement with tag 03 = 1 (power on), seen at the start or after
+  /// the wake connection.
   final GrAdvertisement? onAdvertisement;
+
+  /// When the first matching advertisement was seen: [offAdvertisement],
+  /// or [onAdvertisement] when the camera was already on.
   final Duration? offAdvertisementAfter;
+
+  /// When the bare wake connection was established; null if it was not.
   final Duration? connectedAfter;
 
   /// When the camera dropped the wake link; null if it did not.
@@ -123,11 +138,21 @@ final class GrWakeResult {
   /// The camera kept the link for the whole drop timeout; the wake
   /// continued anyway, as Image Sync does.
   final bool dropTimedOut;
+
+  /// Disconnect reason the platform reported for the drop, if any.
   final String? dropReason;
+
+  /// When the power-on advertisement after the wake connection was seen.
   final Duration? onAdvertisementAfter;
+
+  /// Wake connection or power-on scan failure, if any.
   final String? error;
+
+  /// Human-readable remarks on what happened at each step.
   final List<String> notes;
 
+  /// True when the camera is on now ([GrWakeOutcome.alreadyOn] or
+  /// [GrWakeOutcome.wokeUp]).
   bool get succeeded =>
       outcome == GrWakeOutcome.alreadyOn || outcome == GrWakeOutcome.wokeUp;
 
@@ -135,6 +160,7 @@ final class GrWakeResult {
   String? get deviceId =>
       onAdvertisement?.deviceId ?? offAdvertisement?.deviceId;
 
+  /// Diagnostic JSON with every field; durations in milliseconds.
   Map<String, Object?> toJson() => {
     'outcome': outcome.name,
     'startedAt': startedAt.toUtc().toIso8601String(),
@@ -157,7 +183,8 @@ final class GrWakeResult {
 /// of Image Sync's 10 s polling:
 ///
 /// 1. Scan for a GR advertisement (matching [serial] or [deviceId] when
-///    given) that carries the power tag. Tag 03 = 1 → [GrWakeOutcome.alreadyOn].
+///    given) that carries the power tag. Tag 03 = 1 →
+///    [GrWakeOutcome.alreadyOn].
 /// 2. Tag 03 = 0: open a bare GATT connection (no discovery, bonding or
 ///    writes) with [connectTimeout] (Image Sync: 10 s).
 /// 3. Wait up to [dropTimeout] (Image Sync: 30 s) for the camera to drop

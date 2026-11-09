@@ -9,9 +9,9 @@ import 'package:test/test.dart';
 /// which records how many requests were in flight at once.
 final class HeldConnection implements BleConnection {
   final pending = <Completer<Uint8List>>[];
-  var started = 0;
-  var inFlight = 0;
-  var maxInFlight = 0;
+  int started = 0;
+  int inFlight = 0;
+  int maxInFlight = 0;
 
   @override
   String get deviceId => 'held';

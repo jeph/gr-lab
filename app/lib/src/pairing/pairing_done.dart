@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-
-import '../app_scope.dart';
-import '../connection/camera_sheet.dart';
-import '../theme/tokens.dart';
-import '../widgets/group.dart';
-import 'pairing_widgets.dart';
+import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/connection/camera_sheet.dart';
+import 'package:grlab/src/pairing/pairing_widgets.dart';
+import 'package:grlab/src/theme/tokens.dart';
+import 'package:grlab/src/widgets/group.dart';
 
 /// Last pairing page (mock `b-pair-done`). The camera is already saved and
 /// connecting underneath; this page names it and asks how to connect.
 /// Done returns to the Library.
 class PairingDoneScreen extends StatelessWidget {
-  const PairingDoneScreen({super.key, required this.serial});
+  const new({required this.serial, super.key});
 
   final String serial;
 

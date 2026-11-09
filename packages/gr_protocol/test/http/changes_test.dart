@@ -34,26 +34,38 @@ void main() {
     });
 
     test('cameraDirect fields and Image Sync completion rule', () {
-      GrCameraDirectChange cd(String still, String countDown, bool capturing) =>
-          parse(
-            jsonEncode({
-              'errCode': 200,
-              'changed': 'cameraDirect',
-              'stateStill': still,
-              'stateMovie': 'idle',
-              'countDown': countDown,
-              'capturing': capturing,
-              'shotsCurrent': 1,
-              'shotsTotal': 3,
-            }),
-          ) as GrCameraDirectChange;
-      final done = cd('idle', 'idle', false);
+      GrCameraDirectChange cd(
+        String still,
+        String countDown, {
+        required bool capturing,
+      }) => parse(
+        jsonEncode({
+          'errCode': 200,
+          'changed': 'cameraDirect',
+          'stateStill': still,
+          'stateMovie': 'idle',
+          'countDown': countDown,
+          'capturing': capturing,
+          'shotsCurrent': 1,
+          'shotsTotal': 3,
+        }),
+      ) as GrCameraDirectChange;
+      final done = cd('idle', 'idle', capturing: false);
       expect((done.shotsCurrent, done.shotsTotal), (1, 3));
       expect(done.stillCaptureComplete, isTrue);
-      expect(cd('continuous', 'idle', false).stillCaptureComplete, isTrue);
-      expect(cd('busy', 'idle', false).stillCaptureComplete, isFalse);
-      expect(cd('idle', 'busy10s', false).stillCaptureComplete, isFalse);
-      expect(cd('idle', 'idle', true).stillCaptureComplete, isFalse);
+      expect(
+        cd('continuous', 'idle', capturing: false).stillCaptureComplete,
+        isTrue,
+      );
+      expect(
+        cd('busy', 'idle', capturing: false).stillCaptureComplete,
+        isFalse,
+      );
+      expect(
+        cd('idle', 'busy10s', capturing: false).stillCaptureComplete,
+        isFalse,
+      );
+      expect(cd('idle', 'idle', capturing: true).stillCaptureComplete, isFalse);
       expect(done.movieCaptureComplete, isTrue);
     });
 
@@ -135,11 +147,11 @@ void main() {
     addTearDown(() => server.close(force: true));
     server.listen((request) async {
       expect(request.uri.path, '/v1/changes');
-      final ws = await WebSocketTransformer.upgrade(request);
-      ws.add('{"errCode":200,"changed":"battery"}');
-      ws.add(
-        '{"errCode":200,"changed":"lens","captureId":"9","focused":false}',
-      );
+      final ws = await WebSocketTransformer.upgrade(request)
+        ..add('{"errCode":200,"changed":"battery"}')
+        ..add(
+          '{"errCode":200,"changed":"lens","captureId":"9","focused":false}',
+        );
       await ws.close();
     });
     final socket = GrChangesSocket(
@@ -160,5 +172,19 @@ void main() {
     await sub.cancel();
     await socket.close();
     expect(socket.status.state, GrSocketState.closed);
+  });
+
+  test('waitFor answers null once the socket closes without a match', () async {
+    final socket = GrChangesSocket(
+      '127.0.0.1',
+      port: 9,
+      reconnect: const GrNoReconnect(),
+    );
+    final lens = socket.waitFor<GrLensChange>(
+      (_) => true,
+      timeout: const Duration(minutes: 1),
+    );
+    await socket.close();
+    expect(await lens.timeout(const Duration(seconds: 5)), isNull);
   });
 }

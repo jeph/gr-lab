@@ -1,16 +1,17 @@
 import 'dart:async';
 
-import '../trace.dart';
-import 'catalog.dart';
-import 'client.dart';
-import 'model.dart';
-import 'transport.dart';
-import 'wake.dart';
+import 'package:gr_protocol/src/ble/catalog.dart';
+import 'package:gr_protocol/src/ble/client.dart';
+import 'package:gr_protocol/src/ble/model.dart';
+import 'package:gr_protocol/src/ble/transport.dart';
+import 'package:gr_protocol/src/ble/wake.dart';
+import 'package:gr_protocol/src/trace.dart';
 
 /// A camera this client has paired with. Persist it: [deviceId] is what
 /// later connects and wakes use, and [serialNumber] matches adverts.
 final class GrPairedCamera {
-  const GrPairedCamera({
+  /// Creates a record; [pairCamera] fills it from Camera Information.
+  const new({
     required this.deviceId,
     required this.serialNumber,
     this.modelName,
@@ -19,7 +20,8 @@ final class GrPairedCamera {
     this.bluetoothMacAddress,
   });
 
-  factory GrPairedCamera.fromJson(Map<String, Object?> json) => GrPairedCamera(
+  /// Restores a record written by [toJson].
+  factory fromJson(Map<String, Object?> json) => GrPairedCamera(
     deviceId: json['deviceId']! as String,
     serialNumber: json['serialNumber']! as String,
     modelName: json['modelName'] as String?,
@@ -30,17 +32,29 @@ final class GrPairedCamera {
 
   /// Platform peripheral id (CoreBluetooth UUID, Android MAC).
   final String deviceId;
+
+  /// Camera Information serial number, as read after bonding.
   final String serialNumber;
+
+  /// Camera Information model name (firmware model property), when read.
   final String? modelName;
+
+  /// Camera Information firmware version at pairing time, when read.
   final String? firmwareRevision;
+
+  /// Camera's Bluetooth device name, when read.
   final String? bluetoothDeviceName;
+
+  /// Camera's Bluetooth MAC address string, when read.
   final String? bluetoothMacAddress;
 
+  /// Known GR body for [modelName], or null when absent or unknown.
   GrModel? get model {
     final m = modelName;
     return m == null ? null : GrModel.fromModelString(m);
   }
 
+  /// JSON to persist; read back with [GrPairedCamera.fromJson].
   Map<String, Object?> toJson() => {
     'deviceId': deviceId,
     'serialNumber': serialNumber,
@@ -66,6 +80,7 @@ enum GrPairingStage {
   registering,
 }
 
+/// Why [pairCamera] failed; carried by [GrPairingException].
 enum GrPairingFailure {
   /// No powered-on GR camera advertised within the scan timeout.
   notFound,
@@ -92,10 +107,19 @@ enum GrPairingFailure {
   registrationFailed,
 }
 
+/// Thrown by [pairCamera]; [failure] says which step failed.
 final class GrPairingException implements Exception {
-  const GrPairingException(this.failure, this.message, [this.cause]);
+  /// Creates an exception for [failure] with an optional underlying
+  /// [cause].
+  const new(this.failure, this.message, [this.cause]);
+
+  /// Which pairing step failed.
   final GrPairingFailure failure;
+
+  /// What went wrong, or what the user should do next.
   final String message;
+
+  /// Underlying error (usually a [BleException]), when there is one.
   final Object? cause;
 
   @override
@@ -106,8 +130,10 @@ final class GrPairingException implements Exception {
 
 /// Result of [pairCamera]: what to persist, plus the still-open link.
 final class GrPairing {
-  const GrPairing(this.camera, this.client);
+  /// Pairs the persisted [camera] record with its open [client].
+  const new(this.camera, this.client);
 
+  /// Record to persist for later connects and wakes.
   final GrPairedCamera camera;
 
   /// The pairing link. GR WORLD keeps it open after pairing; continue on it
@@ -189,7 +215,7 @@ Future<GrPairing> pairCamera(
   try {
     await client.discover();
   } on BleException catch (e) {
-    return fail(GrPairingFailure.connectFailed, 'service discovery', e);
+    await fail(GrPairingFailure.connectFailed, 'service discovery', e);
   }
   for (final c in [
     GrBleCatalog.disModelNumber,
@@ -212,7 +238,7 @@ Future<GrPairing> pairCamera(
       timeout: confirmationTimeout,
     );
   } on BleException catch (e) {
-    return fail(
+    await fail(
       GrPairingFailure.notConfirmed,
       'pairing was not completed; open Execute Pairing on the camera, '
       'remove this device from its Paired Devices list if it is there, '
@@ -226,7 +252,7 @@ Future<GrPairing> pairCamera(
   final identity = await client.readIdentity();
   final serialNumber = identity.serialNumber;
   if (serialNumber == null) {
-    return fail(
+    await fail(
       GrPairingFailure.bondUnusable,
       'Camera Information unreadable after pairing',
       identity.issues,
@@ -235,7 +261,7 @@ Future<GrPairing> pairCamera(
   try {
     await client.setPairedDeviceName(clientName);
   } on BleException catch (e) {
-    return fail(
+    await fail(
       GrPairingFailure.registrationFailed,
       'the camera did not record the pairing (was OK pressed on the camera?)',
       e,

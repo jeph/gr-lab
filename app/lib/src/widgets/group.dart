@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../theme/tokens.dart';
+import 'package:grlab/src/theme/tokens.dart';
 
 /// Uppercase label above a [GroupBox] (mock `.seclabel`).
 class SectionLabel extends StatelessWidget {
-  const SectionLabel(this.text, {super.key});
+  const new(this.text, {super.key});
 
   final String text;
 
@@ -25,7 +25,7 @@ class SectionLabel extends StatelessWidget {
 
 /// Rounded card of rows separated by hairlines (mock `.group`).
 class GroupBox extends StatelessWidget {
-  const GroupBox({super.key, required this.children, this.margin, this.color});
+  const new({required this.children, super.key, this.margin, this.color});
 
   final List<Widget> children;
   final EdgeInsetsGeometry? margin;
@@ -60,9 +60,9 @@ class GroupBox extends StatelessWidget {
 /// One row of a [GroupBox]: icon tile, title with optional subtitle, and a
 /// trailing value or control (mock `.li`).
 class GroupRow extends StatelessWidget {
-  const GroupRow({
-    super.key,
+  const new({
     required this.title,
+    super.key,
     this.icon,
     this.leading,
     this.subtitle,
@@ -137,11 +137,11 @@ class GroupRow extends StatelessWidget {
 
 /// Filter chip with an optional monospace count (mock `.chip`).
 class GrChip extends StatelessWidget {
-  const GrChip({
-    super.key,
+  const new({
     required this.label,
     required this.selected,
     required this.onTap,
+    super.key,
     this.count,
   });
 

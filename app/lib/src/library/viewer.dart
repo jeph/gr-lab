@@ -1,31 +1,25 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:gr_protocol/gr_protocol.dart';
+import 'package:gr_camera/gr_camera.dart';
+import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/connection/idle_disconnect.dart';
+import 'package:grlab/src/downloads/download_engine.dart';
+import 'package:grlab/src/library/format.dart';
+import 'package:grlab/src/library/library_model.dart';
+import 'package:grlab/src/library/library_scope.dart';
+import 'package:grlab/src/library/shot.dart';
+import 'package:grlab/src/library/shot_cell.dart';
+import 'package:grlab/src/theme/tokens.dart';
+import 'package:grlab/src/widgets/group.dart';
 import 'package:video_player/video_player.dart';
-
-import '../app_scope.dart';
-import '../connection/idle_disconnect.dart';
-import '../downloads/download_engine.dart';
-import '../theme/tokens.dart';
-import '../widgets/group.dart';
-import 'format.dart';
-import 'library_model.dart';
-import 'library_scope.dart';
-import 'movie_cache.dart';
-import 'shot.dart';
-import 'shot_cell.dart';
 
 /// Full-screen viewer (mock `b-viewer`): swipe between [shots], pinch to
 /// zoom, file details, and Download. A RAW+JPEG pair offers its JPEG and
 /// its RAW separately. A photo shown larger than its preview, or zoomed,
 /// is replaced by the full JPEG once it arrives.
 class ShotViewer extends StatefulWidget {
-  const ShotViewer({
-    super.key,
-    required this.shots,
-    required this.initialIndex,
-  });
+  const new({required this.shots, required this.initialIndex, super.key});
 
   final List<Shot> shots;
   final int initialIndex;
@@ -130,11 +124,11 @@ class _ShotViewerState extends State<ShotViewer> {
 }
 
 class _PhotoPage extends StatefulWidget {
-  const _PhotoPage({
-    super.key,
+  const new({
     required this.serial,
     required this.shot,
     required this.onZoom,
+    super.key,
   });
 
   final String serial;
@@ -192,11 +186,11 @@ class _PhotoPageState extends State<_PhotoPage> {
 }
 
 class _VideoPage extends StatefulWidget {
-  const _VideoPage({
-    super.key,
+  const new({
     required this.serial,
     required this.shot,
     required this.active,
+    super.key,
   });
 
   final String serial;
@@ -382,11 +376,7 @@ class _VideoPageState extends State<_VideoPage> {
 }
 
 class _PlayPrompt extends StatelessWidget {
-  const _PlayPrompt({
-    required this.canPlay,
-    required this.error,
-    required this.onPlay,
-  });
+  const new({required this.canPlay, required this.error, required this.onPlay});
 
   final bool canPlay;
   final String? error;
@@ -421,7 +411,7 @@ class _PlayPrompt extends StatelessWidget {
 
 /// Progress while the movie is copied from the camera, with Cancel.
 class _Copying extends StatelessWidget {
-  const _Copying({required this.download, required this.onCancel});
+  const new({required this.download, required this.onCancel});
 
   final MovieDownload download;
   final VoidCallback onCancel;
@@ -458,7 +448,7 @@ class _Copying extends StatelessWidget {
 
 /// Format, size and date of the shot.
 class _Details extends StatelessWidget {
-  const _Details({required this.shot, required this.model});
+  const new({required this.shot, required this.model});
 
   final Shot shot;
   final LibraryModel model;
@@ -513,7 +503,7 @@ class _Details extends StatelessWidget {
               Expanded(
                 child: Text(
                   shot.files.map((f) => f.name).join(' + '),
-                  style: GrFonts.monoStyle(context, size: 12),
+                  style: GrFonts.monoStyle(context),
                 ),
               ),
               if (shot.isVideo) Text(size, style: GrFonts.monoStyle(context)),
@@ -529,11 +519,7 @@ class _Details extends StatelessWidget {
 /// files can always be downloaded again: the app cannot see whether they
 /// are still on the phone.
 class _ActionBar extends StatelessWidget {
-  const _ActionBar({
-    required this.serial,
-    required this.shot,
-    required this.engine,
-  });
+  const new({required this.serial, required this.shot, required this.engine});
 
   final String serial;
   final Shot shot;
@@ -601,13 +587,13 @@ class _ActionBar extends StatelessWidget {
 /// Downloads [files] of the shot, or shows that they are queued or
 /// downloading, or offers a retry when their job failed.
 class _DownloadAction extends StatelessWidget {
-  const _DownloadAction({
-    super.key,
+  const new({
     required this.serial,
     required this.shot,
     required this.files,
     required this.label,
     required this.engine,
+    super.key,
   });
 
   final String serial;

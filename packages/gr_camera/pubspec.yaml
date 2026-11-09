@@ -1,0 +1,32 @@
+name: gr_camera
+description: The camera layer of GR Lab. Talks to Ricoh GR cameras over the phone's Bluetooth and Wi-Fi, and traces every exchange.
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+  flutter: ">=3.47.0"
+
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  gr_protocol:
+    path: ../gr_protocol
+  universal_ble: ^3.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  gr_fake_camera:
+    path: ../gr_fake_camera
+  very_good_analysis: ^11.0.0
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: io.jeph.grlab.gr_camera
+        pluginClass: GrCameraPlugin
+      ios:
+        pluginClass: GrCameraPlugin

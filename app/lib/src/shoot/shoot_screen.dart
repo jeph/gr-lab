@@ -3,18 +3,18 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
-import '../app_scope.dart';
-import '../camera/camera_top_bar.dart';
-import '../connection/connection_controller.dart';
-import '../data/settings.dart';
-import '../theme/tokens.dart';
-import '../widgets/group.dart';
-import 'live_view_controller.dart';
-import 'live_view_page.dart';
-import 'shoot_format.dart';
-import 'shoot_model.dart';
-import 'shoot_widgets.dart';
+import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/camera/camera_top_bar.dart';
+import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/connection/idle_disconnect.dart' show IdleDisconnect;
+import 'package:grlab/src/data/settings.dart';
+import 'package:grlab/src/shoot/live_view_controller.dart';
+import 'package:grlab/src/shoot/live_view_page.dart';
+import 'package:grlab/src/shoot/shoot_format.dart';
+import 'package:grlab/src/shoot/shoot_model.dart';
+import 'package:grlab/src/shoot/shoot_widgets.dart';
+import 'package:grlab/src/theme/tokens.dart';
+import 'package:grlab/src/widgets/group.dart';
 
 /// Android delivers the volume buttons to the app as key events; iOS does
 /// not, so the hint only promises them on Android.
@@ -24,7 +24,7 @@ bool get volumeShutter => defaultTargetPlatform == TargetPlatform.android;
 /// over the camera's Wi-Fi (mock `b-shoot`), with the switch between them
 /// at the top of both.
 class ShootScreen extends StatefulWidget {
-  const ShootScreen({super.key, required this.model});
+  const new({required this.model, super.key});
 
   final ShootModel model;
 
@@ -110,7 +110,7 @@ class _ShootScreenState extends State<ShootScreen> {
 /// A remote control, not a viewfinder: the camera's mode, shots left and
 /// battery, one large shutter, the self-timer and the drive.
 class _RemoteView extends StatelessWidget {
-  const _RemoteView({required this.model});
+  const new({required this.model});
 
   final ShootModel model;
 
@@ -234,12 +234,7 @@ String _thousands(int n) {
 
 /// A readout card (mock `.stats`).
 class _Stat extends StatelessWidget {
-  const _Stat({
-    super.key,
-    required this.label,
-    required this.value,
-    this.color,
-  });
+  const new({required this.label, required this.value, super.key, this.color});
 
   final String label;
   final String value;
@@ -282,7 +277,7 @@ class _Stat extends StatelessWidget {
 
 /// Under the shutter: what to do, or why it can't be pressed yet.
 class ShootPowerLine extends StatelessWidget {
-  const ShootPowerLine({super.key, required this.model});
+  const new({required this.model, super.key});
 
   final ShootModel model;
 
@@ -306,7 +301,7 @@ class ShootPowerLine extends StatelessWidget {
     final linking =
         connection.status == ConnectionStatus.connecting &&
         connection.step == ConnectStep.bluetooth;
-    if (linking || connection.session?.ble == null) {
+    if (linking || !model.linked) {
       return waiting('Connecting to $name via Bluetooth…');
     }
     return switch (model.power) {

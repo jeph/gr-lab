@@ -2,133 +2,18 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:gr_protocol/gr_protocol.dart';
+import 'package:gr_camera/gr_camera.dart';
 
-import '../data/json_file.dart';
-import 'camera_link.dart';
-import 'request_queue.dart';
-import 'shot.dart';
-
-/// What `/v1/photos/<dir>/<file>/info` told us about one file.
-@immutable
-final class FileInfo {
-  const FileInfo({this.taken, this.size, this.duration, this.orientation});
-
-  factory FileInfo.fromPhotoInfo(GrPhotoInfo info) => FileInfo(
-    taken: parseCameraTime(info.datetime ?? info.recordedTime),
-    size: info.size,
-    duration: info.duration == null ? null : Duration(seconds: info.duration!),
-    orientation: info.orientation,
-  );
-
-  factory FileInfo.fromJson(Map<String, Object?> json) => FileInfo(
-    taken: switch (json['t']) {
-      final String t => DateTime.tryParse(t),
-      _ => null,
-    },
-    size: (json['z'] as num?)?.toInt(),
-    duration: switch (json['v']) {
-      final num v => Duration(seconds: v.toInt()),
-      _ => null,
-    },
-    orientation: (json['o'] as num?)?.toInt(),
-  );
-
-  /// Capture time in the camera's clock (local, no zone).
-  final DateTime? taken;
-
-  /// Bytes of the full file.
-  final int? size;
-
-  /// Movie length.
-  final Duration? duration;
-
-  /// EXIF orientation (1–8) the camera reports for the shot; its
-  /// thumbnails and previews are stored unrotated (image_orientation.dart).
-  final int? orientation;
-
-  Map<String, Object?> toJson() => {
-    if (taken != null) 't': taken!.toIso8601String(),
-    'z': ?size,
-    if (duration != null) 'v': duration!.inSeconds,
-    'o': ?orientation,
-  };
-}
-
-/// Parses the camera's `datetime`. Its format is untested on hardware
-/// (burst-grouping.md), so ISO 8601 and the EXIF `YYYY:MM:DD HH:MM:SS`
-/// form are both accepted, always as the camera's local wall clock.
-DateTime? parseCameraTime(String? text) {
-  if (text == null || text.isEmpty) return null;
-  final exif = RegExp(
-    r'^(\d{4})[:\-](\d{2})[:\-](\d{2})[ T](\d{2}):(\d{2}):(\d{2})',
-  ).firstMatch(text);
-  if (exif != null) {
-    final p = [for (var i = 1; i <= 6; i++) int.parse(exif.group(i)!)];
-    return DateTime(p[0], p[1], p[2], p[3], p[4], p[5]);
-  }
-  final parsed = DateTime.tryParse(text);
-  if (parsed == null) return null;
-  return parsed.isUtc ? parsed.toLocal() : parsed;
-}
+import 'package:grlab/src/library/shot.dart';
 
 enum LibraryFilter { all, jpeg, raw, video, notDownloaded }
-
-/// `library.json` format; info cached under another version is dropped.
-const _cacheVersion = 2;
-
-File _cacheFile(Directory cacheDir, String serial) =>
-    File('${cacheDir.path}/$serial/library.json');
-
-/// What `library.json` kept for one camera.
-typedef CachedListing = ({
-  List<CameraFile> files,
-  Map<String, FileInfo> info,
-  DateTime? listedAt,
-});
-
-/// Reads [serial]'s `library.json`; null when there is none.
-Future<CachedListing?> readCachedListing(
-  Directory cacheDir,
-  String serial,
-) async {
-  final json = await JsonFile(_cacheFile(cacheDir, serial)).read();
-  if (json == null) return null;
-  final files = <CameraFile>[];
-  for (final e in json['files'] as List<Object?>? ?? const []) {
-    if (e is! Map<String, Object?>) continue;
-    final dir = e['d'], file = e['f'], storage = e['s'];
-    if (dir is! String || file is! String) continue;
-    try {
-      files.add(CameraFile(storage as String?, GrPhotoPath(dir, file)));
-    } on Object {
-      continue;
-    }
-  }
-  final info = <String, FileInfo>{};
-  // Version 1 info lacks the orientation; it is fetched again.
-  final cachedInfo = json['version'] == _cacheVersion ? json['info'] : null;
-  if (cachedInfo is Map<String, Object?>) {
-    for (final MapEntry(:key, :value) in cachedInfo.entries) {
-      if (value is Map<String, Object?>) info[key] = FileInfo.fromJson(value);
-    }
-  }
-  return (
-    files: files,
-    info: info,
-    listedAt: switch (json['listedAt']) {
-      final String t => DateTime.tryParse(t),
-      _ => null,
-    },
-  );
-}
 
 /// The camera's photos as shots, kept per camera serial in
 /// `<cacheDir>/<serial>/library.json` so the grid appears at once and
 /// offline. Refreshes whenever the camera connects and when its
 /// `/v1/changes` socket reports a storage change.
 final class LibraryModel extends ChangeNotifier {
-  LibraryModel({
+  new({
     required this.cacheDir,
     required this.link,
     required this.queue,
@@ -140,7 +25,7 @@ final class LibraryModel extends ChangeNotifier {
   }
 
   final Directory cacheDir;
-  final ValueListenable<CameraLink?> link;
+  final ValueListenable<CameraLibrary?> link;
 
   /// Shared with the image loader so the camera sees at most its
   /// concurrency in requests from the library.
@@ -162,8 +47,8 @@ final class LibraryModel extends ChangeNotifier {
   bool _refreshAgain = false;
   bool _loadingCache = false;
   Object? _error;
-  CameraLink? _subscribedLink;
-  StreamSubscription<GrChangeEvent>? _changes;
+  CameraLibrary? _subscribedLink;
+  StreamSubscription<void>? _changes;
   Timer? _changeTimer;
   Timer? _saveTimer;
   Future<void> _saving = Future.value();
@@ -224,7 +109,10 @@ final class LibraryModel extends ChangeNotifier {
 
   /// Reads the camera's listing again. Does nothing while offline; a
   /// refresh requested during one runs once more afterwards.
-  Future<void> refresh() async {
+  Future<void> refresh() => _refresh('user');
+
+  /// [reason] says why the listing is read, for the trace.
+  Future<void> _refresh(String reason) async {
     final current = link.value;
     final serial = _serial;
     if (current == null || serial == null || current.serial != serial) return;
@@ -236,7 +124,7 @@ final class LibraryModel extends ChangeNotifier {
     _refreshing = true;
     _notify();
     try {
-      final files = await _list(current);
+      final files = await current.listFiles(reason: reason);
       if (generation != _generation) return;
       _files = files;
       _shots = groupShots(files);
@@ -250,7 +138,7 @@ final class LibraryModel extends ChangeNotifier {
       // A failed listing usually means the Wi-Fi went; the app then
       // returns to the Cameras screen, so the error is kept only while the
       // camera still answers.
-      final answers = await current.checkWifi?.call() ?? true;
+      final answers = await current.checkWifi(after: 'listing');
       if (generation != _generation || !answers) return;
       _error = e;
     } finally {
@@ -259,34 +147,10 @@ final class LibraryModel extends ChangeNotifier {
         _notify();
         if (_refreshAgain) {
           _refreshAgain = false;
-          unawaited(refresh());
+          unawaited(_refresh('again'));
         }
       }
     }
-  }
-
-  Future<List<CameraFile>> _list(CameraLink current) async {
-    final files = <CameraFile>[];
-    Object? failure;
-    var listed = 0;
-    for (final storage in current.storages) {
-      final found = <CameraFile>[];
-      try {
-        await for (final page in current.http.photoPages(storage: storage)) {
-          for (final p in page.paths) {
-            found.add(CameraFile(storage, p));
-          }
-        }
-        files.addAll(found);
-        listed++;
-      } on GrApiException catch (e) {
-        // A storage without a card answers with an error; the other one
-        // still lists.
-        failure = e;
-      }
-    }
-    if (listed == 0 && failure != null) throw failure;
-    return files;
   }
 
   /// Fetches a file's info from the camera if it is not known yet. Returns
@@ -314,9 +178,7 @@ final class LibraryModel extends ChangeNotifier {
     return _infoRequests.join('$serial|$generation|${f.key}', current, (
       _,
     ) async {
-      final info = FileInfo.fromPhotoInfo(
-        await current.http.photoInfo(f.path, storage: f.storage),
-      );
+      final info = await current.fileInfo(f);
       if (generation == _generation) {
         _info[f.key] = info;
         _scheduleSave();
@@ -337,17 +199,19 @@ final class LibraryModel extends ChangeNotifier {
     if (identical(current, _subscribedLink)) return;
     _subscribeChanges(current);
     _notify();
-    unawaited(refresh());
+    unawaited(_refresh('connected'));
   }
 
-  void _subscribeChanges(CameraLink? current) {
+  void _subscribeChanges(CameraLibrary? current) {
     _subscribedLink = current;
     _changeTimer?.cancel();
     unawaited(_changes?.cancel());
-    _changes = current?.changes?.listen((e) {
-      if (e is! GrStorageChange) return;
+    _changes = current?.storageChanges.listen((_) {
       _changeTimer?.cancel();
-      _changeTimer = Timer(changeDebounce, () => unawaited(refresh()));
+      _changeTimer = Timer(
+        changeDebounce,
+        () => unawaited(_refresh('storageChange')),
+      );
     });
   }
 
@@ -374,18 +238,15 @@ final class LibraryModel extends ChangeNotifier {
     final serial = _serial;
     final shots = _shots;
     if (serial == null || shots == null) return;
-    final snapshot = {
-      'version': _cacheVersion,
-      'listedAt': _listedAt?.toIso8601String(),
-      'files': [
-        for (final f in _files) {'s': f.storage, 'd': f.dir, 'f': f.name},
-      ],
-      'info': {
-        for (final MapEntry(:key, :value) in _info.entries) key: value.toJson(),
-      },
-    };
-    final file = JsonFile(_cacheFile(cacheDir, serial));
-    _saving = _saving.then((_) => file.write(snapshot)).catchError((_) {});
+    // Copies: the collections change while the write waits its turn.
+    final listing = (
+      files: List.of(_files),
+      info: Map.of(_info),
+      listedAt: _listedAt,
+    );
+    _saving = _saving
+        .then((_) => writeCachedListing(cacheDir, serial, listing))
+        .catchError((_) {});
   }
 
   Future<void> _flushSave() async {
@@ -422,9 +283,9 @@ final class LibraryModel extends ChangeNotifier {
 /// Shots counted per filter chip and the filtered lists.
 @immutable
 final class FilteredShots {
-  const FilteredShots(this.shots, this.counts);
+  const new(this.shots, this.counts);
 
-  factory FilteredShots.of(
+  factory of(
     List<Shot> all,
     LibraryFilter filter,
     bool Function(Shot) downloaded,
@@ -460,7 +321,7 @@ final class FilteredShots {
 /// Shots of one day in the grid.
 @immutable
 final class DaySection {
-  const DaySection(this.day, this.shots);
+  const new(this.day, this.shots);
 
   /// Midnight of the day, or null for leading shots whose date is not
   /// known yet.

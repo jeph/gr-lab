@@ -1,44 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:gr_protocol/gr_protocol.dart';
-
-/// One file on the camera. [storage] is `in` or `sd1` on cameras with two
-/// storages and null on cameras that are listed without `storage=`; the
-/// same `dir/file` may exist on both storages of a GR IV.
-@immutable
-final class CameraFile {
-  const CameraFile(this.storage, this.path);
-
-  final String? storage;
-  final GrPhotoPath path;
-
-  String get dir => path.dir;
-  String get name => path.file;
-
-  /// `JPG`, `DNG`, `MOV`.
-  String get extension => path.extension;
-
-  /// Name without the extension (`R0001234`).
-  String get base {
-    final dot = name.lastIndexOf('.');
-    return dot < 0 ? name : name.substring(0, dot);
-  }
-
-  /// Identifies the file within one camera.
-  String get key => '${storage ?? ''}|$dir/$name';
-
-  /// [key] made safe for a file name.
-  String get fileStem => '${storage ?? 'x'}_${dir}_$name';
-
-  @override
-  bool operator ==(Object other) =>
-      other is CameraFile && other.storage == storage && other.path == path;
-
-  @override
-  int get hashCode => Object.hash(storage, path);
-
-  @override
-  String toString() => storage == null ? '$path' : '$storage:$path';
-}
+import 'package:gr_camera/gr_camera.dart';
 
 enum ShotFormat { jpeg, raw, rawJpeg, video }
 
@@ -46,7 +7,7 @@ enum ShotFormat { jpeg, raw, rawJpeg, video }
 /// same base name in the same folder and storage, or a movie.
 @immutable
 final class Shot {
-  const Shot({this.jpeg, this.raw, this.movie})
+  const new({this.jpeg, this.raw, this.movie})
     : assert(
         (movie == null) != (jpeg == null && raw == null),
         'a shot is a movie or a still',

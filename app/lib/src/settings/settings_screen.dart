@@ -1,21 +1,22 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-
-import '../app_scope.dart';
-import '../data/settings.dart';
-import '../pairing/pairing_widgets.dart';
-import '../theme/tokens.dart';
-import '../widgets/group.dart';
+import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/data/settings.dart';
+import 'package:grlab/src/pairing/pairing_widgets.dart';
+import 'package:grlab/src/settings/debug_log_group.dart';
+import 'package:grlab/src/theme/tokens.dart';
+import 'package:grlab/src/widgets/group.dart';
 
 /// App settings (subset of mock `b-settings`): appearance, leaving the
-/// camera's Wi-Fi when the app is not used, and licenses.
+/// camera's Wi-Fi when the app is not used, the debug log, and licenses.
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final settings = AppScope.of(context).settings;
+    final models = AppScope.of(context);
+    final settings = models.settings;
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListenableBuilder(
@@ -47,6 +48,8 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ],
             ),
+            const SectionLabel('Debug log'),
+            DebugLogGroup(log: models.debugLog),
             const SectionLabel('About'),
             GroupBox(
               children: [
@@ -108,7 +111,7 @@ Future<void> _chooseAutoDisconnect(BuildContext context) {
 }
 
 class _ThemeGroup extends StatelessWidget {
-  const _ThemeGroup({required this.mode, required this.onChanged});
+  const new({required this.mode, required this.onChanged});
 
   final ThemeMode mode;
   final ValueChanged<ThemeMode> onChanged;
@@ -161,12 +164,12 @@ class _ThemeGroup extends StatelessWidget {
 /// A tiny Library drawn in the theme it selects; Auto is half light, half
 /// dark (mock `.tpick`).
 class _ThemeTile extends StatelessWidget {
-  const _ThemeTile({
-    super.key,
+  const new({
     required this.mode,
     required this.label,
     required this.selected,
     required this.onTap,
+    super.key,
   });
 
   final ThemeMode mode;
@@ -227,11 +230,7 @@ class _ThemeTile extends StatelessWidget {
 }
 
 class _MiniLibrary extends StatelessWidget {
-  const _MiniLibrary(
-    this.colors, {
-    this.clipLeft = false,
-    this.clipRight = false,
-  });
+  const new(this.colors, {this.clipLeft = false, this.clipRight = false});
 
   final GrColors colors;
   final bool clipLeft;

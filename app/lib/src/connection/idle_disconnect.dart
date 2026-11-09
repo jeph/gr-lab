@@ -3,9 +3,8 @@ import 'dart:async';
 import 'package:clock/clock.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-
-import '../data/settings.dart';
-import 'connection_controller.dart';
+import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/data/settings.dart';
 
 /// Leaves the camera's Wi-Fi ([ConnectionController.closeCamera]) after
 /// [SettingsController.autoDisconnect] without use, returning to the
@@ -18,7 +17,7 @@ import 'connection_controller.dart';
 /// comes up and measures wall-clock time ([clock]), so time in the
 /// background counts.
 final class IdleDisconnect {
-  IdleDisconnect({required this.connection, required this.settings})
+  new({required this.connection, required this.settings})
     : _last = clock.now() {
     connection.addListener(_update);
     settings.addListener(_schedule);
@@ -91,7 +90,7 @@ final class IdleDisconnect {
 }
 
 final class _NavigationUse extends NavigatorObserver {
-  _NavigationUse(this._idle);
+  new(this._idle);
 
   final IdleDisconnect _idle;
 
@@ -114,7 +113,7 @@ final class _NavigationUse extends NavigatorObserver {
 
 /// Reports touches, scrolls and key presses under [child] to [idle].
 class IdleInput extends StatefulWidget {
-  const IdleInput({super.key, required this.idle, required this.child});
+  const new({required this.idle, required this.child, super.key});
 
   final IdleDisconnect idle;
   final Widget child;

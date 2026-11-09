@@ -3,22 +3,23 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import '../trace.dart';
-import 'changes.dart';
-import 'errors.dart';
-import 'json.dart';
-import 'liveview.dart';
-import 'mjpeg.dart';
-import 'models.dart';
-import 'request.dart';
-import 'sha256.dart';
+import 'package:gr_protocol/src/http/changes.dart';
+import 'package:gr_protocol/src/http/errors.dart';
+import 'package:gr_protocol/src/http/json.dart';
+import 'package:gr_protocol/src/http/liveview.dart';
+import 'package:gr_protocol/src/http/mjpeg.dart';
+import 'package:gr_protocol/src/http/models.dart';
+import 'package:gr_protocol/src/http/request.dart';
+import 'package:gr_protocol/src/http/sha256.dart';
+import 'package:gr_protocol/src/trace.dart';
 
 /// Per-route deadlines. Defaults follow connection-lifecycle.md §9 (connect
 /// 3 s, read 10 s, downloads by idle timeout) and the apps' longer per-route
 /// values where they exist (docs/protocol/http-api.md §1,
 /// connection-imagesync.md §2.1).
 final class GrHttpTimeouts {
-  const GrHttpTimeouts({
+  /// Deadlines; each defaults to the value its field doc names.
+  const new({
     this.connect = const Duration(seconds: 3),
     this.request = const Duration(seconds: 10),
     this.photoList = const Duration(seconds: 300),
@@ -51,8 +52,14 @@ final class GrHttpTimeouts {
 
   /// Longest silence while streaming an image.
   final Duration downloadIdle;
+
+  /// GR WORLD's `/v1/configs/firmware/prepare` timeout (60 s).
   final Duration firmwarePrepare;
+
+  /// GR WORLD's whole-file firmware `PUT` timeout (180 s).
   final Duration firmwareUpload;
+
+  /// GR WORLD's end-screen `PUT` timeout (60 s).
   final Duration endScreen;
 }
 
@@ -68,12 +75,18 @@ enum GrTransferMarkStyle {
   imageSync,
 }
 
-/// A response returned as text because its format is [unknown].
+/// A response returned as text because its format is \[unknown\].
 final class GrTextResponse {
-  const GrTextResponse(this.httpStatus, this.contentType, this.text, this.json);
+  /// Response with status [httpStatus], [contentType] and body [text].
+  const new(this.httpStatus, this.contentType, this.text, this.json);
 
+  /// HTTP status code.
   final int httpStatus;
+
+  /// `Content-Type` header, if the camera sent one.
   final String? contentType;
+
+  /// Body decoded as UTF-8.
   final String text;
 
   /// The body parsed as camera JSON (check [CameraJson.issue]).
@@ -81,7 +94,7 @@ final class GrTextResponse {
 }
 
 /// GR WORLD pages photo listings at 3000 files (http-api.md §2.1 step 6,
-/// [inferred]).
+/// \[inferred\]).
 const grWorldPhotoPageSize = 3000;
 
 /// Client for the camera's Wi-Fi HTTP API (`http://<host>/v1/...`).
@@ -89,28 +102,34 @@ const grWorldPhotoPageSize = 3000;
 /// One keep-alive `HttpClient` serves every request, as recommended in
 /// connection-lifecycle.md §9. Pass [httpClient] to supply one whose
 /// `connectionFactory` binds sockets to the camera network; it is then not
-/// closed by [close]. [socketConnector] does the same for live view, which
+/// closed by [close]. `socketConnector` does the same for live view, which
 /// uses a raw socket.
 ///
 /// Every exchange emits [TraceEvent]s on [TraceChannel.http] when a sink is
-/// given; request/response bodies are attached up to [traceBodyLimit] bytes.
+/// given: method, URL and all headers of each request and response, JSON
+/// and text bodies in full, and for binary bodies (images, DNG, movies)
+/// only their type, length and headers.
 final class GrHttpClient {
-  GrHttpClient(
+  /// Client for the camera at [host]; nothing connects until a request.
+  new(
     this.host, {
     this.port = 80,
     HttpClient? httpClient,
     this._trace,
     this.timeouts = const GrHttpTimeouts(),
-    this.traceBodyLimit = 64 * 1024,
     this._socketConnector = defaultSocketConnector,
   }) : _http =
            httpClient ?? (HttpClient()..connectionTimeout = timeouts.connect),
        _ownsHttp = httpClient == null;
 
+  /// Camera address, `192.168.0.1` on the camera's own access point.
   final String host;
+
+  /// HTTP port of the camera's web API.
   final int port;
+
+  /// Per-route deadlines.
   final GrHttpTimeouts timeouts;
-  final int traceBodyLimit;
   final HttpClient _http;
   final bool _ownsHttp;
   final TraceSink? _trace;
@@ -220,7 +239,7 @@ final class GrHttpClient {
   );
 
   /// `GET /v1/photos/infos?storage=<s>[&after=]`: implemented natively in GR
-  /// WORLD but never invoked from Dart; the response shape is [unknown], so
+  /// WORLD but never invoked from Dart; the response shape is \[unknown\], so
   /// the envelope is returned raw (http-api.md §1 row 6, §3).
   Future<GrEnvelope> photoInfoList({
     required String storage,
@@ -265,14 +284,14 @@ final class GrHttpClient {
     final uri = photoUri(path, size: size, storage: storage);
     final route = 'GET ${uri.path}';
     final watch = Stopwatch()..start();
-    _traceRequest('GET', uri, null, null, null);
     final request = await _open('GET', uri, timeouts.connect);
     request.done.ignore();
+    _traceRequest(request, null, null);
     try {
       final response = await request.close().timeout(timeouts.request);
       final total = response.contentLength >= 0 ? response.contentLength : null;
       if (response.statusCode != 200) {
-        final body = await _readBody(response, route, limit: 64 * 1024);
+        final body = await _readBody(response, route);
         _traceResponse(uri, response, body, watch.elapsed);
         _throwForError(route, response.statusCode, body);
         throw GrHttpStatusException(
@@ -290,7 +309,16 @@ final class GrHttpClient {
           if (chunk[0] == 0x7B) jsonBody = BytesBuilder();
         }
         if (jsonBody != null) {
-          if (jsonBody.length < 64 * 1024) jsonBody.add(chunk);
+          // Kept whole for the error and the trace, within the bound every
+          // other response has.
+          if (jsonBody.length + chunk.length > _maxBodyBytes) {
+            throw GrMalformedResponseException(
+              route: route,
+              httpStatus: response.statusCode,
+              issue: 'response body exceeds $_maxBodyBytes bytes',
+            );
+          }
+          jsonBody.add(chunk);
           continue;
         }
         sink.add(chunk);
@@ -317,6 +345,7 @@ final class GrHttpClient {
             'method': 'GET',
             'url': uri.toString(),
             'status': response.statusCode,
+            'headers': _headerMap(response.headers),
             'contentType': response.headers.contentType?.toString(),
             'contentLength': total,
             'bodyLength': received,
@@ -341,7 +370,7 @@ final class GrHttpClient {
       );
     } catch (e) {
       request.abort(e);
-      _traceError(uri, e);
+      _traceError('GET', uri, e);
       rethrow;
     }
   }
@@ -442,7 +471,7 @@ final class GrHttpClient {
     final uri = _uri(['photos', path.dir, path.file, 'transfer']);
     switch (style) {
       case GrTransferMarkStyle.grWorld:
-        return _statusOrEnvelope(
+        return await _statusOrEnvelope(
           'PUT',
           uri,
           body: encodeKeyValueBodyBytes({'storage': ?s}),
@@ -490,7 +519,7 @@ final class GrHttpClient {
   );
 
   /// `PUT /v1/params/lens`, e.g. `focusSetting=<v>` (remote-shooting.md
-  /// §3.3). Response shape [unknown]; parsed as props-shaped.
+  /// §3.3). Response shape \[unknown\]; parsed as props-shaped.
   Future<GrProps> setLensParams(Map<String, String> params) async {
     if (params.isEmpty) throw ArgumentError('no lens params');
     return GrProps(await _put(['params', 'lens'], params));
@@ -498,7 +527,7 @@ final class GrHttpClient {
 
   /// `PUT /v1/params/device` as Image Sync sends it (`text/plain`), e.g.
   /// `stillFormat=rawdng` or `datetime=…` (remote-shooting.md §4.2–4.3).
-  /// Response shape [unknown]; parsed as props-shaped. Credential, channel,
+  /// Response shape \[unknown\]; parsed as props-shaped. Credential, channel,
   /// BLE-enable and name keys change persistent camera state.
   Future<GrProps> setDeviceParams(Map<String, String> params) async {
     if (params.isEmpty) throw ArgumentError('no device params');
@@ -663,7 +692,7 @@ final class GrHttpClient {
   /// `GET /v1/debug/revisions`: firmware runs `cat /etc/revisions/*` and
   /// returns its output or `failed to get revisions.`
   /// (firmware-protocol-inventory.md). Diagnostic route; response framing
-  /// [unknown], so the text is returned.
+  /// \[unknown\], so the text is returned.
   Future<GrTextResponse> debugRevisions() async {
     final reply = await _send('GET', _uri(['debug', 'revisions']));
     _throwForError(reply.route, reply.status, reply.body);
@@ -759,7 +788,7 @@ final class GrHttpClient {
   /// `PUT /v1/device/image/endscreen?index=<n>[&sha256=<hex>]`,
   /// `Content-Type: image/jpeg` (http-api.md §4.4). With [jpeg]: GR WORLD's
   /// variant A (body plus lowercase SHA-256 when [includeSha256]). Without:
-  /// variant B (no body, no hash), [inferred] to reset slot [index].
+  /// variant B (no body, no hash), \[inferred\] to reset slot [index].
   Future<GrEnvelope> uploadEndScreen(
     int index, {
     Uint8List? jpeg,
@@ -926,10 +955,10 @@ final class GrHttpClient {
         '$method ${uri.path}: no connection within $connectTimeout',
         connectTimeout,
       );
-      _traceError(uri, e);
+      _traceError(method, uri, e);
       throw e;
     } catch (e) {
-      _traceError(uri, e);
+      _traceError(method, uri, e);
       rethrow;
     }
   }
@@ -947,7 +976,6 @@ final class GrHttpClient {
   }) async {
     final route = '$method ${uri.path}';
     final watch = Stopwatch()..start();
-    _traceRequest(method, uri, contentType, body, bodyFileLength);
     final request = await _open(
       method,
       uri,
@@ -974,12 +1002,12 @@ final class GrHttpClient {
             'method': method,
             'url': uri.toString(),
             'status': reply.status,
+            'headers': reply.headers,
             'contentType': reply.contentType,
             'bodyLength': reply.body.length,
             'elapsedMs': watch.elapsedMilliseconds,
-            ..._textField(reply.contentType, reply.body),
+            ..._bodyField(reply.contentType, reply.body),
           },
-          bytes: _cap(reply.body),
         ),
       );
       return reply;
@@ -989,11 +1017,11 @@ final class GrHttpClient {
         '$route: no complete response within $deadline',
         deadline,
       );
-      _traceError(uri, e);
+      _traceError(method, uri, e);
       throw e;
     } catch (e) {
       request.abort(e);
-      _traceError(uri, e);
+      _traceError(method, uri, e);
       rethrow;
     }
   }
@@ -1013,6 +1041,7 @@ final class GrHttpClient {
     if (bodyFile != null) {
       final total = bodyFileLength ?? await bodyFile.length();
       request.contentLength = total;
+      _traceRequest(request, null, total);
       var sent = 0;
       await request.addStream(
         bodyFile.openRead().map((chunk) {
@@ -1023,7 +1052,10 @@ final class GrHttpClient {
       );
     } else if (body != null) {
       request.contentLength = body.length;
+      _traceRequest(request, body, null);
       if (body.isNotEmpty) request.add(body);
+    } else {
+      _traceRequest(request, null, null);
     }
     final response = await request.close();
     final bytes = await _readBody(response, route);
@@ -1031,22 +1063,22 @@ final class GrHttpClient {
       route,
       response.statusCode,
       response.headers.contentType?.toString(),
+      _headerMap(response.headers),
       bytes,
     );
   }
 
-  Future<Uint8List> _readBody(
-    HttpClientResponse response,
-    String route, {
-    int limit = 32 * 1024 * 1024,
-  }) async {
+  /// Largest response body read into memory (images stream instead).
+  static const int _maxBodyBytes = 32 * 1024 * 1024;
+
+  Future<Uint8List> _readBody(HttpClientResponse response, String route) async {
     final builder = BytesBuilder(copy: false);
     await for (final chunk in response) {
-      if (builder.length + chunk.length > limit) {
+      if (builder.length + chunk.length > _maxBodyBytes) {
         throw GrMalformedResponseException(
           route: route,
           httpStatus: response.statusCode,
-          issue: 'response body exceeds $limit bytes',
+          issue: 'response body exceeds $_maxBodyBytes bytes',
         );
       }
       builder.add(chunk);
@@ -1054,33 +1086,44 @@ final class GrHttpClient {
     return builder.takeBytes();
   }
 
+  /// Traces [request] once its headers are final, with [body] in full when
+  /// it is text; a file upload is traced by its length ([fileLength]).
   void _traceRequest(
-    String method,
-    Uri uri,
-    GrContentType? contentType,
+    HttpClientRequest request,
     List<int>? body,
     int? fileLength,
   ) {
-    _trace?.call(
+    final trace = _trace;
+    if (trace == null) return;
+    final contentType = request.headers.contentType?.toString();
+    trace(
       TraceEvent(
         channel: TraceChannel.http,
         direction: TraceDirection.outbound,
         kind: 'request',
         fields: {
-          'method': method,
-          'url': uri.toString(),
-          'contentType': contentType?.header,
+          'method': request.method,
+          'url': request.uri.toString(),
+          'headers': _headerMap(request.headers),
+          'contentType': contentType,
           'bodyLength': body?.length ?? fileLength,
-          if (body != null) ..._textField(contentType?.header, body),
+          if (body != null) ..._bodyField(contentType, body),
         },
-        bytes: body == null ? null : _cap(body),
       ),
     );
   }
 
-  /// Response previews for traces: JSON-ish/text bodies as text.
-  Map<String, Object?> _textField(String? contentType, List<int> body) {
-    if (body.isEmpty || body.length > traceBodyLimit) return const {};
+  /// Every header, repeated values joined as HTTP joins them.
+  static Map<String, String> _headerMap(HttpHeaders headers) {
+    final map = <String, String>{};
+    headers.forEach((name, values) => map[name] = values.join(', '));
+    return map;
+  }
+
+  /// A JSON, form or text body as `body` text, in full. Binary bodies
+  /// (images, DNG, movies) are left out: their type and length say enough.
+  static Map<String, Object?> _bodyField(String? contentType, List<int> body) {
+    if (body.isEmpty) return const {};
     final type = contentType ?? '';
     final looksText =
         type.startsWith('text/') ||
@@ -1088,21 +1131,15 @@ final class GrHttpClient {
         type.contains('x-www-form-urlencoded') ||
         (type.isEmpty && body.first == 0x7B);
     if (!looksText) return const {};
-    return {'text': utf8.decode(body, allowMalformed: true)};
+    return {'body': utf8.decode(body, allowMalformed: true)};
   }
 
-  Uint8List? _cap(List<int> body) {
-    if (body.isEmpty) return null;
-    final n = body.length > traceBodyLimit ? traceBodyLimit : body.length;
-    return Uint8List.fromList(body.sublist(0, n));
-  }
-
-  void _traceError(Uri uri, Object error) => _trace?.call(
+  void _traceError(String method, Uri uri, Object error) => _trace?.call(
     TraceEvent(
       channel: TraceChannel.http,
       direction: TraceDirection.internal,
       kind: 'error',
-      fields: {'url': uri.toString(), 'error': '$error'},
+      fields: {'method': method, 'url': uri.toString(), 'error': '$error'},
     ),
   );
 
@@ -1120,20 +1157,21 @@ final class GrHttpClient {
         'method': 'GET',
         'url': uri.toString(),
         'status': response.statusCode,
+        'headers': _headerMap(response.headers),
         'contentType': response.headers.contentType?.toString(),
         'bodyLength': body.length,
         'elapsedMs': elapsed.inMilliseconds,
-        ..._textField(response.headers.contentType?.toString(), body),
+        ..._bodyField(response.headers.contentType?.toString(), body),
       },
-      bytes: _cap(body),
     ),
   );
 }
 
 final class _Reply {
-  const _Reply(this.route, this.status, this.contentType, this.body);
+  const new(this.route, this.status, this.contentType, this.headers, this.body);
   final String route;
   final int status;
   final String? contentType;
+  final Map<String, String> headers;
   final Uint8List body;
 }

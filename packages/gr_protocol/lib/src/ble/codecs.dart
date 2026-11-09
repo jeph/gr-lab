@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'bytes.dart';
+import 'package:gr_protocol/src/ble/bytes.dart';
+import 'package:meta/meta.dart';
 
 /// An enum whose members carry the integer sent on the wire.
 abstract interface class BleWireEnum {
+  /// Integer the camera sends and accepts for this member.
   int get wire;
 
   /// Stable identifier used in JSON output and accepted by CLI parsing.
@@ -13,12 +15,16 @@ abstract interface class BleWireEnum {
 
 /// A decoded enum field that keeps the raw integer, so values the camera
 /// sends outside the documented table survive decoding.
+@immutable
 final class BleEnumValue<E extends BleWireEnum> {
-  const BleEnumValue(this.raw, this.known);
+  /// Pairs a [raw] wire value with its [known] member, if any.
+  const new(this.raw, this.known);
 
-  factory BleEnumValue.of(E value) => BleEnumValue(value.wire, value);
+  /// Value for writing [value] to the camera.
+  factory of(E value) => BleEnumValue(value.wire, value);
 
-  factory BleEnumValue.decode(int raw, List<E> values) {
+  /// Looks [raw] up in [values]; [known] is null when no member matches.
+  factory decode(int raw, List<E> values) {
     for (final v in values) {
       if (v.wire == raw) return BleEnumValue(raw, v);
     }
@@ -27,7 +33,7 @@ final class BleEnumValue<E extends BleWireEnum> {
 
   /// Accepts a member label (case-insensitive) or an integer wire value.
   /// Throws [FormatException] for anything else.
-  factory BleEnumValue.parse(String text, List<E> values) {
+  factory parse(String text, List<E> values) {
     final t = text.trim();
     final asInt = int.tryParse(t);
     if (asInt != null) return BleEnumValue.decode(asInt, values);
@@ -41,11 +47,16 @@ final class BleEnumValue<E extends BleWireEnum> {
     );
   }
 
+  /// Integer exactly as sent or received on the wire.
   final int raw;
+
+  /// Member for [raw], or null when the camera sent an undocumented value.
   final E? known;
 
+  /// [known]'s label, or `unknown(<raw>)` for undocumented values.
   String get label => known?.label ?? 'unknown($raw)';
 
+  /// `{raw, name}`; `name` is null for undocumented values.
   Object? toJson() => {'raw': raw, 'name': known?.label};
 
   @override
@@ -62,12 +73,19 @@ final class BleEnumValue<E extends BleWireEnum> {
 /// An index-coded setting (shutter speed, aperture, exposure compensation,
 /// ISO) with the display label from Image Sync's `def_ble.yaml`, when the
 /// index is in that table.
+@immutable
 final class BleIndexedValue {
-  const BleIndexedValue(this.raw, this.label);
+  /// Pairs a wire index with its table [label], if any.
+  const new(this.raw, this.label);
 
+  /// Index exactly as sent or received on the wire.
   final int raw;
+
+  /// Display label from the `def_ble.yaml` table, or null when [raw] is not
+  /// in it.
   final String? label;
 
+  /// `{raw, label}`; `label` is null when the index is not in the table.
   Object? toJson() => {'raw': raw, 'label': label};
 
   @override
@@ -85,14 +103,20 @@ final class BleIndexedValue {
 /// [value] is null when nothing could be decoded, and [issues] lists every
 /// deviation from the documented layout (wrong length, unexpected bytes).
 final class BleDecoded<T extends Object> {
-  BleDecoded._(this.raw, this.value, List<String> issues, this._codec)
+  new _(this.raw, this.value, List<String> issues, this._codec)
     : issues = List.unmodifiable(issues);
 
+  /// Bytes as received.
   final Uint8List raw;
+
+  /// Decoded value, or null when nothing could be decoded.
   final T? value;
+
+  /// Every deviation from the documented layout; empty for a clean decode.
   final List<String> issues;
   final BleCodec<T> _codec;
 
+  /// True when a value was decoded without any issue.
   bool get isComplete => value != null && issues.isEmpty;
 
   /// `{hex, value, issues?}` with JSON-encodable contents.
@@ -117,7 +141,8 @@ final class BleDecoded<T extends Object> {
 
 /// Typed codec for one characteristic value.
 abstract class BleCodec<T extends Object> {
-  const BleCodec();
+  /// Const constructor for subclasses; codecs hold no mutable state.
+  const new();
 
   /// Never throws; see [BleDecoded].
   BleDecoded<T> decode(Uint8List bytes);
@@ -128,13 +153,16 @@ abstract class BleCodec<T extends Object> {
   /// Parses user text (CLI) into a value. Throws [FormatException].
   T parse(String text);
 
+  /// JSON-encodable form of [value] for traces and CLI output.
   Object? valueToJson(T value);
 
+  /// One-line human rendering of [value]; JSON unless overridden.
   String describeValue(T value) => jsonEncode(valueToJson(value));
 
   /// Accepted text syntax for [parse], for CLI help and error messages.
   String get syntax;
 
+  /// Parses user text with [parse] and encodes it for writing.
   Uint8List encodeText(String text) => encode(parse(text));
 
   /// Parses hex bytes and decodes them; throws [FormatException] unless the
@@ -162,19 +190,36 @@ abstract class BleCodec<T extends Object> {
 /// Integer wire formats from Image Sync's generic codec (`c.java`): all
 /// multi-byte integers are little-endian.
 enum BleIntFormat {
+  /// Signed 8-bit.
   sint8(1, signed: true),
+
+  /// Unsigned 8-bit.
   uint8(1, signed: false),
+
+  /// Signed 16-bit little-endian.
   sint16(2, signed: true),
+
+  /// Unsigned 16-bit little-endian.
   uint16(2, signed: false),
+
+  /// Signed 32-bit little-endian.
   sint32(4, signed: true),
+
+  /// Unsigned 32-bit little-endian.
   uint32(4, signed: false);
 
-  const BleIntFormat(this.width, {required this.signed});
+  new(this.width, {required this.signed});
 
+  /// Size on the wire in bytes.
   final int width;
+
+  /// Whether the value is two's-complement signed.
   final bool signed;
 
+  /// Smallest representable value.
   int get min => signed ? -(1 << (8 * width - 1)) : 0;
+
+  /// Largest representable value.
   int get max => signed ? (1 << (8 * width - 1)) - 1 : (1 << (8 * width)) - 1;
 
   /// Little-endian read; the caller guarantees `offset + width <= length`.
@@ -195,6 +240,8 @@ enum BleIntFormat {
     }
   }
 
+  /// Throws [ArgumentError] naming [name] when [value] is outside
+  /// [min]..[max].
   void check(int value, [String name = 'value']) {
     if (value < min || value > max) {
       throw ArgumentError.value(value, name, 'outside ${this.name} range');
@@ -239,8 +286,10 @@ bool fixedLengthUsable(Uint8List bytes, int width, List<String> issues) {
 
 /// Plain integer of a fixed [format].
 final class BleIntCodec extends BleCodec<int> {
-  const BleIntCodec(this.format);
+  /// Codec for integers of [format].
+  const new(this.format);
 
+  /// Wire width and signedness.
   final BleIntFormat format;
 
   @override
@@ -275,7 +324,8 @@ final class BleIntCodec extends BleCodec<int> {
 /// One-byte boolean. Both apps decode `byte0 == 1` (docs/protocol/ble.md
 /// §Quick reference); other values are kept as an issue.
 final class BleBoolCodec extends BleCodec<bool> {
-  const BleBoolCodec();
+  /// Stateless; one shared instance is enough.
+  const new();
 
   @override
   BleDecoded<bool> decode(Uint8List bytes) {
@@ -290,7 +340,7 @@ final class BleBoolCodec extends BleCodec<bool> {
   }
 
   @override
-  Uint8List encode(bool value) => Uint8List.fromList([value ? 1 : 0]);
+  Uint8List encode(bool value) => Uint8List.fromList([if (value) 1 else 0]);
 
   @override
   bool parse(String text) => parseBoolText(text);
@@ -308,9 +358,15 @@ final class BleBoolCodec extends BleCodec<bool> {
 /// Enum carried in one integer of [format].
 final class BleEnumCodec<E extends BleWireEnum>
     extends BleCodec<BleEnumValue<E>> {
-  const BleEnumCodec(this.values, [this.format = BleIntFormat.sint8]);
+  /// Codec for [values] carried in one [format] integer (sint8 unless
+  /// given).
+  const new(this.values, [this.format = BleIntFormat.sint8]);
 
+  /// Documented members; other wire values decode with a null
+  /// [BleEnumValue.known].
   final List<E> values;
+
+  /// Wire width and signedness.
   final BleIntFormat format;
 
   @override
@@ -351,20 +407,23 @@ final class BleEnumCodec<E extends BleWireEnum>
 /// Parsing: a plain integer is the raw wire index; other text, or text
 /// prefixed with `@`, selects by label (so `@30` means the label "30").
 final class BleIndexedCodec extends BleCodec<BleIndexedValue> {
-  const BleIndexedCodec(
-    this.format,
-    this.labels, {
-    this.encodeMin,
-    this.encodeMax,
-  });
+  /// Codec for indexes of [format] labelled by [labels].
+  const new(this.format, this.labels, {this.encodeMin, this.encodeMax});
 
+  /// Wire width and signedness.
   final BleIntFormat format;
+
+  /// Display label by wire index (`def_ble.yaml` table).
   final Map<int, String> labels;
 
-  /// Narrower write range than [format], when an app documents one.
+  /// Lower end of a narrower write range than [format], when an app
+  /// documents one.
   final int? encodeMin;
+
+  /// Upper end of the narrower write range, see [encodeMin].
   final int? encodeMax;
 
+  /// Value for wire index [raw], labelled from [labels].
   BleIndexedValue value(int raw) => BleIndexedValue(raw, labels[raw]);
 
   @override
@@ -425,9 +484,13 @@ final class BleIndexedCodec extends BleCodec<BleIndexedValue> {
 /// `type: list` from Image Sync's codec (`c.java:299-323`, `396-445`):
 /// `[count sint8][count × element]`.
 final class BleListCodec<E extends Object> extends BleCodec<List<E>> {
-  const BleListCodec(this.element, this.elementWidth);
+  /// Codec for a list of [element] values, each [elementWidth] bytes.
+  const new(this.element, this.elementWidth);
 
+  /// Codec for one element.
   final BleCodec<E> element;
+
+  /// Size of one element on the wire in bytes.
   final int elementWidth;
 
   @override
@@ -498,7 +561,8 @@ final class BleListCodec<E extends Object> extends BleCodec<List<E>> {
 /// first NUL, as both apps strip NUL padding (docs/protocol/ble.md
 /// §Quick reference; ble-imagesync.md §4.1).
 final class BleUtf8Codec extends BleCodec<String> {
-  const BleUtf8Codec();
+  /// Stateless; one shared instance is enough.
+  const new();
 
   @override
   BleDecoded<String> decode(Uint8List bytes) {
@@ -536,7 +600,8 @@ final class BleUtf8Codec extends BleCodec<String> {
 
 /// Opaque bytes, for characteristics whose layout is unknown.
 final class BleBytesCodec extends BleCodec<Uint8List> {
-  const BleBytesCodec();
+  /// Stateless; one shared instance is enough.
+  const new();
 
   @override
   BleDecoded<Uint8List> decode(Uint8List bytes) => result(bytes, bytes);

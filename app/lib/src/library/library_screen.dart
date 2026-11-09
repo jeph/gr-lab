@@ -1,28 +1,27 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-
-import '../app_scope.dart';
-import '../camera/camera_top_bar.dart';
-import '../connection/connect_failure_view.dart';
-import '../connection/connect_steps.dart';
-import '../connection/connection_controller.dart';
-import '../downloads/download_bar.dart';
-import '../downloads/download_engine.dart';
-import '../theme/tokens.dart';
-import '../widgets/group.dart';
-import 'format.dart';
-import 'library_model.dart';
-import 'library_scope.dart';
-import 'shot.dart';
-import 'shot_cell.dart';
-import 'viewer.dart';
+import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/camera/camera_top_bar.dart';
+import 'package:grlab/src/connection/connect_failure_view.dart';
+import 'package:grlab/src/connection/connect_steps.dart';
+import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/downloads/download_bar.dart';
+import 'package:grlab/src/downloads/download_engine.dart';
+import 'package:grlab/src/library/format.dart';
+import 'package:grlab/src/library/library_model.dart';
+import 'package:grlab/src/library/library_scope.dart';
+import 'package:grlab/src/library/shot.dart';
+import 'package:grlab/src/library/shot_cell.dart';
+import 'package:grlab/src/library/viewer.dart';
+import 'package:grlab/src/theme/tokens.dart';
+import 'package:grlab/src/widgets/group.dart';
 
 /// The camera's photos (mocks `b-library-ios` / `b-library-android`): camera
 /// pill and settings, filter chips, a grid by day, selection with a
 /// download bar, and the download mini bar.
 class LibraryScreen extends StatefulWidget {
-  const LibraryScreen({super.key});
+  const new({super.key});
 
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
@@ -59,7 +58,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 }
 
 class _LibraryView extends StatefulWidget {
-  const _LibraryView();
+  const new();
 
   @override
   State<_LibraryView> createState() => _LibraryViewState();
@@ -122,13 +121,11 @@ class _LibraryViewState extends State<_LibraryView> {
   }
 
   void _open(List<Shot> shots, int index) {
-    unawaited(
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => LibraryScope(
-            library: _library,
-            child: ShotViewer(shots: shots, initialIndex: index),
-          ),
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => LibraryScope(
+          library: _library,
+          child: ShotViewer(shots: shots, initialIndex: index),
         ),
       ),
     );
@@ -183,9 +180,9 @@ class _LibraryViewState extends State<_LibraryView> {
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
-                  SliverSafeArea(
+                  const SliverSafeArea(
                     bottom: false,
-                    sliver: SliverToBoxAdapter(child: const _Header()),
+                    sliver: SliverToBoxAdapter(child: _Header()),
                   ),
                   if (wifiFailure != null && camera != null)
                     SliverToBoxAdapter(
@@ -334,7 +331,7 @@ Future<void> showPermissionGuidance(BuildContext context) {
 }
 
 class _Header extends StatelessWidget {
-  const _Header();
+  const new();
 
   @override
   Widget build(BuildContext context) {
@@ -347,9 +344,9 @@ class _Header extends StatelessWidget {
 
 /// Updating, or failed-update note under the title. The Library only shows
 /// while the camera's Wi-Fi is up; a failed update whose camera no longer
-/// answers returns to the Cameras screen instead (see [CameraLink]).
+/// answers returns to the Cameras screen instead (see `ConnectionLink`).
 class _StatusLine extends StatelessWidget {
-  const _StatusLine({required this.model});
+  const new({required this.model});
 
   final LibraryModel model;
 
@@ -398,7 +395,7 @@ class _StatusLine extends StatelessWidget {
 }
 
 class _Chips extends StatelessWidget {
-  const _Chips({
+  const new({
     required this.filter,
     required this.counts,
     required this.onSelect,
@@ -438,7 +435,7 @@ class _Chips extends StatelessWidget {
 }
 
 class _DayLabel extends StatelessWidget {
-  const _DayLabel({required this.title, required this.shots});
+  const new({required this.title, required this.shots});
 
   final String title;
   final List<Shot> shots;
@@ -479,7 +476,7 @@ class _DayLabel extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({
+  const new({
     required this.model,
     required this.connection,
     required this.filter,
@@ -524,7 +521,7 @@ class _EmptyState extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Photos come over $name\'s Wi-Fi',
+              "Photos come over $name's Wi-Fi",
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 18),
@@ -574,7 +571,7 @@ class _EmptyState extends StatelessWidget {
 /// kind that are not already queued, including files downloaded before
 /// (they may have been deleted from the phone).
 class _SelectionBar extends StatelessWidget {
-  const _SelectionBar({
+  const new({
     required this.serial,
     required this.shots,
     required this.onDownload,
@@ -596,7 +593,6 @@ class _SelectionBar extends StatelessWidget {
     ];
     return Material(
       color: c.invBg,
-      elevation: 0,
       borderRadius: BorderRadius.circular(20),
       shadowColor: c.shadow,
       child: Padding(
@@ -652,7 +648,7 @@ class _SelectionBar extends StatelessWidget {
 
 /// Downloads the selection's files of one kind: 'JPEG', '3 files · 24 MB'.
 class _KindAction extends StatelessWidget {
-  const _KindAction({
+  const new({
     required this.serial,
     required this.shots,
     required this.kind,

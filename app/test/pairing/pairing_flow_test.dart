@@ -3,8 +3,10 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:gr_protocol/gr_protocol.dart';
+import 'package:gr_protocol/gr_protocol.dart'
+    show BleAdvertisement, BleConnection, BleTransport, grRicohCompanyId;
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/library/library_screen.dart';
 import 'package:grlab/src/pairing/pairing_flow.dart';
@@ -47,7 +49,7 @@ Future<TestApp> _create(
 /// Two cameras in range whose adverts carry the model but no serial (a
 /// truncated Ricoh payload), so only the device id tells them apart.
 final class _TwoCamerasWithoutSerials implements BleTransport {
-  _TwoCamerasWithoutSerials(this._first, this._second, this._secondId);
+  new(this._first, this._second, this._secondId);
 
   final BleTransport _first;
   final BleTransport _second;
@@ -437,6 +439,11 @@ void main() {
     await pumpUntilFound(tester, find.byKey(_done));
     // Pairing, then the session that starts once it is saved: never the
     // decoy.
+    await pumpUntil(
+      tester,
+      () => app.models.connection.status != ConnectionStatus.offline,
+      reason: 'the session to start',
+    );
     expect(app.ble.connected, isNotEmpty);
     expect(app.ble.connected, everyElement(targetId));
     expect(app.models.cameras.current?.serial, '1234567');

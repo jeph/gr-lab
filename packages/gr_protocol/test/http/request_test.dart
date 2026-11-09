@@ -53,7 +53,15 @@ void main() {
     });
 
     test('rejects malformed and out-of-range input', () {
-      for (final bad in ['50', '50;50', '-1,5', '101,5', 'a,b', '1.5,2']) {
+      for (final bad in [
+        '50',
+        '50;50',
+        '-1,5',
+        '101,5',
+        '5,101',
+        'a,b',
+        '1.5,2',
+      ]) {
         expect(
           () => GrFocusPoint.parse(bad),
           throwsFormatException,

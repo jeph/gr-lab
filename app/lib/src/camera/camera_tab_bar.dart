@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../connection/connection_controller.dart';
-import '../theme/tokens.dart';
+import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/theme/tokens.dart';
 
 /// The floating capsule switching the camera's pages (mock direction H,
 /// `.tb`): the chosen page shows its icon and name on a filled pill, the
 /// other its icon alone.
 class CameraTabBar extends StatelessWidget {
-  const CameraTabBar({super.key, required this.tab, required this.onSelect});
+  const new({required this.tab, required this.onSelect, super.key});
 
   static const double height = 56;
 
@@ -61,12 +61,12 @@ class CameraTabBar extends StatelessWidget {
 }
 
 class _Tab extends StatelessWidget {
-  const _Tab({
-    super.key,
+  const new({
     required this.icon,
     required this.label,
     required this.selected,
     required this.onTap,
+    super.key,
   });
 
   final IconData icon;

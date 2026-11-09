@@ -1,13 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-
-import '../data/cameras.dart';
-import '../pairing/pairing_flow.dart';
-import '../pairing/pairing_widgets.dart';
-import '../theme/tokens.dart';
-import '../widgets/group.dart';
-import 'connection_controller.dart';
+import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/data/cameras.dart';
+import 'package:grlab/src/pairing/pairing_flow.dart';
+import 'package:grlab/src/pairing/pairing_widgets.dart';
+import 'package:grlab/src/theme/tokens.dart';
+import 'package:grlab/src/widgets/group.dart';
 
 /// Small pill buttons of the Cameras card, its rows and the camera's
 /// pages (mock `.btn.sm`).
@@ -18,13 +17,13 @@ const _smallText = TextStyle(
   fontSize: 13,
   fontWeight: FontWeight.w600,
 );
-final smallFilledStyle = FilledButton.styleFrom(
+final ButtonStyle smallFilledStyle = FilledButton.styleFrom(
   minimumSize: _smallSize,
   padding: _smallPadding,
   textStyle: _smallText,
   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
 );
-final smallOutlinedStyle = OutlinedButton.styleFrom(
+final ButtonStyle smallOutlinedStyle = OutlinedButton.styleFrom(
   minimumSize: _smallSize,
   padding: _smallPadding,
   textStyle: _smallText,
@@ -35,11 +34,11 @@ final smallOutlinedStyle = OutlinedButton.styleFrom(
 /// `b-home-fail`). It stays until Try again or another camera is chosen;
 /// pairing is never retried by itself.
 class ConnectFailureView extends StatelessWidget {
-  const ConnectFailureView({
-    super.key,
+  const new({
     required this.camera,
     required this.failure,
     required this.connection,
+    super.key,
   });
 
   final SavedCamera camera;

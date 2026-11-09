@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:gr_protocol/gr_protocol.dart';
+import 'package:gr_protocol/gr_protocol.dart'
+    show WifiJoinDeclined, WifiNetworkControl, WifiSecurity;
 import 'package:grlab/src/connection/camera_pill.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/data/cameras.dart';
@@ -22,7 +24,7 @@ void main() {
       await connection.connect();
       expect(connection.status, ConnectionStatus.bluetooth);
       expect(connection.inSession, isFalse);
-      expect(connection.http, isNull);
+      expect(connection.cameraSession?.library, isNull);
       expect(app.camera.wlanOn, isFalse);
       expect(await app.camera.wifi.currentSsid(), isNull);
     });
@@ -289,7 +291,7 @@ void main() {
       final attempt = connection.openCamera(CameraTab.library);
       await _until(() => connection.wifiConsent != null);
       expect(connection.wifiConsent!.ssid, app.camera.config.ssid);
-      connection.answerWifiConsent(false);
+      connection.answerWifiConsent(join: false);
       await attempt;
 
       expect(connection.status, ConnectionStatus.bluetooth);
@@ -305,7 +307,7 @@ void main() {
 
       final attempt = connection.openCamera(CameraTab.library);
       await _until(() => connection.wifiConsent != null);
-      connection.answerWifiConsent(true);
+      connection.answerWifiConsent(join: true);
       await attempt;
       expect(connection.status, ConnectionStatus.connected);
       expect(app.models.cameras.current!.wifiApproved, isTrue);
@@ -355,7 +357,7 @@ void main() {
       final connection = app.models.connection;
       final first = connection.openCamera(CameraTab.library);
       await _until(() => connection.wifiConsent != null);
-      connection.answerWifiConsent(true);
+      connection.answerWifiConsent(join: true);
       await first;
       expect(connection.status, ConnectionStatus.connected);
       await connection.closeCamera();
@@ -374,7 +376,7 @@ void main() {
       expect(connection.wifiConsent!.again, isTrue);
       expect(connection.wifiConsent!.ssid, app.camera.config.ssid);
       final joinsBefore = wifi.joins;
-      connection.answerWifiConsent(true);
+      connection.answerWifiConsent(join: true);
       await attempt;
 
       expect(connection.status, ConnectionStatus.connected);
@@ -388,7 +390,7 @@ void main() {
 
       final attempt = connection.openCamera(CameraTab.library);
       await _until(() => connection.wifiConsent != null);
-      connection.answerWifiConsent(false);
+      connection.answerWifiConsent(join: false);
       await attempt;
 
       expect(connection.status, ConnectionStatus.bluetooth);
@@ -412,7 +414,7 @@ void main() {
       final attempt = connection.openCamera(CameraTab.library);
       await _until(() => connection.wifiConsent != null);
       expect(connection.wifiConsent!.again, isFalse);
-      connection.answerWifiConsent(true);
+      connection.answerWifiConsent(join: true);
       await attempt;
 
       expect(connection.wifiConsent, isNull);
@@ -424,7 +426,7 @@ void main() {
 /// The camera's Wi-Fi, with Android's network list shown during the next
 /// [backOutOfList] joins and the user backing out of it each time.
 final class _ListWifi implements WifiNetworkControl {
-  _ListWifi(this._camera, this._shown);
+  new(this._camera, this._shown);
 
   final WifiNetworkControl _camera;
   final StreamController<void> _shown;

@@ -2,16 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'app_scope.dart';
-import 'camera/camera_pages.dart';
-import 'cameras/cameras_screen.dart';
-import 'connection/connection_controller.dart';
-import 'connection/idle_disconnect.dart';
-import 'connection/wifi_consent_dialog.dart';
-import 'theme/tokens.dart';
+import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/camera/camera_pages.dart';
+import 'package:grlab/src/cameras/cameras_screen.dart';
+import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/connection/idle_disconnect.dart';
+import 'package:grlab/src/connection/wifi_consent_dialog.dart';
+import 'package:grlab/src/theme/tokens.dart';
 
 class GrLabApp extends StatelessWidget {
-  const GrLabApp({super.key, required this.models});
+  const new({required this.models, super.key});
 
   final AppModels models;
 
@@ -39,11 +39,12 @@ class GrLabApp extends StatelessWidget {
 /// over it while [ConnectionController.tab] is set and the camera is
 /// linked. Going back from them closes them
 /// ([ConnectionController.closeCamera]); the session ending pops back to
-/// the Cameras screen, closing whatever was open over them. Also tells the connection whether
+/// the Cameras screen, closing whatever was open over them. Also tells the
+/// connection whether
 /// the app is in front, and asks before the first join of a camera's
 /// Wi-Fi when the platform needs it.
 class RootScreen extends StatefulWidget {
-  const RootScreen({super.key});
+  const new({super.key});
 
   @override
   State<RootScreen> createState() => _RootScreenState();
@@ -144,7 +145,7 @@ class _RootScreenState extends State<RootScreen> {
     final join = await navigator.push(route);
     if (identical(_consentRoute, route)) _consentRoute = null;
     if (identical(connection.wifiConsent, request)) {
-      connection.answerWifiConsent(join ?? false);
+      connection.answerWifiConsent(join: join ?? false);
     }
   }
 

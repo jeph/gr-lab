@@ -1,32 +1,47 @@
 import 'dart:async';
 
-import '../ble/advertising.dart';
-import '../ble/catalog.dart';
-import '../ble/client.dart';
-import '../ble/enums.dart';
-import '../ble/transport.dart';
-import '../ble/wake.dart';
-import '../http/changes.dart';
-import '../http/client.dart';
-import '../http/liveness.dart';
-import '../http/models.dart';
-import '../trace.dart';
-import '../wifi/network_control.dart';
+import 'package:gr_protocol/src/ble/advertising.dart';
+import 'package:gr_protocol/src/ble/catalog.dart';
+import 'package:gr_protocol/src/ble/client.dart';
+import 'package:gr_protocol/src/ble/enums.dart';
+import 'package:gr_protocol/src/ble/transport.dart';
+import 'package:gr_protocol/src/ble/wake.dart';
+import 'package:gr_protocol/src/http/changes.dart';
+import 'package:gr_protocol/src/http/client.dart';
+import 'package:gr_protocol/src/http/liveness.dart';
+import 'package:gr_protocol/src/http/models.dart';
+import 'package:gr_protocol/src/trace.dart';
+import 'package:gr_protocol/src/wifi/network_control.dart';
 
 /// Where a [GrSession] is in the BLE → Wi-Fi hand-off
 /// (docs/protocol/ble.md §Minimal client sequence) and afterwards.
 enum GrSessionPhase {
+  /// Not connected yet.
   idle,
+
+  /// Scanning for the camera's BLE advertisement.
   scanning,
+
+  /// Turning the camera on over BLE (Operation Mode write).
   waking,
+
+  /// Opening the BLE link, discovering services and reading the identity.
   bleConnecting,
 
   /// Linked over BLE; the camera's Wi-Fi is not in use ([GrSession.startWifi]
   /// joins it, [GrSession.stopWifi] comes back here).
   bluetooth,
+
+  /// Writing WLAN-on over BLE so the camera starts its access point.
   wlanOn,
+
+  /// The phone is joining the camera's access point.
   joining,
+
+  /// Joined; checking `/v1/props` identifies the expected camera.
   verifying,
+
+  /// Wi-Fi verified; WebSocket and liveness polling running.
   connected,
 
   /// Wi-Fi liveness was lost; re-issuing WLAN-on and rejoining.
@@ -34,19 +49,29 @@ enum GrSessionPhase {
 
   /// Recovery gave up; the session stays open but has no Wi-Fi link.
   lost,
+
+  /// [GrSession.close] finished; the session cannot be reused.
   closed,
 }
 
 /// One observable step of a session, for UIs, logs and hardware validation.
 final class GrSessionEvent {
-  GrSessionEvent(this.phase, this.kind, [this.fields = const {}])
-    : at = DateTime.now();
+  /// Event [kind] in [phase], stamped with the current time.
+  new(this.phase, this.kind, [this.fields = const {}]) : at = DateTime.now();
 
+  /// Local time the event was emitted.
   final DateTime at;
+
+  /// Phase after the step.
   final GrSessionPhase phase;
+
+  /// Dotted event name, e.g. `ble.connect`, `wifi.join`, `power.off`.
   final String kind;
+
+  /// Event detail; JSON-encodable values.
   final Map<String, Object?> fields;
 
+  /// Trace/log form; [fields] are merged in at the top level.
   Map<String, Object?> toJson() => {
     'time': at.toUtc().toIso8601String(),
     'phase': phase.name,
@@ -55,10 +80,18 @@ final class GrSessionEvent {
   };
 }
 
+/// A session step failed in [phase]; [cause] holds the underlying error.
 final class GrSessionException implements Exception {
-  const GrSessionException(this.phase, this.message, [this.cause]);
+  /// Failure in [phase] described by [message], caused by [cause].
+  const new(this.phase, this.message, [this.cause]);
+
+  /// Phase the failing step belonged to.
   final GrSessionPhase phase;
+
+  /// What failed, e.g. `join failed`.
   final String message;
+
+  /// Underlying error, e.g. a [BleException] or [WifiJoinDeclined].
   final Object? cause;
 
   /// The camera refused this device's bond, or encrypted access failed on
@@ -84,7 +117,8 @@ final class GrSessionException implements Exception {
 /// Timings and policies. Defaults follow the official apps where the docs
 /// establish them and are marked as design choices otherwise.
 final class GrSessionOptions {
-  const GrSessionOptions({
+  /// Options; each defaults to the value its field doc names.
+  const new({
     this.scanTimeout = const Duration(seconds: 20),
     this.bleConnectTimeout = const Duration(seconds: 35),
     this.bleConnectAttempts = 3,
@@ -125,6 +159,8 @@ final class GrSessionOptions {
   /// parameters). Needed for an off camera: the first link to it drops
   /// (~5.5 s) before discovery.
   final int bleConnectAttempts;
+
+  /// Pause between BLE connect attempts (GR WORLD: 50 ms).
   final Duration bleConnectRetryDelay;
 
   /// How long after a wake the session watches for the link to drop. A
@@ -141,11 +177,11 @@ final class GrSessionOptions {
   /// GR WORLD allows 60 s for the AP to come up and the join to finish.
   final Duration joinTimeout;
 
-  /// Pause between join attempts while the AP is still coming up [design].
+  /// Pause between join attempts while the AP is still coming up \[design\].
   final Duration joinRetryDelay;
 
   /// Total time for the first `/v1/props` identity check to succeed after
-  /// joining (DHCP and the HTTP server may lag the association) [design].
+  /// joining (DHCP and the HTTP server may lag the association) \[design\].
   final Duration verifyTimeout;
 
   /// GR WORLD's `connectToWifi` verification uses a 3 s timeout.
@@ -154,16 +190,24 @@ final class GrSessionOptions {
   /// Image Sync liveness: 500 ms between polls, loss after 3 consecutive
   /// failures and 40 s without success.
   final Duration livenessInterval;
+
+  /// Consecutive failed polls before loss can be declared (Image Sync: 3).
   final int livenessFailureThreshold;
+
+  /// Time without a successful poll before loss can be declared (40 s).
   final Duration livenessLossAfter;
 
   /// Rejoin backoff after liveness loss (connection-lifecycle.md §9); the
   /// last delay repeats.
   final List<Duration> wifiRecoveryDelays;
+
+  /// Rejoin attempts before the session gives up in [GrSessionPhase.lost].
   final int maxWifiRecoveryAttempts;
 
   /// BLE auto-reconnect backoff; independent of Wi-Fi, never writes WLAN.
   final List<Duration> bleReconnectDelays;
+
+  /// BLE reconnect attempts before automatic reconnects stop.
   final int maxBleReconnectAttempts;
 
   /// How long Wi-Fi recovery waits for a lost Bluetooth link to come back
@@ -212,7 +256,9 @@ String? stripRicohPrefix(String? model) =>
 /// (connection-lifecycle.md §9: a BLE blip never tears down Wi-Fi, and Wi-Fi
 /// loss is repaired by re-issuing WLAN-on over BLE and rejoining).
 final class GrSession {
-  GrSession({
+  /// Session over [transport] and [wifi] for the camera at [host]; nothing
+  /// happens until [connect] or [connectBluetooth].
+  new({
     required this.transport,
     required this.wifi,
     this.host = '192.168.0.1',
@@ -224,9 +270,16 @@ final class GrSession {
   static GrHttpClient _defaultHttp(String host, TraceSink? trace) =>
       GrHttpClient(host, trace: trace);
 
+  /// The phone's BLE stack.
   final BleTransport transport;
+
+  /// The phone's Wi-Fi control.
   final WifiNetworkControl wifi;
+
+  /// Camera address on its access point.
   final String host;
+
+  /// Timings and policies.
   final GrSessionOptions options;
   final TraceSink? _trace;
   final GrHttpClient Function(String host, TraceSink? trace) _httpFactory;
@@ -285,13 +338,23 @@ final class GrSession {
   Future<void>? _bleReconnect;
   Future<void>? _wifiRecovery;
 
+  /// Every step, in order (broadcast).
   Stream<GrSessionEvent> get events => _events.stream;
+
+  /// Current phase.
   GrSessionPhase get phase => _phase;
 
   /// Null while BLE is down (reconnecting) or before connecting.
   GrBleClient? get ble => _ble;
+
+  /// Model, serial and other identity read over BLE at connect.
   GrBleIdentity? get identity => _identity;
+
+  /// Camera Wi-Fi SSID and passphrase read over BLE; `null` before the
+  /// first Wi-Fi start.
   GrWifiCredentials? get credentials => _credentials;
+
+  /// The advertisement the scan found; `null` when connected by device id.
   GrAdvertisement? get advertisement => _advertisement;
 
   /// The camera answered over BLE in its BT-only (off) state, or reported
@@ -308,7 +371,11 @@ final class GrSession {
 
   /// `/v1/props` from the last successful identity check.
   GrProps? get props => _props;
+
+  /// The `/v1/changes` socket; non-null while Wi-Fi services run.
   GrChangesSocket? get changes => _changes;
+
+  /// The `/v1/props` liveness monitor; non-null while Wi-Fi services run.
   LivenessMonitor? get liveness => _monitor;
 
   /// Runs the full hand-off: [connectBluetooth], then [startWifi], which
@@ -415,7 +482,7 @@ final class GrSession {
     if (start != null) {
       try {
         await start;
-      } catch (_) {
+      } on Object {
         // Expected: the attempt was cut short.
       }
     }
@@ -433,9 +500,9 @@ final class GrSession {
       await _powerOffWoken(ble);
     } else if (ble != null) {
       try {
-        await ble.setWlan(false);
+        await ble.setWlan(on: false);
         _emit('wlan.off');
-      } catch (e) {
+      } on Object catch (e) {
         _emit('wlan.offFailed', {'error': '$e'});
       }
     }
@@ -523,7 +590,7 @@ final class GrSession {
       await _powerOn(
         mode,
         check: check,
-        whenOn: (afterWake) async =>
+        whenOn: ({required afterWake}) async =>
             // A camera that kept the link after the wake write is on in
             // [mode]; after a relink the mode is checked.
             afterWake || await _ensureMode(mode, check),
@@ -551,7 +618,7 @@ final class GrSession {
   /// GR WORLD's ensure-mode helper (power-on-grworld.md §1.2, 0xe4d738,
   /// called by its Remote and Import screens): reads Operation Mode and
   /// writes [mode] only when it differs and is not `other`. A value this
-  /// client does not know is left alone like `other` [design]. Returns
+  /// client does not know is left alone like `other` \[design\]. Returns
   /// false, with [cameraOff] set, when the read finds the camera off.
   /// [check] throws when the wake was cut short meanwhile.
   Future<bool> _ensureMode(BleOperationMode mode, void Function() check) async {
@@ -622,7 +689,7 @@ final class GrSession {
       _cameraOff = true;
       _wokeCamera = false;
       _emit('power.off');
-    } catch (e) {
+    } on Object catch (e) {
       _poweringOff = false;
       _emit('power.offFailed', {'error': '$e'});
     }
@@ -651,7 +718,7 @@ final class GrSession {
   Future<void> _leaveWifi() async {
     try {
       await wifi.leave();
-    } catch (_) {
+    } on Object {
       // Not joined; nothing to release.
     }
   }
@@ -679,13 +746,14 @@ final class GrSession {
     _closing = true;
     _wakeSettle?.cancel();
     _stopRecovery();
+    var turnOff = powerOff;
     if (powerOffIfWoken) {
       // Releasing the join first cuts a platform join short; the start,
       // recovery and post-wake relink then end on [_closing].
       await _leaveWifi();
       try {
         await _wifiStart;
-      } catch (_) {
+      } on Object {
         // Expected: the attempt was cut short.
       }
       await _wifiRecovery;
@@ -693,23 +761,23 @@ final class GrSession {
       _wakeSettle?.cancel();
       await _afterWake;
       await _wakeCall;
-      powerOff = powerOff || _wokeCamera;
+      turnOff = turnOff || _wokeCamera;
     }
-    if (wlanOff && !powerOff && _ble != null) {
+    if (wlanOff && !turnOff && _ble != null) {
       try {
-        await _ble!.setWlan(false);
+        await _ble!.setWlan(on: false);
         _emit('wlan.off');
-      } catch (e) {
+      } on Object catch (e) {
         _emit('wlan.offFailed', {'error': '$e'});
       }
     }
     await _stopWifiServices();
-    if (powerOff && _ble != null) {
+    if (turnOff && _ble != null) {
       try {
         await _ble!.powerOff();
         _wokeCamera = false;
         _emit('power.off');
-      } catch (e) {
+      } on Object catch (e) {
         _emit('power.offFailed', {'error': '$e'});
       }
     }
@@ -721,7 +789,7 @@ final class GrSession {
     if (ble != null) {
       try {
         await ble.connection.disconnect();
-      } catch (_) {
+      } on Object {
         // Already down; the link state is what matters.
       }
     }
@@ -819,11 +887,11 @@ final class GrSession {
       // close() started while this link was opening (a reconnect or the
       // relink after a wake) and could not reach it.
       if (_closing) throw _closed;
-    } catch (_) {
+    } on Object {
       // Not yet in [_ble], so close() could not reach this link.
       try {
         await connection.disconnect();
-      } catch (_) {
+      } on Object {
         // Already down; the setup failure is what matters.
       }
       rethrow;
@@ -859,8 +927,8 @@ final class GrSession {
 
   /// GR WORLD's power-on check (0xd403b8, on every connect): Operation Mode
   /// `02` (bleStartup) means the camera is off in its BT-only state. Only
-  /// [startWifi] wakes it ([_wakeForWifi]); automatic reconnects never power
-  /// a camera on.
+  /// [startWifi] wakes it ([_wakeAndWlanOn]); automatic reconnects never
+  /// power a camera on.
   Future<void> _checkOperationMode(GrBleClient client) async {
     if (client.isPresent(GrBleCatalog.operationMode) != true) return;
     final mode = await _step(
@@ -877,7 +945,7 @@ final class GrSession {
   /// Reads the Wi-Fi credentials (once per session) and writes WLAN-on.
   Future<void> _wlanOn() async {
     final ble = _ble!;
-    final GrWifiCredentials credentials =
+    final credentials =
         _credentials ??
         await _step<GrWifiCredentials>(
           GrSessionPhase.bleConnecting,
@@ -898,7 +966,7 @@ final class GrSession {
     await _step(
       GrSessionPhase.wlanOn,
       'WLAN-on write',
-      () => ble.setWlan(true),
+      () => ble.setWlan(on: true),
     );
   }
 
@@ -909,7 +977,7 @@ final class GrSession {
   /// After the wake write the camera boots its main firmware. The link may
   /// stay up (GR IV HDF, 2026-11-08) or go silent and drop ~5.5-8 s after it
   /// opened (2026-11-07), and whether WLAN-on written while the camera boots
-  /// takes effect is [unknown]. So the credentials and WLAN-on go out at
+  /// takes effect is \[unknown\]. So the credentials and WLAN-on go out at
   /// once rather than after [GrSessionOptions.wakeSettle]:
   /// - if they fail, the session waits out wakeSettle for a drop, links
   ///   again if one came (checking the mode on that link), and writes them
@@ -926,7 +994,7 @@ final class GrSession {
       await _powerOn(
         options.powerOnMode,
         check: () => _checkWifiStopped(GrSessionPhase.waking),
-        whenOn: (_) async {
+        whenOn: ({required afterWake}) async {
           await _wlanOn();
           return true;
         },
@@ -958,26 +1026,27 @@ final class GrSession {
   }
 
   /// The wake shared by [wake] and the Wi-Fi start and recovery: links
-  /// again when the link is down; with the camera on, runs [whenOn] (false
-  /// = it found the camera off after all); otherwise writes [mode] to
-  /// Operation Mode (GR WORLD's power-on write, power-on-grworld.md §1.2)
-  /// and sets [wokeCamera]. [check] throws when the caller was stopped or
-  /// closed, after which nothing more is written. Then [afterWrite], if
-  /// given, may finish the wake while the link is watched; otherwise the
+  /// again when the link is down; with the camera on, runs [whenOn]
+  /// (`afterWake: false` = it found the camera off after all); otherwise
+  /// writes [mode] to Operation Mode (GR WORLD's power-on write,
+  /// power-on-grworld.md §1.2) and sets [wokeCamera]. [check] throws when
+  /// the caller was stopped or closed, after which nothing more is written.
+  /// Then [afterWrite], if given, may finish the wake while the link is
+  /// watched; otherwise the
   /// link is watched for [GrSessionOptions.wakeSettle]: a link that stays
-  /// up has the camera on (`power.onLinked`, then [whenOn] with true), a
-  /// drop is linked again (`power.relink`) and checked from the top. At
-  /// most two wake writes.
+  /// up has the camera on (`power.onLinked`, then [whenOn] with
+  /// `afterWake: true`), a drop is linked again (`power.relink`) and
+  /// checked from the top. At most two wake writes.
   Future<void> _powerOn(
     BleOperationMode mode, {
     required void Function() check,
-    required Future<bool> Function(bool afterWake) whenOn,
+    required Future<bool> Function({required bool afterWake}) whenOn,
     Future<bool> Function(_WakeSettle settle)? afterWrite,
   }) async {
     for (var wakes = 0; ; wakes++) {
       if (_ble == null) await _connectBle(initial: false);
       check();
-      if (!_cameraOff && await whenOn(false)) return;
+      if (!_cameraOff && await whenOn(afterWake: false)) return;
       if (wakes == 2) {
         throw const GrSessionException(
           GrSessionPhase.waking,
@@ -1007,7 +1076,7 @@ final class GrSession {
       if (!dropped) {
         _cameraOff = false;
         _emit('power.onLinked');
-        await whenOn(true);
+        await whenOn(afterWake: true);
         return;
       }
       _ble = null;
@@ -1020,7 +1089,7 @@ final class GrSession {
   /// once more while the join is still looking for the camera's network, in
   /// case the camera ignored the early write while it booted. A join that
   /// got through is left alone: writing WLAN-on to a running access point is
-  /// [unknown].
+  /// \[unknown\].
   Future<void> _settleAfterWake(_WakeSettle settle) async {
     try {
       await settle.ended;
@@ -1035,10 +1104,10 @@ final class GrSession {
       await _step(
         GrSessionPhase.joining,
         'WLAN-on write',
-        () => ble.setWlan(true),
+        () => ble.setWlan(on: true),
       );
       _emit('wlan.again');
-    } catch (e) {
+    } on Object catch (e) {
       if (!_closing) _emit('wlan.againFailed', {'error': '$e'});
     } finally {
       if (identical(_wakeSettle, settle)) _wakeSettle = null;
@@ -1084,7 +1153,7 @@ final class GrSession {
         await _connectBle(initial: false);
         _emit('ble.restored', {'attempt': attempt + 1});
         return;
-      } catch (e) {
+      } on Object catch (e) {
         _emit('ble.reconnectFailed', {'attempt': attempt + 1, 'error': '$e'});
         if (e is! GrSessionException) continue;
         if (e.needsPairing) {
@@ -1189,7 +1258,7 @@ final class GrSession {
         return;
       } on GrSessionException {
         rethrow;
-      } catch (e) {
+      } on Object catch (e) {
         lastError = e;
       }
       if (DateTime.now().isAfter(deadline)) {
@@ -1210,7 +1279,7 @@ final class GrSession {
     try {
       await changes.connect();
       _emit('changes.open');
-    } catch (e) {
+    } on Object catch (e) {
       // The WebSocket is an extra signal; liveness polling still runs.
       _emit('changes.failed', {'error': '$e'});
     }
@@ -1330,7 +1399,7 @@ final class GrSession {
           'attempt': attempt + 1,
         });
         return;
-      } catch (e) {
+      } on Object catch (e) {
         if (_closing || _wifiStopped) return;
         _emit('recovery.failed', {'attempt': attempt + 1, 'error': '$e'});
         if (e is GrSessionException && e.wifiDeclined) {
@@ -1377,7 +1446,7 @@ final class GrSession {
       }
       _props = props;
       return true;
-    } catch (_) {
+    } on Object {
       return false;
     }
   }
@@ -1425,7 +1494,7 @@ final class GrSession {
 
 /// Watches a link for [GrSessionOptions.wakeSettle] after a wake write.
 final class _WakeSettle {
-  _WakeSettle(GrBleClient client, Duration settle) {
+  new(GrBleClient client, Duration settle) {
     _timer = Timer(settle, _end);
     unawaited(
       client.connection.disconnected.then((_) {

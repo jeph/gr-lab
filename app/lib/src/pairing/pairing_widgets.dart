@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../theme/tokens.dart';
+import 'package:grlab/src/theme/tokens.dart';
 
 /// Round button of the mock top bars (`.iconbtn`), 36 px unless [size]
 /// says otherwise.
 class GrIconButton extends StatelessWidget {
-  const GrIconButton({
-    super.key,
+  const new({
     required this.icon,
     required this.tooltip,
     required this.onPressed,
+    super.key,
     this.size = 36,
   });
 
@@ -43,7 +43,7 @@ class GrIconButton extends StatelessWidget {
 /// Caps a row's trailing control or value so the row title keeps room at
 /// large text sizes: values ellipsize, controls shrink.
 class TrailingFit extends StatelessWidget {
-  const TrailingFit({super.key, required this.child, this.maxWidth = 130});
+  const new({required this.child, super.key, this.maxWidth = 130});
 
   /// A trailing value shown in the secondary text colour, ellipsized.
   static Widget value(BuildContext context, String text) => ConstrainedBox(
@@ -73,12 +73,7 @@ class TrailingFit extends StatelessWidget {
 /// Top bar of a pairing page: optional leading and trailing buttons around
 /// the `n of 4` counter.
 class PairingTopBar extends StatelessWidget {
-  const PairingTopBar({
-    super.key,
-    required this.step,
-    this.leading,
-    this.trailing,
-  });
+  const new({required this.step, super.key, this.leading, this.trailing});
 
   final int step;
   final Widget? leading;
@@ -105,10 +100,10 @@ class PairingTopBar extends StatelessWidget {
 
 /// Large title with an explanatory paragraph under it.
 class PairingHeadline extends StatelessWidget {
-  const PairingHeadline({
-    super.key,
+  const new({
     required this.title,
     required this.body,
+    super.key,
     this.center = false,
   });
 
@@ -150,15 +145,16 @@ class PairingHeadline extends StatelessWidget {
               TextSpan(
                 children: [
                   for (final span in body)
-                    span is _BoldSpan
-                        ? TextSpan(
-                            text: span.text,
-                            style: TextStyle(
-                              color: c.t1,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          )
-                        : span,
+                    if (span is _BoldSpan)
+                      TextSpan(
+                        text: span.text,
+                        style: TextStyle(
+                          color: c.t1,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      )
+                    else
+                      span,
                 ],
               ),
               textAlign: align,
@@ -172,12 +168,12 @@ class PairingHeadline extends StatelessWidget {
 }
 
 final class _BoldSpan extends TextSpan {
-  const _BoldSpan(String text) : super(text: text);
+  const new(String text) : super(text: text);
 }
 
 /// Concentric rings around a Bluetooth glyph (mock `b-pair-find`).
 class RadarHero extends StatelessWidget {
-  const RadarHero({super.key, this.icon = Icons.bluetooth_rounded});
+  const new({super.key, this.icon = Icons.bluetooth_rounded});
 
   final IconData icon;
 
@@ -217,8 +213,8 @@ class RadarHero extends StatelessWidget {
 /// A drawing of the camera's rear screen inside a card, so the user knows
 /// what to look for on the camera (mock `b-pair`, `b-pair-code`).
 class CameraScreenHero extends StatelessWidget {
-  const CameraScreenHero.pairingMenu({super.key}) : _code = false;
-  const CameraScreenHero.authenticationCode({super.key}) : _code = true;
+  const new pairingMenu({super.key}) : _code = false;
+  const new authenticationCode({super.key}) : _code = true;
 
   final bool _code;
 
@@ -322,10 +318,10 @@ class CameraScreenHero extends StatelessWidget {
 
 /// Tinted round badge with an icon (success check, failure cross).
 class StatusBadge extends StatelessWidget {
-  const StatusBadge({
-    super.key,
+  const new({
     required this.icon,
     required this.color,
+    super.key,
     this.size = 84,
   });
 
@@ -347,7 +343,7 @@ class StatusBadge extends StatelessWidget {
 
 /// Small square tile holding a step number (failure checklists).
 class NumberTile extends StatelessWidget {
-  const NumberTile(this.number, {super.key});
+  const new(this.number, {super.key});
 
   final int number;
 
@@ -374,7 +370,7 @@ enum GrStepState { done, now, todo }
 
 @immutable
 final class GrStep {
-  const GrStep(this.title, this.state, {this.detail});
+  const new(this.title, this.state, {this.detail});
 
   final String title;
   final GrStepState state;
@@ -384,7 +380,7 @@ final class GrStep {
 /// Vertical progress list with done / current / pending markers (mock
 /// `.steps`), used while pairing and while connecting.
 class GrStepList extends StatelessWidget {
-  const GrStepList({super.key, required this.steps});
+  const new({required this.steps, super.key});
 
   final List<GrStep> steps;
 
@@ -467,7 +463,7 @@ class GrStepList extends StatelessWidget {
 /// The current step's marker: a dot whose ring keeps expanding and fading
 /// while the step runs. Still when the platform asks for less motion.
 class _PulsingMarker extends StatefulWidget {
-  const _PulsingMarker({super.key});
+  const new({super.key});
 
   @override
   State<_PulsingMarker> createState() => _PulsingMarkerState();
@@ -551,7 +547,7 @@ class _PulsingMarkerState extends State<_PulsingMarker>
 
 /// Full-width primary button pinned under a page's content.
 class BottomAction extends StatelessWidget {
-  const BottomAction({super.key, required this.children});
+  const new({required this.children, super.key});
 
   final List<Widget> children;
 
@@ -577,7 +573,7 @@ class BottomAction extends StatelessWidget {
 
 /// Small centred hint at the bottom of a page.
 class FootNote extends StatelessWidget {
-  const FootNote(this.text, {super.key});
+  const new(this.text, {super.key});
 
   final String text;
 

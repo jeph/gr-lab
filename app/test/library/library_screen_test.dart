@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:grlab/src/library/library_screen.dart';
+import 'package:grlab/src/library/shot.dart' show Shot;
 import 'package:grlab/src/library/viewer.dart';
 
 import '../support/test_app.dart';
 
 /// Pictures the grid has loaded, keyed `image:view:<file key>`
 /// ([Shot.gridSize] of a photo).
-final _thumbs = find.byWidgetPredicate(
+final Finder _thumbs = find.byWidgetPredicate(
   (w) =>
       w is Image &&
       w.key is ValueKey<String> &&

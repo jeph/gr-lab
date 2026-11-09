@@ -48,7 +48,7 @@ void main() {
     expect(credentials.wifiSecurity, WifiSecurity.wpa2);
     expect(credentials.issues, isEmpty);
 
-    await client.setWlan(true);
+    await client.setWlan(on: true);
     expect(camera.wlanOn, isTrue);
     await expectLater(
       join(passphrase: 'wrong-key'),
@@ -76,7 +76,7 @@ void main() {
 
   test('a join started while the AP comes up waits for it', () async {
     final client = await bleClient();
-    await client.setWlan(true);
+    await client.setWlan(on: true);
     // wlanOnDelay has not passed yet.
     await join();
     expect(camera.wifiJoined, isTrue);
@@ -84,9 +84,9 @@ void main() {
 
   test('WLAN-off over BLE ends the association', () async {
     final client = await bleClient();
-    await client.setWlan(true);
+    await client.setWlan(on: true);
     await join();
-    await client.setWlan(false);
+    await client.setWlan(on: false);
     expect(camera.wlanOn, isFalse);
     expect(camera.wifiJoined, isFalse);
   });
@@ -94,6 +94,6 @@ void main() {
   test('WLAN-on is refused after an unrecoverable drop', () async {
     final client = await bleClient();
     camera.dropWifi(recoverable: false);
-    await expectLater(client.setWlan(true), throwsA(isA<BleException>()));
+    await expectLater(client.setWlan(on: true), throwsA(isA<BleException>()));
   });
 }

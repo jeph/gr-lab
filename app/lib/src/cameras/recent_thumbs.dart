@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import '../library/camera_images.dart';
-import '../library/image_orientation.dart';
-import '../library/library_model.dart';
-import '../library/shot.dart';
+import 'package:gr_camera/gr_camera.dart';
+
+import 'package:grlab/src/library/image_orientation.dart';
+import 'package:grlab/src/library/shot.dart';
 
 /// A thumbnail kept from a camera's last visit, with the EXIF orientation
 /// that shows it upright.

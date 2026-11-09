@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 /// three text levels and one accent (blue by default).
 @immutable
 final class GrColors extends ThemeExtension<GrColors> {
-  const GrColors({
+  const new({
     required this.bg,
     required this.s1,
     required this.s2,
@@ -83,9 +83,27 @@ final class GrColors extends ThemeExtension<GrColors> {
   static const photoBadgeScrim = Color(0xB8000000);
   static const photoBadgeOk = Color(0xFF5BD08B);
 
-  final Color bg, s1, s2, s3, s4, line, line2, t1, t2, t3;
-  final Color accent, accentInk, ok, danger;
-  final Color invBg, invFg, invFg2, inv2, float, shadow, dim;
+  final Color bg;
+  final Color s1;
+  final Color s2;
+  final Color s3;
+  final Color s4;
+  final Color line;
+  final Color line2;
+  final Color t1;
+  final Color t2;
+  final Color t3;
+  final Color accent;
+  final Color accentInk;
+  final Color ok;
+  final Color danger;
+  final Color invBg;
+  final Color invFg;
+  final Color invFg2;
+  final Color inv2;
+  final Color float;
+  final Color shadow;
+  final Color dim;
 
   Color get accentSoft => accent.withValues(alpha: .14);
   Color get accentLine => accent.withValues(alpha: .32);

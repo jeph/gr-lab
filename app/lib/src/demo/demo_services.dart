@@ -1,13 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:gr_protocol/gr_protocol.dart';
 
-import '../data/cameras.dart';
-import '../platform/app_dirs.dart';
-import '../platform/media_saver.dart';
-import '../services.dart';
+import 'package:grlab/src/data/cameras.dart';
+import 'package:grlab/src/platform/app_dirs.dart';
+import 'package:grlab/src/platform/media_saver.dart';
+import 'package:grlab/src/services.dart';
 
 /// Services backed by a simulated GR IV, for the emulator/simulator and for
 /// trying the app without a camera (`--dart-define=GR_DEMO=true`).
@@ -53,15 +53,20 @@ Future<AppServices> buildDemoServices() async {
   );
   await camera.startHttp();
 
+  final trace = TraceRelay();
   return AppServices(
-    ble: camera.transport,
-    wifi: camera.wifi,
+    camera: GrCameraEnvironment(
+      ble: camera.transport,
+      wifi: camera.wifi,
+      trace: trace.call,
+      httpFactory: camera.httpClient,
+    ),
+    trace: trace,
     media: PlatformMediaSaver(),
     clientName: 'GR Lab',
     dataDir: data,
     cacheDir: cache,
-    ensureBluetoothPermission: () async => true,
-    httpFactory: camera.httpClient,
+    debugLogDir: Directory('${data.path}/debug-log'),
     // As with a real camera, so the demo shows the same first join.
     askBeforeWifiJoin: Platform.isAndroid,
     isDemo: true,

@@ -52,8 +52,11 @@ String formatDay(DateTime day, DateTime now) {
 String formatDate(DateTime d) => '${d.day} ${_months[d.month - 1]} ${d.year}';
 
 /// `14:22`.
-String formatTime(DateTime t) =>
-    '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+String formatTime(DateTime t) {
+  final hours = t.hour.toString().padLeft(2, '0');
+  final minutes = t.minute.toString().padLeft(2, '0');
+  return '$hours:$minutes';
+}
 
 /// `Today 14:22`, `3 Nov 14:22`.
 String formatDayTime(DateTime t, DateTime now) =>

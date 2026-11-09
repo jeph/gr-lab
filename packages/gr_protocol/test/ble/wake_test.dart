@@ -30,12 +30,12 @@ Duration ms(int v) => Duration(milliseconds: v);
 
 /// Each `scan()` call plays the next script: adverts at given delays.
 final class ScriptedTransport implements BleTransport {
-  ScriptedTransport(this.scripts, {this.dropAfter, this.failConnect = false});
+  new(this.scripts, {this.dropAfter, this.failConnect = false});
 
   final List<List<(Duration, BleAdvertisement)>> scripts;
   final Duration? dropAfter;
   final bool failConnect;
-  var scanCalls = 0;
+  int scanCalls = 0;
   final connections = <ScriptedConnection>[];
 
   @override
@@ -83,7 +83,7 @@ final class ScriptedTransport implements BleTransport {
 }
 
 final class ScriptedConnection implements BleConnection {
-  ScriptedConnection(this.deviceId, Duration? dropAfter) {
+  new(this.deviceId, Duration? dropAfter) {
     if (dropAfter != null) {
       _timer = Timer(dropAfter, () {
         if (!_drop.isCompleted) {
@@ -99,10 +99,10 @@ final class ScriptedConnection implements BleConnection {
   final String deviceId;
   final _drop = Completer<BleDisconnect>();
   Timer? _timer;
-  var disconnectCalls = 0;
+  int disconnectCalls = 0;
 
   /// Any GATT operation: the wake connection must stay bare.
-  var gattCalls = 0;
+  int gattCalls = 0;
 
   @override
   int? get maximumWriteLength => null;

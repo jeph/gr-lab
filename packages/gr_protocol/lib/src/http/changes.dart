@@ -3,22 +3,22 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import '../trace.dart';
-import 'json.dart';
-import 'request.dart';
+import 'package:gr_protocol/src/http/json.dart';
+import 'package:gr_protocol/src/http/request.dart';
+import 'package:gr_protocol/src/trace.dart';
 
 /// One message from `ws://<host>/v1/changes`
 /// (docs/protocol/http-api.md §5, docs/protocol/remote-shooting.md §2.3).
 ///
 /// GR WORLD only knows `storage|battery|camera`; Image Sync also dispatches
 /// `cameraDirect`, `lens`, `capture` and `transfer`. Whether GR IV emits the
-/// Image Sync payloads is [unknown] (remote-shooting.md §8): the key strings
+/// Image Sync payloads is \[unknown\] (remote-shooting.md §8): the key strings
 /// exist in GR IV webapid. Parsing never throws.
 sealed class GrChangeEvent {
-  GrChangeEvent(this.raw, this.receivedAt);
+  new(this.raw, this.receivedAt);
 
   /// Parses a WebSocket message (text or UTF-8 bytes).
-  factory GrChangeEvent.parse(Object? message, {DateTime? receivedAt}) {
+  factory parse(Object? message, {DateTime? receivedAt}) {
     final at = receivedAt ?? DateTime.now();
     final text = switch (message) {
       final String s => s,
@@ -47,18 +47,23 @@ sealed class GrChangeEvent {
 
   /// Complete message object, unknown keys included.
   final Map<String, Object?> raw;
+
+  /// Local time the message arrived (not a camera timestamp).
   final DateTime receivedAt;
 
+  /// Typed, non-throwing accessors over [raw].
   JsonFields get fields => JsonFields(raw);
 
   /// `changed`, falling back to Image Sync's `change` alias.
   String? get changed => fields.string('changed') ?? fields.string('change');
 
+  /// Camera's result code in the message; 200 means success.
   int? get errCode => fields.integer('errCode');
 
   /// GR WORLD ignores messages whose errCode is not 200 (http-api.md §5).
   bool get ok => errCode == 200;
 
+  /// Trace/log form: arrival time, [changed] and the raw message.
   Map<String, Object?> toJson() => {
     'receivedAt': receivedAt.toIso8601String(),
     'changed': changed,
@@ -70,39 +75,65 @@ sealed class GrChangeEvent {
 /// `captureId`. `action == "add"` with a non-`"0"` captureId names a newly
 /// captured file.
 final class GrStorageChange extends GrChangeEvent {
-  GrStorageChange(super.raw, super.receivedAt);
+  /// Wraps a parsed `storage` message.
+  new(super.raw, super.receivedAt);
 
+  /// What happened to the file; `add` is the only value Image Sync acts on.
   String? get action => fields.string('action');
+
+  /// Camera path of the affected file, e.g. `100RICOH/R0000001.DNG`.
   String? get filepath => fields.string('filepath');
+
+  /// Storage the file is on, as the camera names it.
   String? get storage => fields.string('storage');
+
+  /// Capture that produced the file; `"0"` when not a remote capture.
   String? get captureId => fields.string('captureId');
 
+  /// [filepath] parsed into a photo path, or `null` when absent or malformed.
   GrPhotoPath? get path =>
       filepath == null ? null : GrPhotoPath.tryParseCamera(filepath!);
 }
 
 /// `changed:"battery"`: both apps re-read status/props.
 final class GrBatteryChange extends GrChangeEvent {
-  GrBatteryChange(super.raw, super.receivedAt);
+  /// Wraps a parsed `battery` message.
+  new(super.raw, super.receivedAt);
 }
 
 /// `changed:"camera"`: settings changed; re-read `/v1/props`.
 final class GrCameraChange extends GrChangeEvent {
-  GrCameraChange(super.raw, super.receivedAt);
+  /// Wraps a parsed `camera` message.
+  new(super.raw, super.receivedAt);
 }
 
 /// `changed:"cameraDirect"`: capture state (remote-shooting.md §2.3 table).
 final class GrCameraDirectChange extends GrChangeEvent {
-  GrCameraDirectChange(super.raw, super.receivedAt);
+  /// Wraps a parsed `cameraDirect` message.
+  new(super.raw, super.receivedAt);
 
+  /// Still capture state, e.g. `idle` or `continuous`; other values
+  /// unknown.
   String? get stateStill => fields.string('stateStill');
+
+  /// Movie capture state; `idle` when no movie is recording.
   String? get stateMovie => fields.string('stateMovie');
 
   /// `idle|busy2s|busy10s|busy12s|time`.
   String? get countDown => fields.string('countDown');
+
+  /// Whether the camera is taking a picture right now.
   bool? get capturing => fields.boolean('capturing');
+
+  /// Shots taken so far in the current drive sequence; exact meaning
+  /// unknown.
   int? get shotsCurrent => fields.integer('shotsCurrent');
+
+  /// Shots the current drive sequence will take; exact meaning unknown.
   int? get shotsTotal => fields.integer('shotsTotal');
+
+  /// Drive mode, e.g. `single`, `continuous`, `self2s` (the `/v1/props`
+  /// `shootMode` values).
   String? get shootMode => fields.string('shootMode');
 
   /// Image Sync's GR III still-capture completion rule: `stateStill` in
@@ -119,44 +150,68 @@ final class GrCameraDirectChange extends GrChangeEvent {
 /// `changed:"lens"`: focus result for a `captureId` (`"0"` is ignored by
 /// Image Sync).
 final class GrLensChange extends GrChangeEvent {
-  GrLensChange(super.raw, super.receivedAt);
+  /// Wraps a parsed `lens` message.
+  new(super.raw, super.receivedAt);
 
+  /// Capture or focus request this result belongs to.
   String? get captureId => fields.string('captureId');
+
+  /// Whether the autofocus locked.
   bool? get focused => fields.boolean('focused');
 }
 
 /// `changed:"capture"`: the capture with `captureId` finished.
 final class GrCaptureChange extends GrChangeEvent {
-  GrCaptureChange(super.raw, super.receivedAt);
+  /// Wraps a parsed `capture` message.
+  new(super.raw, super.receivedAt);
 
+  /// Capture that finished, as returned by the shoot request.
   String? get captureId => fields.string('captureId');
+
+  /// Outcome flag; Image Sync does not read it, meaning unknown.
   bool? get result => fields.boolean('result');
 }
 
 /// `changed:"transfer"` (connection-imagesync.md §4): `action` in
 /// `add|state|delete|format`; `state` `untransferred|transferred`.
 final class GrTransferChange extends GrChangeEvent {
-  GrTransferChange(super.raw, super.receivedAt);
+  /// Wraps a parsed `transfer` message.
+  new(super.raw, super.receivedAt);
 
+  /// `add`, `state`, `delete` or `format`.
   String? get action => fields.string('action');
+
+  /// Storage of the affected file, as the camera names it.
   String? get storage => fields.string('storage');
+
+  /// Transfer-list index of the file (`/v1/transfers` `index`).
   int? get index => fields.integer('index');
+
+  /// Camera path of the affected file.
   String? get filepath => fields.string('filepath');
+
+  /// File size in bytes, sent by the camera as a string.
   String? get size => fields.string('size');
+
+  /// `untransferred` or `transferred`.
   String? get state => fields.string('state');
 }
 
 /// Any other `changed` value (or none); kept raw.
 final class GrUnknownChange extends GrChangeEvent {
-  GrUnknownChange(super.raw, super.receivedAt);
+  /// Wraps a message with an unrecognised or missing `changed` key.
+  new(super.raw, super.receivedAt);
 }
 
 /// A message that is not a JSON object.
 final class GrUnparsedChange extends GrChangeEvent {
-  GrUnparsedChange(this.text, this.issue, DateTime receivedAt)
-    : super(const {}, receivedAt);
+  /// Keeps the undecodable [text] and why it failed to parse.
+  new(this.text, this.issue, DateTime receivedAt) : super(const {}, receivedAt);
 
+  /// The message as received, decoded as UTF-8.
   final String text;
+
+  /// Why the message is not a JSON object.
   final String issue;
 
   @override
@@ -169,7 +224,7 @@ final class GrUnparsedChange extends GrChangeEvent {
 
 /// What [GrChangesSocket] does after an established socket drops.
 sealed class GrReconnectPolicy {
-  const GrReconnectPolicy();
+  const new();
 
   /// Delay before reconnect [attempt] (1-based), or `null` to give up.
   Duration? delayBefore(int attempt);
@@ -178,7 +233,8 @@ sealed class GrReconnectPolicy {
 /// Never reconnect: GR WORLD's behaviour (http-api.md §5, "no automatic
 /// reconnect").
 final class GrNoReconnect extends GrReconnectPolicy {
-  const GrNoReconnect();
+  /// Never reconnects.
+  const new();
 
   @override
   Duration? delayBefore(int attempt) => null;
@@ -188,7 +244,8 @@ final class GrNoReconnect extends GrReconnectPolicy {
 /// (connection-imagesync.md §2.2). A refused connection retries in a tight
 /// loop throttled only by the connect timeout.
 final class GrImmediateReconnect extends GrReconnectPolicy {
-  const GrImmediateReconnect();
+  /// Reconnects with no delay, without limit.
+  const new();
 
   @override
   Duration? delayBefore(int attempt) => Duration.zero;
@@ -197,7 +254,9 @@ final class GrImmediateReconnect extends GrReconnectPolicy {
 /// Capped backoff with a bounded number of attempts (the default; a design
 /// choice following connection-lifecycle.md §9's "rejoin with backoff").
 final class GrBackoffReconnect extends GrReconnectPolicy {
-  const GrBackoffReconnect({
+  /// Defaults: 0.5 s, 1 s, 2 s, 5 s, then 10 s between attempts, 10
+  /// attempts at most.
+  const new({
     this.delays = const [
       Duration(milliseconds: 500),
       Duration(seconds: 1),
@@ -225,9 +284,15 @@ final class GrBackoffReconnect extends GrReconnectPolicy {
   }
 }
 
+/// Lifecycle of a [GrChangesSocket].
 enum GrSocketState {
+  /// [GrChangesSocket.connect] has not been called yet.
   idle,
+
+  /// A WebSocket handshake is in progress.
   connecting,
+
+  /// The socket is up and delivering events.
   open,
 
   /// Dropped; a reconnect is scheduled.
@@ -240,12 +305,18 @@ enum GrSocketState {
   closed,
 }
 
+/// A [GrSocketState] change, with the reconnect attempt and its cause.
 final class GrSocketStatus {
-  const GrSocketStatus(this.state, {this.attempt = 0, this.error});
+  /// Status in [state]; [attempt] and [error] describe a reconnect.
+  const new(this.state, {this.attempt = 0, this.error});
+
+  /// Current lifecycle state.
   final GrSocketState state;
 
   /// Reconnect attempt number while reconnecting.
   final int attempt;
+
+  /// Error that dropped the socket or failed the last attempt, if any.
   final Object? error;
 
   @override
@@ -260,7 +331,8 @@ final class GrSocketStatus {
 /// `permessage-deflate` as Image Sync's OkHttp does
 /// (connection-imagesync.md §2.2).
 final class GrChangesSocket {
-  GrChangesSocket(
+  /// Socket for camera [host]; nothing connects until [connect].
+  new(
     this.host, {
     this.port = 80,
     HttpClient? httpClient,
@@ -271,11 +343,16 @@ final class GrChangesSocket {
   }) : _http = httpClient,
        _now = clock ?? DateTime.now;
 
+  /// Camera address, `192.168.0.1` on the camera's own access point.
   final String host;
+
+  /// HTTP port of the camera's web API.
   final int port;
 
   /// Image Sync uses 7 s (connection-imagesync.md §2.2).
   final Duration connectTimeout;
+
+  /// What to do after an established socket drops.
   final GrReconnectPolicy reconnect;
   final HttpClient? _http;
   final TraceSink? _trace;
@@ -297,10 +374,16 @@ final class GrChangesSocket {
   bool _closed = false;
   GrSocketStatus _status = const GrSocketStatus(GrSocketState.idle);
 
+  /// `ws://<host>:<port>/v1/changes`.
   Uri get uri => Uri(scheme: 'ws', host: host, port: port, path: '/v1/changes');
 
+  /// Every message from the camera, across reconnects (broadcast).
   Stream<GrChangeEvent> get events => _events.stream;
+
+  /// Every [status] change (broadcast).
   Stream<GrSocketStatus> get statuses => _statuses.stream;
+
+  /// Current lifecycle state.
   GrSocketStatus get status => _status;
 
   /// Opens the socket. Throws the handshake failure (or [TimeoutException])
@@ -320,12 +403,12 @@ final class GrChangesSocket {
   }) async {
     try {
       final event = await events
-          .firstWhere((e) => e is T && test(e))
+          .where((e) => e is T && test(e))
+          .cast<T?>()
+          .firstWhere((_) => true, orElse: () => null)
           .timeout(timeout);
-      return event as T;
+      return event;
     } on TimeoutException {
-      return null;
-    } on StateError {
       return null;
     }
   }
@@ -424,7 +507,7 @@ final class GrChangesSocket {
       if (_closed) return;
       try {
         await _open();
-      } catch (e) {
+      } on Object catch (e) {
         if (!_closed) _scheduleReconnect(e);
       }
     });

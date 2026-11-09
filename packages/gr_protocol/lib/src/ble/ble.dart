@@ -13,4 +13,5 @@ export 'model.dart';
 export 'pairing.dart';
 export 'records.dart';
 export 'tables.dart';
+export 'tracing_transport.dart';
 export 'wake.dart';

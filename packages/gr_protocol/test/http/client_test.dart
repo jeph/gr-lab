@@ -22,17 +22,17 @@ void main() {
   setUp(() async {
     seen = [];
     trace = [];
-    server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    server.listen((request) async {
-      final body = await utf8.decoder.bind(request).join();
-      seen.add((
-        method: request.method,
-        uri: request.uri.toString(),
-        contentType: request.headers.value(HttpHeaders.contentTypeHeader),
-        body: body,
-      ));
-      await handler(request);
-    });
+    server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0)
+      ..listen((request) async {
+        final body = await utf8.decoder.bind(request).join();
+        seen.add((
+          method: request.method,
+          uri: request.uri.toString(),
+          contentType: request.headers.value(HttpHeaders.contentTypeHeader),
+          body: body,
+        ));
+        await handler(request);
+      });
     client = GrHttpClient('127.0.0.1', port: server.port, trace: trace.add);
   });
 
@@ -53,8 +53,9 @@ void main() {
 
   test('props round trip with quirk, typed fields and trace', () async {
     respond(
-      '{"errCode":200,"errMsg":"OK","model":"RICOH GR IV HDF","serialNo":"1234",'
-      '"bdName":"GR_1","battery":4294967295,"svList":["auto","100"],"sv":"auto"}',
+      '{"errCode":200,"errMsg":"OK","model":"RICOH GR IV HDF", '
+      '"serialNo":"1234","bdName":"GR_1","battery":4294967295, '
+      '"svList":["auto","100"],"sv":"auto"}',
     );
     final props = await client.props();
     expect(seen.single.method, 'GET');
@@ -68,6 +69,80 @@ void main() {
     ]);
     expect(trace.last.fields['status'], 200);
     expect(jsonEncode(trace.last.fields), contains('RICOH GR IV HDF'));
+  });
+
+  test('traces headers and full text bodies, binary bodies by size', () async {
+    // Longer than any cap a trace might apply.
+    final long = 'x' * (200 * 1024);
+    final answer = '{"errCode":200,"errMsg":"OK","sv":"$long"}';
+    final image = Uint8List.fromList(List.generate(4096, (i) => i % 251));
+    handler = (request) async {
+      request.response.headers.set('x-camera', 'GR');
+      if (request.uri.path.endsWith('R1.JPG')) {
+        request.response
+          ..headers.contentType = ContentType('image', 'jpeg')
+          ..contentLength = image.length
+          ..add(image);
+      } else {
+        request.response
+          ..headers.contentType = ContentType.json
+          ..write(answer);
+      }
+      await request.response.close();
+    };
+
+    await client.setCameraParams({'sv': long});
+    final request = trace[0];
+    expect(request.kind, 'request');
+    expect(request.fields['method'], 'PUT');
+    expect(request.fields['body'], seen.single.body);
+    expect(
+      (request.fields['headers']! as Map<String, String>)['content-type'],
+      seen.single.contentType,
+    );
+    final response = trace[1];
+    expect(response.kind, 'response');
+    expect(response.fields['body'], answer);
+    expect(
+      (response.fields['headers']! as Map<String, String>)['x-camera'],
+      'GR',
+    );
+    expect(response.bytes, isNull);
+
+    trace.clear();
+    await client.download(GrPhotoPath('100RICOH', 'R1.JPG'), _CollectingSink());
+    final download = trace.last;
+    expect(download.kind, 'response');
+    expect(download.fields['bodyLength'], image.length);
+    expect(download.fields['contentType'], 'image/jpeg');
+    expect(
+      (download.fields['headers']! as Map<String, String>)['x-camera'],
+      'GR',
+    );
+    expect(download.fields.containsKey('body'), isFalse);
+    expect(download.bytes, isNull);
+  });
+
+  test('a long JSON error from a download is traced in full', () async {
+    final long = 'y' * (200 * 1024);
+    final error = '{"errCode":404,"errMsg":"Not Found","reason":"$long"}';
+    for (final status in [404, 200]) {
+      handler = (request) async {
+        request.response
+          ..statusCode = status
+          ..headers.contentType = ContentType.json
+          ..write(error);
+        await request.response.close();
+      };
+      trace.clear();
+      await expectLater(
+        client.download(GrPhotoPath('100RICOH', 'R1.JPG'), _CollectingSink()),
+        throwsA(isA<GrApiException>()),
+      );
+      final response = trace.singleWhere((e) => e.kind == 'response');
+      expect(response.fields['status'], status);
+      expect(response.fields['body'], error);
+    }
   });
 
   test(

@@ -1,16 +1,25 @@
 /// Security requested when joining the camera access point; chosen from the
 /// camera's BLE `security` characteristic where present (0 WPA2, 1 WPA3,
 /// 2 WPA2/WPA3 transition).
-enum WifiSecurity { wpa2, wpa3, transition }
+enum WifiSecurity {
+  /// WPA2-Personal (wire value 0).
+  wpa2,
+
+  /// WPA3-Personal (wire value 1).
+  wpa3,
+
+  /// WPA2/WPA3 transition mode (wire value 2).
+  transition,
+}
 
 /// Thrown by [WifiNetworkControl.join] when the user declined joining the
 /// camera network (an app or OS prompt). Sessions never retry it: asking
 /// again is the user's call.
 final class WifiJoinDeclined implements Exception {
-  const WifiJoinDeclined([
-    this.message = 'joining the camera Wi-Fi was declined',
-  ]);
+  /// Declined join, with a human-readable [message].
+  const new([this.message = 'joining the camera Wi-Fi was declined']);
 
+  /// Why the join was declined.
   final String message;
 
   @override
@@ -37,6 +46,7 @@ abstract interface class WifiNetworkControl {
   /// SSID of the current association, or null when unknown or not associated.
   Future<String?> currentSsid();
 
+  /// Leaves the camera network.
   Future<void> leave();
 
   /// Emits when the OS reports that the joined camera network is gone.

@@ -2,19 +2,19 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../app_scope.dart';
-import '../connection/camera_sheet.dart';
-import '../connection/connection_controller.dart';
-import '../data/cameras.dart';
-import '../library/format.dart';
-import '../pairing/pairing_widgets.dart';
-import '../theme/tokens.dart';
-import '../widgets/group.dart';
+import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/connection/camera_sheet.dart';
+import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/data/cameras.dart';
+import 'package:grlab/src/library/format.dart';
+import 'package:grlab/src/pairing/pairing_widgets.dart';
+import 'package:grlab/src/theme/tokens.dart';
+import 'package:grlab/src/widgets/group.dart';
 
 /// One paired camera, from ⋯ on the Cameras screen (mock
 /// `b-camera-detail`): connect to it, rename it or forget it.
 class CameraDetailsScreen extends StatelessWidget {
-  const CameraDetailsScreen({super.key, required this.serial});
+  const new({required this.serial, super.key});
 
   final String serial;
 
@@ -116,7 +116,7 @@ class CameraDetailsScreen extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.camera});
+  const new({required this.camera});
 
   final SavedCamera camera;
 
@@ -162,7 +162,7 @@ class _Header extends StatelessWidget {
 }
 
 class _ForgetRow extends StatelessWidget {
-  const _ForgetRow({required this.camera});
+  const new({required this.camera});
 
   final SavedCamera camera;
 

@@ -13,9 +13,6 @@ import UIKit
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     let registry = engineBridge.pluginRegistry
     GeneratedPluginRegistrant.register(with: registry)
-    if let registrar = registry.registrar(forPlugin: "GrLabWifiPlugin") {
-      WifiPlugin.register(with: registrar)
-    }
     if let registrar = registry.registrar(forPlugin: "GrLabMediaPlugin") {
       MediaPlugin.register(with: registrar)
     }

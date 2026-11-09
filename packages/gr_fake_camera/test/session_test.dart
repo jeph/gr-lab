@@ -367,8 +367,8 @@ void main() {
   });
 
   test('forgotten on the camera: needsPairing on the next connect', () async {
-    camera = await startCamera(fastConfig(bonded: true));
-    camera.forgetPairing();
+    camera = await startCamera(fastConfig(bonded: true))
+      ..forgetPairing();
     await expectLater(
       connect(),
       throwsA(

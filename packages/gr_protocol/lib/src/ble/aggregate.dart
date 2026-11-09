@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
-import 'bytes.dart';
-import 'catalog.dart';
-import 'codecs.dart';
-import 'enums.dart';
+import 'package:gr_protocol/src/ble/bytes.dart';
+import 'package:gr_protocol/src/ble/catalog.dart';
+import 'package:gr_protocol/src/ble/codecs.dart';
+import 'package:gr_protocol/src/ble/enums.dart';
 
 /// How the 16 UUID bytes inside an aggregate notification were ordered.
 /// Which order the camera actually uses is an open hardware question
@@ -68,7 +68,9 @@ enum BleUuidByteOrder {
 /// §4.2); the value of a multi-entry notification cannot be delimited
 /// because entries carry no length.
 final class BleAggregateNotification {
-  const BleAggregateNotification({
+  /// Creates a notification; the decoder fills [characteristic],
+  /// [byteOrder] and [decoded] when the embedded UUID matches the catalog.
+  const new({
     required this.count,
     required this.include,
     required this.uuidBytes,
@@ -78,9 +80,18 @@ final class BleAggregateNotification {
     this.decoded,
   });
 
+  /// Number of entries the camera says the notification carries; only 1
+  /// can be delimited.
   final int count;
+
+  /// "Include Changed Value" byte: whether [changedValue] is present.
   final BleEnumValue<BleAggregateInclude> include;
+
+  /// The 16 embedded UUID bytes, in wire order.
   final Uint8List uuidBytes;
+
+  /// Bytes after the UUID: the changed characteristic's new value when
+  /// [include] says so; normally empty otherwise.
   final Uint8List changedValue;
 
   /// Catalog characteristic the embedded UUID matched, if any.
@@ -92,6 +103,7 @@ final class BleAggregateNotification {
   /// [changedValue] decoded as [characteristic], when included.
   final BleDecoded<Object>? decoded;
 
+  /// Diagnostic JSON with the raw bytes, the match and the decoded value.
   Map<String, Object?> toJson() => {
     'count': count,
     'include': include.toJson(),
@@ -116,17 +128,20 @@ matchAggregateUuid(Uint8List uuidBytes) {
   return null;
 }
 
+/// Codec for [BleAggregateNotification]: decodes the header, matches the
+/// embedded UUID and decodes the changed value with the matched
+/// characteristic's codec.
 final class BleAggregateNotificationCodec
     extends BleCodec<BleAggregateNotification> {
-  const BleAggregateNotificationCodec();
+  /// Stateless; one shared instance is enough.
+  const new();
 
   @override
   BleDecoded<BleAggregateNotification> decode(Uint8List bytes) {
     if (bytes.length < 18) {
-      return result(bytes, null, [
-        'expected at least 18 bytes (count, include, 16-byte UUID), '
-            'got ${bytes.length}',
-      ]);
+      const expected =
+          'expected at least 18 bytes (count, include, 16-byte UUID)';
+      return result(bytes, null, ['$expected, got ${bytes.length}']);
     }
     final issues = <String>[];
     final count = BleIntFormat.sint8.read(bytes, 0);

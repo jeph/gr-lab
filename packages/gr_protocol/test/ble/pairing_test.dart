@@ -11,7 +11,7 @@ import 'wake_test.dart' show advert, ms;
 /// A camera on Execute Pairing. Camera Information reads fail with
 /// insufficient authentication until [BleConnection.pair] succeeds.
 final class PairingCamera implements BleTransport {
-  PairingCamera({
+  new({
     this.power = 1,
     this.pairError,
     this.failDiscover = false,
@@ -25,8 +25,8 @@ final class PairingCamera implements BleTransport {
 
   /// Every GATT/pairing operation in order.
   final ops = <String>[];
-  var connects = 0;
-  var bonded = false;
+  int connects = 0;
+  bool bonded = false;
   final registered = <String>[];
   final connections = <PairingConnection>[];
 
@@ -53,12 +53,12 @@ final class PairingCamera implements BleTransport {
 }
 
 final class PairingConnection implements BleConnection {
-  PairingConnection(this.camera, this.deviceId);
+  new(this.camera, this.deviceId);
 
   final PairingCamera camera;
   @override
   final String deviceId;
-  var disconnects = 0;
+  int disconnects = 0;
 
   @override
   int? get maximumWriteLength => null;

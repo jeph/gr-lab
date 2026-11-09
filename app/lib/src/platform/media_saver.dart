@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
-import '../services.dart';
+import 'package:grlab/src/services.dart';
 
 /// [MediaSaver] over the `io.jeph.grlab/media` method channel.
 ///
@@ -11,11 +11,9 @@ import '../services.dart';
 /// the primary photo and the second its RAW alternate. Android writes each
 /// file as its own MediaStore entry under `Pictures/<album>` or
 /// `Movies/<album>`; iOS asks only for add-only Photos access, which cannot
-/// create or look up albums, so [album] is ignored there.
+/// create or look up albums, so the album is ignored there.
 final class PlatformMediaSaver implements MediaSaver {
-  PlatformMediaSaver({
-    this._channel = const MethodChannel('io.jeph.grlab/media'),
-  });
+  new({this._channel = const MethodChannel('io.jeph.grlab/media')});
 
   final MethodChannel _channel;
 
@@ -90,7 +88,7 @@ enum _MediaKind {
   dng('image/x-adobe-dng'),
   movie('video/quicktime');
 
-  const _MediaKind(this.mimeType);
+  new(this.mimeType);
 
   final String mimeType;
 }

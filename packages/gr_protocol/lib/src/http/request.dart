@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:meta/meta.dart';
+
 /// Request `Content-Type` values exactly as the apps send them.
 enum GrContentType {
   /// Image Sync's OkHttp body type for every POST/PUT
@@ -20,7 +22,9 @@ enum GrContentType {
   /// End-screen upload (http-api.md §4.4).
   imageJpeg('image/jpeg');
 
-  const GrContentType(this.header);
+  new(this.header);
+
+  /// Exact `Content-Type` header value sent on the wire.
   final String header;
 }
 
@@ -73,7 +77,10 @@ String _q(String v) =>
 
 /// Storage identifiers the camera uses in `storage=` (http-api.md §1).
 abstract final class GrStorageId {
+  /// Internal memory.
   static const internal = 'in';
+
+  /// SD card slot.
   static const sd = 'sd1';
 
   /// Validates a user-supplied storage id: it is placed in URLs and bodies
@@ -87,8 +94,11 @@ abstract final class GrStorageId {
 }
 
 /// `<dir>/<file>` of an image on the camera, e.g. `100RICOH/R0000001.JPG`.
+@immutable
 final class GrPhotoPath {
-  GrPhotoPath(this.dir, this.file) {
+  /// Path [file] in folder [dir]. Throws [FormatException] when either is
+  /// empty or contains `/`, `?`, `#`, `\` or whitespace.
+  new(this.dir, this.file) {
     for (final (name, v) in [('dir', dir), ('file', file)]) {
       if (v.isEmpty || v.contains(RegExp(r'[/?#\\\s]'))) {
         throw FormatException('invalid photo $name', v);
@@ -97,7 +107,7 @@ final class GrPhotoPath {
   }
 
   /// Parses `dir/file`. Throws [FormatException].
-  factory GrPhotoPath.parse(String path) {
+  factory parse(String path) {
     final parts = path.split('/');
     if (parts.length != 2) {
       throw FormatException('expected <dir>/<file>', path);
@@ -119,7 +129,10 @@ final class GrPhotoPath {
     }
   }
 
+  /// Folder name on the card, e.g. `100RICOH`.
   final String dir;
+
+  /// File name within [dir], e.g. `R0000001.JPG`.
   final String file;
 
   /// Upper-case extension without the dot (`JPG`, `DNG`, `MOV`), or empty.
@@ -158,9 +171,10 @@ enum GrImageSize {
 /// Touch position for `pos=X,Y`: integer percent (0..100) of the live-view
 /// frame in camera (landscape) orientation, origin top-left
 /// (docs/protocol/remote-shooting.md §3.2). The firmware-side range is
-/// [unknown]; 0..100 is what Image Sync sends.
+/// \[unknown\]; 0..100 is what Image Sync sends.
 final class GrFocusPoint {
-  GrFocusPoint(this.x, this.y) {
+  /// Point at [x], [y] percent. Throws [RangeError] outside 0..100.
+  new(this.x, this.y) {
     if (x < 0 || x > 100 || y < 0 || y > 100) {
       throw RangeError('focus point $x,$y outside 0..100');
     }
@@ -168,23 +182,25 @@ final class GrFocusPoint {
 
   /// From normalized 0..1 coordinates, rounded like Image Sync
   /// (`Math.round(v*100)`).
-  factory GrFocusPoint.normalized(double x, double y) =>
+  factory normalized(double x, double y) =>
       GrFocusPoint((x * 100).round(), (y * 100).round());
 
   /// Parses `X,Y` (integers, no spaces required). Throws [FormatException].
-  factory GrFocusPoint.parse(String text) {
+  factory parse(String text) {
     final m = RegExp(r'^\s*(\d{1,3})\s*,\s*(\d{1,3})\s*$').firstMatch(text);
     if (m == null) throw FormatException('expected X,Y in percent', text);
     final x = int.parse(m.group(1)!);
     final y = int.parse(m.group(2)!);
-    try {
-      return GrFocusPoint(x, y);
-    } on RangeError {
+    if (x > 100 || y > 100) {
       throw FormatException('X,Y must be 0..100', text);
     }
+    return GrFocusPoint(x, y);
   }
 
+  /// Horizontal position, percent of the frame width from the left edge.
   final int x;
+
+  /// Vertical position, percent of the frame height from the top edge.
   final int y;
 
   /// Wire form `X,Y`.
@@ -195,7 +211,10 @@ final class GrFocusPoint {
   /// area, Image Sync's default (0.111,0.125)–(0.889,0.875) applies
   /// (remote-shooting.md §3.2).
   bool withinEffectiveArea(List<int>? area) {
-    final double left, right, top, bottom;
+    final double left;
+    final double right;
+    final double top;
+    final double bottom;
     if (area != null && area.length >= 2) {
       left = 50 - area[0] / 2;
       right = 50 + area[0] / 2;
@@ -215,7 +234,7 @@ final class GrFocusPoint {
 }
 
 /// `af=` values for `POST /v1/camera/shoot`. The firmware's accepted
-/// vocabulary is [unknown] (remote-shooting.md §3.2, §8): only [on] (GR III
+/// vocabulary is \[unknown\] (remote-shooting.md §3.2, §8): only [on] (GR III
 /// Image Sync) and [camera] (GR II) are observed in shipping clients.
 enum GrShootAf {
   /// Image Sync GR III "shoot with AF".

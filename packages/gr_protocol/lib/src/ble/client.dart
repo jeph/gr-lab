@@ -1,20 +1,20 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import '../trace.dart';
-import '../wifi/network_control.dart';
-import 'bytes.dart';
-import 'catalog.dart';
-import 'codecs.dart';
-import 'enums.dart';
-import 'model.dart';
-import 'records.dart';
-import 'tables.dart';
-import 'transport.dart';
+import 'package:gr_protocol/src/ble/bytes.dart';
+import 'package:gr_protocol/src/ble/catalog.dart';
+import 'package:gr_protocol/src/ble/codecs.dart';
+import 'package:gr_protocol/src/ble/enums.dart';
+import 'package:gr_protocol/src/ble/model.dart';
+import 'package:gr_protocol/src/ble/records.dart';
+import 'package:gr_protocol/src/ble/tables.dart';
+import 'package:gr_protocol/src/ble/transport.dart';
+import 'package:gr_protocol/src/trace.dart';
+import 'package:gr_protocol/src/wifi/network_control.dart';
 
 /// Discovered GATT database compared with [GrBleCatalog].
 final class GrBleDiscoveryReport {
-  GrBleDiscoveryReport._({
+  new _({
     required this.services,
     required this.present,
     required this.missing,
@@ -24,7 +24,7 @@ final class GrBleDiscoveryReport {
   });
 
   /// Matches discovered (service, characteristic) pairs to the catalog.
-  factory GrBleDiscoveryReport.compare(List<BleServiceInfo> services) {
+  factory compare(List<BleServiceInfo> services) {
     final declared = <String, Set<BleCharacteristicProperty>>{};
     final extraServices = <String>[];
     final extra =
@@ -67,8 +67,14 @@ final class GrBleDiscoveryReport {
     );
   }
 
+  /// Every discovered service, as the platform reported it.
   final List<BleServiceInfo> services;
+
+  /// Catalog characteristics found under their catalog service.
   final List<GrBleCharacteristic<Object>> present;
+
+  /// Catalog characteristics this camera does not expose (normal for the
+  /// other model family's characteristics).
   final List<GrBleCharacteristic<Object>> missing;
 
   /// Discovered services that are not in the catalog.
@@ -84,8 +90,11 @@ final class GrBleDiscoveryReport {
   /// Properties the camera declared, by catalog key.
   final Map<String, Set<BleCharacteristicProperty>> declared;
 
+  /// Whether [c] was discovered under its catalog service.
   bool isPresent(GrBleCharacteristic<Object> c) => declared.containsKey(c.key);
 
+  /// Diagnostic JSON: present characteristics with declared versus catalog
+  /// properties, missing ones, and everything not in the catalog.
   Map<String, Object?> toJson() => {
     'services': [for (final s in services) s.uuid],
     'present': [
@@ -129,7 +138,9 @@ final class GrBleDiscoveryReport {
 /// on every connect by GR WORLD. Missing or unreadable fields are null with
 /// the reason in [issues].
 final class GrBleIdentity {
-  const GrBleIdentity({
+  /// Creates an identity; [GrBleClient.readIdentity] fills it from the
+  /// camera.
+  const new({
     this.manufacturer,
     this.modelName,
     this.serialNumber,
@@ -139,21 +150,36 @@ final class GrBleIdentity {
     this.issues = const {},
   });
 
+  /// Manufacturer name string as the camera reports it.
   final String? manufacturer;
+
+  /// Firmware model property, e.g. `RICOH GR IV`; see [model].
   final String? modelName;
+
+  /// Camera serial number string; matches the advertised tag `02` digits.
   final String? serialNumber;
+
+  /// Firmware version string as the camera reports it.
   final String? firmwareRevision;
+
+  /// Camera's Bluetooth device name.
   final String? bluetoothDeviceName;
+
+  /// Camera's Bluetooth MAC address string; the exact format (separators,
+  /// case) is not established (ble.md open question 14).
   final String? bluetoothMacAddress;
 
   /// Problems by characteristic key.
   final Map<String, List<String>> issues;
 
+  /// Known GR body for [modelName], or null when absent or not an exact
+  /// match.
   GrModel? get model {
     final m = modelName;
     return m == null ? null : GrModel.fromModelString(m);
   }
 
+  /// Diagnostic JSON with every field plus the resolved model and family.
   Map<String, Object?> toJson() => {
     'manufacturer': manufacturer,
     'modelName': modelName,
@@ -169,7 +195,9 @@ final class GrBleIdentity {
 
 /// Camera AP credentials read over BLE (ble.md §Minimal client sequence).
 final class GrWifiCredentials {
-  const GrWifiCredentials({
+  /// Creates credentials; [GrBleClient.readWifiCredentials] fills them from
+  /// the camera.
+  const new({
     required this.ssid,
     required this.passphrase,
     required this.security,
@@ -182,7 +210,11 @@ final class GrWifiCredentials {
     this.issues = const [],
   });
 
+  /// Camera AP network name; empty when it could not be decoded.
   final String ssid;
+
+  /// Camera AP passphrase in clear text; empty when it could not be
+  /// decoded.
   final String passphrase;
 
   /// Raw security characteristic; null when the camera lacks it (GR III).
@@ -192,6 +224,9 @@ final class GrWifiCredentials {
   /// GR WORLD's read-all default, and [securityAssumed] is true. Null when
   /// the camera reports an undocumented security value.
   final WifiSecurity? wifiSecurity;
+
+  /// True when [wifiSecurity] is GR WORLD's WPA2 default because the camera
+  /// has no security characteristic.
   final bool securityAssumed;
 
   /// GR IV wlanFreq; null when absent.
@@ -199,12 +234,17 @@ final class GrWifiCredentials {
 
   /// GR III WLAN Channel; null when absent.
   final BleEnumValue<BleWlanChannel>? channel;
+
+  /// GR IV available5GHz flag; null when absent or unreadable.
   final bool? available5GHz;
 
   /// Current WLAN on/off state as read, when readable.
   final BleEnumValue<BleNetworkType>? networkType;
+
+  /// Read and decode problems of the individual characteristics.
   final List<String> issues;
 
+  /// Diagnostic JSON with every field, including the passphrase.
   Map<String, Object?> toJson() => {
     'ssid': ssid,
     'passphrase': passphrase,
@@ -221,16 +261,23 @@ final class GrWifiCredentials {
 
 /// One notification (or priming read) from [GrBleClient.watch].
 final class GrBleNotification<T extends Object> {
-  GrBleNotification(this.characteristic, this.decoded, {this.primed = false})
+  /// Wraps one decoded value, stamped with the local receive time.
+  new(this.characteristic, this.decoded, {this.primed = false})
     : receivedAt = DateTime.now();
 
+  /// Characteristic the value came from.
   final GrBleCharacteristic<T> characteristic;
+
+  /// The value with its raw bytes and decode issues.
   final BleDecoded<T> decoded;
+
+  /// Local time the value arrived.
   final DateTime receivedAt;
 
   /// True for the read GR WORLD performs right after subscribing.
   final bool primed;
 
+  /// Diagnostic JSON: UTC time, characteristic key and the decoded value.
   Map<String, Object?> toJson() => {
     'time': receivedAt.toUtc().toIso8601String(),
     'characteristic': characteristic.key,
@@ -276,6 +323,7 @@ enum GrBleSubscriptionSet {
     ],
   };
 
+  /// Whether each subscription is followed by one read (GR WORLD).
   bool get primesWithRead => this == GrBleSubscriptionSet.grWorld;
 }
 
@@ -285,13 +333,18 @@ enum GrBleSubscriptionSet {
 /// apps do (GR WORLD per-service mutex, Image Sync single executor). Every
 /// read, write, notification and decode is reported to [trace].
 final class GrBleClient {
-  GrBleClient(
+  /// Wraps [connection]; call [discover] before typed access so absent
+  /// characteristics fail fast.
+  new(
     this.connection, {
     this.trace,
     this.operationTimeout = const Duration(seconds: 10),
   });
 
+  /// Link to the camera that every operation goes through.
   final BleConnection connection;
+
+  /// Receives one event per GATT operation, notification and decode.
   final TraceSink? trace;
 
   /// Per read/write deadline reported to the caller. Image Sync uses 5 s;
@@ -378,8 +431,11 @@ final class GrBleClient {
     }
   }
 
-  // -- discovery ---------------------------------------------------------------
+  // -- discovery --------------------------------------------------------------
 
+  /// Discovers the GATT database and compares it with the catalog. Later
+  /// typed calls on characteristics it did not find throw
+  /// [BleErrorCode.notFound].
   Future<GrBleDiscoveryReport> discover() async {
     final services = await _serialized(() async {
       _emit(TraceDirection.outbound, 'gatt.discover', {});
@@ -399,7 +455,7 @@ final class GrBleClient {
   /// Whether [c] was discovered; null before [discover].
   bool? isPresent(GrBleCharacteristic<Object> c) => _discovery?.isPresent(c);
 
-  // -- raw and typed access ----------------------------------------------------
+  // -- raw and typed access ---------------------------------------------------
 
   /// Reads any characteristic by UUID (canonicalized).
   Future<Uint8List> readUuid(String serviceUuid, String characteristicUuid) {
@@ -462,11 +518,15 @@ final class GrBleClient {
     }, timeout: 'write $c');
   }
 
+  /// Reads [c]'s raw bytes; throws [BleErrorCode.notFound] when [discover]
+  /// did not find it.
   Future<Uint8List> readRaw(GrBleCharacteristic<Object> c) {
     _requirePresent(c);
     return readUuid(c.service.uuid, c.uuid);
   }
 
+  /// Writes raw bytes to [c] with response; throws [BleErrorCode.notFound]
+  /// when [discover] did not find it.
   Future<void> writeRaw(GrBleCharacteristic<Object> c, Uint8List value) {
     _requirePresent(c);
     return writeUuid(c.service.uuid, c.uuid, value);
@@ -586,7 +646,7 @@ final class GrBleClient {
     _lastPowerOn = on;
   }
 
-  // -- identity and Wi-Fi ------------------------------------------------------
+  // -- identity and Wi-Fi -----------------------------------------------------
 
   /// Reads the six Camera Information characteristics.
   Future<GrBleIdentity> readIdentity() async {
@@ -640,9 +700,7 @@ final class GrBleClient {
     final ssid = await read(GrBleCatalog.ssid);
     final passphrase = await read(GrBleCatalog.passphrase);
     for (final d in [ssid, passphrase]) {
-      for (final i in d.issues) {
-        issues.add(i);
-      }
+      issues.addAll(d.issues);
     }
     final security = await optional(GrBleCatalog.wlanSecurity);
     final frequency = await optional(GrBleCatalog.wlanFrequency);
@@ -668,7 +726,7 @@ final class GrBleClient {
   /// Camera AP on (`01`) or off (`00`) via Network Type (ble.md §Turning
   /// the camera's Wi-Fi on). The camera may refuse in movie mode or while
   /// USB is connected.
-  Future<void> setWlan(bool on) => write(
+  Future<void> setWlan({required bool on}) => write(
     GrBleCatalog.networkType,
     BleEnumValue.of(on ? BleNetworkType.ap : BleNetworkType.off),
   );
@@ -696,10 +754,10 @@ final class GrBleClient {
     if (channel != null) {
       await write(GrBleCatalog.wlanChannel, BleEnumValue.of(channel));
     }
-    await setWlan(false);
+    await setWlan(on: false);
   }
 
-  // -- shooting ----------------------------------------------------------------
+  // -- shooting ---------------------------------------------------------------
 
   /// Shutter release: `01 01` with AF (GR WORLD), `01 00` without (Image
   /// Sync). Image Sync also sends `01 00` to stop movie/continuous/interval/T
@@ -724,9 +782,11 @@ final class GrBleClient {
   Future<void> cancelSelfTimer(BleSelfTimerCancelFormat format) =>
       write(GrBleCatalog.selfTimer, format.command);
 
+  /// Writes Drive Mode (single, continuous, self-timer, ...).
   Future<void> setDriveMode(BleDriveMode mode) =>
       write(GrBleCatalog.driveMode, BleEnumValue.of(mode));
 
+  /// Writes Capture Mode (still or movie).
   Future<void> setCaptureMode(BleCaptureMode mode) =>
       write(GrBleCatalog.captureMode, BleEnumValue.of(mode));
 
@@ -754,11 +814,14 @@ final class GrBleClient {
     );
   }
 
+  /// Writes Shutter Speed by table index (see [bleShutterSpeedLabels]);
+  /// 0 is B/T.
   Future<void> setShutterSpeed(int index) => write(
     GrBleCatalog.shutterSpeed,
     BleIndexedValue(index, bleShutterSpeedLabels[index]),
   );
 
+  /// Writes Aperture by table index (see [bleApertureLabels]); 0 is AUTO.
   Future<void> setAperture(int index) => write(
     GrBleCatalog.aperture,
     BleIndexedValue(index, bleApertureLabels[index]),
@@ -774,9 +837,11 @@ final class GrBleClient {
     BleIndexedValue(index, bleExposureCompensationLabels[index]),
   );
 
+  /// Writes White Balance.
   Future<void> setWhiteBalance(BleWhiteBalance wb) =>
       write(GrBleCatalog.whiteBalance, BleEnumValue.of(wb));
 
+  /// Writes Metering Mode.
   Future<void> setMeteringMode(BleMeteringMode mode) =>
       write(GrBleCatalog.meteringMode, BleEnumValue.of(mode));
 
@@ -800,13 +865,15 @@ final class GrBleClient {
     );
   }
 
+  /// Writes JPEG image size.
   Future<void> setJpegSize(BleJpegSize size) =>
       write(GrBleCatalog.jpegSize, BleEnumValue.of(size));
 
+  /// Writes Movie Configuration (movie size and frame rate).
   Future<void> setMovieConfiguration(BleMovieConfiguration config) =>
       write(GrBleCatalog.movieConfiguration, BleEnumValue.of(config));
 
-  // -- camera state --------------------------------------------------------------
+  // -- camera state -----------------------------------------------------------
 
   /// Writes [time] (default: now, local) to Date Time, as both apps do.
   Future<BleDateTime> syncDateTime([DateTime? time]) async {
@@ -815,10 +882,14 @@ final class GrBleClient {
     return value;
   }
 
+  /// Writes one phone-location record for geotagging; GR WORLD repeats it
+  /// every 5, 30 or 180 s.
   Future<void> sendGps(BleGpsInformation record) =>
       write(GrBleCatalog.gpsInformation, record);
 
-  Future<void> setGeoTag(bool enabled) => write(GrBleCatalog.geoTag, enabled);
+  /// Turns the camera's geotag setting on or off.
+  Future<void> setGeoTag({required bool enabled}) =>
+      write(GrBleCatalog.geoTag, enabled);
 
   /// Writes `00` to Camera Power, the only value either app writes. The
   /// camera turns off; GR WORLD then waits 6 s before reconnecting.
@@ -828,10 +899,15 @@ final class GrBleClient {
     _lastPowerOn = false;
   }
 
-  /// Neither app is known to write Operation Mode; exposed for validation.
+  /// Writes Operation Mode. GR WORLD wakes a camera reading BLE startup by
+  /// writing playback, or capture for its Remote button (power-on-grworld.md);
+  /// `GrSession` does the same.
   Future<void> setOperationMode(BleOperationMode mode) =>
       write(GrBleCatalog.operationMode, BleEnumValue.of(mode));
 
+  /// Writes BLE Enable Condition (0 disable, 1 anytime, 2 power-on only).
+  /// Image Sync never writes it; it changes whether the camera can be woken
+  /// over BLE.
   Future<void> setBleEnableCondition(BleEnableCondition condition) =>
       write(GrBleCatalog.bleEnableCondition, BleEnumValue.of(condition));
 
@@ -840,6 +916,8 @@ final class GrBleClient {
   Future<void> setPairedDeviceName(String name) =>
       write(GrBleCatalog.pairedDeviceName, name);
 
+  /// Writes the camera's own name (GR IV Camera Service; default
+  /// "MY GR IV").
   Future<void> setCameraName(String name) =>
       write(GrBleCatalog.cameraName, name);
 
@@ -879,12 +957,12 @@ final class GrBleClient {
       GrBleCatalog.powerOffDuringTransfer,
       BlePowerOffDuringTransfer(
         behavior == null ? v.behavior : BleEnumValue.of(behavior),
-        autoResize ?? v.autoResize,
+        autoResize: autoResize ?? v.autoResize,
       ),
     );
   }
 
-  // -- image control ---------------------------------------------------------------
+  // -- image control ----------------------------------------------------------
 
   static ({
     GrBleCharacteristic<String> name,
@@ -897,28 +975,34 @@ final class GrBleClient {
     return GrBleCatalog.imageControlSlots[slot - 1];
   }
 
+  /// Reads the name and data of Image Control Custom [slot] (1–3).
   Future<({BleDecoded<String> name, BleDecoded<BleImageControlBlob> data})>
   readImageControl(int slot) async {
     final s = _slot(slot);
     return (name: await read(s.name), data: await read(s.data));
   }
 
+  /// Writes the name of Image Control Custom [slot] (1–3).
   Future<void> writeImageControlName(int slot, String name) =>
       write(_slot(slot).name, name);
 
+  /// Writes the data blob of Image Control Custom [slot] (1–3).
   Future<void> writeImageControlData(int slot, BleImageControlBlob blob) =>
       write(_slot(slot).data, blob);
 
-  // -- firmware --------------------------------------------------------------------
+  // -- firmware ---------------------------------------------------------------
 
   /// Writes `01` to firmware-update start (GR WORLD step 4, after the image
   /// was uploaded over Wi-Fi). Starts flashing.
   Future<void> startFirmwareUpdate() =>
       write(GrBleCatalog.firmwareUpdateStart, true);
 
-  Future<void> setFirmwareUpdateAvailable(bool available) =>
+  /// Writes the firmware-update-available flag. The characteristic's
+  /// meaning is \[inferred\] from block order; no GR WORLD caller writes it.
+  Future<void> setFirmwareUpdateAvailable({required bool available}) =>
       write(GrBleCatalog.firmwareUpdateAvailable, available);
 
+  /// Reads the firmware-update result (invalid, success or failure).
   Future<BleDecoded<BleEnumValue<BleFirmwareUpdateResult>>>
   readFirmwareUpdateResult() => read(GrBleCatalog.firmwareUpdateResult);
 }

@@ -1,21 +1,20 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-
-import '../app_scope.dart';
-import '../connection/connect_failure_view.dart';
-import '../connection/connect_steps.dart';
-import '../connection/connection_controller.dart';
-import '../data/cameras.dart';
-import '../library/image_orientation.dart';
-import '../pairing/pairing_flow.dart';
-import '../pairing/pairing_widgets.dart';
-import '../settings/settings_screen.dart';
-import '../theme/tokens.dart';
-import '../widgets/group.dart';
-import 'camera_details.dart';
-import 'camera_presence.dart';
-import 'recent_thumbs.dart';
+import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/cameras/camera_details.dart';
+import 'package:grlab/src/cameras/camera_presence.dart';
+import 'package:grlab/src/cameras/recent_thumbs.dart';
+import 'package:grlab/src/connection/connect_failure_view.dart';
+import 'package:grlab/src/connection/connect_steps.dart';
+import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/data/cameras.dart';
+import 'package:grlab/src/library/image_orientation.dart';
+import 'package:grlab/src/pairing/pairing_flow.dart';
+import 'package:grlab/src/pairing/pairing_widgets.dart';
+import 'package:grlab/src/settings/settings_screen.dart';
+import 'package:grlab/src/theme/tokens.dart';
+import 'package:grlab/src/widgets/group.dart';
 
 /// Where the app opens and where it returns whenever no camera is
 /// connected (mock `b-home` … `b-home-lost`, and `b-welcome` before any
@@ -24,7 +23,7 @@ import 'recent_thumbs.dart';
 /// is in front it scans, so each camera says whether it is nearby and
 /// switched on. One camera is connected at a time.
 class CamerasScreen extends StatefulWidget {
-  const CamerasScreen({super.key, this.autoConnect = false});
+  const new({super.key, this.autoConnect = false});
 
   /// Connect to the camera used last as soon as the scan sees it nearby
   /// (once, when the app opens).
@@ -36,7 +35,7 @@ class CamerasScreen extends StatefulWidget {
 
 class _CamerasScreenState extends State<CamerasScreen> with RouteAware {
   late final AppModels _models = AppScope.of(context);
-  late final CameraPresence _presence = CameraPresence(_models.services.ble);
+  late final CameraPresence _presence = CameraPresence(_models.services.camera);
   ModalRoute<void>? _route;
 
   /// Another route (pairing, details, settings) is on top.
@@ -131,7 +130,7 @@ class _CamerasScreenState extends State<CamerasScreen> with RouteAware {
   }
 
   Future<void> _askPermission() async {
-    final granted = await _models.services.ensureBluetoothPermission();
+    final granted = await _models.services.camera.requestBluetoothPermission();
     if (!mounted) return;
     _permission = granted;
     _update();
@@ -183,7 +182,7 @@ class _CamerasScreenState extends State<CamerasScreen> with RouteAware {
 
 /// The Cameras screen before any camera is paired (mock `b-welcome`).
 class _Welcome extends StatelessWidget {
-  const _Welcome();
+  const new();
 
   @override
   Widget build(BuildContext context) {
@@ -232,10 +231,8 @@ class _Welcome extends StatelessWidget {
                       children: [
                         Text(
                           'GR LAB',
-                          style: GrFonts.monoStyle(
-                            context,
-                            size: 12,
-                          ).copyWith(letterSpacing: 1.7),
+                          style: GrFonts.monoStyle(context)
+                              .copyWith(letterSpacing: 1.7),
                         ),
                         const SizedBox(height: 10),
                         const Text(
@@ -295,7 +292,7 @@ class _Welcome extends StatelessWidget {
 }
 
 class _ModelChip extends StatelessWidget {
-  const _ModelChip(this.label);
+  const new(this.label);
 
   final String label;
 
@@ -321,7 +318,7 @@ class _ModelChip extends StatelessWidget {
 // ----------------------------------------------------------------- list
 
 class _CameraList extends StatelessWidget {
-  const _CameraList({
+  const new({
     required this.cameras,
     required this.presence,
     required this.connection,
@@ -367,11 +364,9 @@ class _CameraList extends StatelessWidget {
                   key: const Key('cameras-settings'),
                   icon: Icons.settings_outlined,
                   tooltip: 'Settings',
-                  onPressed: () => unawaited(
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const SettingsScreen(),
-                      ),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const SettingsScreen(),
                     ),
                   ),
                 ),
@@ -449,7 +444,7 @@ class _CameraList extends StatelessWidget {
 /// to the camera's Library and Shoot pages, and Connect while it is not
 /// linked; or the steps while connecting, or why the last attempt failed.
 class _CameraCard extends StatelessWidget {
-  const _CameraCard({
+  const new({
     required this.camera,
     required this.presence,
     required this.connection,
@@ -601,7 +596,7 @@ class _CameraCard extends StatelessWidget {
 
 /// The card's link line while connected over Bluetooth.
 class _LinkedLabel extends StatelessWidget {
-  const _LinkedLabel();
+  const new();
 
   @override
   Widget build(BuildContext context) {
@@ -631,11 +626,11 @@ String _minutes(Duration d) =>
 /// `b-home-lost`), or its Wi-Fi was left for lack of use. Shown once: the
 /// next attempt clears it.
 class _Banner extends StatelessWidget {
-  const _Banner({
-    super.key,
+  const new({
     required this.icon,
     required this.title,
     required this.body,
+    super.key,
   });
 
   final IconData icon;
@@ -682,7 +677,7 @@ class _Banner extends StatelessWidget {
 /// Thumbnails of the newest shots kept from the camera's last visit;
 /// nothing until the Library has loaded some.
 class _Thumbs extends StatefulWidget {
-  const _Thumbs({required this.serial});
+  const new({required this.serial});
 
   final String serial;
 
@@ -747,7 +742,7 @@ class _ThumbsState extends State<_Thumbs> {
 
 /// `GR IIIx · not nearby` with the presence dot (mock `.near`).
 class _NearLabel extends StatelessWidget {
-  const _NearLabel({
+  const new({
     required this.presence,
     required this.camera,
     required this.withModel,
@@ -808,7 +803,7 @@ class _NearLabel extends StatelessWidget {
 }
 
 class _OtherCameraRow extends StatelessWidget {
-  const _OtherCameraRow({
+  const new({
     required this.camera,
     required this.presence,
     required this.onConnect,
@@ -870,7 +865,7 @@ class _OtherCameraRow extends StatelessWidget {
 }
 
 class _AddCameraRow extends StatelessWidget {
-  const _AddCameraRow();
+  const new();
 
   @override
   Widget build(BuildContext context) {

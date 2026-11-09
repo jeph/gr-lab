@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-
-import '../pairing/pairing_widgets.dart';
-import 'connection_controller.dart';
+import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/pairing/pairing_widgets.dart';
 
 /// Bluetooth, then Wi-Fi (mock `b-home-connecting`), on the Cameras card.
 class ConnectSteps extends StatelessWidget {
-  const ConnectSteps({super.key, required this.connection});
+  const new({required this.connection, super.key});
 
   final ConnectionController connection;
 

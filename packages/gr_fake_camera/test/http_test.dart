@@ -323,7 +323,7 @@ void main() {
     addTearDown(link.disconnect);
     final client = GrBleClient(link);
     await client.discover();
-    await client.setWlan(true);
+    await client.setWlan(on: true);
     await Future<void>.delayed(ms(60));
     expect((await http.props()).ok, isTrue);
   });

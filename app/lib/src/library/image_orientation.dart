@@ -7,11 +7,7 @@ import 'package:flutter/widgets.dart';
 /// size and the EXIF Orientation tag, if there is one.
 @immutable
 final class JpegLayout {
-  const JpegLayout({
-    required this.width,
-    required this.height,
-    this.exifOrientation,
-  });
+  const new({required this.width, required this.height, this.exifOrientation});
 
   /// Size of the encoded pixels, before any EXIF rotation.
   final int width;
@@ -144,7 +140,8 @@ double enlargement(JpegLayout? layout, int orientation, Size box, BoxFit fit) {
   if (!box.width.isFinite || !box.height.isFinite || box.isEmpty) return 1;
   final (w, h) = _decoded(layout);
   final (sw, sh) = orientationSwapsAxes(orientation) ? (h, w) : (w, h);
-  final sx = box.width / sw, sy = box.height / sh;
+  final sx = box.width / sw;
+  final sy = box.height / sh;
   return fit == BoxFit.cover ? math.max(sx, sy) : math.min(sx, sy);
 }
 
@@ -171,11 +168,7 @@ int? decodeWidth(JpegLayout? layout, int orientation, Size box, BoxFit fit) {
 /// turned clockwise. Turns swap the layout axes as [RotatedBox] does, so
 /// the box takes the upright aspect. Other values leave [child] as it is.
 class ExifOrientation extends StatelessWidget {
-  const ExifOrientation({
-    super.key,
-    required this.orientation,
-    required this.child,
-  });
+  const new({required this.orientation, required this.child, super.key});
 
   final int orientation;
   final Widget child;

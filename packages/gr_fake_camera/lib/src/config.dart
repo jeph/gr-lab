@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:gr_fake_camera/src/fake_camera.dart' show FakeGrCamera;
 import 'package:gr_protocol/gr_protocol.dart';
 
 /// Bytes the camera serves for [photo] at [size]: the original file for
@@ -12,7 +13,8 @@ typedef FakeMediaSource = Future<Uint8List> Function(
 /// One file on the simulated card. A RAW+JPEG shot is two photos with the
 /// same base name (`R0000231.JPG`, `R0000231.DNG`), as the camera lists it.
 final class FakePhoto {
-  FakePhoto(
+  /// A file `file` in folder `dir` (e.g. `100RICOH`) shot at [dateTime].
+  new(
     this.dir,
     this.file,
     this.dateTime, {
@@ -26,8 +28,13 @@ final class FakePhoto {
     this.xv = '0.0',
   }) : path = GrPhotoPath(dir, file);
 
+  /// Folder on the card, e.g. `100RICOH`.
   final String dir;
+
+  /// File name with extension, e.g. `R0000231.JPG`.
   final String file;
+
+  /// [dir] and [file] as the protocol addresses the photo.
   final GrPhotoPath path;
 
   /// Capture time; `/info` reports it as camera-local wall time.
@@ -58,16 +65,26 @@ final class FakePhoto {
     _ => false,
   };
 
-  /// Exposure as `/info` reports it, in the camera's own notation
-  /// (`tv` `1.250` = 1/250 s, the form `/v1/props` uses).
+  /// Aperture as `/info` `av` reports it, e.g. `2.8`.
   final String av;
+
+  /// Shutter speed as `/info` `tv` reports it, in the camera's own notation
+  /// (`1.250` = 1/250 s, the form `/v1/props` uses).
   final String tv;
+
+  /// ISO sensitivity as `/info` `sv` reports it, e.g. `200`.
   final String sv;
+
+  /// Exposure compensation in EV as `/info` `xv` reports it, e.g. `-0.3`.
   final String xv;
 
   /// Upper-case extension: `JPG`, `DNG` or `MOV`.
   String get extension => path.extension;
+
+  /// A movie (`MOV`).
   bool get isVideo => extension == 'MOV';
+
+  /// A RAW file (`DNG`).
   bool get isRaw => extension == 'DNG';
 
   /// File name without extension; equal for both halves of a RAW+JPEG pair.
@@ -165,7 +182,8 @@ final class FakePhoto {
 /// Delays default to small values so UIs show their loading states without
 /// slowing tests; tests that need speed pass [Duration.zero].
 final class FakeCameraConfig {
-  const FakeCameraConfig({
+  /// A GR IV with the defaults below; override what a test or demo needs.
+  const new({
     this.model = 'RICOH GR IV',
     this.serial = '1234567',
     this.firmware = '1.20',
@@ -210,9 +228,18 @@ final class FakeCameraConfig {
   /// `/v1/props` `model` and the Camera Information model name; must be a
   /// [GrModel] string (it selects the advertised model code and GATT set).
   final String model;
+
+  /// `/v1/props` `serialNo` and the Camera Information serial number.
   final String serial;
+
+  /// `/v1/props` `firmwareVersion` and the Camera Information firmware
+  /// revision.
   final String firmware;
+
+  /// SSID of the camera's Wi-Fi access point.
   final String ssid;
+
+  /// WPA2 passphrase of the camera's access point.
   final String passphrase;
 
   /// Advertised name and Bluetooth Device Name characteristic (`bdName`).
@@ -254,7 +281,11 @@ final class FakeCameraConfig {
 
   /// Files per `/v1/photos` page when the request has no `limit`.
   final int pageSize;
+
+  /// Time between advertisements while the camera advertises.
   final Duration advertisingInterval;
+
+  /// From a connect request until the link is up.
   final Duration connectDelay;
 
   /// Added to every GATT operation.
@@ -334,7 +365,7 @@ final class FakeCameraConfig {
 
   /// Turning the mode dial pushes a `camera` change over the WebSocket as
   /// well as the BLE Shooting Mode notification. Whether the GR IV pushes
-  /// it is [unknown]; false leaves the BLE notification alone.
+  /// it is \[unknown\]; false leaves the BLE notification alone.
   final bool announcesDialChanges;
 
   /// Scales the 2 s and 10 s self-timer countdowns; tests pass small

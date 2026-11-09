@@ -1,4 +1,4 @@
-import 'package:gr_protocol/gr_protocol.dart';
+import 'package:gr_camera/gr_camera.dart';
 
 /// Self-timer choices of the Shoot screen.
 enum ShootTimer {
@@ -6,7 +6,7 @@ enum ShootTimer {
   twoSeconds(Duration(seconds: 2), '2 s'),
   tenSeconds(Duration(seconds: 10), '10 s');
 
-  const ShootTimer(this.delay, this.label);
+  new(this.delay, this.label);
 
   /// Null for [off].
   final Duration? delay;
@@ -24,7 +24,7 @@ enum ShootDrive {
   interval('Interval'),
   intervalComposite('Interval composite');
 
-  const ShootDrive(this.label);
+  new(this.label);
 
   final String label;
 

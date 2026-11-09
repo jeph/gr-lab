@@ -19,24 +19,43 @@ Joining is timed around the camera's access point, which comes up a varying time
 | Path | Contents |
 |---|---|
 | `packages/gr_protocol` | BLE GATT, Wi-Fi HTTP API, change WebSocket and the connect/recover session, in pure Dart |
+| `packages/gr_camera` | The camera layer the app calls for everything camera-related: Bluetooth and Wi-Fi adapters (with the Kotlin and Swift Wi-Fi joining code), session, pairing, scanning, Library, Shoot and live view, and tracing of every exchange |
 | `packages/gr_fake_camera` | Simulated GR IV (BLE, Wi-Fi join, HTTP server on loopback) for tests and demo mode |
-| `app` | The Flutter app (`io.jeph.grlab`), with Kotlin and Swift code for Wi-Fi joining and saving to the photo library |
+| `app` | The Flutter app, with Kotlin and Swift code for saving to the photo library |
+| `tool` | `check.sh`, every code-quality check |
 
 ## Running
 
 ```sh
 cd app
-flutter run                                  # real camera (needs a phone with Bluetooth)
+flutter run                                  # dev build, real camera (needs a phone with Bluetooth)
+flutter run --flavor prod --release          # the build users get
 flutter run --dart-define=GR_DEMO=true       # simulated camera, works on the Android emulator and iOS simulator
 ```
 
+There are two builds. `dev` (`io.jeph.grlab.dev`, named "GR Lab Dev") installs beside `prod` (`io.jeph.grlab`, "GR Lab"). Without `--flavor`, `flutter run` and `flutter build` build `dev`.
+
 Demo mode keeps its data in a separate `demo/` folder. On first launch, Add a camera finds the simulated camera and it confirms pairing by itself; later launches start with the camera off, which stays off until you open the Library (waking it is part of joining its Wi-Fi). Demo RAW files are JPEG bytes with a `.DNG` name.
+
+### Debug log
+
+GR Lab keeps debug logs while Settings > Enable debug logging is on: everything it sends to and receives from the camera (Bluetooth scans, reads, writes and notifications, every HTTP request and answer, WebSocket messages, live-view frame sizes, and the Wi-Fi joining steps), every line the app prints, uncaught errors, and the native Wi-Fi code's lines. The setting is on by default in `dev` and off in `prod`. While it is off nothing is logged, not even to logcat or the console. Settings > Debug log exports the log through the share sheet as JSON Lines files and clears it. The log keeps about 50 MB. It contains the camera's Wi-Fi password.
+
+## Checks
+
+```sh
+tool/check.sh            # formatter, analyzer, camera layer boundary, all test suites
+tool/check.sh --static   # without the tests
+```
+
+The analyzer uses `very_good_analysis` with infos treated as errors. Android and iOS builds run `tool/check.sh --static` first and stop if it fails. Kotlin and Swift warnings are errors. See `AGENTS.md` for the rules.
 
 ## Tests
 
 ```sh
 (cd packages/gr_protocol && dart test)
 (cd packages/gr_fake_camera && dart test)
+(cd packages/gr_camera && flutter test)
 (cd app && flutter test)
 (cd app && flutter test integration_test --dart-define=GR_DEMO=true -d <device>)
 ```
@@ -49,7 +68,7 @@ On the iOS simulator, the app must be installed when Photos access is granted, a
 cd app
 flutter build ios --simulator --debug --dart-define=GR_DEMO=true
 xcrun simctl install booted build/ios/iphonesimulator/Runner.app
-xcrun simctl privacy booted grant photos-add io.jeph.grlab
+xcrun simctl privacy booted grant photos-add io.jeph.grlab.dev
 flutter test integration_test --dart-define=GR_DEMO=true -d <simulator>
 ```
 

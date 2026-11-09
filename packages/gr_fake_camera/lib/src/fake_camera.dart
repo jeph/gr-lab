@@ -4,10 +4,9 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:gr_fake_camera/src/config.dart';
+import 'package:gr_fake_camera/src/media.dart';
 import 'package:gr_protocol/gr_protocol.dart';
-
-import 'config.dart';
-import 'media.dart';
 
 part 'ble_side.dart';
 part 'http_side.dart';
@@ -16,7 +15,10 @@ part 'wifi_side.dart';
 
 /// Thrown by [FakeGrCamera.wifi] when a join fails.
 final class FakeWifiException implements Exception {
-  const FakeWifiException(this.message);
+  /// Wraps [message], the reason the join failed.
+  const new(this.message);
+
+  /// Why the join failed.
   final String message;
 
   @override
@@ -47,7 +49,11 @@ final class FakeWifiException implements Exception {
 /// the camera is on and its access point has not gone down, so HTTP-only
 /// tests can use it without a BLE session.
 final class FakeGrCamera {
-  FakeGrCamera({this.config = const FakeCameraConfig(), required this.media})
+  /// A camera serving [media] as its file bytes, set up by [config].
+  ///
+  /// Throws [ArgumentError] when [FakeCameraConfig.model] is not a GR model
+  /// string.
+  new({required this.media, this.config = const FakeCameraConfig()})
     : model =
           GrModel.fromModelString(config.model) ??
           (throw ArgumentError.value(
@@ -66,7 +72,10 @@ final class FakeGrCamera {
     _initValues();
   }
 
+  /// Identity, timing and failure injection this camera was built with.
   final FakeCameraConfig config;
+
+  /// Bytes served for each photo and size.
   final FakeMediaSource media;
 
   /// Model selected by [FakeCameraConfig.model].
@@ -200,6 +209,8 @@ final class FakeGrCamera {
   /// Open BLE links.
   int get linkCount => _links.length;
 
+  /// Battery charge in percent; setting it notifies BLE Battery Level and
+  /// pushes a `battery` change over the WebSocket.
   int get battery => _battery;
   set battery(int percent) {
     _battery = percent;
@@ -234,7 +245,7 @@ final class FakeGrCamera {
   /// The camera changes an exposure setting itself, as the shutter speed
   /// it picks in Av. No change is pushed: a GR IV HDF sent none for mode
   /// dial changes either (2026-11-08); whether it pushes one for its own
-  /// exposure is [unknown].
+  /// exposure is \[unknown\].
   void cameraSets(String key, String value) => _settings[key] = value;
 
   /// The card, in insertion order.
@@ -418,7 +429,7 @@ final class FakeGrCamera {
       _apDown();
     }
     _notify(GrBleCatalog.cameraPower, [
-      on ? BleCameraPower.on.wire : BleCameraPower.off.wire,
+      if (on) BleCameraPower.on.wire else BleCameraPower.off.wire,
     ]);
     // The main firmware's links end when it shuts down; a link opened to
     // the BT-only firmware ends when the main firmware takes over, unless

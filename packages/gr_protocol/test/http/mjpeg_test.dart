@@ -129,7 +129,7 @@ void main() {
 
   group('readJpegDimensions', () {
     test('reads SOF0 baseline', () {
-      final d = readJpegDimensions(jpeg(width: 720, height: 480))!;
+      final d = readJpegDimensions(jpeg())!;
       expect(
         (d.width, d.height, d.sofMarker, d.progressive),
         (720, 480, 0xC0, false),
@@ -189,15 +189,13 @@ void main() {
     });
 
     test('flags an invalid size line and ignores later input', () {
-      final d = HttpChunkedDecoder();
-      d.add(ascii.encode('zz\r\nabc'));
+      final d = HttpChunkedDecoder()..add(ascii.encode('zz\r\nabc'));
       expect(d.error, contains('invalid chunk size'));
       expect(d.add(ascii.encode('3\r\nabc\r\n')), isEmpty);
     });
 
     test('flags missing CRLF after chunk data', () {
-      final d = HttpChunkedDecoder();
-      d.add(ascii.encode('3\r\nabcX'));
+      final d = HttpChunkedDecoder()..add(ascii.encode('3\r\nabcX'));
       expect(d.error, contains('CRLF'));
     });
   });

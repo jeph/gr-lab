@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import '../trace.dart';
-import 'client.dart';
-import 'models.dart';
+import 'package:gr_protocol/src/http/client.dart';
+import 'package:gr_protocol/src/http/models.dart';
+import 'package:gr_protocol/src/trace.dart';
 
 /// Image Sync's connection-loss rule (`ConnectionChecker.java:63-104`,
 /// docs/protocol/connection-imagesync.md §2.2): the link is lost when
@@ -14,7 +14,8 @@ import 'models.dart';
 /// states "≥40 s" (§2.4). Time comes from the caller, so the rule is
 /// deterministic.
 final class LivenessTracker {
-  LivenessTracker({
+  /// Tracker whose loss clock starts at [start].
+  new({
     required DateTime start,
     this.failureThreshold = 3,
     this.lossAfter = const Duration(seconds: 40),
@@ -24,16 +25,25 @@ final class LivenessTracker {
     }
   }
 
+  /// Consecutive failed probes needed before loss can be declared (≥ 1).
   final int failureThreshold;
+
+  /// Minimum time since the last success before loss can be declared.
   final Duration lossAfter;
   DateTime _lastSuccess;
   int _failures = 0;
   bool _lost = false;
 
+  /// Failed probes since the last success.
   int get consecutiveFailures => _failures;
+
+  /// Time of the last successful probe, or the start time.
   DateTime get lastSuccess => _lastSuccess;
+
+  /// Whether loss was declared; the tracker then ignores further probes.
   bool get lost => _lost;
 
+  /// Records a successful probe at [at] and resets the failure count.
   void recordSuccess(DateTime at) {
     if (_lost) return;
     _failures = 0;
@@ -55,7 +65,8 @@ final class LivenessTracker {
 
 /// Result of one liveness probe.
 final class LivenessPoll {
-  const LivenessPoll({
+  /// Poll result with the tracker's state after it.
+  const new({
     required this.at,
     required this.ok,
     required this.latency,
@@ -67,20 +78,34 @@ final class LivenessPoll {
     this.error,
   });
 
+  /// When the probe finished.
   final DateTime at;
+
+  /// Whether the camera answered with the expected identity.
   final bool ok;
+
+  /// Time the probe took.
   final Duration latency;
 
   /// Identity from this probe's `/v1/props`, when it answered.
   final GrCameraIdentity? identity;
+
+  /// The camera answered, but as a different camera than expected.
   final bool identityMismatch;
+
+  /// Why the probe failed, if it threw.
   final Object? error;
+
+  /// Failed probes since the last success, this one included.
   final int consecutiveFailures;
+
+  /// Time since the last successful probe.
   final Duration sinceLastSuccess;
 
   /// This poll declared the connection lost.
   final bool lost;
 
+  /// Trace/log form.
   Map<String, Object?> toJson() => {
     'at': at.toIso8601String(),
     'ok': ok,
@@ -99,7 +124,10 @@ final class LivenessPoll {
 /// connect, 10 s read (connection-imagesync.md §2.2). This is a liveness
 /// probe, not a proven keep-awake mechanism (connection-lifecycle.md §9).
 final class LivenessMonitor {
-  LivenessMonitor(
+  /// Monitor probing [client]'s `/v1/props` with [connectTimeout] and
+  /// [readTimeout]; the first identity seen is enforced unless
+  /// [expectedIdentity] is given.
+  new(
     GrHttpClient client, {
     Duration interval = const Duration(milliseconds: 500),
     Duration connectTimeout = const Duration(seconds: 1),
@@ -120,8 +148,8 @@ final class LivenessMonitor {
          trace: trace,
        );
 
-  /// Uses [probe] instead of `/v1/props` (e.g. a network-bound client).
-  LivenessMonitor.withProbe(
+  /// Uses `probe` instead of `/v1/props` (e.g. a network-bound client).
+  new withProbe(
     this._probe, {
     this.interval = const Duration(milliseconds: 500),
     this.failureThreshold = 3,
@@ -133,8 +161,14 @@ final class LivenessMonitor {
        _now = clock ?? DateTime.now;
 
   final Future<GrProps> Function() _probe;
+
+  /// Delay between the end of one probe and the start of the next.
   final Duration interval;
+
+  /// Consecutive failures needed before loss (see [LivenessTracker]).
   final int failureThreshold;
+
+  /// Time since the last success needed before loss.
   final Duration lossAfter;
   final DateTime Function() _now;
   final TraceSink? _trace;
@@ -155,6 +189,7 @@ final class LivenessMonitor {
   /// seen.
   GrCameraIdentity? get identity => _identity;
 
+  /// Whether polling is scheduled.
   bool get running => _running;
 
   /// Starts polling; the first probe runs after [interval], like Image Sync's
@@ -196,7 +231,7 @@ final class LivenessMonitor {
       seen = props.identity;
       final expected = _identity ??= seen;
       mismatch = expected != seen;
-    } catch (e) {
+    } on Object catch (e) {
       error = e;
     }
     watch.stop();

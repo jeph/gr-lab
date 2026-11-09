@@ -22,7 +22,7 @@ final Uint8List _quad = base64.decode(
 
 enum _Q { red, green, blue, yellow }
 
-const _stored = [
+const List<List<_Q>> _stored = [
   [_Q.red, _Q.green],
   [_Q.blue, _Q.yellow],
 ];

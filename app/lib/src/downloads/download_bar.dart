@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:gr_protocol/gr_protocol.dart';
-
-import '../library/format.dart';
-import '../library/library_scope.dart';
-import '../library/shot.dart';
-import '../library/shot_cell.dart';
-import '../theme/tokens.dart';
-import 'download_engine.dart';
+import 'package:gr_camera/gr_camera.dart';
+import 'package:grlab/src/downloads/download_engine.dart';
+import 'package:grlab/src/library/format.dart';
+import 'package:grlab/src/library/library_scope.dart';
+import 'package:grlab/src/library/shot.dart';
+import 'package:grlab/src/library/shot_cell.dart';
+import 'package:grlab/src/theme/tokens.dart';
 
 /// Mini download bar floating over the grid (mock `.mini`): what is being
 /// downloaded, "2 of 6 · 31 MB/s", pause/resume and cancel. Tapping it
 /// opens the queue. Hidden while the queue is empty.
 class DownloadBar extends StatelessWidget {
-  const DownloadBar({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +27,7 @@ class DownloadBar extends StatelessWidget {
 }
 
 class _Bar extends StatelessWidget {
-  const _Bar({required this.engine});
+  const new({required this.engine});
 
   final DownloadEngine engine;
 
@@ -146,7 +145,7 @@ class _Bar extends StatelessWidget {
 }
 
 class _JobThumb extends StatelessWidget {
-  const _JobThumb({required this.job, this.size = 40});
+  const new({required this.job, this.size = 40});
 
   final DownloadJob job;
   final double size;
@@ -183,7 +182,6 @@ Future<void> showDownloadQueue(BuildContext context) {
       library: library,
       child: DraggableScrollableSheet(
         expand: false,
-        initialChildSize: .5,
         maxChildSize: .9,
         builder: (context, controller) =>
             _QueueSheet(engine: library.engine, controller: controller),
@@ -193,7 +191,7 @@ Future<void> showDownloadQueue(BuildContext context) {
 }
 
 class _QueueSheet extends StatelessWidget {
-  const _QueueSheet({required this.engine, required this.controller});
+  const new({required this.engine, required this.controller});
 
   final DownloadEngine engine;
   final ScrollController controller;
@@ -261,7 +259,7 @@ class _QueueSheet extends StatelessWidget {
 }
 
 class _JobRow extends StatelessWidget {
-  const _JobRow({required this.engine, required this.job});
+  const new({required this.engine, required this.job});
 
   final DownloadEngine engine;
   final DownloadJob job;
