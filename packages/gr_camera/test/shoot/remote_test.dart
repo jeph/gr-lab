@@ -146,6 +146,19 @@ void main() {
     expect(rig.camera.driveMode, BleDriveMode.continuous);
   });
 
+  test('a refused drive mode keeps an older write the camera took', () async {
+    rig = await ShootRig.start();
+    final remote = rig.remote;
+    await remote.wake();
+    expect(remote.watching, isFalse);
+    final taken = remote.setDriveMode(BleDriveMode.continuous);
+    final refused = remote.setDriveMode(BleDriveMode.singleRemote);
+    await taken;
+    await expectLater(refused, throwsA(anything));
+    expect(rig.camera.driveMode, BleDriveMode.continuous);
+    expect(remote.drive?.known, BleDriveMode.continuous);
+  });
+
   test('a refused drive mode keeps a newer notification', () async {
     rig = await ShootRig.start(
       config: const FakeCameraConfig(

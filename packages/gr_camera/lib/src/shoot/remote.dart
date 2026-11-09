@@ -124,9 +124,12 @@ final class CameraRemote extends ChangeNotifier {
       }
       rethrow;
     }
-    if (_closed || write != _driveWrites) return;
-    // The camera took it; its notification may not have arrived yet.
+    if (_closed) return;
+    // The camera took it; its notification may not have arrived yet. A
+    // newer write still under way keeps showing, but if it is refused,
+    // this is what the camera has.
     _reportedDrive = value;
+    if (write != _driveWrites) return;
     _pendingDrive = null;
     notifyListeners();
   }
