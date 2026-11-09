@@ -85,6 +85,6 @@ Binaries and derived output live only in the local research workspace (`../gr`: 
 3. **blutter** (github.com/worawit/blutter, built for Dart 3.11.1) for the object pool (`pp.txt`), const objects (`objs.txt`) and names. Run it on a **case-sensitive** volume: obfuscated library names differ only by case and overwrite each other on default macOS APFS (`hdiutil create -fs "Case-sensitive APFS" …`). blutter only emits asm for functions that still have Code objects (~3 % here).
 4. **`research/tools/dartdis.py`** for full coverage: linear Capstone disassembly of `_kDartIsolateSnapshotInstructions`, with object-pool loads (x27) resolved against `pp.txt` and call targets named from blutter's `addNames.py`.
    ```
-   tools/blutter/.venv/bin/python ../grlab/research/tools/dartdis.py work/lib/arm64-v8a/libapp.so work/cs/blutter_out work/dis
+   tools/blutter/.venv/bin/python ../gr-lab/research/tools/dartdis.py work/lib/arm64-v8a/libapp.so work/cs/blutter_out work/dis
    ```
    Outputs `dis.txt`, `xrefs.json` (pool offset → referencing functions). The docs cite `0x…` addresses in `dis.txt` and `pp+0x…` offsets in `pp.txt`.
