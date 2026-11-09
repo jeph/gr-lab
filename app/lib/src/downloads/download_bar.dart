@@ -356,9 +356,7 @@ String _failureMessage(AppLocalizations l10n, DownloadFailure failure) =>
         TransferCutOff() => l10n.downloadErrorCutOff,
         TransferConnectionLost() => l10n.downloadErrorConnectionLost,
         TransferStalled() => l10n.downloadErrorStalled,
-        TransferWriteFailed(:final detail) => l10n.downloadErrorWriteFailed(
-          detail,
-        ),
-        TransferOtherError(:final detail) => l10n.downloadErrorOther(detail),
+        TransferWriteFailed() => l10n.downloadErrorWriteFailed,
+        TransferOtherError() => l10n.downloadErrorOther,
       },
     };

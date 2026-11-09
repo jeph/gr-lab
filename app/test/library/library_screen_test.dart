@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
@@ -260,6 +262,39 @@ void main() {
     );
     expect(app.media.shots.single.names, ['R0000270.JPG']);
     await pumpUntilFound(tester, find.text('Nothing to download'));
+
+    await app.dispose();
+  });
+
+  testWidgets('a file the phone cannot write fails with a message of its '
+      "own, never the platform's English", (tester) async {
+    final app = (await tester.runAsync(
+      () => createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+      ),
+    ))!;
+    // A file where the downloads folder goes: creating it fails with the
+    // platform's own description ("Not a directory" or similar).
+    final blocker = File('${app.models.services.cacheDir.path}/downloads');
+    await tester.runAsync(() => blocker.writeAsString(''));
+    await app.pumpApp(tester);
+    await _openLibrary(tester);
+    const jpeg = 'sd1|101RICOH/R0000270';
+    await pumpUntilFound(tester, _cell(jpeg));
+    await tester.longPress(_cell(jpeg));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('selection-download:jpeg')));
+    await tester.pump();
+    await pumpUntilFound(tester, find.text('1 download failed'));
+
+    await tester.tap(find.byKey(const ValueKey('download-bar')));
+    await pumpUntilFound(
+      tester,
+      find.text('JPEG · SD · Could not write the file'),
+    );
+    expect(find.textContaining('directory'), findsNothing);
+    expect(find.textContaining('FileSystemException'), findsNothing);
 
     await app.dispose();
   });

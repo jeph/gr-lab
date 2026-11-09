@@ -805,15 +805,9 @@
   "@downloadErrorNoPhotoAccess": {
     "description": "Why a download failed: the user has not allowed GR Lab to add to the photo library."
   },
-  "downloadErrorOther": "The download failed: {detail}",
+  "downloadErrorOther": "The download failed",
   "@downloadErrorOther": {
-    "description": "Why a download failed, for an unexpected error.",
-    "placeholders": {
-      "detail": {
-        "type": "String",
-        "description": "The error as technical text."
-      }
-    }
+    "description": "Why a download failed, for an unexpected error."
   },
   "downloadErrorRefused": "The camera refused the file ({errCode})",
   "@downloadErrorRefused": {
@@ -851,15 +845,9 @@
   "@downloadErrorStalled": {
     "description": "Why a download failed: the camera stopped sending data."
   },
-  "downloadErrorWriteFailed": "Could not write the file: {detail}",
+  "downloadErrorWriteFailed": "Could not write the file",
   "@downloadErrorWriteFailed": {
-    "description": "Why a download failed: the phone could not store the received file.",
-    "placeholders": {
-      "detail": {
-        "type": "String",
-        "description": "The operating system's description of the failure, e.g. 'No space left on device'."
-      }
-    }
+    "description": "Why a download failed: the phone could not store the received file."
   },
   "downloadPause": "Pause",
   "@downloadPause": {

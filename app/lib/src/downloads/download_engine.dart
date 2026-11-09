@@ -110,14 +110,8 @@ Map<String, Object?>? _failureToJson(DownloadFailure? failure) =>
         TransferCutOff() => {'transfer': 'cutOff'},
         TransferConnectionLost() => {'transfer': 'connectionLost'},
         TransferStalled() => {'transfer': 'stalled'},
-        TransferWriteFailed(:final detail) => {
-          'transfer': 'writeFailed',
-          'detail': detail,
-        },
-        TransferOtherError(:final detail) => {
-          'transfer': 'other',
-          'detail': detail,
-        },
+        TransferWriteFailed() => {'transfer': 'writeFailed'},
+        TransferOtherError() => {'transfer': 'other'},
       },
     };
 
@@ -142,11 +136,8 @@ DownloadFailure? _failureFromJson(Object? json) {
     {'transfer': 'cutOff'} => const TransferCutOff(),
     {'transfer': 'connectionLost'} => const TransferConnectionLost(),
     {'transfer': 'stalled'} => const TransferStalled(),
-    {'transfer': 'writeFailed', 'detail': final String detail} =>
-      TransferWriteFailed(detail),
-    {'transfer': 'other', 'detail': final String detail} => TransferOtherError(
-      detail,
-    ),
+    {'transfer': 'writeFailed'} => const TransferWriteFailed(),
+    {'transfer': 'other'} => const TransferOtherError(),
     _ => null,
   };
   return reason == null ? null : DownloadTransferFailed(reason);

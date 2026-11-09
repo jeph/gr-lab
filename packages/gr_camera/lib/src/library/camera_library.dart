@@ -218,7 +218,8 @@ bool isConnectionError(Object error) =>
     error is GrMalformedResponseException;
 
 /// Why a transfer from the camera failed. The app puts it into words; the
-/// fields carry the technical detail it may show.
+/// fields carry what the camera answered. The thrown error itself, with the
+/// platform's description, is for the debug log.
 sealed class TransferFailure {
   const new();
 
@@ -235,10 +236,8 @@ sealed class TransferFailure {
     GrMalformedResponseException() => const TransferCutOff(),
     SocketException() || HttpException() => const TransferConnectionLost(),
     TimeoutException() => const TransferStalled(),
-    FileSystemException(:final message, :final osError) => TransferWriteFailed(
-      osError?.message ?? message,
-    ),
-    _ => TransferOtherError('$error'),
+    FileSystemException() => const TransferWriteFailed(),
+    _ => const TransferOtherError(),
   };
 }
 
@@ -283,18 +282,12 @@ final class TransferStalled extends TransferFailure {
 
 /// The phone could not write the received file.
 final class TransferWriteFailed extends TransferFailure {
-  /// Writing failed as [detail] says.
-  const new(this.detail);
-
-  /// The operating system's description of the failure.
-  final String detail;
+  /// Writing failed.
+  const new();
 }
 
 /// An error none of the other cases describe.
 final class TransferOtherError extends TransferFailure {
-  /// [detail] describes the error.
-  const new(this.detail);
-
-  /// The error as text, for diagnosis.
-  final String detail;
+  /// Something else went wrong.
+  const new();
 }

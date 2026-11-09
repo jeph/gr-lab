@@ -322,31 +322,12 @@ void main() {
         isA<TransferStalled>(),
       );
       expect(
-        TransferFailure.of(const FileSystemException('write failed')),
-        isA<TransferWriteFailed>().having(
-          (f) => f.detail,
-          'detail',
-          'write failed',
-        ),
-      );
-      expect(
         TransferFailure.of(
           const FileSystemException('write failed', null, OSError('No space')),
         ),
-        isA<TransferWriteFailed>().having(
-          (f) => f.detail,
-          'detail',
-          'No space',
-        ),
+        isA<TransferWriteFailed>(),
       );
-      expect(
-        TransferFailure.of(StateError('odd')),
-        isA<TransferOtherError>().having(
-          (f) => f.detail,
-          'detail',
-          contains('odd'),
-        ),
-      );
+      expect(TransferFailure.of(StateError('odd')), isA<TransferOtherError>());
     });
   });
 
