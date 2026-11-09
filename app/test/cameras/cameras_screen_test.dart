@@ -454,6 +454,45 @@ void main() {
     await app.dispose();
   });
 
+  testWidgets('a screen reader can press the power button, which is disabled '
+      'while it works', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final app = await _start(tester);
+    await pumpUntilFound(
+      tester,
+      find.byKey(const Key('camera-card-link-bluetooth')),
+    );
+    final button = find.byKey(const Key('camera-card-power'));
+    expect(
+      tester.getSemantics(button),
+      isSemantics(
+        label: 'Turn GR IV off',
+        isButton: true,
+        hasEnabledState: true,
+        isEnabled: true,
+        hasToggledState: true,
+        isToggled: true,
+        hasTapAction: true,
+      ),
+    );
+
+    tester.semantics.tap(find.semantics.byLabel('Turn GR IV off'));
+    await tester.pump();
+    expect(
+      tester.getSemantics(button),
+      isSemantics(
+        label: 'Turn GR IV off',
+        hasEnabledState: true,
+        isEnabled: false,
+        hasTapAction: false,
+      ),
+    );
+    await pumpUntil(tester, () => !app.camera.poweredOn, reason: 'off');
+
+    await app.dispose();
+    semantics.dispose();
+  });
+
   testWidgets('the power button links an unlinked camera that is off and '
       'turns it on', (tester) async {
     final app = await _start(

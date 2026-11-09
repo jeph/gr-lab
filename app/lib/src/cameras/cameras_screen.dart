@@ -733,12 +733,19 @@ class _PowerButton extends StatelessWidget {
         ? context.l10n.camerasPowerOff(camera.name)
         : context.l10n.camerasPowerOn(camera.name);
     final color = lit ? c.invFg : c.t1;
+    final onTap = busy ? null : () => unawaited(_press(context));
     return Tooltip(
       message: label,
+      // One node for the button, kept apart from the card's even while it
+      // is busy and has no action: the label says what a tap does, so the
+      // InkWell's own node, and with it its tap action, is replaced here.
       child: Semantics(
+        container: true,
         button: true,
+        enabled: !busy,
         toggled: on,
         label: label,
+        onTap: onTap,
         excludeSemantics: true,
         child: Material(
           key: Key('camera-card-power-${lit ? 'on' : 'off'}'),
@@ -747,7 +754,7 @@ class _PowerButton extends StatelessWidget {
           child: InkWell(
             key: const Key('camera-card-power'),
             customBorder: const CircleBorder(),
-            onTap: busy ? null : () => unawaited(_press(context)),
+            onTap: onTap,
             child: SizedBox.square(
               dimension: 52,
               child: Center(
