@@ -14,7 +14,7 @@ GR Lab keeps the following in its own app storage on your phone:
 - Copies of what your cameras sent, so the Library opens quickly: the list of files on each camera with their date, size and orientation, thumbnails and previews, videos you played, and files that are still being downloaded. These are kept in the app's cache, which your phone may clear when it needs space.
 - The debug log, when it is on (see below).
 
-GR Lab does not keep your camera's Wi-Fi password in its own storage. It reads the password from the camera over Bluetooth each time it connects and passes it to your phone's Wi-Fi system to join the camera's network.
+GR Lab reads your camera's Wi-Fi password from the camera over Bluetooth each time it connects and passes it to your phone's Wi-Fi system to join the camera's network. The password is not saved with your paired cameras. While debug logging is on, though, the password is written to the debug log on your phone, like the rest of the exchange with the camera (see below).
 
 Photos and videos you download are saved to your phone's photo library: on iOS in Photos, on Android in the GR folders under Pictures and Movies. From then on they are yours and are managed by your photo app; GR Lab does not change or delete them.
 
@@ -64,7 +64,7 @@ GR Lab does not use your location, camera, microphone, contacts or notifications
 
 ## Children
 
-GR Lab is not directed at children. It collects no personal information from anyone, children included.
+GR Lab is not directed at children. It sends no personal information about anyone, children included, to the developer or to third parties.
 
 ## Contact
 
