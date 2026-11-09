@@ -289,8 +289,28 @@ final class GrSession {
 
   String? _serial;
   bool _cameraOff = false;
-  bool _wifiStopped = false;
+
+  /// A wake is responsible for the link: the camera may drop it while it
+  /// boots, so a drop clears the link but the wake, not the BLE
+  /// reconnect, links again; a wake that fails hands the loss over.
   bool _relinking = false;
+
+  /// The phone joined, or is joining, the camera's network for this
+  /// session. Tracked apart from the phase, which a failed start resets to
+  /// [GrSessionPhase.bluetooth]: the phone's request is a resource of its
+  /// own (connection-lifecycle.md §6), released by [_leaveWifi].
+  bool _wifiJoined = false;
+
+  /// Completed by [stopWifi] and [close] to cut the Wi-Fi start's or
+  /// recovery's waits short; a new [startWifi] replaces it.
+  Completer<void> _wifiStop = Completer<void>();
+  bool get _wifiStopped => _wifiStop.isCompleted;
+
+  /// [stopWifi] calls in progress; [startWifi] is refused until they end.
+  int _wifiStops = 0;
+
+  /// Completed by [close]: ends a scan and the waits of BLE reconnects.
+  final Completer<void> _closeSignal = Completer<void>();
 
   /// This session turned the camera on ([wake], or a Wi-Fi start or its
   /// recovery); cleared only when the session turns it off again.
@@ -308,14 +328,12 @@ final class GrSession {
   /// [stopWifi], [powerOffIfWoken] and [close] after cutting it short.
   Future<void>? _wakeCall;
 
-  /// [stopWifi], [powerOffIfWoken] or [close] cut the running [wake] short.
-  bool _wakeStopped = false;
+  /// Completed by [stopWifi], [powerOffIfWoken] or [close] to cut the
+  /// running [wake] short, including its waits.
+  Completer<void> _wakeStop = Completer<void>();
 
   /// The phase a [wake] that set [GrSessionPhase.waking] returns to.
   GrSessionPhase? _wakeReturnTo;
-
-  /// Completed by [stopWifi] and [close] to cut a recovery's waits short.
-  Completer<void>? _recoveryStop;
 
   /// The watch over the link after a wake whose early WLAN-on went through
   /// (see [_wakeAndWlanOn]); cancelled by [stopWifi] and [close], and
@@ -405,25 +423,36 @@ final class GrSession {
     }
 
     await _connectBle(initial: true);
+    // A close during the last step has let go of the link already.
+    if (_closing) throw _closed;
     _set(GrSessionPhase.bluetooth, 'bluetooth', {'cameraOff': _cameraOff});
   }
 
   /// From [GrSessionPhase.bluetooth]: powers the camera on when it is off,
   /// reads the Wi-Fi credentials, writes WLAN-on, joins, verifies
   /// `/v1/props`, then opens the change WebSocket and starts liveness
-  /// polling. On failure, or when [stopWifi] cuts it short, the session is
-  /// back in [GrSessionPhase.bluetooth]. Also accepted while a [wake]
-  /// started from [GrSessionPhase.bluetooth] runs: the start first waits
-  /// for it to end, either way, and then goes on as from bluetooth.
+  /// polling. On failure, or when [stopWifi] cuts it short, the phone's
+  /// join is released and the session is back in
+  /// [GrSessionPhase.bluetooth]. Also accepted while a [wake] started from
+  /// [GrSessionPhase.bluetooth] runs: the start first waits for it to end,
+  /// either way, and then goes on as from bluetooth. A call while a start
+  /// runs returns that start; one while [stopWifi] is ending Wi-Fi throws
+  /// [StateError].
   Future<void> startWifi() {
+    final running = _wifiStart;
+    if (running != null && !_wifiStopped) return running;
+    if (running != null || _wifiStops > 0) {
+      throw StateError('GrSession.startWifi called while Wi-Fi stops');
+    }
     final wakingFromBluetooth =
         _phase == GrSessionPhase.waking &&
         _wakeCall != null &&
         _wakeReturnTo == GrSessionPhase.bluetooth;
-    if (_phase != GrSessionPhase.bluetooth && !wakingFromBluetooth) {
+    if (_closing ||
+        (_phase != GrSessionPhase.bluetooth && !wakingFromBluetooth)) {
       throw StateError('GrSession.startWifi called in ${_phase.name}');
     }
-    _wifiStopped = false;
+    _wifiStop = Completer<void>();
     _poweringOff = false;
     final start = _wifiStart = _startWifi();
     return start.whenComplete(() {
@@ -436,8 +465,9 @@ final class GrSession {
       // A wake for BLE-only work ends first; its phase is not this start's.
       await _wakeCall;
       _checkWifiStopped(GrSessionPhase.bluetooth);
-      // A dropped link may be coming back.
-      await _bleReconnect;
+      // A dropped link may be coming back; a stop does not wait for it.
+      await _until(_wifiStop.future, _bleReconnect);
+      _checkWifiStopped(GrSessionPhase.bluetooth);
       if (_ble == null || _cameraOff) {
         await _oneWake(_wakeAndWlanOn);
       } else {
@@ -445,19 +475,23 @@ final class GrSession {
       }
 
       await _joinAndVerify();
+      await _startWifiServices(GrSessionPhase.verifying);
       _checkWifiStopped(GrSessionPhase.verifying);
-      await _startWifiServices();
       _set(GrSessionPhase.connected, 'connected', {
         'model': _props?.model,
         'serialNo': _props?.serialNo,
         'firmwareVersion': _props?.firmwareVersion,
       });
     } catch (e) {
-      if (_closing) rethrow;
+      // Nothing of the attempt stays, the phone's join included: the
+      // phase no longer shows that Wi-Fi was in use.
       await _stopWifiServices();
       _http?.close(force: true);
       _http = null;
-      _set(GrSessionPhase.bluetooth, 'wifi.failed', {'error': '$e'});
+      await _leaveWifi();
+      if (!_closing) {
+        _set(GrSessionPhase.bluetooth, 'wifi.failed', {'error': '$e'});
+      }
       rethrow;
     }
   }
@@ -472,10 +506,18 @@ final class GrSession {
   /// [GrSessionPhase.bluetooth]; does nothing before Wi-Fi was started.
   Future<void> stopWifi({bool powerOffIfWoken = false}) async {
     if (_closing || !_wifiInUse) return;
-    _wifiStopped = true;
+    _wifiStops++;
+    try {
+      await _stopWifi(powerOffIfWoken: powerOffIfWoken);
+    } finally {
+      _wifiStops--;
+    }
+  }
+
+  Future<void> _stopWifi({required bool powerOffIfWoken}) async {
+    _stopWifiWaits();
     _stopWake();
     _wakeSettle?.cancel();
-    _stopRecovery();
     // Releasing the join first cuts a platform join short.
     await _leaveWifi();
     final start = _wifiStart;
@@ -509,14 +551,16 @@ final class GrSession {
     _set(GrSessionPhase.bluetooth, 'wifi.stopped');
   }
 
-  /// Whether the camera's Wi-Fi is in use: a start or recovery is running,
-  /// or the session is past [GrSessionPhase.bluetooth] (seen through a
-  /// [wake] that set [GrSessionPhase.waking]).
+  /// Whether the camera's Wi-Fi is in use: the phone holds a join, a start
+  /// or recovery is running, or the session is past
+  /// [GrSessionPhase.bluetooth] (seen through a [wake] that set
+  /// [GrSessionPhase.waking]).
   bool get _wifiInUse {
     final phase = _phase == GrSessionPhase.waking
         ? _wakeReturnTo ?? _phase
         : _phase;
-    return _wifiStart != null ||
+    return _wifiJoined ||
+        _wifiStart != null ||
         _wifiRecovery != null ||
         phase.index > GrSessionPhase.bluetooth.index;
   }
@@ -556,7 +600,7 @@ final class GrSession {
       throw StateError('GrSession.wake called in ${_phase.name}');
     }
     // A wake already queued keeps a stop that came for it.
-    if (_wakeCall == null) _wakeStopped = false;
+    if (_wakeCall == null) _wakeStop = Completer<void>();
     final run = _oneWake(() => _wake(mode));
     final call = _wakeCall = run.then<void>((_) {}, onError: (_) {});
     unawaited(
@@ -572,15 +616,16 @@ final class GrSession {
       if (_closing) {
         throw const GrSessionException(GrSessionPhase.waking, 'closed');
       }
-      if (_wakeStopped) {
+      if (_wakeStop.isCompleted) {
         throw const GrSessionException(GrSessionPhase.waking, 'wake stopped');
       }
     }
 
     // The wake of a Wi-Fi start goes on watching the link while the camera
-    // boots, and may link again; then a dropped link may be coming back.
-    await _afterWake;
-    await _bleReconnect;
+    // boots, and may link again; then a dropped link may be coming back. A
+    // stop does not wait for either.
+    await _until(_wakeStop.future, _afterWake);
+    await _until(_wakeStop.future, _bleReconnect);
     check();
     final returnTo = _phase == GrSessionPhase.waking
         ? GrSessionPhase.bluetooth
@@ -606,12 +651,9 @@ final class GrSession {
     } finally {
       _wakeReturnTo = null;
       _relinking = false;
-      // A relink that failed leaves BLE to the usual reconnect.
-      if (!_closing && _ble == null) {
-        _bleReconnect ??= _reconnectBle().whenComplete(
-          () => _bleReconnect = null,
-        );
-      }
+      // A relink that failed, or a drop during the wake, leaves BLE to the
+      // usual reconnect.
+      _reconnectIfDown();
     }
   }
 
@@ -622,7 +664,7 @@ final class GrSession {
   /// false, with [cameraOff] set, when the read finds the camera off.
   /// [check] throws when the wake was cut short meanwhile.
   Future<bool> _ensureMode(BleOperationMode mode, void Function() check) async {
-    final client = _ble!;
+    final client = _link(GrSessionPhase.waking);
     if (client.isPresent(GrBleCatalog.operationMode) != true) return true;
     final read = await _step(
       GrSessionPhase.waking,
@@ -673,10 +715,10 @@ final class GrSession {
     await _powerOffWoken(ble);
   }
 
-  /// Cuts a running [wake] short; its drop watch ends at once.
+  /// Cuts a running [wake] short; its waits and drop watch end at once.
   void _stopWake() {
     if (_wakeCall == null) return;
-    _wakeStopped = true;
+    if (!_wakeStop.isCompleted) _wakeStop.complete();
     _wakeSettle?.cancel();
   }
 
@@ -710,12 +752,15 @@ final class GrSession {
     }
   }
 
-  void _stopRecovery() {
-    final stop = _recoveryStop;
-    if (stop != null && !stop.isCompleted) stop.complete();
+  /// Cuts the Wi-Fi start's or recovery's waits short.
+  void _stopWifiWaits() {
+    if (!_wifiStop.isCompleted) _wifiStop.complete();
   }
 
+  /// Releases the phone's join, when this session holds one.
   Future<void> _leaveWifi() async {
+    if (!_wifiJoined) return;
+    _wifiJoined = false;
     try {
       await wifi.leave();
     } on Object {
@@ -728,11 +773,13 @@ final class GrSession {
     if (_wifiStopped) throw GrSessionException(phase, 'Wi-Fi stopped');
   }
 
-  /// Stops supervision, closes the WebSocket, HTTP client and BLE link.
-  /// [wlanOff] writes WLAN-off over BLE first (GR WORLD's explicit release);
-  /// by default the camera's Wi-Fi is left as it is. [powerOff] turns the
-  /// camera off over BLE (Camera Power `00`, as GR WORLD's power-off flow)
-  /// after Wi-Fi supervision has stopped, so the loss is not reported.
+  /// Stops supervision, releases the phone's join, and closes the
+  /// WebSocket, HTTP client and BLE link; a scan or a setup step still in
+  /// flight ends without changing the phase. [wlanOff] writes WLAN-off
+  /// over BLE first (GR WORLD's explicit release); by default the camera's
+  /// Wi-Fi is left as it is. [powerOff] turns the camera off over BLE
+  /// (Camera Power `00`, as GR WORLD's power-off flow) after Wi-Fi
+  /// supervision has stopped, so the loss is not reported.
   /// [powerOffIfWoken] does so only when the session turned the camera on
   /// ([wokeCamera]); a wake still in flight ([wake], or a Wi-Fi start's or
   /// recovery's) is cut short and let finish first, so one whose write
@@ -744,13 +791,17 @@ final class GrSession {
   }) async {
     if (_phase == GrSessionPhase.closed) return;
     _closing = true;
+    if (!_closeSignal.isCompleted) _closeSignal.complete();
     _wakeSettle?.cancel();
-    _stopRecovery();
+    _stopWifiWaits();
+    _stopWake();
+    // Releasing the join first cuts a platform join short; the start,
+    // recovery and post-wake relink then end on [_closing], and release a
+    // join that completes meanwhile themselves. Leaving the camera's
+    // access point up is a separate choice ([wlanOff], [powerOff]).
+    await _leaveWifi();
     var turnOff = powerOff;
     if (powerOffIfWoken) {
-      // Releasing the join first cuts a platform join short; the start,
-      // recovery and post-wake relink then end on [_closing].
-      await _leaveWifi();
       try {
         await _wifiStart;
       } on Object {
@@ -802,7 +853,8 @@ final class GrSession {
   Future<GrAdvertisement> _find(GrSessionPhase phase) async {
     _set(phase, 'scan.start', {'serial': _serial, 'deviceId': _deviceId});
     final ad = await findGrAdvertisement(
-      transport,
+      // close() ends the scan; it fails with [_closed].
+      _ScanUntilClosed(transport, _closeSignal.future),
       timeout: options.scanTimeout,
       where: (a) =>
           a.isGrCamera &&
@@ -835,6 +887,8 @@ final class GrSession {
         _emit('ble.powerOffGuard', {'waitedMs': waited.inMilliseconds});
       }
     }
+    // close() may have ended a scan or a power-off guard just now.
+    if (_closing) throw _closed;
     if (initial) _set(GrSessionPhase.bleConnecting, 'ble.connect');
     for (var attempt = 1; ; attempt++) {
       try {
@@ -917,7 +971,9 @@ final class GrSession {
         }
       }, onError: (Object e) => _emit('ble.cameraPowerError', {'error': '$e'}));
     }
-    unawaited(connection.disconnected.then(_onBleDisconnected));
+    unawaited(
+      connection.disconnected.then((d) => _onBleDisconnected(client, d)),
+    );
   }
 
   static const _closed = GrSessionException(
@@ -944,7 +1000,7 @@ final class GrSession {
 
   /// Reads the Wi-Fi credentials (once per session) and writes WLAN-on.
   Future<void> _wlanOn() async {
-    final ble = _ble!;
+    final ble = _link(GrSessionPhase.wlanOn);
     final credentials =
         _credentials ??
         await _step<GrWifiCredentials>(
@@ -1021,7 +1077,11 @@ final class GrSession {
         },
       );
     } finally {
-      if (!watching) _relinking = false;
+      if (!watching) {
+        _relinking = false;
+        // A drop the wake did not link again goes to the usual reconnect.
+        _reconnectIfDown();
+      }
     }
   }
 
@@ -1053,7 +1113,7 @@ final class GrSession {
           'the camera did not turn on',
         );
       }
-      final client = _ble!;
+      final client = _link(GrSessionPhase.waking);
       _set(GrSessionPhase.waking, 'power.on', {'mode': mode.name});
       // The camera may drop the link while it boots; that drop belongs to
       // the wake, not to the BLE reconnect.
@@ -1100,7 +1160,7 @@ final class GrSession {
         await _connectBle(initial: false);
       }
       if (_wifiStopped || _phase != GrSessionPhase.joining) return;
-      final ble = _ble!;
+      final ble = _link(GrSessionPhase.joining);
       await _step(
         GrSessionPhase.joining,
         'WLAN-on write',
@@ -1113,56 +1173,81 @@ final class GrSession {
       if (identical(_wakeSettle, settle)) _wakeSettle = null;
       _relinking = false;
       // A relink that failed leaves BLE to the usual reconnect.
-      if (!_closing && _ble == null) {
-        _bleReconnect ??= _reconnectBle().whenComplete(
-          () => _bleReconnect = null,
-        );
-      }
+      _reconnectIfDown();
     }
   }
 
-  void _onBleDisconnected(BleDisconnect d) {
-    if (_closing || _relinking) return;
+  /// [client]'s link dropped. Only the current link counts: a late drop of
+  /// an older one must not clear a newer link. During a wake the link is
+  /// cleared too, but the wake links again, and hands the loss to the
+  /// usual reconnect when it fails.
+  void _onBleDisconnected(GrBleClient client, BleDisconnect d) {
+    if (_closing || !identical(_ble, client)) return;
     _ble = null;
-    _emit('ble.lost', {
+    final fields = {
       'requested': d.requested,
       'reason': d.reason,
       if (d.bondRejected) 'bondRejected': true,
-      if (_poweringOff) 'afterPowerOff': true,
-    });
+    };
+    if (_relinking) {
+      _emit('ble.lostWhileWaking', fields);
+      return;
+    }
+    _emit('ble.lost', {...fields, if (_poweringOff) 'afterPowerOff': true});
     _poweringOff = false;
     if (d.bondRejected) {
       _emit('ble.needsPairing');
       return;
     }
-    _bleReconnect ??= _reconnectBle().whenComplete(() => _bleReconnect = null);
+    _reconnectIfDown();
   }
 
+  /// Starts the BLE reconnect when the link is down and nothing else is
+  /// linking again. A link that drops as soon as the reconnect restored
+  /// it, before that reconnect ended, starts another.
+  void _reconnectIfDown() {
+    if (_closing || _relinking || _ble != null || _bleReconnect != null) {
+      return;
+    }
+    _bleReconnect = _reconnectBle().then((restored) {
+      _bleReconnect = null;
+      if (restored) _reconnectIfDown();
+    });
+  }
+
+  /// The current link, for a step in [phase] that needs one.
+  GrBleClient _link(GrSessionPhase phase) =>
+      _ble ?? (throw GrSessionException(phase, 'the Bluetooth link dropped'));
+
   /// Reconnects BLE only; Wi-Fi state is untouched (no WLAN writes). Stops
-  /// for good when the bond is gone.
-  Future<void> _reconnectBle() async {
+  /// for good when the bond is gone. Returns whether the link is back.
+  Future<bool> _reconnectBle() async {
     for (
       var attempt = 0;
       attempt < options.maxBleReconnectAttempts;
       attempt++
     ) {
-      await Future<void>.delayed(_delay(options.bleReconnectDelays, attempt));
-      if (_closing) return;
+      await _until(
+        _closeSignal.future,
+        Future<void>.delayed(_delay(options.bleReconnectDelays, attempt)),
+      );
+      if (_closing) return false;
       _emit('ble.reconnect', {'attempt': attempt + 1});
       try {
         await _connectBle(initial: false);
         _emit('ble.restored', {'attempt': attempt + 1});
-        return;
+        return true;
       } on Object catch (e) {
         _emit('ble.reconnectFailed', {'attempt': attempt + 1, 'error': '$e'});
         if (e is! GrSessionException) continue;
         if (e.needsPairing) {
           _emit('ble.needsPairing');
-          return;
+          return false;
         }
       }
     }
     _emit('ble.gaveUp', {'attempts': options.maxBleReconnectAttempts});
+    return false;
   }
 
   // ---------------------------------------------------------------- Wi-Fi
@@ -1193,12 +1278,21 @@ final class GrSession {
       attempt++;
       final left = deadline.difference(DateTime.now());
       try {
+        // Held from the request on: a pending join is released as well.
+        _wifiJoined = true;
         await wifi.join(
           ssid: c.ssid,
           passphrase: c.passphrase,
           security: security,
           timeout: left,
         );
+        // A stop or close released the join while it was pending; it went
+        // through all the same, so it is released again here.
+        _wifiJoined = true;
+        if (_closing || _wifiStopped) {
+          await _leaveWifi();
+          _checkWifiStopped(GrSessionPhase.joining);
+        }
         break;
       } on WifiJoinDeclined catch (e) {
         _emit('wifi.declined');
@@ -1221,6 +1315,8 @@ final class GrSession {
   }
 
   Future<void> _verify() async {
+    // close() may have let go of the HTTP client; none is made after it.
+    _checkWifiStopped(GrSessionPhase.verifying);
     if (_phase != GrSessionPhase.recovering) {
       _set(GrSessionPhase.verifying, 'verify.start');
     }
@@ -1273,7 +1369,13 @@ final class GrSession {
     }
   }
 
-  Future<void> _startWifiServices() async {
+  /// Opens the change WebSocket and starts liveness polling, for a start or
+  /// recovery in [phase]. Throws when [stopWifi] or [close] came meanwhile,
+  /// leaving nothing running. A socket whose first open fails is retried by
+  /// its reconnect policy while HTTP polling runs; Wi-Fi is not rejoined
+  /// for it (connection-imagesync.md §2.2).
+  Future<void> _startWifiServices(GrSessionPhase phase) async {
+    _checkWifiStopped(phase);
     final http = _http!;
     final changes = _changes ??= http.changesSocket();
     try {
@@ -1281,7 +1383,17 @@ final class GrSession {
       _emit('changes.open');
     } on Object catch (e) {
       // The WebSocket is an extra signal; liveness polling still runs.
-      _emit('changes.failed', {'error': '$e'});
+      _emit('changes.failed', {
+        'error': '$e',
+        'state': changes.status.state.name,
+      });
+    }
+    if (_closing || _wifiStopped) {
+      // The stop may have closed the services already; these are not
+      // started and the socket is closed.
+      if (identical(_changes, changes)) _changes = null;
+      await changes.close();
+      _checkWifiStopped(phase);
     }
     final monitor = LivenessMonitor(
       http,
@@ -1341,7 +1453,7 @@ final class GrSession {
   /// rejoins. Ends in [GrSessionPhase.connected] or [GrSessionPhase.lost];
   /// `recovery.gaveUp` carries `noBle` when Bluetooth did not come back.
   Future<void> _recoverWifi() async {
-    final stop = _recoveryStop = Completer<void>();
+    final stop = _wifiStop.future;
     final bleDeadline = DateTime.now().add(options.bleLostAfter);
     _set(GrSessionPhase.recovering, 'recovery.start', {
       if (_cameraOff) 'cameraOff': true,
@@ -1394,7 +1506,7 @@ final class GrSession {
           }
           await _joinAndVerify();
         }
-        await _startWifiServices();
+        await _startWifiServices(GrSessionPhase.recovering);
         _set(GrSessionPhase.connected, 'recovery.done', {
           'attempt': attempt + 1,
         });
@@ -1415,16 +1527,20 @@ final class GrSession {
     });
   }
 
-  /// Waits for [future], [stop] or [timeout], whichever comes first.
+  /// Waits for [future], [stop] or [timeout], whichever comes first; a
+  /// null [future] is no wait.
   static Future<void> _until(
-    Completer<void> stop,
-    Future<Object?> future, [
+    Future<void> stop,
+    Future<Object?>? future, [
     Duration? timeout,
-  ]) => Future.any<void>([
-    future.then<void>((_) {}, onError: (_) {}),
-    stop.future,
-    if (timeout != null) Future<void>.delayed(timeout),
-  ]);
+  ]) async {
+    if (future == null) return;
+    await Future.any<void>([
+      future.then<void>((_) {}, onError: (_) {}),
+      stop,
+      if (timeout != null) Future<void>.delayed(timeout),
+    ]);
+  }
 
   /// Network reachability check before tearing down and rejoining: one
   /// identity probe, no retries.
@@ -1474,6 +1590,8 @@ final class GrSession {
     String kind, [
     Map<String, Object?> fields = const {},
   ]) {
+    // Closed is final: a step that ends after close() changes nothing.
+    if (_phase == GrSessionPhase.closed) return;
     _phase = phase;
     _emit(kind, fields);
   }
@@ -1520,4 +1638,44 @@ final class _WakeSettle {
     _timer.cancel();
     if (!_ended.isCompleted) _ended.complete(dropped);
   }
+}
+
+/// [BleTransport] whose scans fail with the session's closed error once
+/// [_stop] completes, so [GrSession.close] ends a scan the session started
+/// rather than leaving it to find the camera or time out.
+final class _ScanUntilClosed implements BleTransport {
+  new(this._inner, this._stop);
+
+  final BleTransport _inner;
+  final Future<void> _stop;
+
+  @override
+  Future<BleAdapterState> adapterState() => _inner.adapterState();
+
+  @override
+  Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) {
+    StreamSubscription<BleAdvertisement>? scan;
+    late final StreamController<BleAdvertisement> out;
+    out = StreamController<BleAdvertisement>(
+      onListen: () {
+        scan = _inner
+            .scan(serviceUuids: serviceUuids)
+            .listen(out.add, onError: out.addError, onDone: out.close);
+        unawaited(
+          _stop.then((_) {
+            if (!out.isClosed) out.addError(GrSession._closed);
+          }),
+        );
+      },
+      onCancel: () => scan?.cancel(),
+    );
+    return out.stream;
+  }
+
+  @override
+  Future<BleConnection> connect(String deviceId, {required Duration timeout}) =>
+      _inner.connect(deviceId, timeout: timeout);
+
+  @override
+  Future<void> close() => _inner.close();
 }

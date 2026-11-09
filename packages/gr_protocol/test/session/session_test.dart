@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:gr_protocol/gr_protocol.dart';
@@ -33,6 +34,12 @@ final class BondedCamera implements BleTransport {
 
   /// While set, an Operation Mode write waits for it before it lands.
   Completer<void>? holdModeWrite;
+
+  /// While set, a WLAN write waits for it before it lands.
+  Completer<void>? holdWlanWrite;
+
+  /// What a scan delivers; no advertisements when null.
+  StreamController<BleAdvertisement>? advertising;
   final _links = <_Link>[];
 
   /// Links that have not dropped or been disconnected.
@@ -53,7 +60,7 @@ final class BondedCamera implements BleTransport {
   @override
   Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) {
     scans++;
-    return const Stream.empty();
+    return advertising?.stream ?? const Stream.empty();
   }
 
   @override
@@ -160,15 +167,25 @@ final class _Link implements BleConnection {
     bool withResponse = true,
     Duration? timeout,
   }) async {
-    if (canonicalUuid(characteristicUuid) == GrBleCatalog.operationMode.uuid) {
+    final uuid = canonicalUuid(characteristicUuid);
+    if (uuid == GrBleCatalog.operationMode.uuid) {
       await camera.holdModeWrite?.future;
+    }
+    if (uuid == GrBleCatalog.networkType.uuid) {
+      await camera.holdWlanWrite?.future;
+    }
+    // A write in flight when the link drops fails with it.
+    if (_drop.isCompleted) {
+      throw const BleException(BleErrorCode.notConnected, 'link dropped');
+    }
+    if (uuid == GrBleCatalog.operationMode.uuid) {
       camera.ops.add('write mode ${value.single}');
       camera.operationMode = value.single;
     }
-    if (canonicalUuid(characteristicUuid) == GrBleCatalog.networkType.uuid) {
+    if (uuid == GrBleCatalog.networkType.uuid) {
       camera.ops.add('write wlan ${value.single}');
     }
-    if (canonicalUuid(characteristicUuid) == GrBleCatalog.cameraPower.uuid) {
+    if (uuid == GrBleCatalog.cameraPower.uuid) {
       camera.ops.add('write power ${value.single}');
     }
   }
@@ -260,6 +277,162 @@ final class SearchingWifi implements WifiNetworkControl {
   @override
   Stream<void> get lost => const Stream.empty();
 }
+
+/// Joins the camera network at once, or when [holdJoin] completes. [leave]
+/// cuts a held join short, as the platforms do, unless [leaveMissesJoin]
+/// (a join that completes although it was released). Records joins and
+/// leaves; [loseNetwork] reports the network gone.
+final class JoiningWifi implements WifiNetworkControl {
+  int joins = 0;
+  int leaves = 0;
+  bool joined = false;
+  Completer<void>? holdJoin;
+  bool leaveMissesJoin = false;
+
+  /// Completes when the first join starts.
+  final joinStarted = Completer<void>();
+  Completer<void> _left = Completer<void>();
+  final _lost = StreamController<void>.broadcast();
+
+  void loseNetwork() => _lost.add(null);
+
+  @override
+  Future<void> join({
+    required String ssid,
+    required String passphrase,
+    required WifiSecurity security,
+    required Duration timeout,
+    bool approved = false,
+  }) async {
+    joins++;
+    if (!joinStarted.isCompleted) joinStarted.complete();
+    _left = Completer<void>();
+    final hold = holdJoin;
+    if (hold != null) {
+      await Future.any([hold.future, if (!leaveMissesJoin) _left.future]);
+      if (_left.isCompleted && !leaveMissesJoin) {
+        throw StateError('join cancelled');
+      }
+    }
+    joined = true;
+  }
+
+  @override
+  Future<String?> currentSsid() async => null;
+
+  @override
+  Future<void> leave() async {
+    leaves++;
+    joined = false;
+    if (!_left.isCompleted) _left.complete();
+  }
+
+  @override
+  Stream<void> get lost => _lost.stream;
+}
+
+/// `/v1/props` of the camera [BondedCamera] links to.
+const Map<String, Object?> cameraProps = {
+  'errCode': 200,
+  'errMsg': 'OK',
+  'model': 'RICOH GR IV HDF',
+  'serialNo': '1234567',
+  'ssid': 'GR_H0053A8',
+  'firmwareVersion': '1.20',
+};
+
+/// The camera's HTTP side on a loopback port: `/v1/props` answers [props]
+/// (HTTP 503 while null), and `/v1/changes` upgrades wait for
+/// [holdUpgrade] and are refused (HTTP 503) while [refuseUpgrades] > 0.
+final class CameraServer {
+  new(this._server) {
+    _server.listen(_handle);
+  }
+
+  static Future<CameraServer> start() async {
+    final server = CameraServer(
+      await HttpServer.bind(InternetAddress.loopbackIPv4, 0),
+    );
+    addTearDown(server.close);
+    return server;
+  }
+
+  final HttpServer _server;
+  Map<String, Object?>? props = cameraProps;
+  int propsRequests = 0;
+  int upgradeRequests = 0;
+  int refuseUpgrades = 0;
+  Completer<void>? holdUpgrade;
+  final sockets = <WebSocket>[];
+  final _upgradeRequested = StreamController<void>.broadcast();
+
+  /// One event per `/v1/changes` upgrade request, before it is held.
+  Stream<void> get upgradeRequested => _upgradeRequested.stream;
+
+  /// The session's HTTP client factory, pointed at this server.
+  GrHttpClient client(String host, TraceSink? trace) =>
+      GrHttpClient('127.0.0.1', port: _server.port, trace: trace);
+
+  Future<void> _handle(HttpRequest request) async {
+    final response = request.response;
+    switch (request.uri.path) {
+      case '/v1/props':
+        propsRequests++;
+        final body = props;
+        if (body == null) {
+          response.statusCode = HttpStatus.serviceUnavailable;
+        } else {
+          response
+            ..headers.contentType = ContentType.json
+            ..write(jsonEncode(body));
+        }
+      case '/v1/changes' when WebSocketTransformer.isUpgradeRequest(request):
+        upgradeRequests++;
+        _upgradeRequested.add(null);
+        await holdUpgrade?.future;
+        if (refuseUpgrades == 0) {
+          final ws = await WebSocketTransformer.upgrade(request);
+          sockets.add(ws);
+          ws.listen((_) {});
+          return;
+        }
+        refuseUpgrades--;
+        response.statusCode = HttpStatus.serviceUnavailable;
+      default:
+        response.statusCode = HttpStatus.notFound;
+    }
+    await response.close();
+  }
+
+  Future<void> close() async {
+    for (final ws in sockets) {
+      await ws.close();
+    }
+    await _server.close(force: true);
+  }
+}
+
+/// A session over [camera], [wifi] and [server] with quick retries.
+GrSession wifiSession(
+  BondedCamera camera,
+  JoiningWifi wifi,
+  CameraServer server, {
+  Duration verifyTimeout = const Duration(seconds: 5),
+  TraceSink? trace,
+}) => GrSession(
+  transport: camera,
+  wifi: wifi,
+  httpFactory: server.client,
+  trace: trace,
+  options: GrSessionOptions(
+    joinTimeout: const Duration(seconds: 5),
+    joinRetryDelay: const Duration(milliseconds: 1),
+    wakeSettle: const Duration(milliseconds: 20),
+    verifyTimeout: verifyTimeout,
+    wifiRecoveryDelays: const [Duration.zero],
+    bleReconnectDelays: const [Duration.zero],
+  ),
+);
 
 GrSession session(BondedCamera camera) => GrSession(
   transport: camera,
@@ -363,8 +536,6 @@ void main() {
         transport: camera,
         wifi: SearchingWifi(),
         options: const GrSessionOptions(
-          // close() does not release the platform join, so the first test
-          // ends when this runs out.
           joinTimeout: Duration(seconds: 2),
           joinRetryDelay: Duration(milliseconds: 1),
           wakeSettle: Duration(seconds: 20),
@@ -932,5 +1103,420 @@ void main() {
       await started;
       await s.close();
     });
+  });
+
+  Future<GrSessionEvent> next(GrSession s, String kind) =>
+      s.events.firstWhere((e) => e.kind == kind);
+
+  group("the phone's Wi-Fi join", () {
+    for (final (problem, props, verifyTimeout) in [
+      (
+        'meets a different camera',
+        {...cameraProps, 'serialNo': '9999999'},
+        const Duration(seconds: 5),
+      ),
+      ('gets no answer from the camera', null, Duration.zero),
+    ]) {
+      test('a start that joins but $problem releases the join, and a later '
+          'start connects', () async {
+        final camera = BondedCamera();
+        final wifi = JoiningWifi();
+        final server = await CameraServer.start()
+          ..props = props;
+        final s = wifiSession(
+          camera,
+          wifi,
+          server,
+          verifyTimeout: verifyTimeout,
+        );
+        await s.connectBluetooth(deviceId: 'cam');
+        await expectLater(
+          s.startWifi(),
+          throwsA(
+            isA<GrSessionException>().having(
+              (e) => e.phase,
+              'phase',
+              GrSessionPhase.verifying,
+            ),
+          ),
+        );
+        expect(wifi.joins, 1);
+        expect(wifi.joined, isFalse);
+        expect(s.phase, GrSessionPhase.bluetooth);
+        expect(s.http, isNull);
+        expect(s.changes, isNull);
+        expect(s.liveness, isNull);
+
+        server.props = cameraProps;
+        await s.startWifi();
+        expect(s.phase, GrSessionPhase.connected);
+        expect(wifi.joins, 2);
+        expect(wifi.joined, isTrue);
+        await s.close();
+      });
+    }
+
+    test('close with default arguments releases the join of a connected '
+        'session', () async {
+      final camera = BondedCamera();
+      final wifi = JoiningWifi();
+      final s = wifiSession(camera, wifi, await CameraServer.start());
+      await s.connect(deviceId: 'cam');
+      expect(wifi.joined, isTrue);
+      await s.close();
+      expect(wifi.leaves, 1);
+      expect(wifi.joined, isFalse);
+      expect(camera.ops.where((o) => o == 'write wlan 0'), isEmpty);
+    });
+
+    test('close with default arguments releases a pending join, and again '
+        'when that join completes all the same', () async {
+      final camera = BondedCamera();
+      final wifi = JoiningWifi()
+        ..holdJoin = Completer<void>()
+        ..leaveMissesJoin = true;
+      final s = wifiSession(camera, wifi, await CameraServer.start());
+      await s.connectBluetooth(deviceId: 'cam');
+      final started = expectLater(
+        s.startWifi(),
+        throwsA(isA<GrSessionException>()),
+      );
+      await wifi.joinStarted.future;
+      await s.close();
+      expect(wifi.leaves, 1);
+
+      wifi.holdJoin!.complete();
+      await started;
+      expect(wifi.joined, isFalse);
+      expect(wifi.leaves, 2);
+      expect(s.phase, GrSessionPhase.closed);
+    });
+  });
+
+  group('a Bluetooth drop', () {
+    GrSession dropSession(BondedCamera camera, {TraceSink? trace}) => GrSession(
+      transport: camera,
+      wifi: FailingWifi(),
+      trace: trace,
+      options: const GrSessionOptions(
+        joinTimeout: Duration(milliseconds: 10),
+        joinRetryDelay: Duration(milliseconds: 1),
+        wakeSettle: Duration(seconds: 20),
+        bleReconnectDelays: [Duration.zero],
+      ),
+    );
+
+    for (final viaStart in [false, true]) {
+      test('while the wake write of ${viaStart ? 'a Wi-Fi start' : 'wake'} '
+          'is in flight, which then fails, leaves no dead link', () async {
+        final camera = BondedCamera(operationMode: 2)
+          ..holdModeWrite = Completer<void>();
+        final s = dropSession(camera);
+        await s.connectBluetooth(deviceId: 'cam');
+        final old = s.ble;
+        final poweringOn = next(s, 'power.on');
+        final restored = next(s, 'ble.restored');
+        final woke = expectLater(
+          viaStart ? s.startWifi() : s.wake(BleOperationMode.capture),
+          throwsA(isA<GrSessionException>()),
+        );
+        await poweringOn;
+        camera
+          ..dropAll()
+          ..holdModeWrite!.complete();
+        await woke;
+        expect(s.ble, isNot(same(old)));
+        await restored;
+        expect(s.ble, allOf(isNotNull, isNot(same(old))));
+        expect(camera.openLinks, 1);
+        expect(s.phase, GrSessionPhase.bluetooth);
+        await s.close();
+      }, timeout: const Timeout(Duration(seconds: 10)));
+    }
+
+    test(
+      'of a link the reconnect just restored is reconnected again',
+      () async {
+        final camera = BondedCamera();
+        var restores = 0;
+        final s = dropSession(
+          camera,
+          trace: (e) {
+            // The restored link drops the moment the reconnect reports it,
+            // before that reconnect has ended.
+            if (e.kind == 'session.ble.restored' && ++restores == 1) {
+              camera.dropAll();
+            }
+          },
+        );
+        await s.connectBluetooth(deviceId: 'cam');
+        final restored = s.events
+            .where((e) => e.kind == 'ble.restored')
+            .take(2)
+            .toList();
+        camera.dropAll();
+        await restored;
+        expect(restores, 2);
+        expect(s.ble, isNotNull);
+        expect(camera.openLinks, 1);
+        await s.close();
+      },
+      timeout: const Timeout(Duration(seconds: 10)),
+    );
+  });
+
+  group('close is final', () {
+    test('a change socket handshake still running at close starts nothing '
+        'and changes no phase', () async {
+      final wifi = JoiningWifi();
+      final server = await CameraServer.start()
+        ..holdUpgrade = Completer<void>();
+      final s = wifiSession(BondedCamera(), wifi, server);
+      await s.connectBluetooth(deviceId: 'cam');
+      final upgrading = server.upgradeRequested.first;
+      final started = expectLater(
+        s.startWifi(),
+        throwsA(isA<GrSessionException>()),
+      );
+      await upgrading;
+      await s.close();
+      final probes = server.propsRequests;
+
+      server.holdUpgrade!.complete();
+      await started;
+      await pumpEventQueue();
+      expect(s.phase, GrSessionPhase.closed);
+      expect(s.liveness, isNull);
+      expect(s.changes, isNull);
+      expect(s.http, isNull);
+      expect(wifi.joined, isFalse);
+      expect(server.propsRequests, probes);
+    });
+
+    test('a recovery whose change socket handshake is still running at '
+        'close starts nothing', () async {
+      final wifi = JoiningWifi();
+      final server = await CameraServer.start();
+      final opens = StreamController<String>.broadcast();
+      final s = wifiSession(
+        BondedCamera(),
+        wifi,
+        server,
+        trace: (e) {
+          if (e.kind case 'session.changes.open' || 'session.changes.failed') {
+            opens.add(e.kind);
+          }
+        },
+      );
+      await s.connect(deviceId: 'cam');
+      server.holdUpgrade = Completer<void>();
+      final upgrading = server.upgradeRequested.first;
+      final recoveryOpen = opens.stream.first;
+      wifi.loseNetwork();
+      await upgrading;
+      await s.close();
+
+      server.holdUpgrade!.complete();
+      await recoveryOpen;
+      await pumpEventQueue();
+      expect(s.phase, GrSessionPhase.closed);
+      expect(s.liveness, isNull);
+      expect(s.changes, isNull);
+      expect(wifi.joined, isFalse);
+    });
+
+    test('close ends a scan at once; an advertisement after it changes '
+        'nothing', () async {
+      final ads = StreamController<BleAdvertisement>();
+      final camera = BondedCamera()..advertising = ads;
+      final s = session(camera);
+      final connecting = expectLater(
+        s.connectBluetooth(serial: '1234567'),
+        throwsA(isA<GrSessionException>()),
+      );
+      expect(ads.hasListener, isTrue);
+      await s.close();
+      await pumpEventQueue();
+      expect(ads.hasListener, isFalse);
+      await connecting;
+
+      ads.add(
+        BleAdvertisement(
+          deviceId: 'cam',
+          rssi: -58,
+          manufacturerData: {
+            grRicohCompanyId: Uint8List.fromList([
+              grAdvertisingMarker,
+              0x01,
+              GrModel.gr4Hdf.code,
+              0x02,
+              for (var shift = 0; shift < 32; shift += 8)
+                (1234567 >> shift) & 0xFF,
+            ]),
+          },
+        ),
+      );
+      await pumpEventQueue();
+      expect(s.phase, GrSessionPhase.closed);
+      expect(camera.ops, isEmpty);
+    });
+  });
+
+  group('one Wi-Fi start at a time', () {
+    test('two starts at once share one hand-off', () async {
+      final camera = BondedCamera();
+      final wifi = JoiningWifi();
+      final server = await CameraServer.start();
+      final s = wifiSession(camera, wifi, server);
+      await s.connectBluetooth(deviceId: 'cam');
+      await Future.wait([s.startWifi(), s.startWifi()]);
+      expect(s.phase, GrSessionPhase.connected);
+      expect(wifi.joins, 1);
+      expect(server.upgradeRequests, 1);
+      expect(camera.ops.where((o) => o == 'write wlan 1'), hasLength(1));
+      await s.close();
+    });
+
+    test('two starts while a wake runs share one hand-off', () async {
+      final camera = BondedCamera(operationMode: 2)
+        ..holdModeWrite = Completer<void>();
+      final wifi = JoiningWifi();
+      final server = await CameraServer.start();
+      final s = wifiSession(camera, wifi, server);
+      await s.connectBluetooth(deviceId: 'cam');
+      final poweringOn = next(s, 'power.on');
+      final woke = s.wake(BleOperationMode.capture);
+      await poweringOn;
+      final starts = Future.wait([s.startWifi(), s.startWifi()]);
+      camera.holdModeWrite!.complete();
+      await woke;
+      await starts;
+      expect(s.phase, GrSessionPhase.connected);
+      expect(wifi.joins, 1);
+      expect(server.upgradeRequests, 1);
+      expect(camera.ops.where((o) => o.startsWith('write mode')), [
+        'write mode 0',
+      ]);
+      expect(camera.ops.where((o) => o == 'write wlan 1'), hasLength(1));
+      await s.close();
+    });
+
+    test('a start while stopWifi is still ending Wi-Fi is refused; one '
+        'after it connects', () async {
+      final camera = BondedCamera();
+      final wifi = JoiningWifi()..holdJoin = Completer<void>();
+      final s = wifiSession(camera, wifi, await CameraServer.start());
+      await s.connectBluetooth(deviceId: 'cam');
+      final started = expectLater(
+        s.startWifi(),
+        throwsA(isA<GrSessionException>()),
+      );
+      await wifi.joinStarted.future;
+      camera.holdWlanWrite = Completer<void>();
+      final stopped = s.stopWifi();
+      await started;
+      // The stop is at its WLAN-off write, after the start ended.
+      await pumpEventQueue();
+      expect(s.phase, GrSessionPhase.bluetooth);
+      expect(s.startWifi, throwsStateError);
+
+      camera.holdWlanWrite!.complete();
+      await stopped;
+      expect(camera.ops.last, 'write wlan 0');
+      wifi.holdJoin = null;
+      await s.startWifi();
+      expect(s.phase, GrSessionPhase.connected);
+      await s.close();
+    });
+  });
+
+  group('cancelling while Bluetooth reconnects', () {
+    /// A linked camera whose link dropped; the reconnect's connect waits
+    /// for [BondedCamera.holdConnect].
+    Future<(BondedCamera, GrSession)> reconnecting() async {
+      final camera = BondedCamera();
+      final s = GrSession(
+        transport: camera,
+        wifi: FailingWifi(),
+        options: const GrSessionOptions(
+          joinTimeout: Duration(milliseconds: 10),
+          joinRetryDelay: Duration(milliseconds: 1),
+          bleReconnectDelays: [Duration.zero],
+        ),
+      );
+      await s.connectBluetooth(deviceId: 'cam');
+      final reconnect = next(s, 'ble.reconnect');
+      camera
+        ..holdConnect = Completer<void>()
+        ..dropAll();
+      await reconnect;
+      return (camera, s);
+    }
+
+    test('stopWifi ends a start waiting for it at once; the reconnect goes '
+        'on, and nothing is written', () async {
+      final (camera, s) = await reconnecting();
+      final started = expectLater(
+        s.startWifi(),
+        throwsA(isA<GrSessionException>()),
+      );
+      // The start is waiting for the reconnect.
+      await pumpEventQueue();
+      await s.stopWifi();
+      await started;
+      expect(s.phase, GrSessionPhase.bluetooth);
+
+      final restored = next(s, 'ble.restored');
+      camera.holdConnect!.complete();
+      await restored;
+      await pumpEventQueue();
+      expect(s.ble, isNotNull);
+      expect(camera.ops.where((o) => o.startsWith('write')), isEmpty);
+      await s.close();
+    }, timeout: const Timeout(Duration(seconds: 10)));
+
+    test('powerOffIfWoken ends a wake waiting for it at once; the reconnect '
+        'goes on, and no mode is written', () async {
+      final (camera, s) = await reconnecting();
+      final woke = expectLater(
+        s.wake(BleOperationMode.capture),
+        throwsA(isA<GrSessionException>()),
+      );
+      await s.powerOffIfWoken();
+      await woke;
+
+      final restored = next(s, 'ble.restored');
+      camera.holdConnect!.complete();
+      await restored;
+      await pumpEventQueue();
+      expect(s.ble, isNotNull);
+      expect(camera.ops.where((o) => o.startsWith('write')), isEmpty);
+      await s.close();
+    }, timeout: const Timeout(Duration(seconds: 10)));
+  });
+
+  test('a refused first change socket open is retried while HTTP polling '
+      'runs, without rejoining Wi-Fi', () async {
+    final camera = BondedCamera();
+    final wifi = JoiningWifi();
+    final server = await CameraServer.start()
+      ..refuseUpgrades = 1;
+    final s = wifiSession(camera, wifi, server);
+    await s.connect(deviceId: 'cam');
+    final changes = s.changes!;
+    expect(changes.status.state, GrSocketState.reconnectWaiting);
+
+    await changes.statuses
+        .firstWhere((status) => status.state == GrSocketState.open)
+        .timeout(const Duration(seconds: 5));
+    final event = changes.events.first;
+    server.sockets.single.add('{"changed":"battery"}');
+    expect((await event).changed, 'battery');
+    expect(server.upgradeRequests, 2);
+    expect(s.phase, GrSessionPhase.connected);
+    expect(wifi.joins, 1);
+    expect(wifi.leaves, 0);
+    expect(camera.ops.where((o) => o == 'write wlan 0'), isEmpty);
+    await s.close();
   });
 }
