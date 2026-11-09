@@ -11,7 +11,7 @@ The work is split into workstreams so that no two agents edit the same source fi
 | ID | Area | Owns | Status |
 |---|---|---|---|
 | W1 | Protocol session and change socket | `packages/gr_protocol/lib/src/session/`, `packages/gr_protocol/lib/src/http/changes.dart` | `[~]` |
-| W2 | HTTP client and camera Library caches | `packages/gr_protocol/lib/src/http/client.dart`, `packages/gr_camera/lib/src/library/` | `[~]` |
+| W2 | HTTP client and camera Library caches | `packages/gr_protocol/lib/src/http/client.dart`, `packages/gr_camera/lib/src/library/` | `[x]` |
 | W3 | Camera layer pairing, Bluetooth adapter, native Wi-Fi, app pairing screens | `packages/gr_camera/lib/src/{session,pairing}.dart`, `packages/gr_camera/lib/src/platform/`, `packages/gr_camera/lib/src/shoot/remote.dart`, `packages/gr_camera/android/`, `packages/gr_camera/ios/`, `app/lib/src/pairing/` | `[~]` |
 | W4 | App data, downloads and debug log | `app/lib/src/data/`, `app/lib/src/downloads/`, `app/lib/src/library/library_scope.dart`, `app/lib/src/debug/`, `app/lib/src/app_scope.dart` | `[x]` |
 | W5 | App connection controller and Cameras screen | `app/lib/src/connection/`, `app/lib/src/cameras/` | `[~]` |
@@ -35,8 +35,9 @@ Test files follow their source files. `gr_fake_camera` is shared: changes to it 
 
 ### W2: HTTP client and camera Library request limits
 
-- [ ] **C9. Stalled responses outlive their timeouts.** After a timeout the body read keeps going, and an error response to a download has no timeout at all. `client.dart` `_exchange`, `_readBody`, download non-200 path.
-- [ ] **C10. The Library's three-request limit stops holding when the camera stalls.** A request past its deadline frees its slot but keeps its connection open. `request_queue.dart`, `camera_images.dart` `_fetch`, `movie_cache.dart`.
+- [x] (e5053c7) **C9. Stalled responses outlive their timeouts.** After a timeout the body read keeps going, and an error response to a download has no timeout at all. `client.dart` `_exchange`, `_readBody`, download non-200 path.
+- [x] (2d84032) **C10. The Library's three-request limit stops holding when the camera stalls.** A request past its deadline frees its slot but keeps its connection open. `request_queue.dart`, `camera_images.dart` `_fetch`, `movie_cache.dart`.
+- [ ] **C28. Download pause and cancel, and Library info requests, still can't close a stalled request early.** C10 added an `abort` option, but `downloadFiles` and `fileInfo` don't take it yet, so these wait for the next chunk or their own HTTP timeout. `camera_library.dart`, `download_engine.dart`, `library_model.dart`.
 
 ### W3: camera layer pairing, Bluetooth adapter, native Wi-Fi
 
@@ -77,8 +78,8 @@ Test files follow their source files. `gr_fake_camera` is shared: changes to it 
 
 ### W2: camera Library caches
 
-- [ ] **D6. Two files with the same name on different storage or folders download to the same place**, and the second returns the first's bytes. `camera_library.dart` `downloadFiles`.
-- [ ] **D7. The preview and movie cache on disk has no size limit.** `camera_images.dart`, `movie_cache.dart`.
+- [x] (afc3924) **D6. Two files with the same name on different storage or folders download to the same place**, and the second returns the first's bytes. `camera_library.dart` `downloadFiles`.
+- [x] (7d37dc0) **D7. The preview and movie cache on disk has no size limit.** `camera_images.dart`, `movie_cache.dart`.
 
 ### W7: reused file names (after W2 and W4)
 
