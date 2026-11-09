@@ -13,7 +13,7 @@ The work is split into workstreams so that no two agents edit the same source fi
 | W1 | Protocol session and change socket | `packages/gr_protocol/lib/src/session/`, `packages/gr_protocol/lib/src/http/changes.dart` | `[~]` |
 | W2 | HTTP client and camera Library caches | `packages/gr_protocol/lib/src/http/client.dart`, `packages/gr_camera/lib/src/library/` | `[~]` |
 | W3 | Camera layer pairing, Bluetooth adapter, native Wi-Fi, app pairing screens | `packages/gr_camera/lib/src/{session,pairing}.dart`, `packages/gr_camera/lib/src/platform/`, `packages/gr_camera/lib/src/shoot/remote.dart`, `packages/gr_camera/android/`, `packages/gr_camera/ios/`, `app/lib/src/pairing/` | `[~]` |
-| W4 | App data, downloads and debug log | `app/lib/src/data/`, `app/lib/src/downloads/`, `app/lib/src/library/library_scope.dart`, `app/lib/src/debug/`, `app/lib/src/app_scope.dart` | `[~]` |
+| W4 | App data, downloads and debug log | `app/lib/src/data/`, `app/lib/src/downloads/`, `app/lib/src/library/library_scope.dart`, `app/lib/src/debug/`, `app/lib/src/app_scope.dart` | `[x]` |
 | W5 | App connection controller and Cameras screen | `app/lib/src/connection/`, `app/lib/src/cameras/` | `[~]` |
 | W6 | Protocol Bluetooth pairing and Wi-Fi credentials | `packages/gr_protocol/lib/src/ble/` | `[x]` |
 | W7 | Reused file names (after W2 and W4 land) | as needed across W2 and W4's files | `[ ]` |
@@ -68,11 +68,12 @@ Test files follow their source files. `gr_fake_camera` is shared: changes to it 
 
 ### W4: app data, downloads and debug log
 
-- [ ] **D1. One failed write stops settings and the camera list from saving** for the rest of the session. `settings.dart`, `cameras.dart` write chains.
-- [ ] **D2. Download queue write errors are hidden**, and `flush()` reports success after a failed write. `download_engine.dart` `_save`.
-- [ ] **D3. Leaving the camera pages and coming back quickly can run two download engines on the same queue**, which can save a photo twice or delete files the other still needs. `download_engine.dart`, `library_scope.dart`; also two writers sharing `downloads.json.tmp` in `json_file.dart`.
-- [ ] **D4. If the debug log folder can't be opened, the app won't start**, even with logging off. `debug_log.dart` `open`, `app_scope.dart`.
-- [ ] **D5. A half-written log line (after a crash or a failed write) corrupts the next entry.** `debug_log.dart` reopen and write-failure paths.
+- [x] (aa37cbc) **D1. One failed write stops settings and the camera list from saving** for the rest of the session. `settings.dart`, `cameras.dart` write chains.
+- [x] (61c48f9) **D2. Download queue write errors are hidden**, and `flush()` reports success after a failed write. `download_engine.dart` `_save`.
+- [x] (e035fc3) **D3. Leaving the camera pages and coming back quickly can run two download engines on the same queue**, which can save a photo twice or delete files the other still needs. `download_engine.dart`, `library_scope.dart`; also two writers sharing `downloads.json.tmp` in `json_file.dart`.
+- [x] (091c1c5) **D4. If the debug log folder can't be opened, the app won't start**, even with logging off. `debug_log.dart` `open`, `app_scope.dart`.
+- [x] (6f168a5) **D5. A half-written log line (after a crash or a failed write) corrupts the next entry.** `debug_log.dart` reopen and write-failure paths.
+- [ ] **D9. After a crash between a photo-library save and the queue write, the shot can be saved again on restart.** W4 left this reconciliation out of D2. `download_engine.dart`.
 
 ### W2: camera Library caches
 
