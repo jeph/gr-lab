@@ -411,6 +411,84 @@ void main() {
         expect(app.camera.poweredOn, isTrue);
       },
     );
+
+    /// The Library on Wi-Fi joined through [_BackgroundWifi], with
+    /// recovery giving up after one attempt that fails. (A second attempt
+    /// would find the simulated camera answering without a join.)
+    Future<(TestApp, _BackgroundWifi)> connectedRefusable() async {
+      late _BackgroundWifi wifi;
+      final app = await createTestApp(
+        config: const FakeCameraConfig(
+          bonded: true,
+          wlanOnDelay: Duration.zero,
+          joinDelay: Duration.zero,
+        ),
+        saveCamera: true,
+        sessionOptions: const GrSessionOptions(
+          livenessInterval: Duration(seconds: 30),
+          livenessLossAfter: Duration(seconds: 30),
+          joinTimeout: Duration(milliseconds: 300),
+          joinRetryDelay: Duration(milliseconds: 50),
+          wifiRecoveryDelays: [Duration(milliseconds: 50)],
+          maxWifiRecoveryAttempts: 1,
+        ),
+        wifi: (camera) => wifi = _BackgroundWifi(camera),
+      );
+      addTearDown(app.dispose);
+      await app.models.connection.openCamera(CameraTab.library);
+      expect(app.models.connection.status, ConnectionStatus.connected);
+      return (app, wifi);
+    }
+
+    /// Completes when the session gives up getting the Wi-Fi back.
+    Future<void> recoveryGaveUp(ConnectionController connection) => connection
+        .cameraSession!
+        .events
+        .firstWhere((e) => e.kind == 'recovery.gaveUp')
+        .timeout(const Duration(seconds: 10));
+
+    test('a Wi-Fi that could not be got back in the background is joined '
+        'again on return, with the Library kept', () async {
+      final (app, wifi) = await connectedRefusable();
+      final connection = app.models.connection;
+
+      final gaveUp = recoveryGaveUp(connection);
+      connection.foreground = false;
+      wifi.background = true;
+      app.camera.dropWifi();
+      await gaveUp;
+      expect(connection.tab, CameraTab.library);
+      expect(connection.failure, isNull);
+      expect(connection.reconnecting, isTrue);
+
+      final up = connection.wifiUp.first;
+      wifi.background = false;
+      connection.foreground = true;
+      await up.timeout(const Duration(seconds: 10));
+      expect(connection.status, ConnectionStatus.connected);
+      expect(connection.tab, CameraTab.library);
+      expect(await connection.checkWifi(), isTrue);
+    });
+
+    test('a Wi-Fi the user declined to rejoin in the background is not '
+        'joined again on return', () async {
+      final (app, wifi) = await connectedRefusable();
+      final connection = app.models.connection;
+
+      final gaveUp = recoveryGaveUp(connection);
+      connection.foreground = false;
+      wifi.decline = true;
+      app.camera.dropWifi();
+      await gaveUp;
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(connection.failure?.kind, ConnectFailureKind.wifiDeclined);
+
+      final joins = wifi.joins;
+      connection.foreground = true;
+      await pumpEventQueue();
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(wifi.joins, joins);
+    });
   });
 
   group('asking before the first Wi-Fi join', () {
@@ -702,6 +780,54 @@ final class _GatedLink implements BleConnection {
     await _transport.closeGate?.future;
     await _link.disconnect();
   }
+}
+
+/// The camera's Wi-Fi, which the OS does not join while [background] (as
+/// Android and iOS refuse joins for an app that is not in front), and
+/// which the user declines while [decline].
+final class _BackgroundWifi implements WifiNetworkControl {
+  new(this._camera);
+
+  final WifiNetworkControl _camera;
+  bool background = false;
+  bool decline = false;
+  int joins = 0;
+
+  @override
+  Future<void> join({
+    required String ssid,
+    required String passphrase,
+    required WifiSecurity security,
+    required Duration timeout,
+    bool approved = false,
+  }) async {
+    joins++;
+    if (decline) throw const WifiJoinDeclined();
+    if (background) throw const _JoinInBackground();
+    await _camera.join(
+      ssid: ssid,
+      passphrase: passphrase,
+      security: security,
+      timeout: timeout,
+      approved: approved,
+    );
+  }
+
+  @override
+  Future<String?> currentSsid() => _camera.currentSsid();
+
+  @override
+  Future<void> leave() => _camera.leave();
+
+  @override
+  Stream<void> get lost => _camera.lost;
+}
+
+final class _JoinInBackground implements Exception {
+  const new();
+
+  @override
+  String toString() => 'the OS joins networks only for the app in front';
 }
 
 Future<void> _until(

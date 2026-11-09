@@ -137,10 +137,10 @@ final class WifiConsentRequest {
 /// Bluetooth still there, the pages stay and the Library says the Wi-Fi
 /// was lost; without Bluetooth the session ends, the app goes back to the
 /// Cameras screen and it says the connection was lost. Leaving the camera's
-/// pages turns a camera the app turned on back off. A join that
-/// failed because the app was in the background is tried again on return
-/// ([AppServices.redialDelays]), since the OS only joins camera networks
-/// for the app in front.
+/// pages turns a camera the app turned on back off. A join that failed,
+/// or a lost Wi-Fi that could not be got back, while the app was in the
+/// background is tried again on return ([AppServices.redialDelays]),
+/// since the OS only joins camera networks for the app in front.
 final class ConnectionController extends ChangeNotifier {
   new({required this.services, required this.cameras}) {
     cameras.addListener(_onCamerasChanged);
@@ -616,7 +616,10 @@ final class ConnectionController extends ChangeNotifier {
   /// or out of range): the session ends and the Cameras screen says the
   /// connection was lost. Otherwise the camera's pages stay on Bluetooth,
   /// the Library says the Wi-Fi was lost (or declined), and the camera's
-  /// Wi-Fi is left as [closeCamera] does.
+  /// Wi-Fi is left as [closeCamera] does. A loss in the background that
+  /// was not declined is instead joined again on return, as a join that
+  /// failed in the background is: the OS only joins camera networks for
+  /// the app in front.
   void _wifiGaveUp({required bool noBle, required bool declined}) {
     final session = _session;
     if (session == null || _status != ConnectionStatus.connected) return;
@@ -632,6 +635,10 @@ final class ConnectionController extends ChangeNotifier {
       unawaited(_relinkLater());
       return;
     }
+    // The pages stay, so a camera the app turned on stays on for Shoot;
+    // [closeCamera] turns it off. A rejoin waits for this.
+    _stoppingWifi = session.stopWifi();
+    if (!declined && !_foreground && _scheduleRedial()) return;
     _status = ConnectionStatus.bluetooth;
     _failure = declined
         ? const ConnectFailure(
@@ -644,9 +651,6 @@ final class ConnectionController extends ChangeNotifier {
             loss: ConnectLoss.wifi,
           );
     notifyListeners();
-    // The pages stay, so a camera the app turned on stays on for Shoot;
-    // [closeCamera] turns it off.
-    _stoppingWifi = session.stopWifi();
   }
 
   /// The failure [error] means for the [step] being set up.
