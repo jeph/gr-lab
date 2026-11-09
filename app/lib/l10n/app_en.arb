@@ -279,9 +279,25 @@
   "@camerasWelcomeHint": {
     "description": "Hint under Add a camera on the welcome page."
   },
+  "camerasWelcomeModelGr3": "GR III",
+  "@camerasWelcomeModelGr3": {
+    "description": "Chip on the welcome page naming a camera model GR Lab works with. Keep Ricoh's spelling of the model name; do not translate it."
+  },
+  "camerasWelcomeModelGr3x": "GR IIIx",
+  "@camerasWelcomeModelGr3x": {
+    "description": "Chip on the welcome page naming a camera model GR Lab works with. Keep Ricoh's spelling of the model name; do not translate it."
+  },
+  "camerasWelcomeModelGr4": "GR IV",
+  "@camerasWelcomeModelGr4": {
+    "description": "Chip on the welcome page naming a camera model GR Lab works with. Keep Ricoh's spelling of the model name; do not translate it."
+  },
   "camerasWelcomeTitle": "Your GR,\non your phone",
   "@camerasWelcomeTitle": {
     "description": "Large title of the welcome page; the line break is part of the layout."
+  },
+  "camerasWelcomeWordmark": "GR LAB",
+  "@camerasWelcomeWordmark": {
+    "description": "Wordmark above the welcome page title: the app's name in capitals. Keep the name GR Lab; only change the capitalization if the script needs it."
   },
   "commonCancel": "Cancel",
   "@commonCancel": {

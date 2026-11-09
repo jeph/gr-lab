@@ -232,7 +232,7 @@ class _Welcome extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'GR LAB', // not-translated: brand wordmark
+                          context.l10n.camerasWelcomeWordmark,
                           style: GrFonts.monoStyle(context)
                               .copyWith(letterSpacing: 1.7),
                         ),
@@ -256,13 +256,13 @@ class _Welcome extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 18),
-                        const Wrap(
+                        Wrap(
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            _ModelChip('GR III'),
-                            _ModelChip('GR IIIx'),
-                            _ModelChip('GR IV'),
+                            _ModelChip(context.l10n.camerasWelcomeModelGr3),
+                            _ModelChip(context.l10n.camerasWelcomeModelGr3x),
+                            _ModelChip(context.l10n.camerasWelcomeModelGr4),
                           ],
                         ),
                         const SizedBox(height: 26),
