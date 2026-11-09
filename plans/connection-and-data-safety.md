@@ -12,7 +12,7 @@ The work is split into workstreams so that no two agents edit the same source fi
 |---|---|---|---|
 | W1 | Protocol session and change socket | `packages/gr_protocol/lib/src/session/`, `packages/gr_protocol/lib/src/http/changes.dart` | `[~]` |
 | W2 | HTTP client and camera Library caches | `packages/gr_protocol/lib/src/http/client.dart`, `packages/gr_camera/lib/src/library/` | `[x]` |
-| W3 | Camera layer pairing, Bluetooth adapter, native Wi-Fi, app pairing screens | `packages/gr_camera/lib/src/{session,pairing}.dart`, `packages/gr_camera/lib/src/platform/`, `packages/gr_camera/lib/src/shoot/remote.dart`, `packages/gr_camera/android/`, `packages/gr_camera/ios/`, `app/lib/src/pairing/` | `[~]` |
+| W3 | Camera layer pairing, Bluetooth adapter, native Wi-Fi, app pairing screens | `packages/gr_camera/lib/src/{session,pairing}.dart`, `packages/gr_camera/lib/src/platform/`, `packages/gr_camera/lib/src/shoot/remote.dart`, `packages/gr_camera/android/`, `packages/gr_camera/ios/`, `app/lib/src/pairing/` | `[x]` |
 | W4 | App data, downloads and debug log | `app/lib/src/data/`, `app/lib/src/downloads/`, `app/lib/src/library/library_scope.dart`, `app/lib/src/debug/`, `app/lib/src/app_scope.dart` | `[x]` |
 | W5 | App connection controller and Cameras screen | `app/lib/src/connection/`, `app/lib/src/cameras/` | `[x]` |
 | W6 | Protocol Bluetooth pairing and Wi-Fi credentials | `packages/gr_protocol/lib/src/ble/` | `[x]` |
@@ -41,13 +41,13 @@ Test files follow their source files. `gr_fake_camera` is shared: changes to it 
 
 ### W3: camera layer pairing, Bluetooth adapter, native Wi-Fi
 
-- [ ] **C11. iOS keeps the camera's network saved after a join times out.** `WifiPlugin.swift` timeout path after a successful `apply`.
-- [ ] **C12. Android stops its fast rescans for the camera network after the app is paused** (for example by the approval screen) and never restarts them. `WifiChannel.kt` `onPause`/`onResume`.
-- [ ] **C13. A cancelled pairing can disconnect the next pairing or session.** The pending connect isn't owned by anyone during cancellation. `pairing.dart`, `ble_transport.dart` connect and MTU.
-- [ ] **C14. Pairing retries skip the 15-second wait the GR IV needs** before it locks out pairing (`research/protocol/ble.md`). Enforce the wait per camera and show it in the retry screen. `pairing.dart`, `app/lib/src/pairing/`.
-- [ ] **C15. Turning a Bluetooth watcher off and on quickly can leave the camera's notifications switched off.** `ble_transport.dart` subscribe/unsubscribe, `remote.dart` `_subscribe`.
-- [ ] **C16. Cancelling pairing leaves the previously linked camera disconnected.** `pairing_flow.dart` only restores a session that was connecting or on Wi-Fi, not one linked over Bluetooth.
-- [ ] **C17. A Wi-Fi consent answer that arrives after the join was cancelled can still start a join.** `session.dart` `_ConsentWifi.leave`.
+- [x] (5b6da73) **C11. iOS keeps the camera's network saved after a join times out.** `WifiPlugin.swift` timeout path after a successful `apply`.
+- [x] (e38ef3e) **C12. Android stops its fast rescans for the camera network after the app is paused** (for example by the approval screen) and never restarts them. `WifiChannel.kt` `onPause`/`onResume`.
+- [x] (211ae1c) **C13. A cancelled pairing can disconnect the next pairing or session.** The pending connect isn't owned by anyone during cancellation. `pairing.dart`, `ble_transport.dart` connect and MTU.
+- [x] (15094b8) **C14. Pairing retries skip the 15-second wait the GR IV needs** before it locks out pairing (`research/protocol/ble.md`). Enforce the wait per camera and show it in the retry screen. `pairing.dart`, `app/lib/src/pairing/`.
+- [x] (211ae1c) **C15. Turning a Bluetooth watcher off and on quickly can leave the camera's notifications switched off.** `ble_transport.dart` subscribe/unsubscribe, `remote.dart` `_subscribe`.
+- [x] (262315a) **C16. Cancelling pairing leaves the previously linked camera disconnected.** `pairing_flow.dart` only restores a session that was connecting or on Wi-Fi, not one linked over Bluetooth.
+- [x] (6aff64b) **C17. A Wi-Fi consent answer that arrives after the join was cancelled can still start a join.** `session.dart` `_ConsentWifi.leave`.
 
 ### W5: app connection controller and Cameras screen
 
