@@ -14,7 +14,7 @@ The work is split into workstreams so that no two agents edit the same source fi
 | W2 | HTTP client and camera Library caches | `packages/gr_protocol/lib/src/http/client.dart`, `packages/gr_camera/lib/src/library/` | `[x]` |
 | W3 | Camera layer pairing, Bluetooth adapter, native Wi-Fi, app pairing screens | `packages/gr_camera/lib/src/{session,pairing}.dart`, `packages/gr_camera/lib/src/platform/`, `packages/gr_camera/lib/src/shoot/remote.dart`, `packages/gr_camera/android/`, `packages/gr_camera/ios/`, `app/lib/src/pairing/` | `[~]` |
 | W4 | App data, downloads and debug log | `app/lib/src/data/`, `app/lib/src/downloads/`, `app/lib/src/library/library_scope.dart`, `app/lib/src/debug/`, `app/lib/src/app_scope.dart` | `[x]` |
-| W5 | App connection controller and Cameras screen | `app/lib/src/connection/`, `app/lib/src/cameras/` | `[~]` |
+| W5 | App connection controller and Cameras screen | `app/lib/src/connection/`, `app/lib/src/cameras/` | `[x]` |
 | W6 | Protocol Bluetooth pairing and Wi-Fi credentials | `packages/gr_protocol/lib/src/ble/` | `[x]` |
 | W7 | Reused file names, crash replay (D9), aborting stalled downloads (C28) | `packages/gr_camera/lib/src/library/`, `app/lib/src/library/library_model.dart`, `app/lib/src/downloads/` | `[~]` |
 
@@ -51,11 +51,11 @@ Test files follow their source files. `gr_fake_camera` is shared: changes to it 
 
 ### W5: app connection controller and Cameras screen
 
-- [ ] **C18. Pressing Back while Bluetooth is still connecting still joins Wi-Fi afterwards.** `connection_controller.dart` `joinWifi`, `_leaveWifi`.
-- [ ] **C19. Switching to Library while Bluetooth is connecting never joins Wi-Fi.** `connection_controller.dart` `selectTab`.
-- [ ] **C20. Two quick disconnects let a new connection reuse a link that is still closing.** `connection_controller.dart` `disconnect`, `_closing`.
-- [ ] **C21. If Wi-Fi recovery gives up while the app is in the background, it isn't retried on return.** `connection_controller.dart` `_wifiGaveUp`, foreground setter.
-- [ ] **C22. A Bluetooth permission granted in Settings is ignored until the app restarts.** `cameras_screen.dart` cached `_permission`.
+- [x] (d4235a2) **C18. Pressing Back while Bluetooth is still connecting still joins Wi-Fi afterwards.** `connection_controller.dart` `joinWifi`, `_leaveWifi`.
+- [x] (d4235a2) **C19. Switching to Library while Bluetooth is connecting never joins Wi-Fi.** `connection_controller.dart` `selectTab`.
+- [x] (9024871) **C20. Two quick disconnects let a new connection reuse a link that is still closing.** `connection_controller.dart` `disconnect`, `_closing`.
+- [x] (9f6580c) **C21. If Wi-Fi recovery gives up while the app is in the background, it isn't retried on return.** `connection_controller.dart` `_wifiGaveUp`, foreground setter.
+- [x] (3638a61) **C22. A Bluetooth permission granted in Settings is ignored until the app restarts.** `cameras_screen.dart` cached `_permission`.
 
 ### W6: protocol Bluetooth pairing and Wi-Fi credentials
 
@@ -84,6 +84,7 @@ Test files follow their source files. `gr_fake_camera` is shared: changes to it 
 ### W7: reused file names, crash replay, aborting stalled downloads
 
 - [ ] **D8. When a file name comes back with different content** (SD card swap, deleted and re-shot), the app shows the old preview and movie and marks the new shot as already downloaded. Needs a freshness check for cached media and download history. `camera_images.dart`, `movie_cache.dart`, `library_model.dart`, `download_engine.dart`.
+- [ ] **D10. A movie that is playing can be deleted by the disk cache limit**, because the limit only protects the last two movies asked for and a playing movie stops asking. Hold cached files explicitly while a cell or the player shows them. `camera_images.dart`, `movie_cache.dart`, `shot_cell.dart`, `viewer.dart`.
 
 ## Later (not in this plan)
 
