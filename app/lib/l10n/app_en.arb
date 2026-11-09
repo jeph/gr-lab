@@ -4,6 +4,165 @@
   "@appTitle": {
     "description": "The app's name, shown by the system (task switcher, window title)."
   },
+  "commonCancel": "Cancel",
+  "@commonCancel": {
+    "description": "Button that closes a dialog without doing anything."
+  },
+  "debugLogClear": "Clear log",
+  "@debugLogClear": {
+    "description": "Settings row that deletes the debug log."
+  },
+  "debugLogClearBody": "The debug log is deleted from this phone.",
+  "@debugLogClearBody": {
+    "description": "Body of the dialog that confirms deleting the debug log."
+  },
+  "debugLogClearConfirm": "Clear",
+  "@debugLogClearConfirm": {
+    "description": "Dialog button that deletes the debug log."
+  },
+  "debugLogClearFailed": "Couldn't clear the log. Try again.",
+  "@debugLogClearFailed": {
+    "description": "Snack bar: deleting the debug log failed."
+  },
+  "debugLogClearTitle": "Clear the log?",
+  "@debugLogClearTitle": {
+    "description": "Title of the dialog that confirms deleting the debug log."
+  },
+  "debugLogCleared": "Log cleared",
+  "@debugLogCleared": {
+    "description": "Snack bar: the debug log was deleted."
+  },
+  "debugLogEmpty": "The log is empty. Nothing to export.",
+  "@debugLogEmpty": {
+    "description": "Snack bar: export was tapped but the debug log is empty."
+  },
+  "debugLogEnable": "Enable debug logging",
+  "@debugLogEnable": {
+    "description": "Settings row: switch that turns the debug log on."
+  },
+  "debugLogEnableSubtitle": "Keeps app and camera logs for bug reports",
+  "@debugLogEnableSubtitle": {
+    "description": "Settings: explanation under Enable debug logging."
+  },
+  "debugLogExport": "Export log",
+  "@debugLogExport": {
+    "description": "Settings row that shares the debug log."
+  },
+  "debugLogExportFailed": "Couldn't export the log. Try again.",
+  "@debugLogExportFailed": {
+    "description": "Snack bar: exporting the debug log failed."
+  },
+  "debugLogSizeBytes": "{bytes} B",
+  "@debugLogSizeBytes": {
+    "description": "Size of the debug log under 1 KB. \"B\" is the abbreviation for bytes.",
+    "placeholders": {
+      "bytes": {
+        "type": "int",
+        "format": "decimalPattern",
+        "description": "Size in bytes."
+      }
+    }
+  },
+  "debugLogSizeKilobytes": "{kilobytes} KB",
+  "@debugLogSizeKilobytes": {
+    "description": "Size of the debug log under 1 MB. \"KB\" is the abbreviation for kilobytes.",
+    "placeholders": {
+      "kilobytes": {
+        "type": "double",
+        "format": "decimalPatternDigits",
+        "optionalParameters": {
+          "decimalDigits": 0
+        },
+        "description": "Size in kilobytes (1024 bytes), rounded to whole kilobytes."
+      }
+    }
+  },
+  "debugLogSizeMegabytes": "{megabytes} MB",
+  "@debugLogSizeMegabytes": {
+    "description": "Size of the debug log from 1 MB. \"MB\" is the abbreviation for megabytes.",
+    "placeholders": {
+      "megabytes": {
+        "type": "double",
+        "format": "decimalPatternDigits",
+        "optionalParameters": {
+          "decimalDigits": 1
+        },
+        "description": "Size in megabytes (1024 × 1024 bytes), with one decimal."
+      }
+    }
+  },
+  "liveViewAperture": "Aperture",
+  "@liveViewAperture": {
+    "description": "Live view readout label (shown in capitals): the aperture."
+  },
+  "liveViewBackToRemote": "Back to Remote",
+  "@liveViewBackToRemote": {
+    "description": "Live view: tooltip and accessibility label of the × button that returns to Remote."
+  },
+  "liveViewEv": "EV",
+  "@liveViewEv": {
+    "description": "Live view readout label (shown in capitals): exposure compensation."
+  },
+  "liveViewImageControl": "Image Control",
+  "@liveViewImageControl": {
+    "description": "Live view: title of the Image Control picker, as the camera's menu calls it."
+  },
+  "liveViewIso": "ISO",
+  "@liveViewIso": {
+    "description": "Live view readout label (shown in capitals): the ISO sensitivity."
+  },
+  "liveViewJoining": "Live view comes over {camera}'s Wi-Fi",
+  "@liveViewJoining": {
+    "description": "Live view: heading above the steps of joining the camera's Wi-Fi.",
+    "placeholders": {
+      "camera": {
+        "type": "String",
+        "description": "The camera's name as the camera reports it, for example GR IV."
+      }
+    }
+  },
+  "liveViewJoiningUnnamed": "Live view comes over the camera's Wi-Fi",
+  "@liveViewJoiningUnnamed": {
+    "description": "Live view: heading above the steps of joining the Wi-Fi of a camera whose name is unknown."
+  },
+  "liveViewMetering": "Metering",
+  "@liveViewMetering": {
+    "description": "Live view: title of the metering mode picker."
+  },
+  "liveViewNotOnWifi": "Not on the camera's Wi-Fi",
+  "@liveViewNotOnWifi": {
+    "description": "Snack bar: a setting could not be changed because the phone is not on the camera's Wi-Fi."
+  },
+  "liveViewSettingFailed": "The camera didn't change it ({detail})",
+  "@liveViewSettingFailed": {
+    "description": "Snack bar: the camera refused or failed to change an exposure setting.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "description": "Technical detail of the error, as reported by the camera or the phone; not translated."
+      }
+    }
+  },
+  "liveViewShutter": "Shutter",
+  "@liveViewShutter": {
+    "description": "Live view readout label (shown in capitals): the shutter speed."
+  },
+  "liveViewStarting": "Starting live view…",
+  "@liveViewStarting": {
+    "description": "Live view: shown while the picture stream opens."
+  },
+  "liveViewTapToFocus": "Tap to focus",
+  "@liveViewTapToFocus": {
+    "description": "Live view hint under the shutter."
+  },
+  "liveViewTapToFocusVolume": "Tap to focus · volume buttons fire the shutter",
+  "@liveViewTapToFocusVolume": {
+    "description": "Live view hint under the shutter, on phones where the volume buttons fire the shutter."
+  },
+  "liveViewTimerOff": "Self-timer off",
+  "@liveViewTimerOff": {
+    "description": "Live view self-timer picker: no self-timer."
+  },
   "pairingAdd": "Add",
   "@pairingAdd": {
     "description": "Button on a nearby camera's row that starts adding it."
@@ -445,5 +604,321 @@
   "privacyPolicyTitle": "Privacy policy",
   "@privacyPolicyTitle": {
     "description": "Title of the screen that shows GR Lab's privacy policy. The policy text itself stays in English."
+  },
+  "settingsAppearance": "Appearance",
+  "@settingsAppearance": {
+    "description": "Settings section heading: theme."
+  },
+  "settingsAutoDisconnect": "Auto-disconnect",
+  "@settingsAutoDisconnect": {
+    "description": "Settings row: how long the app stays on the camera's Wi-Fi without use."
+  },
+  "settingsAutoDisconnectMinutes": "{minutes} min",
+  "@settingsAutoDisconnectMinutes": {
+    "description": "Auto-disconnect choice: leave the camera's Wi-Fi after this many minutes without use. \"min\" is the abbreviation for minutes.",
+    "placeholders": {
+      "minutes": {
+        "type": "int",
+        "format": "decimalPattern",
+        "description": "Minutes without use (1, 5, 10 or 15)."
+      }
+    }
+  },
+  "settingsAutoDisconnectNever": "Never",
+  "@settingsAutoDisconnectNever": {
+    "description": "Auto-disconnect choice: stay on the camera's Wi-Fi."
+  },
+  "settingsAutoDisconnectSheetTitle": "Disconnect Wi-Fi after",
+  "@settingsAutoDisconnectSheetTitle": {
+    "description": "Heading of the Auto-disconnect picker."
+  },
+  "settingsAutoDisconnectSubtitle": "Leaves the camera's Wi-Fi when GR Lab isn't used",
+  "@settingsAutoDisconnectSubtitle": {
+    "description": "Settings: explanation under Auto-disconnect."
+  },
+  "settingsCamera": "Camera",
+  "@settingsCamera": {
+    "description": "Settings section heading: camera connection settings."
+  },
+  "settingsDebugLog": "Debug log",
+  "@settingsDebugLog": {
+    "description": "Settings section heading: debug logging."
+  },
+  "settingsTheme": "Theme",
+  "@settingsTheme": {
+    "description": "Settings: heading of the theme choices."
+  },
+  "settingsThemeName": "{mode, select, light{Light} dark{Dark} other{Auto}}",
+  "@settingsThemeName": {
+    "description": "Settings: name of a theme choice. Auto follows the phone's setting.",
+    "placeholders": {
+      "mode": {
+        "type": "String",
+        "description": "Which theme: light, dark or system (Auto). Not shown."
+      }
+    }
+  },
+  "settingsThemeSemantics": "{mode, select, light{Light theme} dark{Dark theme} other{Auto theme}}",
+  "@settingsThemeSemantics": {
+    "description": "Accessibility label of a theme choice. Auto follows the phone's setting.",
+    "placeholders": {
+      "mode": {
+        "type": "String",
+        "description": "Which theme: light, dark or system (Auto). Not shown."
+      }
+    }
+  },
+  "settingsTitle": "Settings",
+  "@settingsTitle": {
+    "description": "Title of the Settings screen."
+  },
+  "shootCameraOff": "{camera} is off",
+  "@shootCameraOff": {
+    "description": "Shoot: the camera was switched off.",
+    "placeholders": {
+      "camera": {
+        "type": "String",
+        "description": "The camera's name as the camera reports it, for example GR IV."
+      }
+    }
+  },
+  "shootCameraOffUnnamed": "The camera is off",
+  "@shootCameraOffUnnamed": {
+    "description": "Shoot: a camera whose name is unknown was switched off."
+  },
+  "shootCancelTimerSemantics": "{seconds, plural, =1{Cancel self-timer, 1 second left} other{Cancel self-timer, {seconds} seconds left}}",
+  "@shootCancelTimerSemantics": {
+    "description": "Accessibility label of the shutter button while the self-timer counts down; tapping it cancels the self-timer.",
+    "placeholders": {
+      "seconds": {
+        "type": "int",
+        "description": "Whole seconds until the picture is taken."
+      }
+    }
+  },
+  "shootConnectingBluetooth": "Connecting to {camera} via Bluetooth…",
+  "@shootConnectingBluetooth": {
+    "description": "Shoot: under the shutter while the Bluetooth link to the camera comes up.",
+    "placeholders": {
+      "camera": {
+        "type": "String",
+        "description": "The camera's name as the camera reports it, for example GR IV."
+      }
+    }
+  },
+  "shootConnectingBluetoothUnnamed": "Connecting to the camera via Bluetooth…",
+  "@shootConnectingBluetoothUnnamed": {
+    "description": "Shoot: under the shutter while the Bluetooth link to a camera whose name is unknown comes up."
+  },
+  "shootDrive": "Drive",
+  "@shootDrive": {
+    "description": "Shoot: title of the drive mode row and of the drive mode picker."
+  },
+  "shootDriveBracket": "Bracket",
+  "@shootDriveBracket": {
+    "description": "Drive mode name, as in the camera's Drive menu: Bracket."
+  },
+  "shootDriveContinuous": "Continuous",
+  "@shootDriveContinuous": {
+    "description": "Drive mode name, as in the camera's Drive menu: Continuous."
+  },
+  "shootDriveFailed": "The camera didn't change the drive mode ({detail})",
+  "@shootDriveFailed": {
+    "description": "Snack bar: the camera refused or failed to change the drive mode or self-timer.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "description": "Technical detail of the error, as reported by the camera or the phone; not translated."
+      }
+    }
+  },
+  "shootDriveInterval": "Interval",
+  "@shootDriveInterval": {
+    "description": "Drive mode name, as in the camera's Drive menu: Interval."
+  },
+  "shootDriveIntervalComposite": "Interval composite",
+  "@shootDriveIntervalComposite": {
+    "description": "Drive mode name, as in the camera's Drive menu: Interval composite."
+  },
+  "shootDriveMultipleExposure": "Multi-exposure",
+  "@shootDriveMultipleExposure": {
+    "description": "Drive mode name, as in the camera's Drive menu: Multi-exposure."
+  },
+  "shootDriveSingle": "Single",
+  "@shootDriveSingle": {
+    "description": "Drive mode name, as in the camera's Drive menu: Single."
+  },
+  "shootEffectBleachBypass": "Bleach Bypass",
+  "@shootEffectBleachBypass": {
+    "description": "Image Control setting, as in the camera's menu: Bleach Bypass."
+  },
+  "shootEffectCustom1": "Custom 1",
+  "@shootEffectCustom1": {
+    "description": "Image Control setting, as in the camera's menu: Custom 1."
+  },
+  "shootEffectCustom2": "Custom 2",
+  "@shootEffectCustom2": {
+    "description": "Image Control setting, as in the camera's menu: Custom 2."
+  },
+  "shootEffectHardMonotone": "Hard Monotone",
+  "@shootEffectHardMonotone": {
+    "description": "Image Control setting, as in the camera's menu: Hard Monotone."
+  },
+  "shootEffectHdrTone": "HDR Tone",
+  "@shootEffectHdrTone": {
+    "description": "Image Control setting, as in the camera's menu: HDR Tone."
+  },
+  "shootEffectHiContrast": "Hi-Contrast B&W",
+  "@shootEffectHiContrast": {
+    "description": "Image Control setting, as in the camera's menu: Hi-Contrast B&W."
+  },
+  "shootEffectMonotone": "Monotone",
+  "@shootEffectMonotone": {
+    "description": "Image Control setting, as in the camera's menu: Monotone."
+  },
+  "shootEffectPositiveFilm": "Positive Film",
+  "@shootEffectPositiveFilm": {
+    "description": "Image Control setting, as in the camera's menu: Positive Film."
+  },
+  "shootEffectRetro": "Retro",
+  "@shootEffectRetro": {
+    "description": "Image Control setting, as in the camera's menu: Retro."
+  },
+  "shootEffectSoftMonotone": "Soft Monotone",
+  "@shootEffectSoftMonotone": {
+    "description": "Image Control setting, as in the camera's menu: Soft Monotone."
+  },
+  "shootEffectStandard": "Standard",
+  "@shootEffectStandard": {
+    "description": "Image Control setting, as in the camera's menu: Standard."
+  },
+  "shootEffectVivid": "Vivid",
+  "@shootEffectVivid": {
+    "description": "Image Control setting, as in the camera's menu: Vivid."
+  },
+  "shootExposureAstro": "Astro",
+  "@shootExposureAstro": {
+    "description": "Mode dial position: star tracking (Astrotracer)."
+  },
+  "shootExposureAuto": "Auto",
+  "@shootExposureAuto": {
+    "description": "Mode dial position: the camera chooses the exposure."
+  },
+  "shootExposureMovie": "Movie",
+  "@shootExposureMovie": {
+    "description": "Mode dial position: video recording."
+  },
+  "shootMeteringCenter": "Center",
+  "@shootMeteringCenter": {
+    "description": "Metering mode, as in the camera's menu: Center."
+  },
+  "shootMeteringHighlight": "Highlight",
+  "@shootMeteringHighlight": {
+    "description": "Metering mode, as in the camera's menu: Highlight."
+  },
+  "shootMeteringMulti": "Multi",
+  "@shootMeteringMulti": {
+    "description": "Metering mode, as in the camera's menu: Multi."
+  },
+  "shootMeteringSpot": "Spot",
+  "@shootMeteringSpot": {
+    "description": "Metering mode, as in the camera's menu: Spot."
+  },
+  "shootModeLiveView": "Live view",
+  "@shootModeLiveView": {
+    "description": "Shoot mode switch: show the camera's picture over its Wi-Fi."
+  },
+  "shootModeRemote": "Remote",
+  "@shootModeRemote": {
+    "description": "Shoot mode switch: control the camera over Bluetooth, without a picture."
+  },
+  "shootSelfTimer": "Self-timer",
+  "@shootSelfTimer": {
+    "description": "Shoot remote section heading above the self-timer choices."
+  },
+  "shootShutter": "Shutter",
+  "@shootShutter": {
+    "description": "Accessibility label of the shutter button."
+  },
+  "shootShutterFailed": "The camera didn't take the picture ({detail})",
+  "@shootShutterFailed": {
+    "description": "Snack bar: the camera refused or failed to take a picture.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "description": "Technical detail of the error, as reported by the camera or the phone; not translated."
+      }
+    }
+  },
+  "shootStatBattery": "Battery",
+  "@shootStatBattery": {
+    "description": "Shoot remote readout label (shown in capitals): the camera's battery level."
+  },
+  "shootStatMode": "Mode",
+  "@shootStatMode": {
+    "description": "Shoot remote readout label (shown in capitals): the camera's mode dial position."
+  },
+  "shootStatShotsLeft": "Shots left",
+  "@shootStatShotsLeft": {
+    "description": "Shoot remote readout label (shown in capitals): how many more pictures fit on the card."
+  },
+  "shootTapToCancelTimer": "Tap to cancel the self-timer",
+  "@shootTapToCancelTimer": {
+    "description": "Shoot: under the shutter while the self-timer counts down."
+  },
+  "shootTapToShoot": "Tap to shoot",
+  "@shootTapToShoot": {
+    "description": "Shoot: under the shutter when the camera is ready."
+  },
+  "shootTapToShootVolume": "Tap to shoot · volume buttons work too",
+  "@shootTapToShootVolume": {
+    "description": "Shoot: under the shutter when the camera is ready, on phones where the volume buttons also fire the shutter."
+  },
+  "shootTimerOff": "Off",
+  "@shootTimerOff": {
+    "description": "Self-timer choice: no self-timer."
+  },
+  "shootTimerSeconds": "{seconds} s",
+  "@shootTimerSeconds": {
+    "description": "Self-timer choice: the shutter fires this many seconds after the press. \"s\" is the abbreviation for seconds.",
+    "placeholders": {
+      "seconds": {
+        "type": "int",
+        "format": "decimalPattern",
+        "description": "Length of the self-timer in seconds (2 or 10)."
+      }
+    }
+  },
+  "shootTurnOn": "Turn on",
+  "@shootTurnOn": {
+    "description": "Shoot: button that turns the camera on again."
+  },
+  "shootTurnOnFailed": "Couldn't turn {camera} on",
+  "@shootTurnOnFailed": {
+    "description": "Shoot: turning the camera on in shooting mode failed.",
+    "placeholders": {
+      "camera": {
+        "type": "String",
+        "description": "The camera's name as the camera reports it, for example GR IV."
+      }
+    }
+  },
+  "shootTurnOnFailedUnnamed": "Couldn't turn the camera on",
+  "@shootTurnOnFailedUnnamed": {
+    "description": "Shoot: turning a camera whose name is unknown on in shooting mode failed."
+  },
+  "shootTurningOn": "Turning {camera} on…",
+  "@shootTurningOn": {
+    "description": "Shoot: under the shutter while the app turns the camera on in shooting mode.",
+    "placeholders": {
+      "camera": {
+        "type": "String",
+        "description": "The camera's name as the camera reports it, for example GR IV."
+      }
+    }
+  },
+  "shootTurningOnUnnamed": "Turning the camera on…",
+  "@shootTurningOnUnnamed": {
+    "description": "Shoot: under the shutter while the app turns a camera whose name is unknown on in shooting mode."
   }
 }

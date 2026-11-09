@@ -22,8 +22,27 @@ enum ShootPower {
   /// Switched off after it was on; turning it on again is the user's call.
   off,
 
-  /// Turning it on failed; [ShootModel.powerError] says why.
+  /// Turning it on failed; [ShootModel.powerFailureDetail] says why.
   failed,
+}
+
+/// What the app asked the camera to do from the Shoot tab.
+enum ShootRequest {
+  /// Release the shutter, or cancel a running self-timer.
+  shutter,
+
+  /// Change the drive mode or the self-timer.
+  driveMode,
+}
+
+/// A [request] the camera did not carry out, for a snack bar.
+final class ShootRefusal {
+  const new(this.request, this.detail);
+
+  final ShootRequest request;
+
+  /// The error, as technical detail; not translated.
+  final String detail;
 }
 
 /// The Shoot tab's state for one visit to the camera's pages: the camera
@@ -44,7 +63,7 @@ final class ShootModel extends ChangeNotifier {
   final SettingsController settings;
   final LiveViewController liveView;
 
-  final _messages = StreamController<String>.broadcast();
+  final _refusals = StreamController<ShootRefusal>.broadcast();
 
   CameraSession? _session;
   CameraRemote? _remote;
@@ -53,13 +72,16 @@ final class ShootModel extends ChangeNotifier {
   int _wakeRun = 0;
 
   ShootPower _power = ShootPower.idle;
-  String? _powerError;
+  String? _powerFailureDetail;
 
-  /// Short notes for a snack bar: a shutter or setting the camera refused.
-  Stream<String> get messages => _messages.stream;
+  /// A shutter or drive change the camera refused, for a snack bar.
+  Stream<ShootRefusal> get refusals => _refusals.stream;
 
   ShootPower get power => _power;
-  String? get powerError => _powerError;
+
+  /// Why turning the camera on failed, as technical detail (the session's
+  /// error); not translated.
+  String? get powerFailureDetail => _powerFailureDetail;
 
   /// Mode dial position, from Shooting Mode.
   BleShootingMode? get exposure => _remote?.exposure;
@@ -132,7 +154,7 @@ final class ShootModel extends ChangeNotifier {
     try {
       await remote.shutter();
     } on Object catch (e) {
-      _say("The camera didn't take the picture ($e)");
+      _refuse(ShootRequest.shutter, e);
     }
   }
 
@@ -154,12 +176,12 @@ final class ShootModel extends ChangeNotifier {
     try {
       await remote.setDriveMode(mode);
     } on Object catch (e) {
-      _say("The camera didn't change the drive mode ($e)");
+      _refuse(ShootRequest.driveMode, e);
     }
   }
 
-  void _say(String message) {
-    if (!_disposed) _messages.add(message);
+  void _refuse(ShootRequest request, Object error) {
+    if (!_disposed) _refusals.add(ShootRefusal(request, '$error'));
   }
 
   void _sync() {
@@ -195,7 +217,7 @@ final class ShootModel extends ChangeNotifier {
     _remote = session?.remote;
     _remote?.addListener(_onRemote);
     _power = ShootPower.idle;
-    _powerError = null;
+    _powerFailureDetail = null;
   }
 
   void _onRemote() {
@@ -205,14 +227,14 @@ final class ShootModel extends ChangeNotifier {
   Future<void> _wake(CameraRemote remote) async {
     final run = ++_wakeRun;
     _power = ShootPower.waking;
-    _powerError = null;
+    _powerFailureDetail = null;
     notifyListeners();
     try {
       await remote.wake();
     } on Object catch (e) {
       if (_disposed || run != _wakeRun) return;
       _power = ShootPower.failed;
-      _powerError = e is GrSessionException ? e.message : '$e';
+      _powerFailureDetail = e is GrSessionException ? e.message : '$e';
       notifyListeners();
       return;
     }
@@ -244,7 +266,7 @@ final class ShootModel extends ChangeNotifier {
       ?..removeListener(_onRemote)
       ..watching = false;
     liveView.dispose();
-    unawaited(_messages.close());
+    unawaited(_refusals.close());
     super.dispose();
   }
 }

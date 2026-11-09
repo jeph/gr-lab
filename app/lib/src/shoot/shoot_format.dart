@@ -1,32 +1,44 @@
 import 'package:gr_camera/gr_camera.dart';
+import 'package:grlab/l10n/l10n.dart';
 
 /// Self-timer choices of the Shoot screen.
 enum ShootTimer {
-  off(null, 'Off'),
-  twoSeconds(Duration(seconds: 2), '2 s'),
-  tenSeconds(Duration(seconds: 10), '10 s');
+  off(null),
+  twoSeconds(Duration(seconds: 2)),
+  tenSeconds(Duration(seconds: 10));
 
-  new(this.delay, this.label);
+  new(this.delay);
 
   /// Null for [off].
   final Duration? delay;
-  final String label;
+
+  /// `Off`, `2 s`, `10 s`.
+  String label(AppLocalizations l10n) => switch (delay) {
+    null => l10n.shootTimerOff,
+    final delay => l10n.shootTimerSeconds(delay.inSeconds),
+  };
 }
 
 /// Drive modes without their self-timer, in the camera's menu order. The
 /// camera combines each with a timer into one Drive Mode value (BLE
 /// `B29E6DE3`, ble.md); [continuous] has no timed variant.
 enum ShootDrive {
-  single('Single'),
-  continuous('Continuous'),
-  bracket('Bracket'),
-  multipleExposure('Multi-exposure'),
-  interval('Interval'),
-  intervalComposite('Interval composite');
+  single,
+  continuous,
+  bracket,
+  multipleExposure,
+  interval,
+  intervalComposite;
 
-  new(this.label);
-
-  final String label;
+  /// The name the camera's Drive menu uses.
+  String label(AppLocalizations l10n) => switch (this) {
+    single => l10n.shootDriveSingle,
+    continuous => l10n.shootDriveContinuous,
+    bracket => l10n.shootDriveBracket,
+    multipleExposure => l10n.shootDriveMultipleExposure,
+    interval => l10n.shootDriveInterval,
+    intervalComposite => l10n.shootDriveIntervalComposite,
+  };
 
   bool get hasTimer => this != continuous;
 
@@ -85,8 +97,9 @@ enum ShootDrive {
   }
 }
 
-/// Mode dial label: `Av`, `U1`, `SFP`.
-String exposureLabel(BleShootingMode mode) {
+/// Mode dial label: `Av`, `U1`, `SFP` as the camera's dial reads; the modes
+/// named by a word (Auto, Movie, Astro) are messages.
+String exposureLabel(AppLocalizations l10n, BleShootingMode mode) {
   final user = mode.userMode.known;
   if (user != null && user != BleUserMode.none) {
     return user.name.toUpperCase();
@@ -101,7 +114,7 @@ String exposureLabel(BleShootingMode mode) {
     BleExposureMode.b => 'B',
     BleExposureMode.bt => 'BT',
     BleExposureMode.t => 'T',
-    BleExposureMode.auto => 'Auto',
+    BleExposureMode.auto => l10n.shootExposureAuto,
     BleExposureMode.tav => 'TAv',
     BleExposureMode.sv => 'Sv',
     BleExposureMode.x => 'X',
@@ -109,51 +122,48 @@ String exposureLabel(BleShootingMode mode) {
     BleExposureMode.movieTv ||
     BleExposureMode.movieAv ||
     BleExposureMode.movieTav ||
-    BleExposureMode.movieM => 'Movie',
+    BleExposureMode.movieM => l10n.shootExposureMovie,
     BleExposureMode.astroTracer ||
     BleExposureMode.astroTracerT ||
     BleExposureMode.astroTracerBt ||
-    BleExposureMode.astroTracerType3 => 'Astro',
+    BleExposureMode.astroTracerType3 => l10n.shootExposureAstro,
     BleExposureMode.sfp => 'SFP',
   };
 }
 
 /// A `/v1/props` setting value as the camera shows it
-/// (remote-shooting.md §4.3).
-String settingLabel(String key, String value) => switch (key) {
-  'av' => value == '---' ? '---' : 'f/$value',
-  'tv' => _shutterLabel(value),
-  'sv' =>
-    value == 'auto'
-        ? 'AUTO'
-        : value == '---'
-        ? '---'
-        : value,
-  'xv' => _evLabel(value),
-  'meteringMode' => switch (value) {
-    'multi' => 'Multi',
-    'center' => 'Center',
-    'spot' => 'Spot',
-    'highlight' => 'Highlight',
-    _ => value,
-  },
-  'effect' => switch (value) {
-    'off' => 'Standard',
-    'col_vivid' => 'Vivid',
-    'col_custom1' => 'Custom 1',
-    'col_custom2' => 'Custom 2',
-    'efc_monochrome' => 'Monotone',
-    'efc_softMonochrome' => 'Soft Monotone',
-    'efc_hardMonochrome' => 'Hard Monotone',
-    'efc_highContrast' => 'Hi-Contrast B&W',
-    'efc_posiFilm' => 'Positive Film',
-    'efc_bleachBypass' => 'Bleach Bypass',
-    'efc_retro' => 'Retro',
-    'efc_HDRTone' => 'HDR Tone',
-    _ => value,
-  },
-  _ => value,
-};
+/// (remote-shooting.md §4.3): readouts such as `f/2.8`, `1/250` and `AUTO`
+/// as data, menu names such as Spot and Positive Film as messages.
+String settingLabel(AppLocalizations l10n, String key, String value) =>
+    switch (key) {
+      'av' => value == '---' ? '---' : 'f/$value',
+      'tv' => _shutterLabel(value),
+      'sv' => value == 'auto' ? 'AUTO' : value,
+      'xv' => _evLabel(value),
+      'meteringMode' => switch (value) {
+        'multi' => l10n.shootMeteringMulti,
+        'center' => l10n.shootMeteringCenter,
+        'spot' => l10n.shootMeteringSpot,
+        'highlight' => l10n.shootMeteringHighlight,
+        _ => value,
+      },
+      'effect' => switch (value) {
+        'off' => l10n.shootEffectStandard,
+        'col_vivid' => l10n.shootEffectVivid,
+        'col_custom1' => l10n.shootEffectCustom1,
+        'col_custom2' => l10n.shootEffectCustom2,
+        'efc_monochrome' => l10n.shootEffectMonotone,
+        'efc_softMonochrome' => l10n.shootEffectSoftMonotone,
+        'efc_hardMonochrome' => l10n.shootEffectHardMonotone,
+        'efc_highContrast' => l10n.shootEffectHiContrast,
+        'efc_posiFilm' => l10n.shootEffectPositiveFilm,
+        'efc_bleachBypass' => l10n.shootEffectBleachBypass,
+        'efc_retro' => l10n.shootEffectRetro,
+        'efc_HDRTone' => l10n.shootEffectHdrTone,
+        _ => value,
+      },
+      _ => value,
+    };
 
 /// `N.D` is N/D seconds: `1.320` -> `1/320`, `3.10` -> `0.3"`,
 /// `2.1` -> `2"`.

@@ -22,6 +22,24 @@ enum LiveViewPhase {
   streaming,
 }
 
+/// Why [LiveViewController.setSetting] did not change a setting.
+sealed class SettingRefusal {
+  const new();
+}
+
+/// The phone is not on the camera's Wi-Fi, so settings cannot change.
+final class SettingRefusalNotOnWifi extends SettingRefusal {
+  const new();
+}
+
+/// The camera did not take the new value.
+final class SettingRefusalByCamera extends SettingRefusal {
+  const new(this.detail);
+
+  /// The error, as technical detail; not translated.
+  final String detail;
+}
+
 /// Live view on the Shoot tab (mock `b-shoot`): wanting it joins the
 /// camera's Wi-Fi, and the session's [CameraLiveView] runs while the Wi-Fi
 /// is up. A focus result shows for 2 s.
@@ -106,17 +124,17 @@ final class LiveViewController extends ChangeNotifier {
   /// Sets an exposure setting to one of the values its list offers. The
   /// readouts show [value] at once and go back if the camera refuses it;
   /// returns why then.
-  Future<String?> setSetting(String key, String value) async {
+  Future<SettingRefusal?> setSetting(String key, String value) async {
     final live = _live;
     if (live == null || !live.canChangeSettings) {
-      return "Not on the camera's Wi-Fi";
+      return const SettingRefusalNotOnWifi();
     }
     try {
       await live.setSetting(key, value);
       return null;
     } on Object catch (e) {
       if (_disposed) return null;
-      return "The camera didn't change it ($e)";
+      return SettingRefusalByCamera('$e');
     }
   }
 

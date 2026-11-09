@@ -92,9 +92,11 @@ void main() {
     expect(shared, isFalse);
   });
 
-  test('sizes read in plain units', () {
-    expect(formatLogSize(512), '512 B');
-    expect(formatLogSize(20 * 1024), '20 KB');
-    expect(formatLogSize(1234567), '1.2 MB');
+  test('sizes read in plain units, formatted for the locale', () {
+    final en = lookupAppLocalizations(const Locale('en'));
+    expect(formatLogSize(en, 512), '512 B');
+    expect(formatLogSize(en, 20 * 1024), '20 KB');
+    expect(formatLogSize(en, 1234567), '1.2 MB');
+    expect(formatLogSize(en, 1536 * 1024 * 1024), '1,536.0 MB');
   });
 }

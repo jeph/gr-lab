@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/connection/camera_pill.dart';
 import 'package:grlab/src/connection/connect_failure_view.dart';
 import 'package:grlab/src/connection/connect_steps.dart';
@@ -56,12 +57,8 @@ class _LiveLayoutState extends State<_LiveLayout> {
   ShootModel get _model => widget.model;
   LiveViewController get _live => _model.liveView;
 
-  static const _readouts = [
-    ('av', 'Aperture'),
-    ('tv', 'Shutter'),
-    ('sv', 'ISO'),
-    ('xv', 'EV'),
-  ];
+  /// The `/v1/props` keys of the readouts, left to right.
+  static const _readouts = ['av', 'tv', 'sv', 'xv'];
 
   /// A setting the camera lets the app change now: it lists more than one
   /// value (Av lists apertures, not shutter speeds), and for the mode dial
@@ -76,12 +73,18 @@ class _LiveLayoutState extends State<_LiveLayout> {
   }
 
   Future<void> _set(String key, String value) async {
-    final error = await _live.setSetting(key, value);
-    if (error != null && mounted) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(error)));
-    }
+    final refusal = await _live.setSetting(key, value);
+    if (refusal == null || !mounted) return;
+    final l10n = context.l10n;
+    final message = switch (refusal) {
+      SettingRefusalNotOnWifi() => l10n.liveViewNotOnWifi,
+      SettingRefusalByCamera(:final detail) => l10n.liveViewSettingFailed(
+        detail,
+      ),
+    };
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _pick(String key, String title) async {
@@ -109,7 +112,11 @@ class _LiveLayoutState extends State<_LiveLayout> {
             for (final t in ShootTimer.values)
               ListTile(
                 key: Key('shoot-timer-${t.name}'),
-                title: Text(t == ShootTimer.off ? 'Self-timer off' : t.label),
+                title: Text(
+                  t == ShootTimer.off
+                      ? context.l10n.liveViewTimerOff
+                      : t.label(context.l10n),
+                ),
                 trailing: t == current ? const Icon(Icons.check_rounded) : null,
                 onTap: () => Navigator.of(context).pop(t),
               ),
@@ -123,6 +130,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     final split = _model.driveAndTimer;
     final exposure = _model.exposure;
     final dialKey = _dialKey != null && _editable(_dialKey!) != null
@@ -142,7 +150,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
                     _RoundButton(
                       key: const Key('live-close'),
                       icon: Icons.close_rounded,
-                      label: 'Back to Remote',
+                      label: l10n.liveViewBackToRemote,
                       onTap: () => _model.mode = ShootMode.remote,
                     ),
                     const SizedBox(width: 8),
@@ -165,7 +173,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
                           border: Border.all(color: c.line2),
                         ),
                         child: Text(
-                          exposureLabel(exposure),
+                          exposureLabel(l10n, exposure),
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -190,7 +198,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
                     _Chip(
                       key: const Key('live-chip-drive'),
                       icon: Icons.burst_mode_outlined,
-                      label: split?.$1.label ?? '—',
+                      label: split?.$1.label(l10n) ?? '—',
                       onTap: _model.canShoot
                           ? () => unawaited(showDrivePicker(context, _model))
                           : null,
@@ -198,21 +206,25 @@ class _LiveLayoutState extends State<_LiveLayout> {
                     _Chip(
                       key: const Key('live-chip-timer'),
                       icon: Icons.timer_outlined,
-                      label: split?.$2.label ?? '—',
+                      label: split?.$2.label(l10n) ?? '—',
                       onTap:
                           _model.canShoot && split?.$1 != ShootDrive.continuous
                           ? () => unawaited(_pickTimer())
                           : null,
                     ),
-                    for (final (key, icon, title) in const [
-                      ('meteringMode', Icons.filter_center_focus, 'Metering'),
-                      ('effect', Icons.tune_rounded, 'Image Control'),
+                    for (final (key, icon, title) in [
+                      (
+                        'meteringMode',
+                        Icons.filter_center_focus,
+                        l10n.liveViewMetering,
+                      ),
+                      ('effect', Icons.tune_rounded, l10n.liveViewImageControl),
                     ])
                       if (_live.props?.setting(key)?.current case final v?)
                         _Chip(
                           key: Key('live-chip-$key'),
                           icon: icon,
-                          label: settingLabel(key, v),
+                          label: settingLabel(l10n, key, v),
                           onTap: _editable(key) == null
                               ? null
                               : () => unawaited(_pick(key, title)),
@@ -258,8 +270,8 @@ class _LiveLayoutState extends State<_LiveLayout> {
               const SizedBox(height: 12),
               Text(
                 volumeShutter
-                    ? 'Tap to focus · volume buttons fire the shutter'
-                    : 'Tap to focus',
+                    ? l10n.liveViewTapToFocusVolume
+                    : l10n.liveViewTapToFocus,
                 style: TextStyle(fontSize: 11.5, color: c.t2),
               ),
               const SizedBox(height: 8),
@@ -306,7 +318,10 @@ class _Picture extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Live view comes over ${camera?.name ?? 'the camera'}'s Wi-Fi",
+              switch (camera?.name) {
+                final name? => context.l10n.liveViewJoining(name),
+                null => context.l10n.liveViewJoiningUnnamed,
+              },
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
@@ -319,7 +334,7 @@ class _Picture extends StatelessWidget {
           children: [
             const CircularProgressIndicator(),
             const SizedBox(height: 14),
-            Text('Starting live view…', style: TextStyle(color: c.t2)),
+            Text(context.l10n.liveViewStarting, style: TextStyle(color: c.t2)),
           ],
         );
       }
@@ -417,7 +432,9 @@ class _Readouts extends StatelessWidget {
   });
 
   final LiveViewController live;
-  final List<(String, String)> readouts;
+
+  /// The `/v1/props` keys to show.
+  final List<String> readouts;
   final String? selected;
   final bool Function(String key) editable;
   final ValueChanged<String> onTap;
@@ -425,12 +442,13 @@ class _Readouts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     final props = live.props;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6),
       child: Row(
         children: [
-          for (final (key, label) in readouts)
+          for (final key in readouts)
             Expanded(
               child: GestureDetector(
                 key: Key('live-readout-$key'),
@@ -439,7 +457,7 @@ class _Readouts extends StatelessWidget {
                 child: Column(
                   children: [
                     Text(
-                      label.toUpperCase(),
+                      _readoutLabel(l10n, key).toUpperCase(),
                       style: TextStyle(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w600,
@@ -450,7 +468,7 @@ class _Readouts extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       switch (props?.setting(key)?.current) {
-                        final v? => settingLabel(key, v),
+                        final v? => settingLabel(l10n, key, v),
                         null => '—',
                       },
                       style: GrFonts.monoStyle(
@@ -473,6 +491,14 @@ class _Readouts extends StatelessWidget {
     );
   }
 }
+
+String _readoutLabel(AppLocalizations l10n, String key) => switch (key) {
+  'av' => l10n.liveViewAperture,
+  'tv' => l10n.liveViewShutter,
+  'sv' => l10n.liveViewIso,
+  'xv' => l10n.liveViewEv,
+  _ => key,
+};
 
 /// The values of one setting in a row, the current one centred
 /// (mock `.dial`).
@@ -545,7 +571,11 @@ class _DialState extends State<_Dial> {
             itemBuilder: (context, i) {
               final v = options[i];
               final current = v == widget.setting.current;
-              final label = settingLabel(key, v).replaceFirst('f/', '');
+              final label = settingLabel(
+                context.l10n,
+                key,
+                v,
+              ).replaceFirst('f/', '');
               return GestureDetector(
                 key: Key('live-dial-option-$v'),
                 behavior: HitTestBehavior.opaque,

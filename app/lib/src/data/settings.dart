@@ -7,17 +7,16 @@ import 'package:grlab/src/data/json_file.dart';
 /// How long the camera's Wi-Fi stays connected without use before the app
 /// leaves it.
 enum AutoDisconnect {
-  oneMinute(Duration(minutes: 1), '1 min'),
-  fiveMinutes(Duration(minutes: 5), '5 min'),
-  tenMinutes(Duration(minutes: 10), '10 min'),
-  fifteenMinutes(Duration(minutes: 15), '15 min'),
-  never(null, 'Never');
+  oneMinute(Duration(minutes: 1)),
+  fiveMinutes(Duration(minutes: 5)),
+  tenMinutes(Duration(minutes: 10)),
+  fifteenMinutes(Duration(minutes: 15)),
+  never(null);
 
-  new(this.after, this.label);
+  new(this.after);
 
   /// Null for [never].
   final Duration? after;
-  final String label;
 }
 
 /// The Shoot tab's two modes (mock `b-remote`, `b-shoot`).

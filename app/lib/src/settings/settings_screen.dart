@@ -20,8 +20,9 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final models = AppScope.of(context);
     final settings = models.settings;
+    final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListenableBuilder(
         listenable: settings,
         builder: (context, _) => ListView(
@@ -29,29 +30,29 @@ class SettingsScreen extends StatelessWidget {
             bottom: 24 + MediaQuery.paddingOf(context).bottom,
           ),
           children: [
-            const SectionLabel('Appearance'),
+            SectionLabel(l10n.settingsAppearance),
             _ThemeGroup(
               mode: settings.themeMode,
               onChanged: (m) => settings.themeMode = m,
             ),
-            const SectionLabel('Camera'),
+            SectionLabel(l10n.settingsCamera),
             GroupBox(
               children: [
                 GroupRow(
                   key: const Key('setting-auto-disconnect'),
                   icon: Icons.timer_outlined,
-                  title: 'Auto-disconnect',
-                  subtitle: "Leaves the camera's Wi-Fi when GR Lab isn't used",
+                  title: l10n.settingsAutoDisconnect,
+                  subtitle: l10n.settingsAutoDisconnectSubtitle,
                   trailing: TrailingFit.value(
                     context,
-                    settings.autoDisconnect.label,
+                    _autoDisconnectLabel(l10n, settings.autoDisconnect),
                   ),
                   chevron: true,
                   onTap: () => unawaited(_chooseAutoDisconnect(context)),
                 ),
               ],
             ),
-            const SectionLabel('Debug log'),
+            SectionLabel(l10n.settingsDebugLog),
             DebugLogGroup(log: models.debugLog),
             SectionLabel(context.l10n.privacyAboutSection),
             GroupBox(
@@ -81,6 +82,13 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
+/// `5 min`, `Never`.
+String _autoDisconnectLabel(AppLocalizations l10n, AutoDisconnect choice) =>
+    switch (choice.after) {
+      null => l10n.settingsAutoDisconnectNever,
+      final after => l10n.settingsAutoDisconnectMinutes(after.inMinutes),
+    };
+
 Future<void> _chooseAutoDisconnect(BuildContext context) {
   final settings = AppScope.of(context).settings;
   return showModalBottomSheet<void>(
@@ -93,13 +101,13 @@ Future<void> _chooseAutoDisconnect(BuildContext context) {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SectionLabel('Disconnect Wi-Fi after'),
+            SectionLabel(context.l10n.settingsAutoDisconnectSheetTitle),
             GroupBox(
               children: [
                 for (final choice in AutoDisconnect.values)
                   GroupRow(
                     key: ValueKey('auto-disconnect:${choice.name}'),
-                    title: choice.label,
+                    title: _autoDisconnectLabel(context.l10n, choice),
                     trailing: choice == settings.autoDisconnect
                         ? Icon(
                             Icons.check_rounded,
@@ -129,6 +137,7 @@ class _ThemeGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
@@ -140,24 +149,23 @@ class _ThemeGroup extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Theme',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+          Text(
+            l10n.settingsTheme,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              for (final (m, label) in const [
-                (ThemeMode.system, 'Auto'),
-                (ThemeMode.light, 'Light'),
-                (ThemeMode.dark, 'Dark'),
+              for (final m in const [
+                ThemeMode.system,
+                ThemeMode.light,
+                ThemeMode.dark,
               ]) ...[
                 if (m != ThemeMode.system) const SizedBox(width: 8),
                 Expanded(
                   child: _ThemeTile(
                     key: ValueKey('theme:${m.name}'),
                     mode: m,
-                    label: label,
                     selected: mode == m,
                     onTap: () => onChanged(m),
                   ),
@@ -176,20 +184,19 @@ class _ThemeGroup extends StatelessWidget {
 class _ThemeTile extends StatelessWidget {
   const new({
     required this.mode,
-    required this.label,
     required this.selected,
     required this.onTap,
     super.key,
   });
 
   final ThemeMode mode;
-  final String label;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     final preview = switch (mode) {
       ThemeMode.light => const _MiniLibrary(GrColors.light),
       ThemeMode.dark => const _MiniLibrary(GrColors.dark),
@@ -203,7 +210,7 @@ class _ThemeTile extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: '$label theme',
+      label: l10n.settingsThemeSemantics(mode.name),
       child: GestureDetector(
         onTap: onTap,
         child: Column(
@@ -225,7 +232,7 @@ class _ThemeTile extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              label,
+              l10n.settingsThemeName(mode.name),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,

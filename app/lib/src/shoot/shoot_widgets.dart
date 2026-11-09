@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/data/settings.dart';
 import 'package:grlab/src/shoot/shoot_format.dart';
 import 'package:grlab/src/shoot/shoot_model.dart';
 import 'package:grlab/src/theme/tokens.dart';
+import 'package:intl/intl.dart';
 
 /// Remote / Live view, at the top of Shoot in both modes (mock `.modeseg`).
 class ShootModeSwitch extends StatelessWidget {
@@ -17,6 +19,7 @@ class ShootModeSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     return Container(
       key: const Key('shoot-mode'),
       padding: const EdgeInsets.all(3),
@@ -28,9 +31,9 @@ class ShootModeSwitch extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          for (final (m, icon, label) in const [
-            (ShootMode.remote, Icons.bluetooth_rounded, 'Remote'),
-            (ShootMode.liveView, Icons.wifi_rounded, 'Live view'),
+          for (final (m, icon, label) in [
+            (ShootMode.remote, Icons.bluetooth_rounded, l10n.shootModeRemote),
+            (ShootMode.liveView, Icons.wifi_rounded, l10n.shootModeLiveView),
           ])
             Semantics(
               button: true,
@@ -209,6 +212,7 @@ class _ShutterButtonState extends State<ShutterButton> {
     final length = model.countdown;
     final size = widget.size;
     final enabled = model.canShoot;
+    final l10n = context.l10n;
     final Widget face;
     final String label;
     if (ends != null && length != null) {
@@ -217,7 +221,7 @@ class _ShutterButtonState extends State<ShutterButton> {
           ? 0.0
           : (left.inMilliseconds / length.inMilliseconds).clamp(0.0, 1.0);
       final seconds = math.max(0, (left.inMilliseconds / 1000).ceil());
-      label = 'Cancel self-timer, $seconds seconds left';
+      label = l10n.shootCancelTimerSemantics(seconds);
       face = CustomPaint(
         key: const Key('shoot-countdown'),
         painter: _RingPainter(
@@ -228,7 +232,9 @@ class _ShutterButtonState extends State<ShutterButton> {
         ),
         child: Center(
           child: Text(
-            '$seconds',
+            NumberFormat.decimalPattern(
+              Localizations.localeOf(context).toString(),
+            ).format(seconds),
             style: GrFonts.monoStyle(
               context,
               size: size * .3,
@@ -239,7 +245,7 @@ class _ShutterButtonState extends State<ShutterButton> {
         ),
       );
     } else {
-      label = 'Shutter';
+      label = l10n.shootShutter;
       face = DecoratedBox(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
@@ -327,17 +333,17 @@ Future<void> showDrivePicker(BuildContext context, ShootModel model) async {
         key: const Key('shoot-drive-sheet'),
         shrinkWrap: true,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
             child: Text(
-              'Drive',
-              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+              context.l10n.shootDrive,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
             ),
           ),
           for (final d in ShootDrive.values)
             ListTile(
               key: Key('shoot-drive-${d.name}'),
-              title: Text(d.label),
+              title: Text(d.label(context.l10n)),
               trailing: d == current ? const Icon(Icons.check_rounded) : null,
               onTap: () => Navigator.of(context).pop(d),
             ),
@@ -378,7 +384,7 @@ Future<String?> showSettingPicker(
           for (final o in options)
             ListTile(
               key: Key('shoot-option-$key-$o'),
-              title: Text(settingLabel(key, o)),
+              title: Text(settingLabel(context.l10n, key, o)),
               trailing: o == current ? const Icon(Icons.check_rounded) : null,
               onTap: () => Navigator.of(context).pop(o),
             ),
