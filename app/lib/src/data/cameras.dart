@@ -86,7 +86,6 @@ final class CameraStore extends ChangeNotifier {
 
   final JsonFile _file;
   final List<SavedCamera> _cameras = [];
-  Future<void> _pending = Future.value();
 
   List<SavedCamera> get cameras => List.unmodifiable(_cameras);
   SavedCamera? get current => _cameras.isEmpty ? null : _cameras.first;
@@ -127,11 +126,14 @@ final class CameraStore extends ChangeNotifier {
     return _save();
   }
 
+  /// Saves every camera after the writes already queued. The returned
+  /// future fails when this write does (the failure also goes to the debug
+  /// log); the next change writes every camera again.
   Future<void> _save() {
     notifyListeners();
     final snapshot = {
       'cameras': [for (final c in _cameras) c.toJson()],
     };
-    return _pending = _pending.then((_) => _file.write(snapshot));
+    return _file.save(() => snapshot);
   }
 }

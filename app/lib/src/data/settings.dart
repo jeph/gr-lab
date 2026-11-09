@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -52,7 +53,6 @@ final class SettingsController extends ChangeNotifier {
   }
 
   final JsonFile _file;
-  Future<void> _pending = Future.value();
 
   ThemeMode _themeMode = ThemeMode.system;
   AutoDisconnect _autoDisconnect = AutoDisconnect.fiveMinutes;
@@ -78,6 +78,8 @@ final class SettingsController extends ChangeNotifier {
   set shootMode(ShootMode v) => _update(() => _shootMode = v);
   set debugLogging(bool? v) => _update(() => _debugLogging = v);
 
+  /// Applies [change] at once and saves every setting; a failed write goes
+  /// to the debug log, and the next change writes every setting again.
   void _update(void Function() change) {
     change();
     notifyListeners();
@@ -87,9 +89,10 @@ final class SettingsController extends ChangeNotifier {
       'shootMode': _shootMode.name,
       'debugLogging': ?_debugLogging,
     };
-    _pending = _pending.then((_) => _file.write(snapshot));
+    unawaited(_file.save(() => snapshot));
   }
 
-  /// Completes when every change so far is on disk.
-  Future<void> flush() => _pending;
+  /// Completes when every change so far is on disk; fails when the latest
+  /// write did.
+  Future<void> flush() => _file.flush();
 }
