@@ -87,10 +87,10 @@ void main() {
     final first = await looks.load(1, name: 'Rebased', look: rebased);
     final second = await looks.load(2, name: 'Fresh', look: fresh);
 
-    expect(first.look!.sameAs(rebased), isTrue);
-    expect(second.look!.sameAs(fresh), isTrue);
-    expect(_held(rig, 1).sameAs(rebased), isTrue);
-    expect(_held(rig, 2).sameAs(fresh), isTrue);
+    expect(first.look!.settings, rebased.settings);
+    expect(second.look!.settings, fresh.settings);
+    expect(_held(rig, 1).settings, rebased.settings);
+    expect(_held(rig, 2).settings, fresh.settings);
   });
 
   test('a blob the camera refuses leaves the slot as it was', () async {

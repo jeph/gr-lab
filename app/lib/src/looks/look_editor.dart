@@ -103,9 +103,9 @@ class _LookEditorState extends State<LookEditor> {
   /// The look differs from its saved version, or has none.
   bool get _unsaved {
     final saved = _saved;
-    if (saved == null) return true;
-    final look = saved.look;
-    return saved.name != _name || look == null || !look.sameAs(_look);
+    return saved == null ||
+        saved.name != _name ||
+        saved.settings != _look.settings;
   }
 
   File? get _photo {
@@ -114,7 +114,8 @@ class _LookEditorState extends State<LookEditor> {
   }
 
   /// Stores the look, asking for a name when it is new, and says in a snack
-  /// bar whether it reached the phone's storage.
+  /// bar whether it reached the phone's storage, or in a dialog which saved
+  /// look has its name or settings already.
   Future<void> _save() async {
     final l10n = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
@@ -137,6 +138,9 @@ class _LookEditorState extends State<LookEditor> {
         stored = saved.copyWith(name: name, data: data);
         await _model.store.update(stored);
       }
+    } on LookConflict catch (conflict) {
+      if (mounted) await showLookConflict(context, conflict);
+      return;
     } on FileSystemException {
       showLooksMessage(messenger, l10n.looksSaveFailed(name));
       return;

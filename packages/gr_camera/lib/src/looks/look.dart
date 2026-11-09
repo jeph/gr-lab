@@ -98,18 +98,10 @@ final class Look {
     return base != null && lookBases(camera).contains(base);
   }
 
-  /// Whether [other] is the same look: the same base image and the same
-  /// value for every parameter, in any order, including those GR Lab does
-  /// not know. The header is not compared, so a look still matches after
-  /// the camera stored it in its own format version.
-  bool sameAs(Look other) {
-    final mine = _blob.parameters;
-    final theirs = other._blob.parameters;
-    if (_blob.base.raw != other._blob.base.raw) return false;
-    if (mine.length != theirs.length) return false;
-    final values = {for (final e in mine) e.parameter.raw: e.value};
-    return theirs.every((e) => values[e.parameter.raw] == e.value);
-  }
+  /// What this look does to a picture, apart from how its bytes lay it
+  /// out: compare two looks' settings with `==` to tell whether they are
+  /// the same look.
+  late final LookSettings settings = LookSettings._(_blob);
 
   /// The look as the Custom slots and `/imgctrl` carry it: the header, each
   /// parameter, then zeros up to the slot's 56 bytes (ble.md § Image
@@ -144,6 +136,57 @@ final class Look {
 
   static int _initial(LookParameter parameter) =>
       lookRange(parameter)?.initial ?? 0;
+}
+
+/// A look's base image and the value of each of its parameters, compared
+/// by value: two looks with equal settings are the same look, whatever
+/// their bytes.
+///
+/// The settings are derived from a look's bytes and never stored, so what
+/// counts as the same look can change without converting saved looks. Only
+/// what the look means is compared \[design\]:
+///
+/// - the header (format version and byte 1) is left out, so a look still
+///   matches after a camera stored it in its own format version;
+/// - so are the order of the parameters, the zeros after them and the
+///   length of the bytes;
+/// - a base image or parameter GR Lab does not know is compared by its
+///   number, so looks from a newer camera or firmware compare too;
+/// - a parameter listed twice has its first value, as in [Look.values].
+///
+/// A look that lacks a parameter differs from one that has it, even at its
+/// initial value: what a camera takes a missing parameter to be is
+/// \[unknown\], and the GR IV's firmware refuses a look without exactly
+/// its base's parameters (research/protocol/image-control.md §1).
+@immutable
+final class LookSettings {
+  new _(BleImageControlBlob blob)
+    : _base = blob.base.raw,
+      _values = {
+        // Last to first, so that a parameter's first value is the one kept.
+        for (final e in blob.parameters.reversed) e.parameter.raw: e.value,
+      };
+
+  /// The base image's number on the wire.
+  final int _base;
+
+  /// Each parameter's value, by the parameter's number on the wire.
+  final Map<int, int> _values;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LookSettings &&
+      _base == other._base &&
+      mapEquals(_values, other._values);
+
+  @override
+  late final int hashCode = Object.hash(
+    _base,
+    Object.hashAllUnordered([
+      for (final MapEntry(:key, :value) in _values.entries)
+        Object.hash(key, value),
+    ]),
+  );
 }
 
 /// The look [blob] holds. Used inside the camera layer only; not exported.

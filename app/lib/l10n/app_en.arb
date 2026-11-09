@@ -1463,6 +1463,48 @@
   "@looksBefore": {
     "description": "Tag on the unaltered photo in the look editor."
   },
+  "looksConflictExistsBody": "{name} is already saved with the same settings.",
+  "@looksConflictExistsBody": {
+    "description": "Body of the dialog shown when a look is not saved because a saved look has both the same name and the same settings.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "description": "The name of the saved look, as the user or the camera named it."
+      }
+    }
+  },
+  "looksConflictExistsTitle": "This look already exists",
+  "@looksConflictExistsTitle": {
+    "description": "Title of the dialog shown when a look is not saved because a saved look has both the same name and the same settings."
+  },
+  "looksConflictNameBody": "Another look is already named {name}. Give this look a different name.",
+  "@looksConflictNameBody": {
+    "description": "Body of the dialog shown when a look is not saved because a saved look with other settings has the same name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "description": "The name both looks would have, as the user or the camera named it."
+      }
+    }
+  },
+  "looksConflictOk": "OK",
+  "@looksConflictOk": {
+    "description": "Button that closes the dialog shown when a look is not saved."
+  },
+  "looksConflictSettingsBody": "Another look, {name}, has the same settings. Two looks can't have the same settings.",
+  "@looksConflictSettingsBody": {
+    "description": "Body of the dialog shown when a look is not saved because a saved look under another name has the same settings (base image and adjustments).",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "description": "The name of the saved look with the same settings, as the user or the camera named it."
+      }
+    }
+  },
+  "looksConflictTitle": "Can't save this look",
+  "@looksConflictTitle": {
+    "description": "Title of the dialog shown when a look is not saved because a saved look has the same name or the same settings."
+  },
   "looksCustomSlots": "Custom 1-3",
   "@looksCustomSlots": {
     "description": "Note beside the On the camera label: which camera settings the three slots are."

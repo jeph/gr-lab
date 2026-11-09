@@ -386,4 +386,66 @@ void main() {
     await pumpUntilFound(tester, find.text('Saved Daido'));
     expect(app.models.looks.looks.single.name, 'Daido');
   });
+
+  testWidgets('a look with the name or the settings of a saved look is not '
+      'saved or renamed, and a dialog names the look in the way', (
+    tester,
+  ) async {
+    final app = await _start(tester, saveCamera: false);
+    final looks = app.models.looks;
+    Future<void> nameIt(String name) async {
+      final field = find.byKey(const Key('looks-name-field'));
+      await pumpUntilFound(tester, field);
+      await tester.enterText(field, name);
+      await tapWhenReady(tester, find.byKey(const Key('looks-name-ok')));
+    }
+
+    Future<void> saveAs(String name) async {
+      await tapWhenReady(tester, find.byKey(const Key('look-save')));
+      await nameIt(name);
+    }
+
+    Future<void> dismiss(String said) async {
+      await pumpUntilFound(tester, find.text(said));
+      await tapWhenReady(tester, find.byKey(const Key('looks-conflict-ok')));
+      await pumpUntil(tester, () => find.text(said).evaluate().isEmpty);
+    }
+
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+    await tapWhenReady(tester, find.byKey(const Key('looks-new')));
+    await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
+    await saveAs('Plain');
+    await pumpUntilFound(tester, find.text('Saved Plain'));
+    await tester.pageBack();
+
+    await tapWhenReady(tester, find.byKey(const Key('looks-new')));
+    await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
+    await saveAs('Plain');
+    await pumpUntilFound(tester, find.text('This look already exists'));
+    await dismiss('Plain is already saved with the same settings.');
+    await saveAs('Other');
+    await dismiss(
+      "Another look, Plain, has the same settings. Two looks can't have the "
+      'same settings.',
+    );
+    await tapWhenReady(tester, find.byKey(const ValueKey('look-base:vivid')));
+    await saveAs('Plain');
+    await dismiss(
+      'Another look is already named Plain. Give this look a different name.',
+    );
+    expect(looks.looks.map((l) => l.name), ['Plain']);
+
+    await saveAs('Bright');
+    await pumpUntilFound(tester, find.text('Saved Bright'));
+    final bright = looks.looks.first;
+    await tester.pageBack();
+    await tapWhenReady(tester, find.byKey(Key('look-menu:${bright.id}')));
+    await tapWhenReady(tester, find.text('Rename'));
+    await nameIt('Plain');
+    await dismiss(
+      'Another look is already named Plain. Give this look a different name.',
+    );
+    expect(looks.looks.map((l) => l.name), ['Bright', 'Plain']);
+    await app.dispose();
+  });
 }

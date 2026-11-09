@@ -202,6 +202,35 @@ Future<String?> askLookName(
   return trimmed == null || trimmed.isEmpty ? null : trimmed;
 }
 
+/// Says why a look was not saved: the saved look [conflict] names has its
+/// name, its settings or both.
+Future<void> showLookConflict(BuildContext context, LookConflict conflict) {
+  final l10n = context.l10n;
+  final other = conflict.other.name;
+  final exists = conflict.kind == LookConflictKind.nameAndSettings;
+  return showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      key: Key('looks-conflict:${conflict.kind.name}'),
+      title: Text(
+        exists ? l10n.looksConflictExistsTitle : l10n.looksConflictTitle,
+      ),
+      content: Text(switch (conflict.kind) {
+        LookConflictKind.nameAndSettings => l10n.looksConflictExistsBody(other),
+        LookConflictKind.settings => l10n.looksConflictSettingsBody(other),
+        LookConflictKind.name => l10n.looksConflictNameBody(other),
+      }),
+      actions: [
+        TextButton(
+          key: const Key('looks-conflict-ok'),
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.looksConflictOk),
+        ),
+      ],
+    ),
+  );
+}
+
 /// Asks before deleting [saved] from the library.
 Future<bool> confirmDelete(BuildContext context, SavedLook saved) async {
   final l10n = context.l10n;

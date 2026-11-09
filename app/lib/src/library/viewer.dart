@@ -16,6 +16,7 @@ import 'package:grlab/src/library/shot.dart';
 import 'package:grlab/src/library/shot_cell.dart';
 import 'package:grlab/src/looks/look_spec.dart';
 import 'package:grlab/src/looks/look_widgets.dart';
+import 'package:grlab/src/looks/looks_store.dart';
 import 'package:grlab/src/theme/tokens.dart';
 import 'package:grlab/src/widgets/group.dart';
 import 'package:video_player/video_player.dart';
@@ -722,7 +723,6 @@ class _ImageControlRowState extends State<_ImageControlRow> {
               .load(serial, file, GrImageSize.view)
               .future
               .then<Uint8List?>((b) => b, onError: (Object _) => null);
-    var stored = true;
     try {
       await store.add(
         name: name,
@@ -730,14 +730,13 @@ class _ImageControlRowState extends State<_ImageControlRow> {
         source: file.name,
         photo: photo,
       );
+      showLooksMessage(messenger, l10n.looksSaved(name));
+    } on LookConflict catch (conflict) {
+      if (mounted) unawaited(showLookConflict(context, conflict));
     } on FileSystemException {
-      stored = false;
+      showLooksMessage(messenger, l10n.looksSaveFailed(name));
     }
     if (mounted) setState(() => _saving = false);
-    showLooksMessage(
-      messenger,
-      stored ? l10n.looksSaved(name) : l10n.looksSaveFailed(name),
-    );
   }
 
   @override

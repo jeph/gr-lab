@@ -153,15 +153,15 @@ final class LooksModel extends ChangeNotifier {
     _sync();
   }
 
-  /// The saved look [slot] holds: one with the same base image and
-  /// parameters, the one under the slot's name first.
+  /// The saved look [slot] holds: one with the same settings
+  /// ([LookSettings]). A library from before saved looks had to differ can
+  /// hold several; the one under the slot's name comes first.
   SavedLook? savedLookIn(LookSlot slot) {
-    final inSlot = slot.look;
+    final inSlot = slot.look?.settings;
     if (inSlot == null) return null;
     SavedLook? same;
     for (final saved in store.looks) {
-      final look = saved.look;
-      if (look == null || !look.sameAs(inSlot)) continue;
+      if (saved.settings != inSlot) continue;
       if (saved.name == slot.name) return saved;
       same ??= saved;
     }

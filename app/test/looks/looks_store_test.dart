@@ -8,6 +8,13 @@ import 'package:grlab/src/looks/looks_store.dart';
 void main() {
   late Directory dataDir;
   final data = Uint8List.fromList(FakeLook.presets[0].data);
+  final otherData = Uint8List.fromList(FakeLook.presets[1].data);
+
+  Matcher conflict(LookConflictKind kind, SavedLook other) => throwsA(
+    isA<LookConflict>()
+        .having((c) => c.kind, 'kind', kind)
+        .having((c) => c.other.id, 'other', other.id),
+  );
 
   setUp(() async {
     dataDir = await Directory.systemTemp.createTemp('grlab_looks_');
@@ -28,6 +35,71 @@ void main() {
     final store = await LooksStore.load(dataDir);
     return [for (final l in store.looks) l.name];
   }
+
+  test('a look with the name, the settings or both of a saved look is not '
+      'added, and the conflict names that look', () async {
+    final store = await LooksStore.load(dataDir);
+    final tokyo = await store.add(name: 'Tokyo Night', data: data);
+    // The same settings in other bytes: the header is not part of them.
+    final sameSettings = Uint8List.fromList(data)..[1] = data[1] + 1;
+
+    await expectLater(
+      store.add(name: 'Tokyo Night', data: sameSettings, photo: Uint8List(4)),
+      conflict(LookConflictKind.nameAndSettings, tokyo),
+    );
+    await expectLater(
+      store.add(name: 'Shinjuku', data: sameSettings),
+      conflict(LookConflictKind.settings, tokyo),
+    );
+    await expectLater(
+      store.add(name: 'Tokyo Night', data: otherData),
+      conflict(LookConflictKind.name, tokyo),
+    );
+    expect(store.looks.single.id, tokyo.id);
+    expect(await namesOnDisk(), ['Tokyo Night']);
+    expect(Directory('${dataDir.path}/looks').existsSync(), isFalse);
+
+    await store.add(name: 'Shinjuku', data: otherData);
+    expect(await namesOnDisk(), ['Shinjuku', 'Tokyo Night']);
+  });
+
+  test('a look is not renamed or changed into another saved look, but is '
+      'saved again as itself', () async {
+    final store = await LooksStore.load(dataDir);
+    final tokyo = await store.add(name: 'Tokyo Night', data: data);
+    final daido = await store.add(name: 'Daido', data: otherData);
+
+    await expectLater(
+      store.update(daido.copyWith(name: 'Tokyo Night')),
+      conflict(LookConflictKind.name, tokyo),
+    );
+    await expectLater(
+      store.update(daido.copyWith(data: data)),
+      conflict(LookConflictKind.settings, tokyo),
+    );
+    await expectLater(
+      store.update(daido.copyWith(name: 'Tokyo Night', data: data)),
+      conflict(LookConflictKind.nameAndSettings, tokyo),
+    );
+    expect(store.byId(daido.id)!.name, 'Daido');
+    expect(store.byId(daido.id)!.data, otherData);
+
+    await store.update(daido.copyWith(name: 'Moriyama'));
+    await store.update(tokyo.copyWith(data: data));
+    expect(await namesOnDisk(), ['Moriyama', 'Tokyo Night']);
+  });
+
+  test("a look with one saved look's settings and another's name is "
+      'refused for its settings', () async {
+    final store = await LooksStore.load(dataDir);
+    final tokyo = await store.add(name: 'Tokyo Night', data: data);
+    await store.add(name: 'Daido', data: otherData);
+
+    await expectLater(
+      store.add(name: 'Daido', data: data),
+      conflict(LookConflictKind.settings, tokyo),
+    );
+  });
 
   test(
     'a failed write does not stop the next one from reaching disk',

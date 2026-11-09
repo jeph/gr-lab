@@ -647,6 +647,8 @@ class _LookMenu extends StatelessWidget {
         if (name == null) return;
         try {
           await model.store.update(saved.copyWith(name: name));
+        } on LookConflict catch (conflict) {
+          if (context.mounted) await showLookConflict(context, conflict);
         } on FileSystemException {
           showLooksMessage(messenger, l10n.looksSaveFailed(name));
         }

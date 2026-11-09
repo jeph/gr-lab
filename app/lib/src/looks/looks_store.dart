@@ -41,6 +41,10 @@ final class SavedLook {
   /// [data] read as a look; null when it is not one.
   Look? get look => Look.fromBytes(data);
 
+  /// What the look does to a picture, for telling whether two looks are
+  /// the same ([LookSettings]); null when [data] is not a look.
+  LookSettings? get settings => look?.settings;
+
   SavedLook copyWith({String? name, Uint8List? data}) => SavedLook(
     id: id,
     name: name ?? this.name,
@@ -56,6 +60,33 @@ final class SavedLook {
     'created': created.toIso8601String(),
     'source': ?source,
   };
+}
+
+/// What a look shares with the saved look that keeps it from being saved.
+enum LookConflictKind {
+  /// The name and the settings: the look is already saved.
+  nameAndSettings,
+
+  /// The settings, under another name.
+  settings,
+
+  /// The name, with other settings.
+  name,
+}
+
+/// A look was not saved because the library already has [other], which
+/// shares its name, its settings ([SavedLook.settings]) or both: no two
+/// saved looks may share either.
+final class LookConflict implements Exception {
+  const new(this.kind, this.other);
+
+  final LookConflictKind kind;
+
+  /// The saved look in the way.
+  final SavedLook other;
+
+  @override
+  String toString() => 'LookConflict(${kind.name}, ${other.name})';
 }
 
 /// The user's looks, persisted as `looks.json` in the app data directory,
@@ -106,9 +137,10 @@ final class LooksStore extends ChangeNotifier {
 
   /// Adds a look named [name] holding [data], from [source] (see
   /// [SavedLook.source]), with [photo] (a JPEG) of the camera photo it was
-  /// saved from. Completes once the look is on disk; when it cannot be
-  /// written, the look is taken out again and the [FileSystemException] is
-  /// rethrown, so saving again does not leave a duplicate.
+  /// saved from. Throws [LookConflict], storing nothing, when a saved look
+  /// has its name or its settings. Completes once the look is on disk; when
+  /// it cannot be written, the look is taken out again and the
+  /// [FileSystemException] is rethrown, so saving again stores it once.
   Future<SavedLook> add({
     required String name,
     required Uint8List data,
@@ -123,6 +155,8 @@ final class LooksStore extends ChangeNotifier {
       created: now,
       source: source,
     );
+    final conflict = _conflictOf(look);
+    if (conflict != null) throw conflict;
     final photoFile = File('${_photos.path}/${look.id}.jpg');
     try {
       if (photo != null) {
@@ -139,12 +173,15 @@ final class LooksStore extends ChangeNotifier {
     return look;
   });
 
-  /// Replaces the look with [look]'s id. Completes once it is on disk; when
-  /// it cannot be written, the earlier version comes back and the
-  /// [FileSystemException] is rethrown.
+  /// Replaces the look with [look]'s id. Throws [LookConflict], changing
+  /// nothing, when another saved look has its name or its settings.
+  /// Completes once it is on disk; when it cannot be written, the earlier
+  /// version comes back and the [FileSystemException] is rethrown.
   Future<void> update(SavedLook look) => _serial(() async {
     final i = _looks.indexWhere((l) => l.id == look.id);
     if (i < 0) return;
+    final conflict = _conflictOf(look);
+    if (conflict != null) throw conflict;
     final before = _looks[i];
     _looks[i] = look;
     try {
@@ -155,6 +192,31 @@ final class LooksStore extends ChangeNotifier {
       rethrow;
     }
   });
+
+  /// The saved look, other than [look] itself, that keeps [look] from being
+  /// saved. One with both its name and its settings comes first: the look
+  /// already exists. Then one with its settings, which no other name gets
+  /// around, then one with its name.
+  LookConflict? _conflictOf(SavedLook look) {
+    final settings = look.settings;
+    SavedLook? sameSettings;
+    SavedLook? sameName;
+    for (final other in _looks) {
+      if (other.id == look.id) continue;
+      final hasName = other.name == look.name;
+      final hasSettings = settings != null && other.settings == settings;
+      if (hasName && hasSettings) {
+        return LookConflict(LookConflictKind.nameAndSettings, other);
+      }
+      if (hasSettings) sameSettings ??= other;
+      if (hasName) sameName ??= other;
+    }
+    if (sameSettings != null) {
+      return LookConflict(LookConflictKind.settings, sameSettings);
+    }
+    if (sameName != null) return LookConflict(LookConflictKind.name, sameName);
+    return null;
+  }
 
   /// Removes [look]. Completes once the removal is on disk; when it cannot
   /// be written, the look comes back and the [FileSystemException] is

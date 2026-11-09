@@ -142,32 +142,72 @@ void main() {
     expect(toned.valueOf(LookParameter.toningRetro), -3);
   });
 
-  test('the same look in another order or format version still matches', () {
+  test('looks have equal settings whatever their header, parameter order '
+      'and padding', () {
     final look = _preset(2);
     final shuffled = lookOf(
       BleImageControlBlob(
-        version: 1,
-        reserved: look.blob.reserved,
+        version: 4,
+        reserved: look.blob.reserved + 1,
         base: look.blob.base,
         parameters: look.blob.parameters.reversed.toList(),
       ),
     );
-    expect(look.sameAs(shuffled), isTrue);
-    expect(look.sameAs(look.withValue(LookParameter.hue, 0)), isFalse);
-    expect(look.sameAs(look.withBase(LookBase.positiveFilm)), isFalse);
+    expect(shuffled.settings, look.settings);
+    expect(shuffled.settings.hashCode, look.settings.hashCode);
+    expect({look.settings, shuffled.settings}, hasLength(1));
+
+    final unpadded = _bytes([1, 0, 0x01, 2], [0x00, 0x02, 0x02, 0xff]);
     expect(
-      look.sameAs(
-        lookOf(
-          BleImageControlBlob(
-            version: look.blob.version,
-            reserved: look.blob.reserved,
-            base: look.blob.base,
-            parameters: look.blob.parameters.skip(1).toList(),
-          ),
-        ),
-      ),
-      isFalse,
+      Look.fromBytes(unpadded)!.settings,
+      Look.fromBytes(Uint8List.fromList([...unpadded, ...List.filled(48, 0)]))!
+          .settings,
     );
+  });
+
+  test('looks with another base, value or set of parameters have '
+      'different settings', () {
+    final look = _preset(2);
+    expect(look.withValue(LookParameter.hue, 0).settings, isNot(look.settings));
+    expect(look.withBase(LookBase.positiveFilm).settings, isNot(look.settings));
+    expect(
+      lookOf(
+        BleImageControlBlob(
+          version: look.blob.version,
+          reserved: look.blob.reserved,
+          base: look.blob.base,
+          parameters: look.blob.parameters.skip(1).toList(),
+        ),
+      ).settings,
+      isNot(look.settings),
+      reason: 'a missing parameter is not its initial value',
+    );
+  });
+
+  test('settings compare a base and parameters GR Lab does not know, and '
+      'take the first value of a parameter listed twice', () {
+    Look read(List<int> header, List<int> parameters) =>
+        Look.fromBytes(_bytes(header, parameters))!;
+    final unknown = read([4, 0, 0x7a, 2], [0x6f, 0x05, 0x02, 0x01]);
+    expect(
+      read([1, 9, 0x7a, 2], [0x02, 0x01, 0x6f, 0x05]).settings,
+      unknown.settings,
+    );
+    expect(
+      read([4, 0, 0x7a, 2], [0x6f, 0x06, 0x02, 0x01]).settings,
+      isNot(unknown.settings),
+      reason: 'an unknown parameter with another value',
+    );
+    expect(
+      read([4, 0, 0x7b, 2], [0x6f, 0x05, 0x02, 0x01]).settings,
+      isNot(unknown.settings),
+      reason: 'another unknown base',
+    );
+
+    final twice = read([1, 0, 0x00, 2], [0x02, 0x01, 0x02, 0x03]);
+    expect(twice.valueOf(LookParameter.key), 1);
+    expect(twice.settings, read([1, 0, 0x00, 1], [0x02, 0x01]).settings);
+    expect(twice.settings, isNot(read([1, 0, 0x00, 1], [0x02, 0x03]).settings));
   });
 
   test('the GR IV Monochrome offers the monochrome bases GR WORLD gives it, '
