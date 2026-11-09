@@ -621,6 +621,35 @@ void main() {
     });
   });
 
+  test('a failed queue write fails flush and reaches the debug log; later '
+      'writes recover', () async {
+    final printed = <String>[];
+    final original = debugPrint;
+    debugPrint = (message, {wrapWidth}) => printed.add(message ?? '');
+    addTearDown(() => debugPrint = original);
+    h = (await Harness.start(
+      config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
+    ))..disconnect();
+    final engine = h.engine();
+    await engine.ready;
+    // A folder where downloads.json goes: the write cannot replace it.
+    final blocker = await Directory('${h.data.path}/downloads.json')
+        .create(recursive: true);
+    await engine.enqueue(serial, [h.shot('R0000002')]);
+    await expectLater(engine.flush(), throwsA(isA<FileSystemException>()));
+    expect(printed, contains(startsWith('Saving downloads.json failed')));
+
+    await blocker.delete();
+    await engine.enqueue(serial, [h.shot('R0000003')]);
+    await engine.flush();
+    final reopened = h.engine();
+    await reopened.ready;
+    expect(reopened.jobs.map((j) => j.shot.base), ['R0000002', 'R0000003']);
+    expect(h.data.listSync().map((e) => e.uri.pathSegments.last), [
+      'downloads.json',
+    ]);
+  });
+
   test('records loaded from disk reach listeners', () async {
     h = await Harness.start(
       config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),

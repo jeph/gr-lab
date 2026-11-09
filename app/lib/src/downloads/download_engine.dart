@@ -234,7 +234,6 @@ final class DownloadEngine extends ChangeNotifier {
   late final JsonFile _file = JsonFile(File('${dataDir.path}/downloads.json'));
   final List<DownloadJob> _jobs = [];
   final Map<String, Set<String>> _downloaded = {};
-  Future<void> _saving = Future.value();
   int _nextId = 0;
 
   bool _looping = false;
@@ -656,12 +655,16 @@ final class DownloadEngine extends ChangeNotifier {
   }
 
   /// Writes the state as it is when the write runs, after loading, so an
-  /// early change never overwrites the saved queue with an empty one.
+  /// early change never overwrites the saved queue with an empty one. A
+  /// failed write goes to the debug log and [flush]; the next change writes
+  /// the whole state again.
   void _save() {
-    _saving = _saving
-        .then((_) => _ready)
-        .then((_) => _file.write(_snapshot()))
-        .catchError((Object _) {});
+    unawaited(
+      _file.save(() async {
+        await _ready;
+        return _snapshot();
+      }),
+    );
   }
 
   Map<String, Object?> _snapshot() => {
@@ -673,8 +676,9 @@ final class DownloadEngine extends ChangeNotifier {
     },
   };
 
-  /// Completes when every change so far is on disk.
-  Future<void> flush() => _saving;
+  /// Completes when every change so far is on disk; fails when the latest
+  /// write did.
+  Future<void> flush() => _file.flush();
 
   void _notify() {
     if (!_disposed) notifyListeners();
