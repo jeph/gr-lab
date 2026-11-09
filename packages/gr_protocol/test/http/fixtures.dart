@@ -48,7 +48,7 @@ Uint8List jpeg({
 ]);
 
 /// The part header the firmware sends before each frame
-/// (docs/protocol/remote-shooting.md §1.2).
+/// (research/protocol/remote-shooting.md §1.2).
 final List<int> partHeader = ascii.encode(
   '--boundary\r\nContent-Type: image/jpeg\r\n\r\n',
 );

@@ -1,5 +1,5 @@
 /// GR camera BLE protocol: GATT catalog, codecs, advertising, client and
-/// wake sequence (docs/protocol/ble.md, docs/protocol/ble-imagesync.md).
+/// wake sequence (research/protocol/ble.md, research/protocol/ble-imagesync.md).
 library;
 
 export 'advertising.dart';

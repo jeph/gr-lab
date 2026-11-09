@@ -1,0 +1,30 @@
+# notes (recovered from earlier session; verify before citing)
+- base "http://192.168.0.1" pp+0x1e7c8 used by ctors XSb 0x590b60, xCb 0x795758 (imageControlViewModelProvider), iQb 0x830184
+- http helpers: 0x5854d4 GET-ish?, 0x58572c POST, 0x594a64 PUT, 0x855774 PUT, 0x7cd2d8 GET("GET" pp+0x248), 0x8556a0 ?, 0x5866c8, 0xdc2064 GET streaming to File
+- Uri.parse 0x47d85c; Future.timeout 0x475464; Duration pp+0xade8 = 60s; pp+0x2af50 = 180s
+- fw: prepare 0xdd7268 POST form "filesize=" ; put 0xdd698c "/v1/configs/firmware?storage=in&reboot=true" octet-stream; cancel 0xddcca4
+- fw result parse 0x85528c errCode/errMsg/detail ; 0x854ea8 err_fw_same/err_fw_old/battery_too_low
+- endscreen 0xe2c7b8 "/v1/device/image/endscreen?index=" Content-Type image/jpeg
+- logs 0xe0a4c0 "/v1/logs/camera?type=monthly_capture&date="
+- imgctrl 0xd8f0fc "/imgctrl?storage=" sd1/in ; parse 0xd8e104 version set{1,2,4}
+- photos: 0xdb8a38 "?storage=sd1&"/"?storage=in&"; 0xdbdd14 ?size=xs/?size=full ; 0xdbe510 "&storage=" ; 0xe3cac0 size=thumb/size=view ; 0xdbb298 "v1/photos\n"
+- parsers: 0x83913c dirs/name/files ; 0x838300 photo info keys; 0x83a904 transfers ; 0x83ac28 index/size/filepath
+- ws: ws://192.168.0.1/v1/changes pp+0x28430 0xd22098, 0x56c9f0; onError/onDone closeCode closeReason (0x569a18,0x569938); handler 0xd28f24 "Web socket changed: " keys errCode changed storage battery camera; getDeviceStatus channel 0xd29d64
+- native java: p085J6/AbstractActivityC0655d.java (photos/info/transfers/status), p308k6/RunnableC3963a.java (status/device GET, device/finish POST, props GET), p062H0/RunnableC0391f.java (PUT json, params/device), p168T4/RunnableC1626F.java (connectToWifi, props bdName)
+- method channel com.pavct.jp.grapp/wifiConnection pp+0x1ff80
+- putWifiInfo 0xe2a4c0 {ssid,password}; postCameraPower 0xe4bfa4
+## verified this session
+- bool: true = x22+0x20 (bit4 clear), false = x22+0x30 (tbnz #4 => false). selector-offset-0 dispatch = `==`.
+- package:http: get=0x7cd2d8 (callers 0x952890,0xd8eb6c,0xd8f0fc,0xda42a4,0xddc594,0xe0a4c0,0xe3d768,0xe42cc0) post=0x5854d4 (0xd38a24 cloud,0xdd7268,0xddcca4) put=0x8556a0 (0xdd698c,0xe2c7b8); _sendUnstreamed 0xd3ad48; Request ctor 0x5866c8 (streamed GET 0xdc2064)
+- Durations: pp+0xade8 60s; pp+0x2af50 180s; pp+0x30008 30s; pp+0x284d8 5s
+- imgctrl GET 0xd8f0fc: PRb.base(0x13 "http://192.168.0.1/v1/photos/")+dir(0x1b)+"/"+file(0x1f)+"/imgctrl?storage="+(sd1|in); timeout 5s; status==200 -> bodyBytes
+- 0xd8eb6c http.get(Uri.parse(arg)) timeout 30s "Image Control get error" (callers 0xd8d384 etc; URL from arg)
+- listing 0xdbb298: getPhotosList(storage only if storageCount==2 (sd1 if aFb sdSlot else in), startFileName) loop; parse 0x83913c {errCode(==200), dirs:[{name, files:[str]}]}; lastFile=lastDir.name/lastDir.files.last; continue while page file count >= 3000
+- native getPhotosList GET /v1/photos[?storage=X][&|?after=dir/file] 10s; getPhotosInfo GET /v1/photos/<dir/file>/info[?storage=] 15s, 404 -> "404 Not Found"; getPhotoInfoList(unused by Dart) GET /v1/photos/infos?storage=&after= 120s; getTransfersList GET /v1/transfers?status=untransferred[&storage=] 10s; putTransferState PUT /v1/photos/<dir/file>/transfer body "storage=X" CT application/json 10s connect; getDeviceStatus GET /v1/status/device 10s; getPropertyData GET /v1/props 10s; postCameraPower POST /v1/device/finish empty body; putWifiInfo PUT /v1/params/device body "channel=0&ssid=S&key=K" CT application/json; connectToWifi verify GET /v1/props 3s errCode==200 ssid/serialNo(last8? m792k0)/model(minus RICOH, trimmed)/bdName
+- photo info 0x838300 keys: errCode num?, cameraModel, dir, file, size num?, datetime, recordedTime, orientation num?, aspectRatio, av, tv, sv, xv, latLng, gpsInfo, duration num?, resolution (strings)
+- transfers parse 0x83ac74: index num, filepath String, size String
+- auto-transfer 0xdbdd14: getTransfersList(untransferred) loop; filepath split '/', [1].replaceAll('?xs',''); suffix = size=="xs"&&ext=="JPG" ? "?size=xs" : "?size=full"; getPhotosInfo (0xdb7750) then download 0xdbe510 then putTransferState (closure 0xdc0d58); loop until errCode!=200 or empty
+- manual import 0xe3a278: import size enum hOb {thumb0,view1,full2,xs3,single4}; xs && JPG -> ?size=xs else ?size=full
+- download URL 0xdbe510: base+dir+"/"+file+suffix+("&storage="+s if storageCount==2)
+- streamed GET 0xdc2064: Request GET, status==200 && contentLength!=null else "ErrorCode N: 該当画像なし、転送処理をしない"; writes TempImage file; progress receiveAllBytes; first chunk starting '{' -> json errCode!=200 -> eTb@865541 transferException ER_IMG_004
+- thumbnails 0xdb8a38: base+dir+"/"+file+("?storage=sd1&"|"?storage=in&"|"?") + UI 0x977b64 "size=thumb"/"size=view"

@@ -1,0 +1,343 @@
+# GR WORLD 2.0.0: connection lifecycle and robustness (Wi-Fi join, keep-alive, loss detection, reconnect)
+
+Scope: how the official Android app joins the camera's Wi-Fi AP, keeps the link up, notices when it drops, and reconnects. It also covers why the link drops and how a third-party client should do this better. Sources: jadx Java (`work/jadx/sources/...`, file:line), the blutter dump of `libapp.so` (`pp+0x…` pool offsets, `0x…` function addresses in `dis/condensed.txt`), and `AndroidManifest.xml`. Labels: **[inferred]** = reasoned, not directly observed; **[unknown]** = not settled statically.
+
+Related docs: `http-api.md` (endpoints, WebSocket), the BLE slice (WLAN Control service `F37F568F-…`, characteristic `hJb` `9111CDD0-9F01-45C4-A2D4-E09E8FB0424D` = camera WLAN on/off), `../framework.md`.
+
+---
+
+## 1. Summary for implementers
+
+- Android joins the camera AP with `WifiNetworkSpecifier` + `ConnectivityManager.requestNetwork(...)`. The request is TRANSPORT_WIFI with NET_CAPABILITY_INTERNET removed. When the network comes up the app calls **`bindProcessToNetwork(network)`**, so the whole process is bound to the camera network. Timeout is 60 s; for WPA2/WPA3 transition mode it falls back from WPA3 to WPA2 (worst case 120 s).
+- The `NetworkCallback`, the timeout handler and the pending result all live as **fields of `MainActivity`**. No foreground service owns the Wi-Fi session. The `dataSync` foreground service (flutter_foreground_task, `allowWifiLock=true`) runs **only during photo transfers**. The `location` foreground service (geolocator) has `enableWifiLock=false`.
+- **There is no keep-alive.** The app sends no periodic HTTP request or WebSocket ping (no `pingInterval`). The only periodic timers send location over BLE (5 s, or a user-set interval) and scan BLE. The one long-lived Wi-Fi connection is the WebSocket `ws://192.168.0.1/v1/changes`. For GR III/IV its messages are ignored, so it only serves as a liveness signal (see http-api.md §5).
+- **Loss detection is indirect and incomplete:**
+  - The native `onLost` for the WPA3/WPA2-direct request silently unbinds and unregisters. It never tells Dart.
+  - The native `onLost` for the WPA2-fallback request **does nothing at all**, so the process stays bound to a dead network.
+  - Dart notices loss only through (a) the WebSocket `onDone` (`websocketConnectionStateNotifierProvider` → `disconnected`) or (b) connectivity_plus reporting `none` as the first result.
+  - Both listener paths are gated by an "isIgnore" flag. When the WebSocket drops, the state update still runs in the background; only the "connection lost" dialog is skipped while `isPaused` is true.
+- **There is no automatic Wi-Fi reconnect.** The WebSocket is opened only by the post-join setup (`0xd1d508`), so it is never reopened on its own. The user has to restart the flow (e.g. the `/reconnect` route) or start a feature that runs the connect flow again.
+- The app itself turns the camera WLAN **off**. Its BLE device "release" routine writes `hJb=0x00` and calls `disconnectWifi`. This routine runs before BLE (auto-)connects.
+
+---
+
+## 2. Native channel `com.pavct.jp.grapp/wifiConnection`
+
+Registered in `AbstractActivityC0655d.java:516` (the Flutter host activity's `configureFlutterEngine`, with handler class `v6.b`). The channel name is the field `MainActivity.f10012G` (`MainActivity.java:52`). A second channel, `com.pavct.jp.grapp/widget` (`:1617`), is unrelated: it handles album/widget calls `deleteAlbum`, `deletePhotos`, `updateAlbum` and `updateAlbumName`. Unknown methods get `notImplemented` (`:1394`).
+
+Results: `success(x)` = `mo2967d`, `error(code,msg,details)` = `mo2969f`.
+
+| Method | Args | Native behaviour | Result | Evidence |
+|---|---|---|---|---|
+| `connectToWifi` | `ssid`, `password`, `serialNo`, `model`, `bdName` (String), `securityType` (int: 0 WPA2, 1 WPA3, 2 WPA2/WPA3 transition) | See §3. Pre-check `GET /v1/props` (3 s); if that fails, `requestNetwork` with a 60 s timeout. | `true` when the network is available or the pre-check passed. `false` from `onUnavailable`/`onLost` before success. Errors: `("connectToWifi","TIMEOUT Connection timeout")`, `("TIMEOUT","Connection timeout during WPA2 retry")`, `("Exception","Error",e)`, `("","")` if an arg is missing. | `AbstractActivityC0655d.java:582-666`; `C4805d.java`; `RunnableC4802a.java`; `MainActivity.java:73-115` |
+| `disconnectWifi` | – | Removes the timeout, `bindProcessToNetwork(null)`, `unregisterNetworkCallback(V)` (**V only, never W**). | `true`. `false` on exception. `true` if the ConnectivityManager was never created. | `:1191-1216` |
+| `getConnectedSsid` | – | Builds a generic Wi-Fi `NetworkRequest` without INTERNET. On callback X it calls `registerNetworkCallback` **and** `requestNetwork` (X has `FLAG_INCLUDE_LOCATION_INFO`, `super(1)`, `C4805d.java:240-244`). Has a 1 s timeout. `onCapabilitiesChanged` takes the SSID from `WifiInfo`, stores it with quotes stripped into `f10008A`, then unregisters. | SSID string **with quotes**. Errors: `("TIMEOUT","SSID get timeout")`, `("Lost","Get error")`, `("Unavailable","Get error")`, `("Exception","Error")`. | `:537-565`; `C4805d.java:77-115,143-160,197-213`; `RunnableC4802a.java:43-56` |
+| `checkWifiState` | – | `WifiManager.isWifiEnabled()` | bool | `:676-681` |
+| `getPropertyData` | – | `GET /v1/props`, 10 s connect/read | JSON string | `RunnableC3963a.java:96-127` |
+| `getDeviceStatus` | – | `GET /v1/status/device`, 10 s | JSON | `RunnableC3963a.java:41-72` |
+| `postCameraPower` | – | `POST /v1/device/finish` (empty body), 10 s connect, no read timeout. This is camera power-off. | `true` / error `"POST error"` | `RunnableC3963a.java:73-95` |
+| `putWifiInfo` | `ssid`, `password` | `PUT /v1/params/device` body `channel=0&ssid=…&key=…` (GR II path) | bool | `RunnableC0391f.java:340-367` |
+| `getPhotosList`, `getPhotoInfoList`, `getPhotosInfo`, `getTransfersList`, `putTransferState` | see http-api.md | Plain `HttpURLConnection` on a new thread. Timeouts 10 s (list/transfers), 15 s (info), 120 s (infos list), PUT 10 s connect. | JSON | `:684-1389` |
+
+There is **no `lastConnectedWifi` channel method.** `"lastConnectedWifi"` (pp+0x279f0) and `"lastConnectedDevice"` (pp+0x27d30) are Dart preference keys read in `0xd1e340`.
+
+All native HTTP uses `java.net.HttpURLConnection` (JDK-default keep-alive pool). It does not specify a network, so it relies on the process binding.
+
+---
+
+## 3. Android Wi-Fi join implementation (exact)
+
+State fields in `MainActivity` (`MainActivity.java:19-70`):
+- `N`: ConnectivityManager
+- `O`: pending `connectToWifi` result
+- `P`: main-looper Handler
+- `Q`: timeout Runnable
+- `A`: "current SSID", initially `""`
+- `B`/`C`: ssid/password
+- `F`: securityType
+- `V`: `C4805d(this,0)`, the first-attempt callback
+- `W`: `C4805d(this,2)`, the WPA2-fallback callback
+- `X`: `C4805d(this)`, the getConnectedSsid callback
+- `R`/`S`/`T`/`U`: ConnectivityManager / result / Handler / timeout used by getConnectedSsid
+
+`connectToWifi(ssid, password, serialNo, model, bdName, securityType)` (`AbstractActivityC0655d.java:582-666`):
+1. Cancel any pending timeout `Q`. Store `B=ssid`, `C=password`, `F=securityType`.
+2. **Pre-check (on the platform/UI thread):** start a thread running `RunnableC1626F` case "default" and `join()` it (`:607-609`), so the main thread blocks for up to ~6 s. The thread does `GET http://192.168.0.1/v1/props` with 3 s connect + 3 s read (`RunnableC1626F.java:119-124`). It succeeds when all hold: `errCode==200`, `ssid==ssid`, `takeLast(8)` of `serialNo` `== serialNo` (`m792k0(8,…)`), `model` with "RICOH" removed and trimmed `== model`, and `bdName==bdName` (`:133-143`). On success, `connectToWifi` returns `true` **without requesting a network**.
+3. If `A != ssid` and `A != ""`: `bindProcessToNetwork(null)` + `unregisterNetworkCallback(V)` (IllegalArgumentException is caught: "already unregistered") (`:623-634`).
+4. Build `WifiNetworkSpecifier.Builder().setSsid(ssid)` with `setWpa2Passphrase` for type 0 or unknown and `setWpa3Passphrase` for 1 **and 2** (`:641-649`). Request = `NetworkRequest.Builder().addTransportType(TRANSPORT_WIFI).removeCapability(NET_CAPABILITY_INTERNET).setNetworkSpecifier(spec)` (`:650`). There is no BSSID pattern and no band.
+5. `O = result`. `Q = RunnableC4802a(this,2)`. `requestNetwork(request, V)`. `postDelayed(Q, 60000)` (`:651-658`). The call uses the 2-arg `requestNetwork`, which has no framework timeout. Android shows its "connect to device" approval dialog unless this SSID was approved before **[inferred, platform behaviour]**.
+6. Outcomes:
+   - `V.onAvailable(network)`: remove `Q`, **`bindProcessToNetwork(network)`**, `A = B`, result `true`, `O = null` (`C4805d.java:31-49`).
+   - `V.onUnavailable()`: unbind, unregister V, `A=""`. If `F==2`, log `"TransitionMode WPA3" "onUnavailable try WPA2"` and call `m6182n` (WPA2 retry). Otherwise result `false` (`C4805d.java:170-196`).
+   - Timeout `Q` (60 s, `RunnableC4802a.java:57-75`): unbind, unregister V. If `F==2`, call `m6182n` (log `"TIMEOUT onUnavailable try WPA2"`). Otherwise error `("connectToWifi","TIMEOUT Connection timeout")`.
+   - `V.onLost(network)`: remove `Q`, `bindProcessToNetwork(null)`, unregister V, `A=""`, `O?.success(false)` (`C4805d.java:120-142`). **After a successful connect `O` is already null, so Dart is never told the link was lost.**
+7. `m6182n(ssid, pw)`, the WPA2 retry (`MainActivity.java:73-115`): unbind and unregister **W**; build the same request with `setWpa2Passphrase`; `requestNetwork(request, W)`; `Q = RunnableC4802a(this,0)` after 60 s. That timeout unbinds, unregisters W, and errors `("TIMEOUT","Connection timeout during WPA2 retry")`.
+   - `W.onAvailable` behaves like V (bind process, `A=B`, `true`).
+   - `W.onUnavailable` falls to the `default` branch (unbind, unregister, `false`).
+   - **`W.onLost` and `W.onCapabilitiesChanged` fall into `default:` → only `super.onLost()`** (`C4805d.java:161-163`). There is no unbind, no unregister and no `A=""`.
+
+`MainActivity` has **no** `onPause`/`onStop`/`onDestroy` override (the whole class is `MainActivity.java:16-116`). Callbacks are therefore not unregistered on background or destroy. The network request lives as long as the process (and the `MainActivity` instance it references). `launchMode="singleTop"`, and `configChanges` covers orientation/screenSize/etc. (`AndroidManifest.xml:91-94`), so rotation does not recreate the activity.
+
+Platform facts that matter (AOSP `WifiNetworkFactory`, main branch; behaviour varies by OEM/version **[inferred]**):
+- A request with a specifier is accepted only from a **foreground app or foreground service** ("Request not from foreground app or service. Rejecting"). A request from a foreground app overrides another app's active/connected request.
+- A request with a specifier that also carries INTERNET is rejected. The app removes it, which is correct.
+- The framework's own connection timeout is 30 s, with up to 3 connect retries (`NETWORK_CONNECTION_TIMEOUT_MS`, `USER_SELECTED_NETWORK_CONNECT_RETRY_MAX`). The app's 60 s timer is usually beaten by `onUnavailable`.
+- When the request is released (unregister, or process death), the framework **disconnects and removes** the network (`teardownForConnectedNetwork`).
+- `bindProcessToNetwork`: "if network ever disconnects, all Sockets created in this way will cease to work and all host name resolutions will fail."
+- Registering a callback twice only logs "NetworkCallback was already registered". `unregisterNetworkCallback` releases every request mapped to the callback.
+
+Manifest (`AndroidManifest.xml`):
+- minSdk 31, targetSdk 36 (`:13-14`).
+- Permissions: ACCESS_WIFI_STATE, CHANGE_WIFI_STATE, ACCESS_NETWORK_STATE, CHANGE_NETWORK_STATE, INTERNET, ACCESS_FINE/COARSE_LOCATION, FOREGROUND_SERVICE, FOREGROUND_SERVICE_LOCATION, FOREGROUND_SERVICE_DATA_SYNC, WAKE_LOCK, RECEIVE_BOOT_COMPLETED, REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, POST_NOTIFICATIONS, BLUETOOTH_SCAN/CONNECT. **No NEARBY_WIFI_DEVICES.**
+- `usesCleartextTraffic="true"`.
+- Services:
+  - `com.pravera.flutter_foreground_task.service.ForegroundService`, `foregroundServiceType="dataSync"` (`:231-234`), meta `com.ricohimaging.grworld.service.STATUS_ICON`.
+  - `com.baseflow.geolocator.GeolocatorLocationService`, `foregroundServiceType="location"` (`:454-458`).
+- Receivers: `flutter_foreground_task` `RebootReceiver` (BOOT_COMPLETED/MY_PACKAGE_REPLACED/QUICKBOOT, exported) and `RestartReceiver`. `flutter_local_notifications` boot receiver. There is no Wi-Fi-related receiver.
+
+---
+
+## 4. Foreground services, Wi-Fi lock and wakelock (Dart)
+
+**flutter_foreground_task options** are inlined constants in the toJson `0x835dec` (`add x3, NULL, #0x20` = true, `#0x30` = false):
+
+| key | value |
+|---|---|
+| `autoRunOnBoot` | true (0x835e7c) |
+| `autoRunOnMyPackageReplaced` | false (0x835eac) |
+| `allowWakeLock` | true (0x835edc) |
+| `allowWifiLock` | **true** (0x835f0c) |
+| `allowAutoRestart` | true (0x835f3c) |
+| `taskEventAction` | `{taskEventType: 1, taskEventInterval: <field>}` (0x835f6c; type 1 = presumably `nothing` **[inferred]**) |
+
+- Started by `startService` (`pp+0x32160`, wrappers `0xdc143c` / `0xdc1770`, entry `0xdc1024`). Called only from the photo-transfer flows:
+  - `0xdbc234` / `0xdbdd14`: camera "reserved transfer", log `予約転送処理エラー`.
+  - `0xdbe510`.
+  - `0xe3a278`: manual import; callers `PHm_ERb` / `QHm_HRb` closures.
+- Stopped by `stopService` (pp+0x1dd8, `0xd493e8`) from the same flows and from `jLm_aRb` `0xd48b58`.
+- Native: `ForegroundService.java:467` reads `allowWifiLock`. **So a WifiLock is held only during transfers.**
+- `autoRunOnBoot=true` restarts the transfer service after reboot; it does nothing for the Wi-Fi session.
+
+**geolocator foreground notification** (`0xd47214-0xd47264` → toJson `0x5924f0`):
+- title `"位置情報送信"` (pp+0x274d0, "sending location").
+- `enableWifiLock=false` (+0x17), `enableWakeLock=true` (+0x1b), `setOngoing=false`.
+- Used for background location → camera over **BLE**.
+
+**wakelock_plus** (screen-on only, no effect on Wi-Fi):
+- `enable()` = `0x84b97c` (passes true), called from `0xdbc234`, `0xe3a278`, `0xdd2760`.
+- `disable()` = `0x7e46b8`, called from `0xd90ffc`, `0xd913b0`, `0xdbc234`, `0xe3a278`.
+- These are transfer and firmware/home screens **[inferred]** from the call sites.
+
+---
+
+## 5. Dart side: who calls the channel and what "connected" means
+
+MethodChannel object: `Obj!MethodChannel@845371` (pp+0x1ff80).
+
+| Dart fn | Channel call | Wrapper behaviour |
+|---|---|---|
+| `0xdda5c4` | `connectToWifi` | Args map {ssid,password,serialNo,model,bdName,securityType}. Logs `"Connection result: "`. A non-true result → ER_WF_001. A PlatformException whose text contains `"NEHotspotConfigurationErrorDomain Code=8"` → **ER_WF_007 InternalError (iOS)** (`0xdda87c`). Text containing `"timeout"` → **ER_WF_009 ConnectTimeoutError** (`0xdda900`). Anything else → ER_WF_001 (`0xdda92c`). **No Dart-side timeout.** |
+| `0xd1b418` | `getConnectedSsid` | Failure → ER_WF_006 CheckSSIDError (lTb@865291). Always called through the retry helper. |
+| `0xd45024` | `disconnectWifi` | Logs `"Disconnect result: "`. |
+| `0xdd8e48` | `checkWifiState` | Logs `"Wi-Fi CheckStateError: "`. Called from `0xdd809c` (firmware step 2) and `0xe05cf8`, `0xe2d358`, `0xe47bd8`. |
+
+**Retry helper** `0x5479e4` → loop `0xd1b0f4`. This looks like package:retry: named `NCi` = delay, default `la@8704a1` = **50 ms**; `OCi` = maxAttempts, default **3** (`0x547aac mov x5,#3`); `PCi`/`QCi`/`RCi` are optional predicates/callbacks. It delays with `Future.delayed` (0x4ad404) between attempts; a backoff multiplier is **[unknown]**.
+- `getConnectedSsid` in the connect path: 3 × 50 ms (`0xddaab0`).
+- `getConnectedSsid` in teardown: 3 × **100 ms** (`0xd44ef0`, `la@870441`).
+- BLE writes: 3 × 50 ms (BLE slice).
+
+**Connect orchestrator** `0xdd91ac` (class ILb; detail in `research/notes/ble/WlanChars.md` §3):
+1. Load the registered device record, or throw ER_BL_001.
+2. If connectivity contains `vpn` (Wxa@86cdd1), wait **1 s** (`0xdd9724`, la@870401) and throw ER_WF_010 VPNError.
+3. Path by record kind (`0x58f270`; `BTb` cid 1242 = kind 0):
+   - **kind 0 → `0xdda950`** (no BLE WLAN-on; **[inferred]** GR II / Wi-Fi-only):
+     1. Optional BLE release (`0xd43cd4`/`0xd431f0`).
+     2. `getConnectedSsid` (retry).
+     3. Log `"get: <ssid>, <last>"`.
+     4. Read prefs `lastConnectedDevice` / `lastConnectedWifi` (`0xd1e340`).
+     5. If the phone is already on that SSID, go straight to `0xd1d508`. Otherwise call `connectToWifi` (`0xddaea0`) and then `0xd1d508` (`0xddae18`, `0xddaf40`).
+   - **kind 1/2 → `0xdd9fe0`** (BLE models):
+     1. BLE read of the WLAN characteristics (`0xd3e874`).
+     2. Save `lastConnectedDevice`.
+     3. BLE write `hJb=0x01` (camera WLAN ON) via `0xd419d0` (`0xdda1a0`).
+     4. **Immediately** `connectToWifi` (`0xdda1e0`); there is no wait for the AP to come up. The native 30 s/60 s request window absorbs the AP boot time.
+     5. `0xd1d508`.
+   - Both paths run inside a cancelable wrapper (`0x56f82c`, closure `0x857390`).
+4. Analytics: `success` / `connect_failure` / `vpn_failure` / `connect_timeout_failure` / `get_failure` / `wlan_router_failure` / `ios_internal_error` / `other_failure`, plus `"foreground"` / `"background"` from `isPaused` (`0xdd961c`, `0xdd9d54`).
+
+**Post-join setup `0xd1d508`** ("connected to the camera" is decided here):
+- `0xd28c9c` re-reads the SSID.
+- `getPropertyData` (`GET /v1/props`) checks model and minimum firmware. A failure throws ER_WF_003.
+- Opens the WebSocket (`0xd22098`): `WebSocketChannel.connect(Uri.parse("ws://192.168.0.1/v1/changes"))` (`0xd22114`, `0xd2211c`) with no protocols and no `pingInterval`. State becomes `connected` (KLb@867941, `0xd22198`). `listen(onData 0xd27770, onError 0x569a18, onDone 0x569938, cancelOnError: true)` (`0xd22234-0xd22248`). `onDone` sets state `disconnected` (KLb@867921) and logs closeCode/closeReason.
+
+So "connected" =
+1. native `requestNetwork` `onAvailable` (or the props pre-check),
+2. the SSID matches (`getConnectedSsid`) for the kind-0 shortcut,
+3. `GET /v1/props` succeeds,
+4. the WebSocket is open.
+
+After that, the WebSocket state is the liveness indicator.
+
+**Dart HTTP client.** `package:http` with a **new Client per request**: `0xd3ac30` creates the client via `0x585624`/`0x5855e0`, sends, and closes it in `finally`. So there is no connection reuse; every call opens a new TCP connection. Per-call `Future.timeout` values: imgctrl 5 s, monthly log 10 s, ImageControl 10 s, endscreen 60 s, firmware prepare 60 s, firmware PUT 180 s (full table in http-api.md). The native channel HTTP uses `HttpURLConnection` with 3/10/15/120 s timeouts (§2).
+
+---
+
+## 6. Loss detection, background/foreground, teardown
+
+**Listeners in the home view model** (`Lsn_MQb`):
+- `0xbf51c8` on `connectivityStreamProvider` (pp+0x51f30, connectivity_plus; Android plugin `p034D6/C0221b.java` uses `registerDefaultNetworkCallback` **[inferred]**).
+  - Logs `"ネットワーク状態が変化: prev → next"`.
+  - Acts only if `next.first == ConnectivityResult.none` (Wxa@86cd51, `0xbf5470`) **and** the home state is variant `zQb` (cid 1350, `0xbf5524`).
+  - Action: cleanup `0xdd39b8` (resets session providers) and a message `"Wifi接続が切断されました。"` (pp+0x51ee8, "Wi-Fi connection was lost").
+  - Because the process is bound to a non-INTERNET local network, the reported list is usually `[wifi]`, or `[mobile]` when cellular stays up. **A camera-Wi-Fi loss while cellular is up is not `none`, so this listener does not fire [inferred].**
+- `0xbf5750` on the "wifi isIgnore" flag. Logs `"wifi: isIgnore: … next: …"`. When the ignore flag clears **and** the WebSocket state is `disconnected` (KLb@867921, `0xbf5a24`) **and** the home state matches (`0x56afc8`), it runs cleanup `0xdd39b8` plus the same message. The BLE counterpart is `0xe86418` (`"ble: isIgnore:"`, `"Ble接続が切断されました。"`).
+- `0xe851a4` (DeviceManager, WebSocket state change). If the transition is `connected → disconnected`, **`isPaused` is false** (`0xe8536c`) and flag `YBi` is true, it shows the info dialog `0xbf4988` (`images/icon/infoIcon.svg`). Every other case, including `isPaused == true`, branches to `0xe85408`. That code still checks `next == disconnected` (`0xe85418`) and runs the state update through closure `0xbf4ac8` (`0xe85430-0xe85470`). So in the background the loss is **recorded, and only the dialog is skipped**. Whether the dialog appears later on resume is **[unknown]**.
+- `isPaused` is a global `StateProvider<bool>` (`Field ::.isPaused`, pp+0x274c8, static 0x141c). It is read by 16 sites (`0xe84c3c` camera power, `0xe855a4` BLE state, `0xe851a4`, `0xd2dc0c` / `0xd465b8` bg/auto-connect analytics, `0xd46f20` location). AppLifecycleState strings `resumed/inactive/hidden/paused/detached` (pp+0x2a08, 0x3be0, 0x3bf0, 0x3c00, 0x3b78) are referenced in the lifecycle code; the exact writer is **[unknown]**.
+
+**Teardown `0xd44ea0`:**
+1. `getConnectedSsid` (3 × 100 ms).
+2. If non-null, `disconnectWifi` (`0xd44f1c`).
+3. Always close the WebSocket `0xd44f70` (state `disconnected`, close sink).
+
+Callers:
+- the BLE release routine `0xd43cd4`, which runs before writes for kind-0 records (`0xd44140`) and after a failed BLE write `"ble write error skip, "` (`0xd44340`, `0xd4436c`, `0xd44558`, `0xd44580`);
+- power-off `0xe4c108`: `POST /v1/device/finish`, then WS close;
+- the account flow `0xdeb86c` (`"アカウント操作前のWi-Fi切断失敗"`, "Wi-Fi disconnect before account operation failed": it drops camera Wi-Fi to reach the internet).
+
+`0xd43cd4` also writes **`hJb=0x00` (camera WLAN OFF)** (`0xd441ec`, `0xd44414`). It is reached through `0xd431f0` from the BLE auto/background connect `0xd2e93c` (callers `0xd2dc0c` / `0xd465b8`, analytics `bg_connect_failure` / `auto_connect_failure`) and from `0xdda950`. Which devices are released (previous vs current) is **[inferred]** "other than the one being connected".
+
+**Reconnect.** There is no timer or listener that rejoins Wi-Fi. `connectToWifi` runs only from user/feature flows (`0xdd91ac` callers `0xdd8fdc` firmware, `0xe07338`, `0xe47bd8`, `0xe49658`, `0xe499a0`). Pages: `/reconnect` (pp+0x90b0, `0xdabf24`; `"切断失敗:"` ("disconnect failed") in `0xd48694`), `/wifiDetect` (pp+0x83b8), `WifiDeviceDetectPage`, `WifiSettingPage`.
+
+**Periodic timers** (none touch Wi-Fi):
+- `0xd2b2d8`: `Timer.periodic(5 s)` (la@870431) → location write over BLE (`0xd2b5b4` → `0xd2b990`).
+- `0xd4753c`: `"start timer N seconds."` with a user-chosen interval, `"write timer lastPosition"`.
+- `0xdd606c`: 5 s during BLE scan.
+
+---
+
+## 7. Connection state machine (as implemented)
+
+```
+            ┌──────────── user starts a feature / firmware step2 / /reconnect ────────────┐
+            ▼                                                                              │
+ [IDLE] ─► [VPN_CHECK] ─vpn─► wait 1 s ─► ER_WF_010 ─────────────────────────────────────► [IDLE]
+            │ ok
+            ├─kind0─► [SSID_CHECK getConnectedSsid 3×50ms] ─same as lastConnectedWifi─┐
+            │                    └─different/null─► [JOIN]                             │
+            └─kind1/2─► [BLE_READ_WLAN] ─► [BLE_WRITE hJb=1 (3×50ms, ER_BL_005)] ─► [JOIN]
+ [JOIN] native: precheck GET /v1/props 3s+3s (blocks UI thread)
+        ├─ok──────────────────────────────────────────────────────────────────────────►[SETUP]
+        └─requestNetwork(V) ── onAvailable ─► bindProcess ─────────────────────────────►[SETUP]
+                │ onUnavailable / 60 s
+                ├─ securityType==2 ─► requestNetwork(W, WPA2) ─ onAvailable ─► bind ──►[SETUP]
+                │                         └─ onUnavailable/60 s ─► false / TIMEOUT ─► [IDLE] (ER_WF_001/009)
+                └─ else ─► false / TIMEOUT ─► [IDLE] (ER_WF_001/009)
+ [SETUP] 0xd1d508: GET /v1/props (model/fw check, ER_WF_003) ─► WS connect ─► [CONNECTED]
+ [CONNECTED]  no keepalive; WS idle (GR III/IV), HTTP on demand (new TCP each call)
+   ├─ V.onLost ─► native unbind+unregister, Dart NOT notified ─► (WS onDone) ─► [LOST]
+   ├─ W.onLost ─► nothing (process stays bound to dead network) ─► (WS onDone) ─► [LOST]
+   ├─ WS onDone/close ─► state=disconnected ─► state update 0xbf4ac8 (always); dialog only if !isPaused && YBi ─► [LOST]
+   ├─ connectivity first==none && state zQb ─► cleanup + "Wifi接続が切断されました。" ─► [LOST]
+   ├─ BLE release (auto/bg connect, power off, account op) ─► hJb=0 + disconnectWifi + WS close ─► [IDLE]
+   └─ process death ─► framework releases request ─► AP disconnected ─► (next launch) [IDLE]
+ [LOST] ─► cleanup 0xdd39b8 ─► [IDLE]  (no automatic rejoin)
+```
+
+Timeouts: pre-check 3 s + 3 s. Join 60 s, or 120 s with the WPA2 fallback (framework: 30 s × up to 3 retries inside). getConnectedSsid 1 s × 3 attempts. VPN delay 1 s. No keepalive interval exists.
+
+---
+
+## 8. Disconnect mechanisms and hypotheses (not a measured likelihood ranking)
+
+| # | Cause | Evidence | Status |
+|---|---|---|---|
+| 1 | **Idle-session hypothesis, not a demonstrated cause.** The app sends no periodic Wi-Fi traffic. Firmware registers `/v1/ping`, but its handler reads camera datetime rather than explicitly resetting an idle timer. Neither observation establishes an AP inactivity threshold or proves that polling prevents shutdown. Ricoh's own Image Sync app does poll: an uncached `GET /v1/props` every 500 ms for the whole Wi-Fi session, declaring loss only after ≥3 consecutive failures and ≥40 s without success ([Image Sync connection §2](connection-imagesync.md#2-liveness-keep-alive-disconnect-detection-reconnect)). Ricoh shipping that design suggests the camera handles a 2 Hz poll **[inferred]**; it does not show the poll prevents drops. | App timer evidence §6; firmware `gr3-webapid-ping.json`, `gr4-webapid-ping.json`; Image Sync `impl/ConnectionChecker.java:12-104` | absent app heartbeat observed; camera idle policy **[unknown]** |
+| 2 | **The process gets backgrounded and killed, so the network request is released and Android disconnects the AP.** The request is owned by `MainActivity` fields with no foreground service; the `dataSync` FGS/WifiLock exist only during transfers; the location FGS has `enableWifiLock=false`. OEM battery managers kill or freeze such processes, and Wi-Fi can go into power save with the screen off (no WifiLock). | `MainActivity.java:16-116`, FGS start sites §4, `0xd47248` | observed structure; consequence **[inferred]** |
+| 3 | **The app turns the camera WLAN off itself.** The BLE release routine writes `hJb=0x00` and calls `disconnectWifi` + WS close. It runs from the BLE background/auto-connect path (`0xd2e93c` → `0xd431f0` → `0xd43cd4`), e.g. when the BLE link to the camera blips and auto-connect kicks in while the user is on Wi-Fi. | `0xd441ec`, `0xd44414`, `0xd44140`, `0xd44340` | writes observed; trigger timing **[inferred]** |
+| 4 | **Unhandled / silent `onLost`.** For V, native unbinds and unregisters without notifying Dart; there is no rejoin, and Dart learns only via WS `onDone`. For the WPA2 fallback W, `onLost` does nothing: the process stays bound to a dead `Network`, so *all* sockets (camera and cloud) fail until the next `connectToWifi`/`disconnectWifi`, and `A` keeps the stale SSID. | `C4805d.java:120-142`, `:161-163` | observed |
+| 5 | **Loss is missed or surfaced late.** The connectivity listener reacts only to `first==none`, which does not happen when cellular is up, so a camera-Wi-Fi loss is caught only through the WebSocket closing. While backgrounded, a WebSocket close updates state but shows no dialog (`0xe8536c` → `0xe85408`). This makes the user experience worse; it does not cause drops. | `0xbf5470`, `0xe8536c`, `0xe85418-0xe85470` | observed; UX effect **[inferred]** |
+| 6 | **`disconnectWifi` only releases V.** After a WPA2-fallback join, W stays requested (the camera link is kept) while the process is unbound. Dart HTTP then goes out the default network and fails, which looks like a disconnect. | `:1207` | observed |
+| 7 | **A foreground request from another app overrides ours** (another camera/IoT app, or Android's own Wi-Fi picker); and a new request from GR WORLD while backgrounded is rejected. Specifier connections on single-STA phones also take over the primary Wi-Fi, and the user switching networks tears it down. | AOSP `WifiNetworkFactory` `canNewRequestOverrideExistingRequest`, "Request not from foreground app or service" | platform **[inferred]** |
+| 8 | **WLAN-on → join race.** `connectToWifi` is called right after `hJb=1` with no wait for the AP beacon. On slow AP start it relies on framework retries; the WPA3 attempt may fail and fall back after up to 60 s. Shows up as connect failures rather than drops. | `0xdda1a0` → `0xdda1e0` | observed |
+| 9 | **The pre-check blocks the main thread** (`Thread.join`, up to ~6 s). Not a disconnect itself, but it can stall UI and lifecycle and trip ANR on top of other work. | `AbstractActivityC0655d.java:607-609` | observed |
+| 10 | **VPN** routes `192.168.0.1` away from the bound network. The app detects VPN and refuses (ER_WF_010). | `0xdd9724`; UI text pp+0x68ad8 | observed |
+
+---
+
+## 9. Recommendations for a robust client
+
+### Android
+- Own the session in a **foreground service** (`connectedDevice` type, Android 14+ permission `FOREGROUND_SERVICE_CONNECTED_DEVICE`). Start it from the foreground, then call `requestNetwork(specifier, callback, handler)` from the service. Keep one `NetworkCallback` registered for the whole session and unregister only on an explicit user disconnect.
+- **Do not `bindProcessToNetwork`.** Bind per socket with `network.socketFactory`, `network.openConnection(url)`, or OkHttp `.socketFactory(network.socketFactory)`. For Dart/Flutter, route camera HTTP through a native client bound to the `Network`, or bind briefly and restore. The internet keeps working and a lost network cannot poison every socket.
+- Handle `onLost` / `onUnavailable` uniformly for every attempt (WPA3, WPA2 fallback). Emit an event to the UI; do not just unbind. Then rejoin with backoff (e.g. 1 s, 2 s, 5 s, 10 s, capped), while BLE stays connected to re-issue WLAN-on.
+- Hold a `WifiManager.WifiLock` (`WIFI_MODE_FULL_LOW_LATENCY` on 29+, or `FULL_HIGH_PERF`) for the whole session, plus a partial wakelock only during transfers. Ask for battery-optimisation exemption (the app already declares `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`).
+- Use `WifiNetworkSpecifier` with `setSsid`. A BSSID does **not** skip scans: AOSP `WifiNetworkFactory.triggerConnectIfUserApprovedMatchFound` connects an approved single-AP request only once a scan result matches. The factory scans when a request arrives and then periodically (AOSP 10 s; 17.5 s observed on an Android 17 phone, 2026-11-08), so a camera AP that comes up just after the first scan waits for the next one; filing the request again starts a new scan (see the GR Lab app's `WifiChannel`). Pick the passphrase type from BLE `security` (0 WPA2, 1 WPA3, 2 transition → try WPA3, then WPA2). Treat an approval-dialog rejection (`onUnavailable` within seconds) separately from timeouts.
+- After BLE `hJb=0x01`, wait for the AP: poll scan results for the SSID, or just rely on the specifier request, but give it ≥30 s before falling back.
+- Never write `hJb=0x00` or disconnect Wi-Fi as a side effect of BLE auto-reconnect. Keep BLE and Wi-Fi state machines independent: a BLE blip must not tear down Wi-Fi.
+- Do network work off the main thread (no `Thread.join` on the UI thread).
+
+### iOS
+- Use `NEHotspotConfiguration(ssid:passphrase:isWEP:false)` with `joinOnce = false`, so the configuration persists while the app is backgrounded (`joinOnce = true` drops it when the app suspends). Handle `NEHotspotConfigurationErrorDomain` codes:
+  - 13 alreadyAssociated = success
+  - 7 userDenied
+  - 8 internal: the app's ER_WF_007; retry after toggling, and tell the user to remove the camera from "My Networks", as the app's help text pp+0x69488 suggests.
+- After `apply`, verify with `NEHotspotNetwork.fetchCurrent` (needs location permission) and an HTTP probe of `/v1/props`.
+- Add `NSLocalNetworkUsageDescription` and trigger the local-network prompt early.
+- iOS keeps no app sockets alive in the background; plan to reconnect on `didBecomeActive`. BLE background mode (`bluetooth-central`) can keep the camera awake and re-enable WLAN.
+
+### Windows
+- Join with WinRT `WiFiAdapter.ConnectAsync(network, WiFiReconnectionKind.Automatic, PasswordCredential)` or Native Wifi `WlanConnect` with a temporary profile, after `WlanScan` waits for the SSID.
+- Subscribe to `NetworkInformation.NetworkStatusChanged` / `WlanRegisterNotification` (`wlan_notification_acm_disconnected`) for loss.
+- If Ethernet or another Wi-Fi is present, add a host route to 192.168.0.1 via the camera interface, or bind sockets to its interface IP. Disable adapter power saving for the session where possible.
+
+### macOS
+- Join with CoreWLAN `CWInterface.associate(to:password:)` (needs location authorization for SSID visibility). Watch `CWEventDelegate.linkDidChangeForWiFiInterface` and `ssidDidChange`.
+- The camera subnet route is automatic on the Wi-Fi interface. If the Mac prefers Ethernet for default, bind to `en0`'s address or use `NWParameters.requiredInterface`.
+
+### All platforms
+- **Liveness probes, not a proven keep-awake fix:** keep the WebSocket open and poll `GET /v1/props` while actively connected. Ricoh's Image Sync polls it every 500 ms with a 1 s connect timeout and treats the link as lost only after ≥3 consecutive failures and ≥40 s without success; it also reopens the WebSocket immediately on failure ([Image Sync connection](connection-imagesync.md)). Start from that design and measure on hardware whether a slower cadence (e.g. 2–5 s) is enough **[design choice]**. Firmware also registers `/v1/ping` on the analyzed GR III/IV builds; validate its response and model support before using it. Do not assume `/v1/status/device` exists on these models. Retry a failed socket and check network reachability before tearing down/rejoining Wi-Fi: a WebSocket close or HTTP socket expiry alone does not prove the AP disappeared.
+- Reuse one HTTP connection (keep-alive) instead of a client per request.
+- Use explicit timeouts: connect 3 s, read 10 s, downloads by idle timeout.
+- If the camera's Wi-Fi auto-off is configurable over BLE/HTTP, read it and warn the user.
+- Keep BLE connected during the Wi-Fi session where the model supports it, so the client can re-issue WLAN-on (`hJb=0x01`) after a camera-side AP shutdown and rejoin without user action.
+
+---
+
+## Camera-firmware cross-check
+
+See [firmware inventory](../firmware-protocol-inventory.md) for exact image hashes and saved REA evidence. These are static findings, not observed disconnects:
+
+- GR IV `WlanCommandHandler::RecvChangeWlanRunningState` calls `WlanDevice::Stop` for mode `0`; nonzero requests call `Start`. `WlanDevice::Stop` builds a `stop_wlan.sh` command. This establishes an explicit camera-side shutdown path, not the policy that decides when to send it (`gr4-netmgr-wlan-request.json`, `gr4-netmgr-device-stop.json`).
+- GR IV `start_wlan.sh` starts hostapd, assigns `192.168.0.1/24` to `uap0`, starts DHCP, and polls hostapd's control interface up to 30 times with 100 ms sleeps. That is a startup readiness check, **not an idle timeout**, and `PONG` does not prove a phone has associated.
+- `/v1/changes` close handling removes the socket and invokes registered callbacks. One GR IV firmware-update callback cancels an active update. No general AP-shutdown-on-WebSocket-close contract was established (`gr4-webapid-close.json`, `gr4-webapid-fw-ws-callback.json`).
+- GR III webapid has Crow HTTP deadline/idle-object cleanup code. HTTP socket lifetime, WebSocket lifetime, AP lifetime, and camera power state must remain separate client states (`gr3-http-deadline.json`, `gr3-http-idle-delete.json`).
+- Camera auto-power-off thresholds and indirect effects of ping remain unresolved. The firmware findings do **not** justify promoting missing heartbeats to a confirmed disconnect cause.
+- The [network configuration report](../firmware-network-config.md) finds a one-hour DHCP lease and GR IV driver PS/deep-sleep settings, but neither is an AP idle-off timer. No numeric AP inactivity override was found in the inspected templates/scripts or recovered GR IV config edits; compiled defaults and RTOS policy remain outside that bounded negative finding.
+
+## Evidence
+
+- Channel registration and handlers: `AbstractActivityC0655d.java:516-1395` (connectToWifi 582-666, getConnectedSsid 537-565, putWifiInfo 568-579, postCameraPower 669-673, checkWifiState 676-681, disconnectWifi 1191-1216, getDeviceStatus 1219-1223, getPropertyData 1226-1230, photo methods 684-1389); widget channel 1617.
+- Callbacks: `p403v6/C4805d.java:28-244`. Timeouts: `p403v6/RunnableC4802a.java:24-77`. WPA2 retry: `MainActivity.java:73-115`. Fields: `MainActivity.java:19-70`.
+- Pre-check: `p168T4/RunnableC1626F.java:111-150`. Power off: `p308k6/RunnableC3963a.java:73-95`. putWifiInfo: `p062H0/RunnableC0391f.java:340-367`. FGS options read: `ForegroundService.java:467`.
+- Manifest: `AndroidManifest.xml:5-45` (SDK/permissions), `:91-94` (activity), `:170-180`, `:231-234`, `:282-295`, `:454-458`.
+- Dart channel calls: `0xdda5c4` (pp+0x2b250 `connectToWifi`, 0x2b278 NEHotspot…, 0x2b280 `timeout`); `0xd1b418` (pp+0x1ff88 `getConnectedSsid`); `0xd45024` (pp+0x29680); `0xdd8e48` (pp+0x2b4d0); `0xd1e340` (pp+0x27d30, 0x279f0).
+- Error enum lTb: ER_WF_001 pp+0x2b178, 003 pp+0x27b38, 006 pp+0x1ff90, 007 pp+0x2b1b0 ("Internal Error(iOS)"), 009 pp+0x2b190, 010 pp+0x2b148. Security enum qJb: wpa2 pp+0x1a1f8, wpa3/transition pp+0x2a8d8 / 0x2a8e8; list pp+0x2b130.
+- Retry helper: `0x5479e4` (defaults 0x547a3c la@8704a1 = 50 ms, 0x547aac maxAttempts 3), loop `0xd1b0f4`. Teardown use: `0xd44ef0` (la@870441 = 100 ms).
+- Orchestrator `0xdd91ac` (VPN 0xdd9724, path select 0xdd93a0, analytics 0xdd9b54-0xdd9cac, isPaused 0xdd961c). Paths `0xdda950`, `0xdd9fe0` (WLAN-on 0xdda19c-0xdda1a0, join 0xdda1e0). Setup `0xd1d508`. WebSocket `0xd22098` (pp+0x28430; states KLb connected pp+0x28438, disconnected pp+0x28468; onDone 0x569938; close 0xd44f70).
+- Teardown `0xd44ea0`. Release `0xd43cd4` (BTb cid 1242 check 0xd4412c, WLAN off 0xd441ec / 0xd44414, error skip pp+0x295c0). `0xd431f0` ← `0xd2e93c` (auto/bg connect) ← `0xd2dc0c` / `0xd465b8`.
+- Listeners: `0xbf51c8` (pp+0x51ef0, none check 0xbf5470, cid 0x546 0xbf5524), `0xbf5750` (pp+0x51f00, 0xbf5a24), `0xe86418` (BLE), `0xe851a4` (isPaused 0xe8536c skips only the dialog 0xbf4988; state update 0xe85418-0xe85470 via closure 0xbf4ac8). Cleanup `0xdd39b8`. isPaused pp+0x274c8.
+- FGS options `0x835dec` (bools 0x835e7c-0x835f3c), event action `0x835f6c`. Start path `0xdc1024` → `0xdc1298` → `0xdc143c`. Geolocator config `0xd47214-0xd47264`, toJson `0x5924f0`. Wakelock `0x84b97c` (enable), `0x7e46b8` (disable).
+- Timers: `0xd2b2d8` (5 s, pp+0x284d8), `0xd4753c`, `0xdd606c`. HTTP client per request: `0xd3ac30` (`0x585624`, `0x5855e0`).
+- Strings: pp+0x51ee8 "Wifi接続が切断されました。", pp+0x51ee0 "Ble接続が切断されました。", pp+0x698b8 "WLAN connection has been lost.", pp+0x69488 (iOS "My Networks" advice), pp+0x68ad8 (VPN), pp+0x83b8 `/wifiDetect`, pp+0x90b0 `/reconnect`.
+- AOSP (platform behaviour, main branch): `WifiNetworkFactory.java` (foreground check ~L810, override rules ~L704-724, INTERNET rejection ~L730, release/teardown ~L956-986, `NETWORK_CONNECTION_TIMEOUT_MS=30000`, retries 3); `ConnectivityManager.java` (duplicate register only logs ~L4757; unregister releases all ~L5570-5600; `bindProcessToNetwork` javadoc ~L5880).
+
+## Open questions (confirm with a live capture)
+
+1. Camera WLAN idle/auto-power-off: after how long with (a) the WS open and idle, (b) no TCP at all, (c) BLE connected? Does an open WebSocket count as activity? Capture over Wi-Fi with a sniffer, plus a BLE sniff for WLAN-state notifications.
+2. Does the camera send WS pings or close frames before shutting the AP? What close codes?
+3. On a real Android device, after `onLost`, logcat `WifiNetworkFactory`/`ConnectivityService`: what released the request (app background, user, override, AP gone)? Does the framework reconnect while the request is still registered?
+4. When does `0xd2e93c` (BLE auto/bg connect) actually run while a Wi-Fi session is active, and does it write `hJb=0x00` to the connected camera? Confirm with a BLE capture during a deliberate BLE link drop.
+5. The exact writer of `isPaused` and the meaning of flags `YBi` / "isIgnore" and of state variant `zQb` (cid 1350): which screens set "ignore"?
+6. `taskEventType: 1` mapping in this flutter_foreground_task version, and whether the transfer FGS keeps running after a transfer ends.
+7. iOS native implementation (not in this APK): `joinOnce` setting and how `getConnectedSsid` / `disconnectWifi` are done (`NEHotspotNetwork.fetchCurrent`, `removeConfiguration`).
+8. How long the AP takes to beacon after BLE `hJb=0x01`, per model; and whether WPA3 SAE succeeds on common Android phones for securityType 2.

@@ -1,5 +1,5 @@
 /// Firmware generation sharing one BLE/HTTP server build
-/// (docs/camera-models.md §5): GR III family (codes 1, 3, 5, 6, identical
+/// (research/camera-models.md §5): GR III family (codes 1, 3, 5, 6, identical
 /// `bled`/`webapid`) and GR IV family (7–10, one firmware file).
 enum GrModelFamily {
   /// GR III, GR IIIx and their HDF variants (codes 1, 3, 5, 6).
@@ -10,7 +10,7 @@ enum GrModelFamily {
   gr4,
 }
 
-/// GR bodies with a BLE model code (docs/camera-models.md §4.1 table).
+/// GR bodies with a BLE model code (research/camera-models.md §4.1 table).
 /// GR II has no BLE and is identified only over Wi-Fi. Codes 0, 2 and 4
 /// are PENTAX K-3 Mark III bodies sharing the `bled` table and are not GR
 /// models; see [GrModelCode] for keeping them raw.

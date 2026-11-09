@@ -11,7 +11,7 @@ import 'package:gr_protocol/src/trace.dart';
 
 /// Opens a TCP connection to the camera. Supply one that binds to the camera
 /// network (e.g. an Android `Network.socketFactory`) when the platform needs
-/// it (docs/protocol/connection-lifecycle.md §9).
+/// it (research/protocol/connection-lifecycle.md §9).
 typedef GrSocketConnector = Future<Socket> Function(
   String host,
   int port,
@@ -130,7 +130,7 @@ final class LiveViewStats {
 }
 
 /// `GET /v1/liveview[?maxfps=N][&reso=…]` as a stream of JPEG frames
-/// (docs/protocol/remote-shooting.md §1).
+/// (research/protocol/remote-shooting.md §1).
 ///
 /// Runs on a raw socket rather than `HttpClient` so that [close] tears the
 /// connection down immediately (Image Sync's stop never closes the socket and

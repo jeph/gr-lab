@@ -1,0 +1,7 @@
+# Parent notes (BleProtocol)
+- Subscribe-all sequence 0xd30c30 (async, sequential awaits). arg x2 bool: if true -> FirmwareUpdateResultNotify 0xd3812c first (tbnz w0,#4 at 0xd30c60 skips when false; true=null+0x20, false=null+0x30).
+  Then unconditionally: CameraPowerNotify 0xd37c94 (call 0xd30d74) -> BatteryNotify(WFb ZFb) 0xd377fc (0xd30df8) -> GeoTagNotify 0xd37368 (0xd30e7c) -> StorageNotify 0xd36e30 (0xd30f00) -> FileTransferListNotify 0xd36274 (0xd30f84) -> PowerOffDuringFileTransferNotify 0xd35ddc (0xd31008) -> 0xd35944 (mIb; logs 'CaptureModeNotify error') (0xd3108c) -> CaptureModeNotify 0xd354ac (nIb) (0xd31110) -> BatteryNotify(iIb kIb) 0xd35014 (0xd31194) -> ShootingNotifier 0xd31250 (lIb via 0xd34b14) (0xd31218).
+  Parser closures: FWUpdateResult GHb 0x57d6f4, CameraPower DHb 0x57d558, Battery(WFb) CHb 0x57d334, GeoTag HHb 0x57d198, Storage JHb 0x57c5a4, Shooting TIb 0xd34e50.
+  Callers: 0xd2e93c (from 0xd2dc0c and 0xd465b8 — auto/bg connect), 0xe1e300.
+- getter blocks: services 0xb1c1ac..0xb1c1f4 (sel 0x3fa4), WFb chars 0xb1c200..0xb1c2a0, iIb 0xa1f670..0xa1f6f4, gJb 0xad42ac..0xad42e8, FFb 0xb1b1fc..0xb1b238, DIS 0xcb2b54..0xcb2b84.
+- Ordering-rule validation #3: l10n getter block 0xcb2b90.. ("Auflösung" de qTb 0x4e6, "Recorded pixels" en rTb 0x4e5, fr sTb 0x4e4, ja tTb 0x4e3, ko uTb 0x4e2, "解析度" zh_Hant xTb 0x4e0, "分辨率" zh vTb 0x4df; zh_Hans wTb 0x4e1 inherits) — classes from l10n lookup 0xb15968. Descending cid holds.

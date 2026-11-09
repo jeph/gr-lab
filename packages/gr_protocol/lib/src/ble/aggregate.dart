@@ -7,7 +7,7 @@ import 'package:gr_protocol/src/ble/enums.dart';
 
 /// How the 16 UUID bytes inside an aggregate notification were ordered.
 /// Which order the camera actually uses is an open hardware question
-/// (docs/protocol/ble-imagesync.md §4.2), so the decoder tries all three
+/// (research/protocol/ble-imagesync.md §4.2), so the decoder tries all three
 /// and records the one that matched.
 enum BleUuidByteOrder {
   /// Image Sync's parser (`c.java:597-612`): wire = node(6) | clock_seq(2)

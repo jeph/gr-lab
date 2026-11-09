@@ -6,7 +6,7 @@ import 'package:gr_protocol/src/ble/model.dart';
 import 'package:gr_protocol/src/ble/transport.dart';
 
 /// Bluetooth SIG company ID of Ricoh Company Ltd, carried in the camera's
-/// scan response (docs/camera-models.md §4.1).
+/// scan response (research/camera-models.md §4.1).
 const grRicohCompanyId = 0x065F;
 
 /// Marker byte that starts the Ricoh payload (`def_adv.yaml` format value).
@@ -19,7 +19,7 @@ const grAdvertisingMarker = 0xDA;
 /// DA 01 <model> 02 <serial u32 LE> 03 <power>
 /// ```
 ///
-/// Follows the parsing rule of docs/camera-models.md §4.1: tags are read
+/// Follows the parsing rule of research/camera-models.md §4.1: tags are read
 /// only in that order, parsing stops at the first unexpected tag or short
 /// payload, already-decoded fields are kept, and later bytes are never
 /// reinterpreted. [raw] keeps the payload for diagnostics.

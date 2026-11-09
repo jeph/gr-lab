@@ -10,7 +10,7 @@ import 'package:gr_protocol/gr_protocol.dart';
 ///
 /// Pairing never retries by itself: camera firmware deletes the entry of a
 /// device that requests pairing outside Execute Pairing
-/// (docs/protocol/firmware-bonding.md §2).
+/// (research/protocol/firmware-bonding.md §2).
 final class PairingRun {
   /// A run pairing [target] over [camera]'s Bluetooth as [clientName].
   new(

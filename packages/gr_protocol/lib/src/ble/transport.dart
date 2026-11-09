@@ -211,7 +211,7 @@ enum BleErrorCode {
   /// "Peer removed pairing information". The bond is gone on the peer side;
   /// only deleting it on both sides and pairing again recovers. Retrying
   /// does harm on GR cameras: a pairing request outside Execute Pairing
-  /// makes the camera delete its entry (docs/protocol/firmware-bonding.md
+  /// makes the camera delete its entry (research/protocol/firmware-bonding.md
   /// §2).
   bondRejected,
 

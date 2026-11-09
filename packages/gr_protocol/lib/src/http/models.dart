@@ -3,7 +3,7 @@ import 'package:gr_protocol/src/http/request.dart';
 import 'package:meta/meta.dart';
 
 /// The `errCode` envelope every camera JSON response carries
-/// (docs/protocol/http-api.md §8). [raw] keeps the whole object, unknown keys
+/// (research/protocol/http-api.md §8). [raw] keeps the whole object, unknown keys
 /// included.
 class GrEnvelope {
   /// Wraps a decoded response object.
@@ -35,7 +35,7 @@ class GrEnvelope {
 
 /// One exposure/setting key from `/v1/props`: the current value `props[key]`
 /// and the camera-offered choices `props[key + "List"]`
-/// (docs/protocol/remote-shooting.md §4.1).
+/// (research/protocol/remote-shooting.md §4.1).
 final class GrSetting {
   /// Setting [key] with value [current] and choices [options].
   const new(this.key, this.current, this.options);

@@ -5,7 +5,7 @@ import 'package:gr_protocol/src/http/models.dart';
 import 'package:gr_protocol/src/trace.dart';
 
 /// Image Sync's connection-loss rule (`ConnectionChecker.java:63-104`,
-/// docs/protocol/connection-imagesync.md §2.2): the link is lost when
+/// research/protocol/connection-imagesync.md §2.2): the link is lost when
 /// [failureThreshold] consecutive probes failed **and** at least [lossAfter]
 /// passed since the last success. A probe that answers with a different
 /// camera identity counts as a failure.

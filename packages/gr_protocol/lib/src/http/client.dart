@@ -15,7 +15,7 @@ import 'package:gr_protocol/src/trace.dart';
 
 /// Per-route deadlines. Defaults follow connection-lifecycle.md §9 (connect
 /// 3 s, read 10 s, downloads by idle timeout) and the apps' longer per-route
-/// values where they exist (docs/protocol/http-api.md §1,
+/// values where they exist (research/protocol/http-api.md §1,
 /// connection-imagesync.md §2.1).
 final class GrHttpTimeouts {
   /// Deadlines; each defaults to the value its field doc names.

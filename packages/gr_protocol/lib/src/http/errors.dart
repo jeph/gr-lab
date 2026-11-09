@@ -15,7 +15,7 @@ sealed class GrHttpException implements Exception {
 /// The camera answered with a JSON envelope whose `errCode` is not 200.
 ///
 /// Both apps treat `errCode` as the authority, not the HTTP status
-/// (docs/protocol/remote-shooting.md §0 item 3, docs/protocol/http-api.md §8).
+/// (research/protocol/remote-shooting.md §0 item 3, research/protocol/http-api.md §8).
 final class GrApiException extends GrHttpException {
   /// Error decoded from the camera's envelope for [route].
   const new({
@@ -40,7 +40,7 @@ final class GrApiException extends GrHttpException {
   final Map<String, Object?> body;
 
   /// Firmware-update interpretation of this error
-  /// (docs/protocol/http-api.md §7 "Firmware error mapping").
+  /// (research/protocol/http-api.md §7 "Firmware error mapping").
   GrFirmwareRejection get firmwareRejection =>
       classifyFirmwareRejection(errCode, reason);
 

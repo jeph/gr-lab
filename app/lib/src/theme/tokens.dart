@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-/// Colours from the mock-ups (`design/mockups/index.html` in the research
-/// repo): a near-black or off-white base, three raised surfaces, hairlines,
+/// Colours from the mock-ups (`design/mockups/index.html` in the local
+/// research workspace, `../gr`): a near-black or off-white base, three raised surfaces, hairlines,
 /// three text levels and one accent (blue by default).
 @immutable
 final class GrColors extends ThemeExtension<GrColors> {

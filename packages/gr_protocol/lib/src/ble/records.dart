@@ -4,9 +4,9 @@ import 'package:gr_protocol/src/ble/bytes.dart';
 import 'package:gr_protocol/src/ble/codecs.dart';
 import 'package:gr_protocol/src/ble/enums.dart';
 
-// Multi-field characteristic values. Layouts: docs/protocol/ble.md
+// Multi-field characteristic values. Layouts: research/protocol/ble.md
 // §Service and characteristic map / §Payload details (GR WORLD) and
-// docs/protocol/ble-imagesync.md §1 (Image Sync `def_ble.yaml`): fields are
+// research/protocol/ble-imagesync.md §1 (Image Sync `def_ble.yaml`): fields are
 // concatenated in order with no separators; integers little-endian.
 
 List<String> _fields(String text, int min, int max) {

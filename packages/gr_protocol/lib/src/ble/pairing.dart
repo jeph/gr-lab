@@ -73,7 +73,7 @@ enum GrPairingStage {
   /// Connected; the OS pairing is running. The user must confirm the code
   /// on this device **and** press OK on the camera (GR WORLD copy
   /// pp+0x695b0; the OK is the camera's numeric-comparison accept,
-  /// docs/protocol/firmware-bonding.md §2).
+  /// research/protocol/firmware-bonding.md §2).
   awaitingConfirmation,
 
   /// Bonded; reading Camera Information and writing this client's name.
@@ -142,7 +142,7 @@ final class GrPairing {
 }
 
 /// Pairs with a camera that is on and showing **Execute Pairing**, in GR
-/// WORLD's order (docs/protocol/grworld-connect-flow.md §1), on one link:
+/// WORLD's order (research/protocol/grworld-connect-flow.md §1), on one link:
 ///
 /// 1. scan for a powered-on camera, connect, discover, read the DIS model
 ///    and firmware (unencrypted);
@@ -155,7 +155,7 @@ final class GrPairing {
 /// There is no automatic retry. Camera firmware deletes the entry of a
 /// device that requests pairing outside Execute Pairing, refuses pairing
 /// from an address it still lists, and answers rapid retries with SMP
-/// reason 9 (docs/protocol/firmware-bonding.md §2).
+/// reason 9 (research/protocol/firmware-bonding.md §2).
 Future<GrPairing> pairCamera(
   BleTransport transport, {
   required String clientName,

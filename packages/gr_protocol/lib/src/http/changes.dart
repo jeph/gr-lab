@@ -8,7 +8,7 @@ import 'package:gr_protocol/src/http/request.dart';
 import 'package:gr_protocol/src/trace.dart';
 
 /// One message from `ws://<host>/v1/changes`
-/// (docs/protocol/http-api.md §5, docs/protocol/remote-shooting.md §2.3).
+/// (research/protocol/http-api.md §5, research/protocol/remote-shooting.md §2.3).
 ///
 /// GR WORLD only knows `storage|battery|camera`; Image Sync also dispatches
 /// `cameraDirect`, `lens`, `capture` and `transfer`. Whether GR IV emits the

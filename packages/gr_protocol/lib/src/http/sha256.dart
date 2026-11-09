@@ -68,7 +68,7 @@ const List<int> _k = [
 ];
 
 /// SHA-256 (FIPS 180-4) of [data]. Needed for the end-screen upload's
-/// `sha256=` query (docs/protocol/http-api.md §4.4); implemented here because
+/// `sha256=` query (research/protocol/http-api.md §4.4); implemented here because
 /// `gr_protocol` depends on `dart:` libraries only.
 Uint8List sha256(List<int> data) {
   final h = Uint32List.fromList([

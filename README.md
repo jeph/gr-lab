@@ -1,6 +1,6 @@
 # GR Lab
 
-Companion app for Ricoh GR cameras (GR III, GR IIIx, GR IV) on iOS and Android, built with Flutter on a pure-Dart protocol package. The protocol was reverse-engineered from Ricoh's GR WORLD app and the camera firmware; the research lives in a separate repository.
+Companion app for Ricoh GR cameras (GR III, GR IIIx, GR IV) on iOS and Android, built with Flutter on a pure-Dart protocol package. The protocol was reverse-engineered from Ricoh's GR WORLD and Image Sync apps and the camera firmware; the findings are in [`research/`](research/README.md).
 
 Current scope: pairing cameras over Bluetooth and keeping several of them on a Cameras screen (switch, rename, forget), connecting (Bluetooth first, waking the camera and joining its Wi-Fi when the Library opens), browsing the photos and videos on the camera, viewing them, downloading them to the phone's photo library, and shooting (a Bluetooth remote, and live view over Wi-Fi). Image Control, location sync, firmware update and Ricoh account services are not implemented.
 
@@ -22,6 +22,7 @@ Joining is timed around the camera's access point, which comes up a varying time
 | `packages/gr_camera` | The camera layer the app calls for everything camera-related: Bluetooth and Wi-Fi adapters (with the Kotlin and Swift Wi-Fi joining code), session, pairing, scanning, Library, Shoot and live view, and tracing of every exchange |
 | `packages/gr_fake_camera` | Simulated GR IV (BLE, Wi-Fi join, HTTP server on loopback) for tests and demo mode |
 | `app` | The Flutter app, with Kotlin and Swift code for saving to the photo library |
+| `research` | Protocol research: how each route and characteristic was found, firmware evidence, hardware results, open questions |
 | `tool` | `check.sh`, every code-quality check |
 
 ## Running

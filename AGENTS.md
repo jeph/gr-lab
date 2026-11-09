@@ -11,8 +11,17 @@ GR Lab talks to Ricoh GR cameras over a protocol that was reverse-engineered, no
 | `packages/gr_fake_camera` | Simulated GR IV for tests and demo mode |
 | `app` | Flutter UI: widgets, navigation, presentation state, app data, saving to the photo library |
 | `tool/check.sh` | Every code-quality check; see below |
+| `research` | Protocol research: how each route and characteristic was found, firmware evidence, hardware results, what is still unknown. `research/README.md` indexes it |
 
-Protocol research (how each route and characteristic was found, firmware evidence, what is still unknown) lives in the separate `gr` repository under `docs/protocol/`. Read the relevant file before changing protocol behaviour, and update it when hardware shows something new.
+## Research
+
+`research/` is the record of what the camera does and how we know it. The code cites it (for example `research/protocol/remote-shooting.md §4.2`).
+
+- Read the relevant file before changing protocol behaviour.
+- Update it in the same change whenever you discover something new or notice drift: the camera, a firmware version or Ricoh's apps behaving differently from what the notes say, or the code relying on behaviour the notes don't describe. Correct the wrong text rather than appending a contradiction, and say what was seen, on which body and firmware, and when.
+- Mark every fact as observed (on hardware, with date, body and firmware), found in code (with its source), inferred or unknown, as the files already do.
+- Paths such as `firmware/evidence/…`, `work/…` and `apk/…` refer to the local research workspace (`../gr`), which holds Ricoh's APKs, their decompilation and the extracted firmware. Those are Ricoh's copyrighted files: never add them, or large excerpts of decompiled code, to this repository.
+- Keep personal data out: no Wi-Fi passphrases, no home network names, no Bluetooth or Wi-Fi addresses of a particular camera or phone (mask them, `F0:3E:05:xx:xx:xx`), no keys or tokens taken from Ricoh's apps.
 
 ## Camera layer
 
@@ -53,5 +62,5 @@ Run `tool/check.sh` before considering any change done. It runs the formatter, t
 
 - Behaviour changes come with tests against the simulated camera. Extend `gr_fake_camera` when the real camera does something it cannot yet simulate.
 - Break the change on purpose and confirm a test fails before trusting it.
-- Hardware findings (what a GR IV did on a given date and firmware) go into the protocol notes, marked as observed; guesses are marked as inferred.
-- In doc comments, protocol facts that are not established carry an evidence tag with escaped brackets, `\[inferred\]`, `\[unknown\]` or `\[design\]` (our choice, not the camera's), so `comment_references` does not read them as code references. Do not state a meaning the protocol notes or code do not support.
+- Hardware findings (what a GR IV did on a given date and firmware) go into `research/`, marked as observed; guesses are marked as inferred.
+- In doc comments, protocol facts that are not established carry an evidence tag with escaped brackets, `\[inferred\]`, `\[unknown\]` or `\[design\]` (our choice, not the camera's), so `comment_references` does not read them as code references. Do not state a meaning `research/` or the code does not support.

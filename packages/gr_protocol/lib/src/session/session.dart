@@ -14,7 +14,7 @@ import 'package:gr_protocol/src/trace.dart';
 import 'package:gr_protocol/src/wifi/network_control.dart';
 
 /// Where a [GrSession] is in the BLE → Wi-Fi hand-off
-/// (docs/protocol/ble.md §Minimal client sequence) and afterwards.
+/// (research/protocol/ble.md §Minimal client sequence) and afterwards.
 enum GrSessionPhase {
   /// Not connected yet.
   idle,
@@ -96,7 +96,7 @@ final class GrSessionException implements Exception {
 
   /// The camera refused this device's bond, or encrypted access failed on
   /// a link that should be bonded. Only pairing again recovers; retrying
-  /// cannot (docs/protocol/firmware-bonding.md §4).
+  /// cannot (research/protocol/firmware-bonding.md §4).
   bool get needsPairing {
     final c = cause;
     return c is BleException &&
@@ -171,7 +171,7 @@ final class GrSessionOptions {
 
   /// Written to Operation Mode when a connect finds the camera in
   /// bleStartup (`02`): GR WORLD writes playback, or capture for its
-  /// remote screen (docs/protocol/power-on-grworld.md).
+  /// remote screen (research/protocol/power-on-grworld.md).
   final BleOperationMode powerOnMode;
 
   /// GR WORLD allows 60 s for the AP to come up and the join to finish.

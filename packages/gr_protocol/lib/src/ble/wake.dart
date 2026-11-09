@@ -35,7 +35,7 @@ Future<Duration> waitAfterPowerOff(
 
 /// True when [wanted] (a serial string as printed on the camera or by
 /// `scan`) names the advertised tag-02 serial. The advert carries the
-/// serial's digits as an integer (docs/camera-models.md §4.1), so only
+/// serial's digits as an integer (research/camera-models.md §4.1), so only
 /// the digits of [wanted] are compared.
 bool grSerialMatches(String wanted, int? advertised) {
   if (advertised == null) return false;
@@ -179,7 +179,7 @@ final class GrWakeResult {
 }
 
 /// Powers a camera on from its BT-only "off" state the way Image Sync does
-/// (docs/protocol/ble-imagesync.md §2), with continuous rescanning instead
+/// (research/protocol/ble-imagesync.md §2), with continuous rescanning instead
 /// of Image Sync's 10 s polling:
 ///
 /// 1. Scan for a GR advertisement (matching [serial] or [deviceId] when

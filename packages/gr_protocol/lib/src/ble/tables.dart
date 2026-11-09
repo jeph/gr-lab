@@ -1,5 +1,5 @@
 // Generated from Image Sync 2.1.32 `def_ble.yaml` (SHA-256
-// 906651181674ef23…a8cc40b, docs/protocol/ble-imagesync.md §0-1). Do not
+// 906651181674ef23…a8cc40b, research/protocol/ble-imagesync.md §0-1). Do not
 // edit values by hand.
 
 /// Shutter Speed (`D3CE2AED`, uint8) index labels from `def_ble.yaml`

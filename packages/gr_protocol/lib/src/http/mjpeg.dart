@@ -48,7 +48,7 @@ enum _S { seek, expectFF, markerCode, lenHi, lenLo, skip, entropy }
 ///
 /// The firmware declares `boundary=--boundary` but delimits parts with
 /// `--boundary`, and sends no per-part Content-Length, so a strict multipart
-/// parser fails (docs/protocol/remote-shooting.md §1.2). Like Image Sync's
+/// parser fails (research/protocol/remote-shooting.md §1.2). Like Image Sync's
 /// `MjpegInputStream`, this ignores the multipart framing entirely and finds
 /// frames by JPEG markers. Unlike Image Sync's blind `FF D9` search it walks
 /// the JPEG segment structure (length-prefixed headers, byte-stuffed entropy

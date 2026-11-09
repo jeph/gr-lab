@@ -5,12 +5,12 @@ import 'package:meta/meta.dart';
 /// Request `Content-Type` values exactly as the apps send them.
 enum GrContentType {
   /// Image Sync's OkHttp body type for every POST/PUT
-  /// (docs/protocol/remote-shooting.md §0 item 2).
+  /// (research/protocol/remote-shooting.md §0 item 2).
   textPlain('text/plain; charset=utf-8'),
 
   /// GR WORLD labels its `key=value` bodies for `PUT /v1/params/device` and
   /// `PUT …/transfer` as JSON although they are form-style text
-  /// (docs/protocol/http-api.md §1 rows 8 and 12).
+  /// (research/protocol/http-api.md §1 rows 8 and 12).
   jsonLabelled('application/json'),
 
   /// Firmware prepare (http-api.md §1 row 15).
@@ -30,7 +30,7 @@ enum GrContentType {
 
 /// Encodes `key=value&key=value` exactly as Image Sync and GR WORLD do: no
 /// URL-encoding, so `xv=+0.3` keeps its literal `+`
-/// (docs/protocol/remote-shooting.md §0 item 2, `ItemCaptureParams.java:267-282`).
+/// (research/protocol/remote-shooting.md §0 item 2, `ItemCaptureParams.java:267-282`).
 ///
 /// Because nothing is escaped, a key containing `=` or `&` or a value
 /// containing `&` cannot be represented; those, empty keys and CR/LF are
@@ -170,7 +170,7 @@ enum GrImageSize {
 
 /// Touch position for `pos=X,Y`: integer percent (0..100) of the live-view
 /// frame in camera (landscape) orientation, origin top-left
-/// (docs/protocol/remote-shooting.md §3.2). The firmware-side range is
+/// (research/protocol/remote-shooting.md §3.2). The firmware-side range is
 /// \[unknown\]; 0..100 is what Image Sync sends.
 final class GrFocusPoint {
   /// Point at [x], [y] percent. Throws [RangeError] outside 0..100.

@@ -1,8 +1,8 @@
 import 'package:gr_protocol/src/ble/codecs.dart';
 import 'package:gr_protocol/src/wifi/network_control.dart';
 
-// Wire values come from GR WORLD 2.0.0 (docs/protocol/ble.md) and from
-// Image Sync's decrypted `def_ble.yaml` (docs/protocol/ble-imagesync.md §1).
+// Wire values come from GR WORLD 2.0.0 (research/protocol/ble.md) and from
+// Image Sync's decrypted `def_ble.yaml` (research/protocol/ble-imagesync.md §1).
 // Values outside these tables are kept raw by BleEnumValue.
 
 /// Operation Request byte 0 (ble-imagesync.md §1, Shooting Service).

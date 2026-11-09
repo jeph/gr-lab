@@ -9,10 +9,10 @@ import 'package:gr_protocol/src/ble/transport.dart';
 
 /// Which reverse-engineered app documents (and uses) an attribute.
 enum GrBleApp {
-  /// GR WORLD 2.0.0 (docs/protocol/ble.md), the GR IV-capable app.
+  /// GR WORLD 2.0.0 (research/protocol/ble.md), the GR IV-capable app.
   grWorld,
 
-  /// Image Sync 2.1.32 (docs/protocol/ble-imagesync.md), GR III only.
+  /// Image Sync 2.1.32 (research/protocol/ble-imagesync.md), GR III only.
   imageSync,
 }
 
@@ -34,14 +34,14 @@ final class GrBleService {
   /// Canonical UUID (see [canonicalUuid]).
   final String uuid;
 
-  /// Name used in docs/protocol/ble.md.
+  /// Name used in research/protocol/ble.md.
   final String name;
 
   /// Name in Image Sync's `def_ble.yaml`, when it differs.
   final String? imageSyncName;
 
   /// Whether the UUID bytes occur in the analyzed GR III `bled` binary
-  /// (docs/firmware-protocol-inventory.md; null = not established).
+  /// (research/firmware-protocol-inventory.md; null = not established).
   /// Byte presence does not prove runtime registration.
   final bool? onGr3;
 
@@ -78,7 +78,7 @@ final class GrBleCharacteristic<T extends Object> {
   /// Stable kebab-case name used by the CLI.
   final String key;
 
-  /// Display name, from docs/protocol/ble.md or Image Sync's `def_ble.yaml`.
+  /// Display name, from research/protocol/ble.md or Image Sync's `def_ble.yaml`.
   final String name;
 
   /// Canonical UUID.

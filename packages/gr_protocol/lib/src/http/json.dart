@@ -5,7 +5,7 @@ final RegExp _uint32Max = RegExp('(?<![0-9.])4294967295(?![0-9.])');
 /// Applies Image Sync's textual fix-up before JSON parsing: every
 /// `4294967295` (an unsigned 32-bit -1 the firmware serialises for "unset"
 /// fields) becomes `-2147483648` so it fits a signed 32-bit int
-/// (docs/protocol/remote-shooting.md §0 item 3, `RestCameraClient.java:110`).
+/// (research/protocol/remote-shooting.md §0 item 3, `RestCameraClient.java:110`).
 ///
 /// Image Sync replaces the substring blindly; this version only replaces it
 /// where it is not part of a longer number, which is the same for every
@@ -94,7 +94,7 @@ extension type const JsonFields(Map<String, Object?> map) {
 /// Text form of a JSON number. Doubles lose their original lexeme in
 /// `dart:convert` (`1.250` parses to `1.25`); the camera is expected to send
 /// setting values such as `tv` as strings (Image Sync models them as
-/// `String`, docs/protocol/remote-shooting.md §4.1), so this only matters for
+/// `String`, research/protocol/remote-shooting.md §4.1), so this only matters for
 /// a firmware that sends bare numbers.
 String numberText(num n) => n.toString();
 

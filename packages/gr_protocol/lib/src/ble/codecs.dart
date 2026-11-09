@@ -321,7 +321,7 @@ final class BleIntCodec extends BleCodec<int> {
   String get syntax => 'integer (${format.name})';
 }
 
-/// One-byte boolean. Both apps decode `byte0 == 1` (docs/protocol/ble.md
+/// One-byte boolean. Both apps decode `byte0 == 1` (research/protocol/ble.md
 /// §Quick reference); other values are kept as an issue.
 final class BleBoolCodec extends BleCodec<bool> {
   /// Stateless; one shared instance is enough.
@@ -558,7 +558,7 @@ final class BleListCodec<E extends Object> extends BleCodec<List<E>> {
 }
 
 /// Raw UTF-8 with no length prefix or terminator. Decoding stops at the
-/// first NUL, as both apps strip NUL padding (docs/protocol/ble.md
+/// first NUL, as both apps strip NUL padding (research/protocol/ble.md
 /// §Quick reference; ble-imagesync.md §4.1).
 final class BleUtf8Codec extends BleCodec<String> {
   /// Stateless; one shared instance is enough.
