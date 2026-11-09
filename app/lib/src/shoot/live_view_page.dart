@@ -241,12 +241,18 @@ class _LiveLayoutState extends State<_LiveLayout> {
                 onTap: (k) =>
                     setState(() => _dialKey = dialKey == k ? null : k),
               ),
-              if (dialKey != null)
-                _Dial(
-                  key: Key('live-dial-$dialKey'),
-                  setting: _editable(dialKey)!,
-                  onSelect: (v) => unawaited(_set(dialKey, v)),
-                ),
+              // The dial's room is kept when it is closed, so opening it
+              // does not push the readouts up.
+              SizedBox(
+                height: _Dial.slotHeight,
+                child: dialKey == null
+                    ? null
+                    : _Dial(
+                        key: Key('live-dial-$dialKey'),
+                        setting: _editable(dialKey)!,
+                        onSelect: (v) => unawaited(_set(dialKey, v)),
+                      ),
+              ),
               const SizedBox(height: 16),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 40),
@@ -444,8 +450,14 @@ class _Readouts extends StatelessWidget {
     final c = GrColors.of(context);
     final l10n = context.l10n;
     final props = live.props;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      decoration: BoxDecoration(
+        color: c.s2.withValues(alpha: .8),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: c.line2),
+      ),
       child: Row(
         children: [
           for (final key in readouts)
@@ -501,9 +513,12 @@ String _readoutLabel(AppLocalizations l10n, String key) => switch (key) {
 };
 
 /// The values of one setting in a row, the current one centred
-/// (mock `.dial`).
+/// (mock `.dial`). It rises into its place under the readouts when it opens.
 class _Dial extends StatefulWidget {
   const new({required this.setting, required this.onSelect, super.key});
+
+  /// The room kept for the dial under the readouts, open or not.
+  static const slotHeight = 54.0;
 
   final GrSetting setting;
   final ValueChanged<String> onSelect;
@@ -512,9 +527,21 @@ class _Dial extends StatefulWidget {
   State<_Dial> createState() => _DialState();
 }
 
-class _DialState extends State<_Dial> {
+class _DialState extends State<_Dial> with SingleTickerProviderStateMixin {
   static const _item = 56.0;
   late final ScrollController _scroll;
+  late final _opening = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 220),
+  );
+  late final _rise = CurvedAnimation(
+    parent: _opening,
+    curve: Curves.easeOutCubic,
+  );
+  late final Animation<Offset> _slide = Tween(
+    begin: const Offset(0, .35),
+    end: Offset.zero,
+  ).animate(_rise);
 
   int get _index =>
       widget.setting.options!.indexOf(widget.setting.current ?? '');
@@ -525,6 +552,17 @@ class _DialState extends State<_Dial> {
     _scroll = ScrollController(
       initialScrollOffset: _index < 0 ? 0 : _index * _item,
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_opening.isAnimating || _opening.isCompleted) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _opening.value = 1;
+    } else {
+      _opening.forward();
+    }
   }
 
   @override
@@ -541,6 +579,8 @@ class _DialState extends State<_Dial> {
 
   @override
   void dispose() {
+    _rise.dispose();
+    _opening.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -550,7 +590,7 @@ class _DialState extends State<_Dial> {
     final c = GrColors.of(context);
     final options = widget.setting.options!;
     final key = widget.setting.key;
-    return Container(
+    final dial = Container(
       height: 44,
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       decoration: BoxDecoration(
@@ -598,6 +638,10 @@ class _DialState extends State<_Dial> {
           );
         },
       ),
+    );
+    return FadeTransition(
+      opacity: _rise,
+      child: SlideTransition(position: _slide, child: dial),
     );
   }
 }

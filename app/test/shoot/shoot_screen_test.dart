@@ -307,6 +307,23 @@ void main() {
       await app.dispose();
     });
 
+    testWidgets('opening the dial leaves the readouts where they are', (
+      tester,
+    ) async {
+      final app = await inLiveView(tester);
+      await pumpUntil(
+        tester,
+        () => find.text('f/2.8').evaluate().isNotEmpty,
+        reason: 'aperture readout',
+      );
+      final readout = find.byKey(const Key('live-readout-av'));
+      final before = tester.getTopLeft(readout);
+      await tester.tap(readout);
+      await pumpUntilFound(tester, find.byKey(const Key('live-dial-av')));
+      expect(tester.getTopLeft(readout), before);
+      await app.dispose();
+    });
+
     testWidgets('a value the camera refuses comes back as its error code', (
       tester,
     ) async {
