@@ -79,8 +79,10 @@ final class LooksModel extends ChangeNotifier {
   /// The slot (1–3) a load is being written to.
   int? get loading => _loading;
 
-  /// The paired camera's model, for the slots and base images it offers.
-  GrModel? get model => connection.camera?.model;
+  /// The camera's model, for the slots and base images it offers: as it
+  /// reported it on this connection, else as it was saved at pairing.
+  GrModel? get model =>
+      connection.cameraSession?.model ?? connection.camera?.model;
 
   /// A look the camera produced, whose header a new look copies
   /// (`Look.onBase`): a slot's look, else a saved look's; null when there

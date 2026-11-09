@@ -14,10 +14,11 @@ const _quietLiveness = GrSessionOptions(
 );
 
 /// The whole app with the fake camera ([model], a GR IV by default) paired
-/// and off, on the Looks tab.
+/// and off, on the Looks tab. [saveModel] false saves it without its model.
 Future<TestApp> _inLooks(
   WidgetTester tester, {
   String model = 'RICOH GR IV',
+  bool saveModel = true,
 }) async {
   tester.view
     ..physicalSize = const Size(1170, 2532)
@@ -27,6 +28,7 @@ Future<TestApp> _inLooks(
     () => createTestApp(
       config: FakeCameraConfig(bonded: true, poweredOn: false, model: model),
       saveCamera: true,
+      saveModel: saveModel,
       sessionOptions: _quietLiveness,
     ),
   ))!;
@@ -153,6 +155,14 @@ void main() {
       reason: 'linked',
     );
     expect(app.camera.poweredOn, isFalse);
+    await app.dispose();
+  });
+
+  testWidgets('a camera saved without its model shows its slots once it '
+      'reports the model', (tester) async {
+    final app = await _inLooks(tester, saveModel: false);
+    expect(app.models.cameras.current!.model, isNull);
+    await pumpUntilFound(tester, _inSlot(1, 'Tokyo Night'));
     await app.dispose();
   });
 

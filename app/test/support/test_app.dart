@@ -147,10 +147,12 @@ final class TestApp {
 /// Wi-Fi control. [wifiApprovalShown] goes to the [GrCameraEnvironment],
 /// [askBeforeWifiJoin] and [redialDelays] to [AppServices].
 /// [debugLogBlocked] puts a file where the debug log's folder goes, so the
-/// log cannot open.
+/// log cannot open. [saveModel] false saves the camera without its model,
+/// as when pairing could not read it.
 Future<TestApp> createTestApp({
   FakeCameraConfig config = const FakeCameraConfig(),
   bool saveCamera = false,
+  bool saveModel = true,
   GrSessionOptions sessionOptions = const GrSessionOptions(),
   BleTransport Function(BleTransport camera)? transport,
   WifiNetworkControl Function(WifiNetworkControl camera)? wifi,
@@ -173,7 +175,7 @@ Future<TestApp> createTestApp({
     final paired = GrPairedCamera(
       deviceId: config.deviceId,
       serialNumber: config.serial,
-      modelName: config.model,
+      modelName: saveModel ? config.model : null,
       firmwareRevision: config.firmware,
       bluetoothDeviceName: config.bluetoothName,
     );

@@ -121,6 +121,10 @@ final class CameraSession {
   /// linked; null before the first link.
   String? get firmwareRevision => _session.identity?.firmwareRevision;
 
+  /// The model the camera reported over Bluetooth when it last linked;
+  /// null before the first link or when GR Lab does not know it.
+  GrModel? get model => _session.identity?.model;
+
   /// The newest `/v1/props` the session read over Wi-Fi.
   GrProps? get props => _session.props;
 
