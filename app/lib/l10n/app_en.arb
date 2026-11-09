@@ -1,0 +1,7 @@
+{
+  "@@locale": "en",
+  "appTitle": "GR Lab",
+  "@appTitle": {
+    "description": "The app's name, shown by the system (task switcher, window title)."
+  }
+}

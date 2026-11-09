@@ -13,12 +13,15 @@ dependencies:
   clock: ^1.1.3
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   gr_camera:
     path: ../packages/gr_camera
   gr_fake_camera:
     path: ../packages/gr_fake_camera
   gr_protocol:
     path: ../packages/gr_protocol
+  intl: any
   path_provider: ^2.1.6
   share_plus: ^13.3.1
   video_player: ^2.14.1
@@ -33,6 +36,7 @@ dev_dependencies:
 flutter:
   # `flutter run` and `flutter build` without --flavor build dev.
   default-flavor: dev
+  generate: true
   uses-material-design: true
   assets:
     - assets/demo/

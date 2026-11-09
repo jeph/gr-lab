@@ -12,6 +12,7 @@ import 'package:gr_protocol/gr_protocol.dart'
         BleConnection,
         BleTransport,
         WifiNetworkControl;
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/data/cameras.dart';
@@ -72,7 +73,12 @@ final class TestApp {
     await tester.pumpWidget(
       AppScope(
         models: models,
-        child: MaterialApp(theme: grTheme(brightness), home: home),
+        child: MaterialApp(
+          theme: grTheme(brightness),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: home,
+        ),
       ),
     );
     await tester.pump();

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/data/settings.dart';
 import 'package:grlab/src/debug/debug_log.dart';
 import 'package:grlab/src/settings/debug_log_group.dart';
@@ -32,6 +33,8 @@ void main() {
       tester.pumpWidget(
         MaterialApp(
           theme: grTheme(Brightness.light),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: ListView(children: [DebugLogGroup(log: log)]),
           ),

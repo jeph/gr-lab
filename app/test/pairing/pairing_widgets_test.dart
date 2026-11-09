@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart';
 import 'package:grlab/src/theme/tokens.dart';
 
@@ -12,6 +13,8 @@ void main() {
           await tester.pumpWidget(
             MaterialApp(
               theme: grTheme(brightness),
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
               home: MediaQuery(
                 data: MediaQueryData(textScaler: TextScaler.linear(scale)),
                 child: const Scaffold(

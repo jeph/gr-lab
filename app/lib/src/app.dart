@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/camera/camera_pages.dart';
 import 'package:grlab/src/cameras/cameras_screen.dart';
@@ -21,7 +22,9 @@ class GrLabApp extends StatelessWidget {
     child: ListenableBuilder(
       listenable: models.settings,
       builder: (context, _) => MaterialApp(
-        title: 'GR Lab',
+        onGenerateTitle: (context) => context.l10n.appTitle,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         debugShowCheckedModeBanner: false,
         theme: grTheme(Brightness.light),
         darkTheme: grTheme(Brightness.dark),
