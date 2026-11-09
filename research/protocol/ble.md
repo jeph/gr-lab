@@ -116,9 +116,9 @@ Getter block 0xb1c200..0xb1c2a0; builder 0x570654; finder 0x56fed0. Read-all 0xd
 | `D9AE1C06-447D-4DEA-8B7D-FC8B19C2CDAE` | fileTransferList | N, R | 2 bytes: [0]==1 list not empty, [1]==1 list changed |
 | `BD6725FC-5D16-496A-A48A-F784594C8ECB` | powerOffDuringTransfer | N, R, W | 2 bytes: [0]==1 behaviour enabled, [1]==1 auto-resize. Write: read current, wait 50 ms, write `[current[0], newAutoResize]` |
 | `ef437870-180a-44ae-affd-99dbd85ade43` | cameraName | R, W | UTF-8 string |
-| `e450ed9b-dd61-43f2-bdfb-6af500c910c3` | firmware update available **[inferred]** | (W, no caller found) | 1 byte bool |
-| `5f0a7ba9-ae46-4645-abac-58ab2a1f4fe4` | firmware update start **[inferred]** | W | `01` (step 4 of the firmware-update flow, 0xdd5a44) |
-| `39879aac-0af6-44b5-afbb-ca50053fa575` | firmware update result | N (only when requested, see below), R | byte0: 0 invalid, 1 success, 2 failure (0x57d85c) |
+| `e450ed9b-dd61-43f2-bdfb-6af500c910c3` | FirmwareUpdateAvailable (name from GR IV `bled`) | W (camera declares Write only; GR WORLD never writes it) | 1 byte, stored in camera property `0xC2` |
+| `5f0a7ba9-ae46-4645-abac-58ab2a1f4fe4` | FirmwareUpdateStart | W | 1 byte: `00` nop, `01` start the update; other values and lengths rejected. GR WORLD writes `01` (0xdd5a44) |
+| `39879aac-0af6-44b5-afbb-ca50053fa575` | FirmwareUpdateResult | N, R | 1 byte (camera property `0xC3`): 0 invalid, 1 success, 2 failure (0x57d85c). GR WORLD subscribes only on the reconnect after the firmware upload |
 | `f759f4dd-5faf-4cac-82f4-5a3fe11737e7` | end-screen data | R | raw bytes, layout **[unknown]** (0xdb09b8 reads it first and falls back to the long battery record) |
 
 `CameraServiceModel.gradNd` (@0x33) is always 0 in read-all (0xd41954); no characteristic feeds it.
@@ -409,7 +409,7 @@ Background/auto-connect never powers a camera on: it connects only when the scan
 
 ## Firmware update (BLE part)
 
-`_firmwareUpdate` 0xdd5398: the firmware file is transferred over Wi-Fi (step 2 joins the camera AP; the transfer itself belongs to the HTTP document) **[inferred]**. Then the app waits 200 ms (`la@870561`), writes `01` to `5f0a7ba9-…` (start; 0xdd5a44) and waits for a FirmwareUpdateResult notification on `39879aac-…` (`01` success / `02` failure). If none arrives it logs `step4_ble_notify_not_received`. On success it writes camera power `00`.
+The firmware file goes over Wi-Fi first; the camera then restarts and the app reconnects (subscribing to FirmwareUpdateResult `39879aac-…` on that connection only). `_firmwareUpdate` 0xdd5398 waits 200 ms (`la@870561`), writes `01` to FirmwareUpdateStart `5f0a7ba9-…` (0xdd5a44) and waits for the FirmwareUpdateResult notification (`01` success / `02` failure). On success it writes camera power `00`. The whole sequence and the camera side are in [firmware update](firmware-update.md).
 
 ## Phone name registration
 
@@ -607,4 +607,3 @@ Working notes with more detail: `research/notes/ble/{CamSvcChars,WfbChars,WlanCh
     - GPS `datum` byte
 13. GPS timestamp: UTC or local? Does the camera ignore GPS writes when geotag is off?
 14. Camera Information MAC string format (colons, case). Exact DIS `2A24` model number for GR IV Monochrome / HDF: GR WORLD's firmware gate needs exactly "GR IV"/"GR IIIx"/"GR III"/"GR II"; `bled` has no DIS implementation, so the DIS server and strings are unknown. The custom model-name characteristic returns the firmware model property (e.g. `RICOH GR IV Monochrome` **[inferred]**).
-15. `e450ed9b` (firmware update available) and `5f0a7ba9` (start) names are inferred from block order. Confirm their properties.

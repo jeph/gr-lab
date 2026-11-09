@@ -216,27 +216,14 @@ For GR III/GR IV the socket is opened but its messages are ignored (no-op handle
 ## 7. Firmware update over Wi-Fi
 **Our app: not in v1.** The firmware screen is in the mock-ups, but v1 won't implement updates. GR WORLD gets the package from Ricoh's online service, which our app doesn't use, and whether the file on Ricoh's public download page has the same format is unverified. See design notes (`design/README.md#not-in-v1`).
 
-The package is downloaded from the cloud (`…/v1/fwDownload` pp+0x2a080) as `update.zip`, containing `updateInfo.json` and `fwdc248b.bin` (`0xddc0d0`). Then:
-1. Step 2: BLE turns WLAN on and the phone joins the camera Wi-Fi (`0xdd3c14`; failure codes `step2_ble_wlan_on_failure`, `step2_ble_wlan_on_video_failure`, `step2_ble_connect_failure`, `step2_wlan_connect_failure`).
-2. `_prepare` (`0xdd418c`): read version info (`Firmwareupdate version info jsonFile is null` on failure). Then `POST /v1/configs/firmware/prepare` with `Content-Type: application/x-www-form-urlencoded` and body `filesize=<firmware length>`, 60 s timeout (`0xdd7268`).
-   - Empty body: unexpected error.
-   - Otherwise `jsonDecode` and parse `{errCode, errMsg, detail:{reason}}` (`0x855200`, `0x85528c`, `0x8555a8`). `errCode == 200` is success.
-3. `_dataTransfer` (`0xdd48ac`): `PUT /v1/configs/firmware?storage=in&reboot=true` with `Content-Type: application/octet-stream` and the whole binary as the body (no chunking), 180 s timeout (`0xdd698c`). Response handling is the same as prepare. The camera reboots by itself (`reboot=true`).
-4. Step 3: BLE reconnect after reboot (`0xdd4f54`, `step3_ble_connect_failure`).
-5. Cancel: `POST /v1/configs/firmware/cancel` with no body (`0xddcca4`, caller `0xddcb14`).
+The full flow, the camera's handlers and the error reasons are in [firmware update](firmware-update.md). In short:
+1. The package comes from Ricoh's cloud (`…/v1/fwDownload` pp+0x2a080) as `update.zip`, unzipped to `updateInfo.json` and `fwdc248b.bin` (`0xddc0d0`).
+2. BLE turns WLAN on and the phone joins the camera Wi-Fi (`0xdd3c14`).
+3. `POST /v1/configs/firmware/prepare` with body `filesize=<firmware length>` (`0xdd7268`), then `PUT /v1/configs/firmware?storage=in&reboot=true` with the whole file (`0xdd698c`). Both answers are parsed as `{errCode, errMsg, detail:{reason}}` (`0x855200`); `errCode == 200` is success.
+4. The camera restarts; the app reconnects over BLE and finishes the update with the BLE start/result characteristics.
+5. `POST /v1/configs/firmware/cancel` (`0xddcca4`) is sent only while the upload is in progress.
 
-Firmware error mapping (`0x854ea8`):
-
-| errCode | detail.reason | app error |
-|---|---|---|
-| 400 | `err_fw_same` | same version (LSb) |
-| 400 | `err_fw_old` | older version (MSb) |
-| 400 | other | NSb (generic 400) |
-| 412 | `battery_too_low` | battery too low (KSb) |
-| 412 | other | JSb |
-| other | – | OSb (unexpected) |
-
-Timeouts give `FirmwareUpdate _postPrepare Timeout` / `_putFirmware Timeout`.
+`detail.reason` values the GR IV firmware sends: `battery_too_low` (412), `err_fw_same`, `err_fw_old`, `err_fw_broken` (400). The `step…` strings in the app are analytics results, not wire values.
 
 ## 8. Error codes and status handling
 - Every camera JSON response: `errCode` (HTTP-like int; 200 = OK), optional `errMsg` (string), optional `detail` object (`reason`).
@@ -278,5 +265,5 @@ Timeouts give `FirmwareUpdate _postPrepare Timeout` / `_putFirmware Timeout`.
 7. The end-screen PUT without a body (variant B): is it delete/reset? The valid `index` range? Is `sha256` mandatory on newer firmware?
 8. `/v1/params/device` on GR II: are the body (`channel=0&ssid=&key=` with JSON content-type) and the escaping of special characters accepted as is? Also what pp+0x1c38 (the regex fix-up for the props `key` field) is.
 9. WebSocket: does the camera send other `changed` values, does it send pings or require them, what are the idle timeout and close codes, and is it the camera that drops the socket during Wi-Fi power saving (relevant to the disconnects)?
-10. Firmware: maximum upload time, whether `storage=sd1` is accepted, and the full set of `detail.reason` values.
+10. Firmware: maximum upload and update time and whether `storage=sd1` is accepted; see [firmware update §6](firmware-update.md#6-open-questions).
 11. The origin of the URL used by `0xd8eb6c` (30 s Image Control GET) and of the end-screen image URL (`0x952890`).

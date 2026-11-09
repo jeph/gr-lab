@@ -22,7 +22,7 @@ At the parent's request, a final focused extension also inspected `sysmgrd` dyna
 ## Main findings
 
 1. **Both webapid binaries contain more HTTP functionality than GR WORLD uses:** method-labelled literals for liveview, ping, camera shoot/compose/cancel, lens focus, camera/lens parameter writes, WLAN-only finish and debug revisions, plus named implementation symbols. This does not contradict the app document's carefully scoped “not used by this app” statement.
-2. GR4 adds six method-labelled HTTP literals relative to GR3: camera logs, firmware prepare/upload/cancel, end-screen image upload and photo image-control retrieval. The accompanying firmware/log/image-control symbols also exist. Exact registration and behavior remain unknown here.
+2. GR4 adds six method-labelled HTTP literals relative to GR3: camera logs, firmware prepare/upload/cancel, end-screen image upload and photo image-control retrieval. The accompanying firmware/log/image-control symbols also exist. The firmware routes' registration and handlers are decompiled in [firmware update](protocol/firmware-update.md#3-camera-side-gr-iv-120); `/v1/configs/firmware` is registered for both PUT and DELETE.
 3. No dashed UUID strings occur in either `bled`; the custom GATT identifiers are **canonical-order 16-byte constants**. All **46 custom UUIDs** from the BLE baseline occur in GR4; **32** occur in GR3. Fourteen app-known constants are not found in GR3 in canonical, whole-reversed or GUID-little-endian encodings. That bounded absence is not a proof of runtime GATT absence.
 4. There are **25 additional shared UUID-shaped constants**, absent from the app's custom UUID map, alongside useful RTTI/function names for exposure, focus, lists and aggregate notifications. Their bytes and nearby type associations are inventoried below, without asserting active registrations.
 5. GR3 and GR3x Linux and INITFS payloads are byte-identical; their RTOS and outer firmware images differ. The local GR IV and GR IV Monochrome outer BIN files are **byte-identical**, despite different ZIP hashes and directory labels. Do not treat them as independent firmware builds.
@@ -245,13 +245,13 @@ The 46 custom identifiers below are the app's six custom services and 40 charact
 | `28f59d60-8b8e-4fcd-a81f-61bdb46595a9` | Phone location for geotagging | 0x896dc | 0x90310 |
 | `30adb439-1bc0-4b8e-9c8b-2bd1892ad6b0` | Image Control Custom 1 name | not found | 0x91518 |
 | `35fe6272-6aa5-44d9-88e1-f09427f51a71` | modelNumberString (e.g. "GR IV"; gates firmware check 0x54b6c0, compared to "GR IV" at 0xda754c) | 0x86660 | 0x8e118 |
-| `39879aac-0af6-44b5-afbb-ca50053fa575` | firmware update result | not found | 0x8ee90 |
+| `39879aac-0af6-44b5-afbb-ca50053fa575` | FirmwareUpdateResult (`bled` name; [firmware update](protocol/firmware-update.md#36-ble-characteristics-in-bled)) | not found | 0x8ee90 |
 | `3e0673e0-1c7b-4f97-8ca6-5c2c8bc56680` | Image Control Custom 1 data | not found | 0x91554 |
 | `430b80a3-cc2e-4ec2-aacd-08610281ff38` | operationModeList | 0x87cb0 | 0x8ee54 |
 | `460828ac-94eb-4edf-9bb0-d31e75f2b165` | available5GHz | not found | 0x94610 |
 | `4b445988-caa0-4dd3-941d-37b4f52aca86` | Camera State | 0x80810 | 0x8b338 |
 | `559644b8-e0bc-4011-929b-5cf9199851e7` | Shutter release (enum member startOrStopRecording, so it presumably also starts/stops movie recording **[inferred]**) | 0x8b8c4 | 0x93ca0 |
-| `5f0a7ba9-ae46-4645-abac-58ab2a1f4fe4` | firmware update start **[inferred]** | not found | 0x8ee7c |
+| `5f0a7ba9-ae46-4645-abac-58ab2a1f4fe4` | FirmwareUpdateStart (`bled` name) | not found | 0x8ee7c |
 | `63bc8463-228f-4698-b30d-faf8e3d7bd88` | security | not found | 0x945fc |
 | `6fe9d605-3122-4fce-a0ae-fd9bc08ff879` | bluetoothDeviceName | 0x86708 | 0x8e154 |
 | `78009238-ac3d-4370-9b6f-c9ce2f4e3ca8` | Capture mode | 0x8b7dc | 0x93c60 |
@@ -274,7 +274,7 @@ The 46 custom identifiers below are the app's six custom services and 40 charact
 | `cd879e7a-ab9f-4c58-90ed-689bae67ef8e` | Image Control Custom 3 data | not found | 0x9157c |
 | `d9ae1c06-447d-4dea-8b7d-fc8b19c2cdae` | fileTransferList | 0x87d90 | 0x8fdc0 |
 | `df77dd09-0a48-44aa-9664-2116d03b6fd7` | Image Control Custom 3 name | not found | 0x91540 |
-| `e450ed9b-dd61-43f2-bdfb-6af500c910c3` | firmware update available **[inferred]** | not found | 0x8fde0 |
+| `e450ed9b-dd61-43f2-bdfb-6af500c910c3` | FirmwareUpdateAvailable (`bled` name) | not found | 0x8fde0 |
 | `e799198f-cf3f-4650-9373-b15dda1b618c` | Image Control Custom 2 name | not found | 0x9152c |
 | `ef437870-180a-44ae-affd-99dbd85ade43` | cameraName | not found | 0x8ee68 |
 | `f37f568f-9071-445d-a938-5441f2e82399` | WLAN Control | 0x80850 | 0x8b378 |
