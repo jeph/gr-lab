@@ -210,8 +210,9 @@ final class LibraryModel extends ChangeNotifier {
     if (current == null) return null;
     final generation = _generation;
     final key = '${current.serial}|$generation|${f.key}';
-    return _infoRequests.join(key, current, (_) async {
-      final info = await current.fileInfo(f);
+    return _infoRequests.join(key, current, (signal) async {
+      // Past the deadline the request closes at once, freeing its slot.
+      final info = await current.fileInfo(f, abort: signal.aborted);
       if (generation == _generation) {
         _info[f.key] = info;
         _scheduleSave();

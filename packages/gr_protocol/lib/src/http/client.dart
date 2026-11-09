@@ -217,14 +217,20 @@ final class GrHttpClient {
   }
 
   /// `GET /v1/photos/<dir>/<file>/info[?storage=]` (http-api.md §2.2).
-  Future<GrPhotoInfo> photoInfo(GrPhotoPath path, {String? storage}) async =>
-      GrPhotoInfo(
-        await _json(
-          'GET',
-          _uri(['photos', path.dir, path.file, 'info'], _storage(storage)),
-          timeout: timeouts.photoInfo,
-        ),
-      );
+  /// Once [abort] completes, the request stops and its connection is closed
+  /// at once, and [photoInfo] throws the value [abort] completed with.
+  Future<GrPhotoInfo> photoInfo(
+    GrPhotoPath path, {
+    String? storage,
+    Future<Object>? abort,
+  }) async => GrPhotoInfo(
+    await _json(
+      'GET',
+      _uri(['photos', path.dir, path.file, 'info'], _storage(storage)),
+      timeout: timeouts.photoInfo,
+      abort: abort,
+    ),
+  );
 
   /// `GET /v1/photos/latest/info`: Image Sync's fallback when no WebSocket
   /// `filepath` was seen. GR III/IV webapid has no `/latest` route; a GR IV
@@ -872,6 +878,7 @@ final class GrHttpClient {
     GrContentType? contentType,
     Duration? connectTimeout,
     Duration? timeout,
+    Future<Object>? abort,
   }) async {
     final reply = await _send(
       method,
@@ -883,6 +890,7 @@ final class GrHttpClient {
       contentType: contentType,
       connectTimeout: connectTimeout,
       timeout: timeout,
+      abort: abort,
     );
     _throwForError(reply.route, reply.status, reply.body);
     final json = decodeCameraJsonBytes(reply.body);
@@ -993,6 +1001,7 @@ final class GrHttpClient {
     GrContentType? contentType,
     Duration? connectTimeout,
     Duration? timeout,
+    Future<Object>? abort,
   }) async {
     final route = '$method ${uri.path}';
     final watch = Stopwatch()..start();
@@ -1003,8 +1012,19 @@ final class GrHttpClient {
     );
     request.done.ignore();
     final deadline = timeout ?? timeouts.request;
-    // Completed when the deadline passes, to close a body still arriving.
+    // Completed when the deadline passes or [abort] completes, to close a
+    // body still arriving.
     final stop = Completer<Object>();
+    Object? aborted;
+    unawaited(
+      abort?.then((reason) {
+        aborted = reason;
+        // Abort ends the request only until the response has arrived; the
+        // body is closed through [stop].
+        request.abort(reason);
+        if (!stop.isCompleted) stop.complete(reason);
+      }),
+    );
     try {
       final reply = await _exchange(
         request,
@@ -1034,21 +1054,26 @@ final class GrHttpClient {
         ),
       );
       return reply;
-    } on TimeoutException {
-      final e = TimeoutException(
+    } on Object catch (e, stack) {
+      // An abort can surface as the socket error it caused; the caller gets
+      // what [abort] completed with.
+      if (aborted case final reason?) {
+        _traceError(method, uri, reason);
+        Error.throwWithStackTrace(reason, stack);
+      }
+      if (e is! TimeoutException) {
+        request.abort(e);
+        _traceError(method, uri, e);
+        rethrow;
+      }
+      final timeout = TimeoutException(
         '$route: no complete response within $deadline',
         deadline,
       );
-      // Abort ends the request only until the response has arrived; the
-      // body is closed through [stop].
-      request.abort(e);
-      stop.complete(e);
-      _traceError(method, uri, e);
-      throw e;
-    } catch (e) {
-      request.abort(e);
-      _traceError(method, uri, e);
-      rethrow;
+      request.abort(timeout);
+      if (!stop.isCompleted) stop.complete(timeout);
+      _traceError(method, uri, timeout);
+      throw timeout;
     }
   }
 

@@ -70,7 +70,10 @@ void main() {
 
   /// A model whose current camera is [current] (none for null), once it
   /// has read that camera's cached listing.
-  Future<LibraryModel> model([String? current = serial]) async {
+  Future<LibraryModel> model([
+    String? current = serial,
+    Duration infoTimeout = const Duration(seconds: 10),
+  ]) async {
     final cameras = await CameraStore.load(await data.createTemp());
     if (current != null) await cameras.add(saved(current));
     final m = LibraryModel(
@@ -80,6 +83,7 @@ void main() {
       queue: queue,
       changeDebounce: const Duration(milliseconds: 10),
       saveDelay: Duration.zero,
+      infoTimeout: infoTimeout,
     );
     models.add(m);
     await m.switched;
@@ -294,4 +298,78 @@ void main() {
     expect(m.connected, isTrue);
     expect(m.shots, hasLength(3));
   });
+
+  test('an /info request past its deadline closes at once and frees its '
+      'queue slot', () async {
+    final stalling = await _InfoStallingCamera.start();
+    addTearDown(stalling.close);
+    final stalledHttp = GrHttpClient('127.0.0.1', port: stalling.port);
+    addTearDown(() => stalledHttp.close(force: true));
+    final m = await model(serial, const Duration(milliseconds: 100));
+    link.value = CameraLibrary.overHttp(stalledHttp, serial: serial);
+    final ticket = m.requestInfo(
+      CameraFile(null, GrPhotoPath('100RICOH', 'R0000001.JPG')),
+    )!;
+    await expectLater(ticket.future, throwsA(isA<TimeoutException>()));
+    // Without closing it, the request would hold its slot until the HTTP
+    // client's own 15-second deadline.
+    await stalling.closed.future.timeout(const Duration(seconds: 5));
+    await until(() => queue.running == 0, reason: 'slot freed');
+  });
+}
+
+/// A camera that lists an empty card and never answers `/info`.
+final class _InfoStallingCamera {
+  new _(this._server) {
+    _server.listen((socket) {
+      _sockets.add(socket);
+      socket.done.ignore();
+      var answered = false;
+      var stalled = false;
+      socket.listen(
+        (data) {
+          final text = latin1.decode(data);
+          if (answered || !text.contains('\r\n\r\n')) return;
+          answered = true;
+          stalled = text.contains('/info');
+          if (stalled) return;
+          const body = '{"errCode":200,"dirs":[]}';
+          socket.add(
+            latin1.encode(
+              'HTTP/1.1 200 OK\r\n'
+              'Content-Type: application/json\r\n'
+              'Content-Length: ${body.length}\r\n'
+              'Connection: close\r\n\r\n'
+              '$body',
+            ),
+          );
+          unawaited(socket.close());
+        },
+        onDone: () {
+          if (stalled && !closed.isCompleted) closed.complete();
+          socket.destroy();
+        },
+        onError: (Object _) => socket.destroy(),
+      );
+    });
+  }
+
+  static Future<_InfoStallingCamera> start() async => _InfoStallingCamera._(
+    await ServerSocket.bind(InternetAddress.loopbackIPv4, 0),
+  );
+
+  final ServerSocket _server;
+  final _sockets = <Socket>[];
+
+  /// Completes when the client closed a connection it had asked on.
+  final closed = Completer<void>();
+
+  int get port => _server.port;
+
+  Future<void> close() async {
+    await _server.close();
+    for (final s in _sockets) {
+      s.destroy();
+    }
+  }
 }

@@ -324,6 +324,38 @@ void main() {
       expect(events('download.kept'), isEmpty);
     });
 
+    test('downloadFiles closes a stalled copy at once when aborted and '
+        'keeps nothing of it', () async {
+      final body = Uint8List.fromList(List.filled(4096, 7));
+      final stalling = await _StallingCamera.start(body);
+      addTearDown(stalling.close);
+      final stalledHttp = GrHttpClient('127.0.0.1', port: stalling.port);
+      addTearDown(() => stalledHttp.close(force: true));
+      final dir = Directory('${cache.path}/job');
+      final abort = Completer<Object>();
+      final started = Completer<void>();
+      final copy = CameraLibrary.overHttp(stalledHttp, serial: serial)
+          .downloadFiles(
+            [
+              CameraFile(
+                GrStorageId.sd,
+                GrPhotoPath('100RICOH', 'R0000001.JPG'),
+              ),
+            ],
+            dir,
+            onProgress: (_, _, received, _) {
+              if (received > 0 && !started.isCompleted) started.complete();
+            },
+            abort: abort.future,
+          );
+      await started.future;
+      abort.complete(const _Stopped());
+      const guard = Duration(seconds: 5);
+      await expectLater(copy.timeout(guard), throwsA(isA<_Stopped>()));
+      await stalling.closed.single.future.timeout(guard);
+      expect(dir.listSync(recursive: true).whereType<File>(), isEmpty);
+    });
+
     test('tells broken links from refusals', () {
       const route = 'GET /v1/photos/100RICOH/R0000001.JPG';
       const refused = GrApiException(
@@ -834,4 +866,8 @@ final class _StallingCamera {
       s.destroy();
     }
   }
+}
+
+final class _Stopped implements Exception {
+  const new();
 }

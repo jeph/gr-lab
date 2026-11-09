@@ -242,6 +242,10 @@ final class DownloadEngine extends ChangeNotifier {
   DownloadJob? _current;
   CameraLibrary? _currentLink;
   _Stop? _stop;
+
+  /// Completed when the running transfer is stopped, so its camera request
+  /// closes at once instead of at its next chunk or its own deadline.
+  Completer<Object>? _abort;
   int _batchDone = 0;
   MediaSaveException? _permissionProblem;
   bool _disposed = false;
@@ -396,7 +400,7 @@ final class DownloadEngine extends ChangeNotifier {
   /// deleted.
   void cancel(DownloadJob job) {
     if (identical(job, _current)) {
-      _stop = _Stop.cancel;
+      _stopRunning(_Stop.cancel);
       _notify();
       return;
     }
@@ -412,7 +416,7 @@ final class DownloadEngine extends ChangeNotifier {
       _jobs.remove(j);
       unawaited(_deleteTemp(j));
     }
-    if (_current != null) _stop = _Stop.cancel;
+    if (_current != null) _stopRunning(_Stop.cancel);
     _changed();
   }
 
@@ -441,7 +445,7 @@ final class DownloadEngine extends ChangeNotifier {
   void pause() {
     if (_paused) return;
     _paused = true;
-    if (_current != null) _stop ??= _Stop.pause;
+    if (_current != null) _stopRunning(_Stop.pause);
     _changed();
   }
 
@@ -461,10 +465,18 @@ final class DownloadEngine extends ChangeNotifier {
   void _onLink() {
     final current = _currentLink;
     if (current != null && !identical(link.value, current)) {
-      _stop ??= _Stop.pause;
+      _stopRunning(_Stop.pause);
     }
     _kick();
     _notify();
+  }
+
+  /// Stops the running job for [reason]; a cancel overrides a pause asked
+  /// for earlier. The transfer's camera request closes at once.
+  void _stopRunning(_Stop reason) {
+    final stop = _stop = reason == _Stop.cancel ? reason : _stop ?? reason;
+    final abort = _abort;
+    if (abort != null && !abort.isCompleted) abort.complete(_StopSignal(stop));
   }
 
   void _changed() {
@@ -520,6 +532,7 @@ final class DownloadEngine extends ChangeNotifier {
     _current = job;
     _currentLink = current;
     _stop = null;
+    _abort = Completer<Object>();
     job
       ..state = DownloadState.running
       ..failure = null;
@@ -540,7 +553,8 @@ final class DownloadEngine extends ChangeNotifier {
       _batchDone++;
       await _deleteTemp(job);
     } on _StopSignal catch (s) {
-      _stopped(job, s.reason);
+      // A cancel may follow the pause that aborted the transfer.
+      _stopped(job, _stop ?? s.reason);
     } on MediaSaveException catch (e) {
       if (e.permissionDenied) {
         _permissionProblem = e;
@@ -567,6 +581,7 @@ final class DownloadEngine extends ChangeNotifier {
       _current = null;
       _currentLink = null;
       _stop = null;
+      _abort = null;
       _setProgress(const DownloadProgress());
       _save();
       _notify();
@@ -607,13 +622,12 @@ final class DownloadEngine extends ChangeNotifier {
   ) => current.downloadFiles(
     files,
     _tempDir(job),
-    onProgress: (bytes, index, received, total) {
-      if (_stop case final reason?) throw _StopSignal(reason);
-      _progress(bytes, index, files.length, received, total);
-    },
+    onProgress: (bytes, index, received, total) =>
+        _progress(bytes, index, files.length, received, total),
     afterFile: () {
       if (_stop case final reason?) throw _StopSignal(reason);
     },
+    abort: _abort?.future,
   );
 
   void _progress(int jobBytes, int index, int count, int received, int? total) {
@@ -695,7 +709,7 @@ final class DownloadEngine extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     link.removeListener(_onLink);
-    if (_current != null) _stop ??= _Stop.pause;
+    if (_current != null) _stopRunning(_Stop.pause);
     progress.dispose();
     super.dispose();
   }

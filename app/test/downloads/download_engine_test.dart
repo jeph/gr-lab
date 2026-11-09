@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -47,11 +48,15 @@ Future<void> until(
 final class Harness {
   new _(this.camera, this.http, this.root, this.media, this.link);
 
+  /// With [stall], the camera holds every full-size file (and every `/info`
+  /// that needs its size) until `stall.stall` completes, completing
+  /// `stall.stalled` when the first one waits.
   static Future<Harness> start({
     FakeCameraConfig config = const FakeCameraConfig(
       httpLatency: Duration.zero,
     ),
     Set<String>? failing,
+    ({Completer<void> stall, Completer<void> stalled})? stall,
   }) async {
     HttpOverrides.global = null;
     final source = syntheticMedia(
@@ -65,6 +70,10 @@ final class Harness {
         if (size == GrImageSize.full &&
             (failing?.contains(photo.file) ?? false)) {
           throw StateError('card read error');
+        }
+        if (size == GrImageSize.full && stall != null) {
+          if (!stall.stalled.isCompleted) stall.stalled.complete();
+          await stall.stall.future;
         }
         return await source(photo, size);
       },
@@ -608,6 +617,36 @@ void main() {
         ['R0000003.DNG'],
       ]);
     });
+
+    for (final cancel in [false, true]) {
+      test('${cancel ? 'cancelling' : 'pausing'} a stalled transfer closes '
+          'its camera request at once', () async {
+        final stall = (stall: Completer<void>(), stalled: Completer<void>());
+        h = await Harness.start(
+          config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
+          stall: stall,
+        );
+        // The camera may answer once the test is over.
+        addTearDown(stall.stall.complete);
+        final engine = h.engine();
+        await engine.enqueue(serial, [h.shot('R0000002')]);
+        await stall.stalled.future;
+        if (cancel) {
+          engine.cancel(engine.current!);
+        } else {
+          engine.pause();
+        }
+        // Without closing the request, the engine would wait for its
+        // 10-second HTTP deadline.
+        await engine.whenIdle().timeout(const Duration(seconds: 5));
+        expect(engine.current, isNull);
+        expect(
+          engine.jobs.map((j) => j.state),
+          cancel ? isEmpty : [DownloadState.queued],
+        );
+        expect(h.saved, isEmpty);
+      });
+    }
 
     test('the queue survives a restart', () async {
       h = (await Harness.start(

@@ -436,6 +436,34 @@ void main() {
       await expectLater(download, throwsA(isA<_Stop>()));
       await camera.closed.single.future.timeout(guard);
     });
+
+    test('abort closes an /info request whose answer stalled', () async {
+      await start(
+        'HTTP/1.1 200 OK\r\n'
+        'Content-Type: application/json\r\n'
+        'Content-Length: 1000\r\n\r\n'
+        '{"errCode":200,',
+        timeouts: const GrHttpTimeouts(),
+      );
+      final abort = Completer<Object>();
+      final info = stalled.photoInfo(p, abort: abort.future);
+      await camera.requested.future;
+      abort.complete(const _Stop());
+      await expectLater(info, throwsA(isA<_Stop>()));
+      await camera.closed.single.future.timeout(guard);
+    });
+
+    test('abort closes an /info request the camera has not answered, '
+        'with the error it was given', () async {
+      await start(null, timeouts: const GrHttpTimeouts());
+      final abort = Completer<Object>();
+      final info = stalled.photoInfo(p, abort: abort.future);
+      await camera.requested.future;
+      final reason = TimeoutException('deadline of the caller');
+      abort.complete(reason);
+      await expectLater(info, throwsA(same(reason)));
+      await camera.closed.single.future.timeout(guard);
+    });
   });
 
   group('live view', () {
@@ -588,6 +616,9 @@ final class _StallingServer {
   new _(this._server, this.head) {
     _server.listen((socket) {
       _sockets.add(socket);
+      // The client may close the connection while the head is being
+      // written; that write error is expected.
+      socket.done.ignore();
       final closed = Completer<void>();
       this.closed.add(closed);
       void done() {

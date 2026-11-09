@@ -99,9 +99,12 @@ final class CameraLibrary {
     return files;
   }
 
-  /// The camera's `/info` for [f].
-  Future<FileInfo> fileInfo(CameraFile f) async =>
-      fileInfoOf(await _http.photoInfo(f.path, storage: f.storage));
+  /// The camera's `/info` for [f]. Once [abort] completes, the request
+  /// stops at once and throws the value [abort] completed with.
+  Future<FileInfo> fileInfo(CameraFile f, {Future<Object>? abort}) async =>
+      fileInfoOf(
+        await _http.photoInfo(f.path, storage: f.storage, abort: abort),
+      );
 
   /// The Image Control [f] was shot with, from `/imgctrl` (http-api.md
   /// §4.3), as GR WORLD reads it to save a look from a photo. Throws
@@ -158,13 +161,15 @@ final class CameraLibrary {
   /// [onProgress] gets the bytes of all files so far, the index of the
   /// file being copied, and that file's received bytes and length.
   /// [afterFile] runs after each file. Throwing from either stops the
-  /// transfer with that error.
+  /// transfer with that error. Once [abort] completes, the transfer stops
+  /// at once and throws the value [abort] completed with.
   Future<List<File>> downloadFiles(
     List<CameraFile> files,
     Directory dir, {
     required void Function(int bytes, int index, int received, int? total)
     onProgress,
     void Function()? afterFile,
+    Future<Object>? abort,
   }) async {
     final local = <File>[];
     var before = 0;
@@ -183,6 +188,7 @@ final class CameraLibrary {
           out,
           onProgress: (received, total) =>
               onProgress(before + received, i, received, total),
+          abort: abort,
         );
       }
       afterFile?.call();
