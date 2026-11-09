@@ -31,18 +31,24 @@ Finder _inFlow(Finder finder) =>
 
 Finder get _flowScrollable => _inFlow(find.byType(Scrollable)).first;
 
-/// A phone-sized screen, so the pages lay out as on a device.
+/// A phone-sized screen, so the pages lay out as on a device. With
+/// [saveCamera], the camera is already paired (see `createTestApp`).
 Future<TestApp> _create(
   WidgetTester tester, [
   FakeCameraConfig config = const FakeCameraConfig(),
   BleTransport Function(BleTransport camera)? transport,
+  bool saveCamera = false,
 ]) async {
   tester.view
     ..physicalSize = const Size(1170, 2532)
     ..devicePixelRatio = 3;
   addTearDown(tester.view.reset);
   return (await tester.runAsync(
-    () => createTestApp(config: config, transport: transport),
+    () => createTestApp(
+      config: config,
+      transport: transport,
+      saveCamera: saveCamera,
+    ),
   ))!;
 }
 
@@ -296,6 +302,38 @@ void main() {
     expect(tester.widget<FilledButton>(pair).onPressed, isNotNull);
     expect(find.byKey(wait), findsNothing);
     expect(app.ble.connects, 1);
+
+    await app.dispose();
+  });
+
+  testWidgets('cancelling pairing links the saved camera over Bluetooth '
+      'again', (tester) async {
+    final app = await _create(
+      tester,
+      const FakeCameraConfig(bonded: true, executePairingOpen: true),
+      null,
+      true,
+    );
+    await app.pumpApp(tester);
+    await pumpUntil(
+      tester,
+      () => app.models.connection.status == ConnectionStatus.bluetooth,
+      reason: 'the saved camera linked',
+    );
+    await tapWhenReady(tester, find.byKey(const Key('cameras-add')));
+    await pumpUntilFound(tester, find.byKey(_find));
+
+    await _selectAndPair(tester);
+    await _awaitCode(tester, app.camera);
+    expect(app.models.connection.status, ConnectionStatus.offline);
+    await tapWhenReady(tester, find.byKey(const Key('pairing-cancel')));
+    await pumpUntil(tester, () => find.byType(PairingFlow).evaluate().isEmpty);
+
+    await pumpUntil(
+      tester,
+      () => app.models.connection.status == ConnectionStatus.bluetooth,
+      reason: 'the saved camera linked again',
+    );
 
     await app.dispose();
   });

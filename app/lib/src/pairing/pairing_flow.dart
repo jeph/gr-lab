@@ -53,8 +53,9 @@ class _PairingFlowState extends State<PairingFlow> {
   /// Why the last attempt failed; the failure page maps it to messages.
   Object? _pairingError;
 
-  /// Set when starting to pair dropped the session to the current camera,
-  /// so leaving without a new pairing can bring it back.
+  /// Set when starting to pair dropped the session to the current camera
+  /// (connecting, or linked over Bluetooth or Wi-Fi), so leaving without a
+  /// new pairing can bring it back.
   bool _droppedSession = false;
   bool _paired = false;
 
@@ -70,9 +71,10 @@ class _PairingFlowState extends State<PairingFlow> {
     _scanner?.dispose();
     final run = _run;
     _run = null;
-    if (run != null) unawaited(run.cancel());
+    // The session comes back once the run has let go of its link.
+    final released = run?.cancel() ?? Future<void>.value();
     if (_droppedSession && !_paired && _models.cameras.current != null) {
-      unawaited(_models.connection.connect());
+      unawaited(released.whenComplete(_models.connection.connect));
     }
     super.dispose();
   }
@@ -152,9 +154,13 @@ class _PairingFlowState extends State<PairingFlow> {
       _page = _Page.pairing;
     });
     final connection = _models.connection;
-    if (connection.status == ConnectionStatus.connecting ||
-        connection.status == ConnectionStatus.connected) {
-      _droppedSession = true;
+    switch (connection.status) {
+      case ConnectionStatus.connecting ||
+          ConnectionStatus.bluetooth ||
+          ConnectionStatus.connected:
+        _droppedSession = true;
+      case ConnectionStatus.offline || ConnectionStatus.failed:
+        break;
     }
     // The session may hold a link to this very camera; pairing needs it.
     await connection.disconnect();
