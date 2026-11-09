@@ -16,7 +16,7 @@ The work is split into workstreams so that no two agents edit the same source fi
 | W4 | App data, downloads and debug log | `app/lib/src/data/`, `app/lib/src/downloads/`, `app/lib/src/library/library_scope.dart`, `app/lib/src/debug/`, `app/lib/src/app_scope.dart` | `[x]` |
 | W5 | App connection controller and Cameras screen | `app/lib/src/connection/`, `app/lib/src/cameras/` | `[x]` |
 | W6 | Protocol Bluetooth pairing and Wi-Fi credentials | `packages/gr_protocol/lib/src/ble/` | `[x]` |
-| W7 | Reused file names, crash replay (D9), aborting stalled downloads (C28) | `packages/gr_camera/lib/src/library/`, `app/lib/src/library/library_model.dart`, `app/lib/src/downloads/` | `[~]` |
+| W7 | Reused file names, crash replay (D9), aborting stalled downloads (C28) | `packages/gr_camera/lib/src/library/`, `app/lib/src/library/library_model.dart`, `app/lib/src/downloads/` | `[x]` |
 
 Test files follow their source files. `gr_fake_camera` is shared: changes to it stay small, and conflicts are resolved when rebasing.
 
@@ -83,8 +83,8 @@ Test files follow their source files. `gr_fake_camera` is shared: changes to it 
 
 ### W7: reused file names, crash replay, aborting stalled downloads
 
-- [ ] **D8. When a file name comes back with different content** (SD card swap, deleted and re-shot), the app shows the old preview and movie and marks the new shot as already downloaded. Needs a freshness check for cached media and download history. `camera_images.dart`, `movie_cache.dart`, `library_model.dart`, `download_engine.dart`.
-- [ ] **D10. A movie that is playing can be deleted by the disk cache limit**, because the limit only protects the last two movies asked for and a playing movie stops asking. Hold cached files explicitly while a cell or the player shows them. `camera_images.dart`, `movie_cache.dart`, `shot_cell.dart`, `viewer.dart`.
+- [x] (57af791) **D8. When a file name comes back with different content** (SD card swap, deleted and re-shot), the app shows the old preview and movie and marks the new shot as already downloaded. Needs a freshness check for cached media and download history. `camera_images.dart`, `movie_cache.dart`, `library_model.dart`, `download_engine.dart`.
+- [x] (0b80b1d) **D10. A movie that is playing can be deleted by the disk cache limit**, because the limit only protects the last two movies asked for and a playing movie stops asking. Hold cached files explicitly while a cell or the player shows them. `camera_images.dart`, `movie_cache.dart`, `shot_cell.dart`, `viewer.dart`.
 
 ## Later (not in this plan)
 
