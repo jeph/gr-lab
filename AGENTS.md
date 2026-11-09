@@ -31,6 +31,16 @@ Write commit messages in the [Conventional Commits](https://www.conventionalcomm
 
 Commits are signed through 1Password, so commit normally first. If 1Password doesn't allow the signature, for example because the request times out or the agent returns an error, commit again without signing using `git -c commit.gpgsign=false commit`. Don't change the repository's or the global Git signing settings to get around it.
 
+## Personal data
+
+Nothing in this repository may identify a real camera, phone or person: not in code, tests, the simulated camera, demo data, `research/`, commit messages or anything else that gets committed. Hardware traces and logs carry real identifiers, so never copy values out of them; write synthetic ones instead.
+
+- Serial numbers: use a synthetic serial such as `1234567`, never one a camera reported, even to make a test look realistic.
+- Bluetooth and Wi-Fi addresses: use the documentation range `00:00:5E:00:53:xx` (RFC 7042) in code and tests, and mask real ones in `research/` (`F0:3E:05:xx:xx:xx`). Camera network and Bluetooth names are built from the address (`GR_H` plus its last three bytes), so they identify the camera too: derive them from a synthetic address.
+- No Wi-Fi passphrases, home network names, phone or computer names, Bluetooth device IDs, or keys and tokens taken from Ricoh's apps. A passphrase in a test is made up, not an edited real one.
+
+Before committing, search the change for the values in the traces you worked from. If a real identifier has already been pushed, tell the user rather than rewriting history yourself: removing it takes a force push, which only the user can approve.
+
 ## Research
 
 `research/` is the record of what the camera does and how we know it. The code cites it (for example `research/protocol/remote-shooting.md §4.2`).
@@ -40,7 +50,6 @@ Commits are signed through 1Password, so commit normally first. If 1Password doe
 - Update it in the same change whenever you discover something new or notice drift: the camera, a firmware version or Ricoh's apps behaving differently from what the notes say, or the code relying on behaviour the notes don't describe. Correct the wrong text rather than appending a contradiction, and say what was seen, on which body and firmware, and when.
 - Mark every fact as observed (on hardware, with date, body and firmware), found in code (with its source), inferred or unknown, as the files already do.
 - Paths such as `firmware/evidence/…`, `work/…` and `apk/…` refer to the local research workspace (`../gr`), which holds Ricoh's APKs, their decompilation and the extracted firmware. Those are Ricoh's copyrighted files: never add them, or large excerpts of decompiled code, to this repository.
-- Keep personal data out: no Wi-Fi passphrases, no home network names, no serial numbers, Bluetooth or Wi-Fi addresses of a particular camera or phone (use a synthetic serial such as `1234567` and mask addresses, `F0:3E:05:xx:xx:xx`), no keys or tokens taken from Ricoh's apps.
 
 ## Camera layer
 
