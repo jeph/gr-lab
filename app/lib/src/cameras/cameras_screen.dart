@@ -232,7 +232,7 @@ class _Welcome extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'GR LAB',
+                          'GR LAB', // not-translated: brand wordmark
                           style: GrFonts.monoStyle(context)
                               .copyWith(letterSpacing: 1.7),
                         ),

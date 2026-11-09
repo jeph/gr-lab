@@ -37,13 +37,15 @@ dart_packages=(packages/gr_protocol packages/gr_fake_camera)
 flutter_packages=(packages/gr_camera app)
 
 step "format" dart format --output=none --set-exit-if-changed \
-  "${dart_packages[@]}" "${flutter_packages[@]}"
+  "${dart_packages[@]}" "${flutter_packages[@]}" tool
 
 for p in "${dart_packages[@]}" "${flutter_packages[@]}"; do
   step "analyze $p" bash -c "cd '$p' && dart analyze --fatal-infos"
 done
+step "analyze tool" dart analyze --fatal-infos tool
 
 step "camera layer boundary" "$root/tool/check_boundary.sh"
+step "translated text" dart run tool/check_strings.dart app/lib
 
 if [[ "$static_only" == false ]]; then
   for p in "${dart_packages[@]}"; do

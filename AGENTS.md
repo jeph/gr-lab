@@ -69,7 +69,7 @@ Leave code you change better than you found it, and limit the cleanup to that co
 
 ## Checks
 
-Run `tool/check.sh` before considering any change done. It runs the formatter, the analyzer with `very_good_analysis` on every package (infos are fatal), the camera layer boundary check and every test suite. The Android and iOS builds run `tool/check.sh --static` and refuse to build when it fails.
+Run `tool/check.sh` before considering any change done. It runs the formatter, the analyzer with `very_good_analysis` on every package and on `tool/` (infos are fatal), the camera layer boundary check, the translated-text check and every test suite. The Android and iOS builds run `tool/check.sh --static` and refuse to build when it fails.
 
 - Every check must pass, whether or not a finding looks important, including failures in code you didn't change: fix them rather than leaving them for later. Fix the code, not the check.
 - Do not disable a lint, add `// ignore`, relax `analysis_options.yaml`, add a baseline, skip a test or bypass the build gate to get past a finding. Needing an escape hatch usually means you are taking a shortcut, and avoiding that shortcut is the point of this rule. An escape hatch is a last resort, only when a finding truly cannot be fixed (for example a false positive or a third-party API you cannot change). It must be as narrow as possible (one line, one rule, never a whole file) and carry a comment saying why the rule doesn't fit there.
@@ -98,6 +98,8 @@ The user's phone is sometimes reachable over `adb`, and it's the only way to tes
 ## Text the user sees
 
 GR Lab is set up for translation, so every text the app itself shows comes from the localized messages in `app/lib/l10n/app_en.arb`: labels, buttons, errors, notices, dialogs and snackbars alike. Read them through `context.l10n` (the generated `AppLocalizations`). Text from the camera, such as its name, file names and setting values, is shown as the camera sends it. The camera layer reports failures as typed values, never as English sentences; the app turns each into a message. Give every message an `@` description, and describe each placeholder. Format numbers, sizes, times and dates with the locale (`intl`'s `NumberFormat` and `DateFormat`), not fixed patterns or English suffixes.
+
+`tool/check_strings.dart` fails when a string literal with words in it goes straight to a widget that shows text (`Text('…')`, `title: '…'`, `tooltip: '…'` and similar) in `app/lib`. It matches common shapes, so passing it doesn't prove a screen is translated. A literal that truly must not be translated, such as the GR Lab brand name, carries `// not-translated: <why>` on the same line; like any escape hatch, it is a last resort.
 
 ## Privacy policy
 
