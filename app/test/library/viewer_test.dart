@@ -202,4 +202,50 @@ void main() {
     (tester) =>
         _pairLoses(tester, deleted: 'R0000001.DNG', kept: 'R0000001.JPG'),
   );
+
+  testWidgets("a photo's look that is already saved is not saved again: a "
+      'dialog says so, and Save look can be used again', (tester) async {
+    final app = await _openViewer(tester, [
+      FakePhoto(
+        '100RICOH',
+        'R0000001.JPG',
+        _taken(1),
+        imageControl: FakeLook.presets[0].data,
+      ),
+    ], 'sd1|100RICOH/R0000001');
+    final looks = app.models.looks;
+    final save = _inViewer(find.byKey(const Key('viewer-save-look')));
+    final nameField = find.byKey(const Key('looks-name-field'));
+    Future<void> dismiss(String said) async {
+      await pumpUntilFound(tester, find.text(said));
+      await tapWhenReady(tester, find.byKey(const Key('looks-conflict-ok')));
+      await pumpUntil(tester, () => find.text(said).evaluate().isEmpty);
+    }
+
+    await tapWhenReady(tester, save);
+    await tapWhenReady(tester, find.byKey(const Key('looks-name-ok')));
+    await pumpUntilFound(tester, find.text('Saved Positive Film'));
+    final saved = looks.looks.single;
+    expect(saved.source, 'R0000001.JPG');
+
+    await tapWhenReady(tester, save);
+    await tapWhenReady(tester, find.byKey(const Key('looks-name-ok')));
+    await pumpUntilFound(tester, find.text('This look already exists'));
+    await dismiss('Positive Film is already saved with the same settings.');
+    expect(looks.looks.single.id, saved.id);
+    expect(tester.widget<OutlinedButton>(save).onPressed, isNotNull);
+
+    await tapWhenReady(tester, save);
+    await pumpUntilFound(tester, nameField);
+    await tester.enterText(nameField, 'Shinjuku');
+    await tapWhenReady(tester, find.byKey(const Key('looks-name-ok')));
+    await dismiss(
+      "Another look, Positive Film, has the same settings. Two looks can't "
+      'have the same settings.',
+    );
+    expect(looks.looks.single.id, saved.id);
+    expect(tester.widget<OutlinedButton>(save).onPressed, isNotNull);
+
+    await app.dispose();
+  });
 }
