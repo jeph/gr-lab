@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/theme/tokens.dart';
+import 'package:intl/intl.dart';
 
 /// Round button of the mock top bars (`.iconbtn`), 36 px unless [size]
 /// says otherwise.
@@ -87,7 +88,7 @@ class PairingTopBar extends StatelessWidget {
         SizedBox(width: 36, height: 36, child: leading),
         Expanded(
           child: Text(
-            '$step of 4',
+            context.l10n.pairingStepCounter(step, PairingTopBar.stepCount),
             textAlign: TextAlign.center,
             style: GrFonts.monoStyle(context),
           ),
@@ -96,6 +97,9 @@ class PairingTopBar extends StatelessWidget {
       ],
     ),
   );
+
+  /// Pages in the pairing flow, the last being the done page.
+  static const stepCount = 4;
 }
 
 /// Large title with an explanatory paragraph under it.
@@ -109,13 +113,28 @@ class PairingHeadline extends StatelessWidget {
 
   final String title;
 
-  /// Plain text, or spans with [bold] parts for the words the user must
-  /// find on screen or on the camera.
-  final List<InlineSpan> body;
+  /// Paragraph under the title. Parts between `<b>` and `</b>` (the words
+  /// the user must find on screen or on the camera) are drawn bold in the
+  /// primary text colour.
+  final String body;
   final bool center;
 
-  /// A span drawn in the primary text colour and bold.
-  static InlineSpan bold(String text) => _BoldSpan(text);
+  static final _bold = RegExp('<b>(.*?)</b>');
+
+  /// [body] as spans, with its `<b>` parts in [bold].
+  List<TextSpan> _spans(TextStyle bold) {
+    final spans = <TextSpan>[];
+    var start = 0;
+    for (final match in _bold.allMatches(body)) {
+      if (match.start > start) {
+        spans.add(TextSpan(text: body.substring(start, match.start)));
+      }
+      spans.add(TextSpan(text: match[1], style: bold));
+      start = match.end;
+    }
+    if (start < body.length) spans.add(TextSpan(text: body.substring(start)));
+    return spans;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -143,19 +162,9 @@ class PairingHeadline extends StatelessWidget {
             const SizedBox(height: 10),
             Text.rich(
               TextSpan(
-                children: [
-                  for (final span in body)
-                    if (span is _BoldSpan)
-                      TextSpan(
-                        text: span.text,
-                        style: TextStyle(
-                          color: c.t1,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      )
-                    else
-                      span,
-                ],
+                children: _spans(
+                  TextStyle(color: c.t1, fontWeight: FontWeight.w700),
+                ),
               ),
               textAlign: align,
               style: TextStyle(fontSize: 15, height: 1.5, color: c.t2),
@@ -165,10 +174,6 @@ class PairingHeadline extends StatelessWidget {
       ),
     );
   }
-}
-
-final class _BoldSpan extends TextSpan {
-  const new(String text) : super(text: text);
 }
 
 /// Concentric rings around a Bluetooth glyph (mock `b-pair-find`).
@@ -221,6 +226,7 @@ class CameraScreenHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     // The camera's own screen is black in both themes.
     const label = TextStyle(
       fontSize: 9,
@@ -232,7 +238,11 @@ class CameraScreenHero extends StatelessWidget {
         ? Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('AUTHENTICATION CODE', softWrap: false, style: label),
+              Text(
+                l10n.pairingCameraScreenCodeTitle,
+                softWrap: false,
+                style: label,
+              ),
               const SizedBox(height: 10),
               // Placeholder digits: a sample code could be mistaken for the
               // one to compare.
@@ -246,18 +256,26 @@ class CameraScreenHero extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              _menuItem('OK', selected: true, compact: true),
+              _menuItem(
+                l10n.pairingCameraScreenOk,
+                selected: true,
+                compact: true,
+              ),
             ],
           )
         : Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('PAIRING', softWrap: false, style: label),
+              Text(
+                l10n.pairingCameraScreenPairingTitle,
+                softWrap: false,
+                style: label,
+              ),
               const SizedBox(height: 8),
-              _menuItem('Execute Pairing', selected: true),
+              _menuItem(l10n.pairingCameraScreenExecutePairing, selected: true),
               const SizedBox(height: 4),
-              _menuItem('Paired Devices', selected: false),
+              _menuItem(l10n.pairingCameraScreenPairedDevices, selected: false),
             ],
           );
     return Center(
@@ -359,7 +377,8 @@ class NumberTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(9),
       ),
       child: Text(
-        '$number',
+        NumberFormat.decimalPattern(Localizations.localeOf(context).toString())
+            .format(number),
         style: GrFonts.monoStyle(context, size: 13, color: c.t1),
       ),
     );

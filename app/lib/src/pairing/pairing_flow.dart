@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/data/cameras.dart';
@@ -47,7 +48,9 @@ class _PairingFlowState extends State<PairingFlow> {
   NearbyCamera? _selected;
   PairingRun? _run;
   GrPairingStage _stage = GrPairingStage.scanning;
-  PairingFailureInfo? _failure;
+
+  /// Why the last attempt failed; the failure page maps it to messages.
+  Object? _pairingError;
 
   /// Set when starting to pair dropped the session to the current camera,
   /// so leaving without a new pairing can bring it back.
@@ -72,8 +75,6 @@ class _PairingFlowState extends State<PairingFlow> {
     }
     super.dispose();
   }
-
-  String get _cameraName => _selected?.model.shortName ?? 'The camera';
 
   // ------------------------------------------------------------------ find
 
@@ -146,7 +147,7 @@ class _PairingFlowState extends State<PairingFlow> {
     setState(() {
       _run = run;
       _stage = GrPairingStage.scanning;
-      _failure = null;
+      _pairingError = null;
       _page = _Page.pairing;
     });
     final connection = _models.connection;
@@ -168,7 +169,7 @@ class _PairingFlowState extends State<PairingFlow> {
       if (!mounted || run.cancelled) return;
       setState(() {
         _run = null;
-        _failure = PairingFailureInfo.from(e, camera: _cameraName);
+        _pairingError = e;
         _page = _Page.failed;
       });
       return;
@@ -213,7 +214,7 @@ class _PairingFlowState extends State<PairingFlow> {
   }
 
   void _pairAgain() => setState(() {
-    _failure = null;
+    _pairingError = null;
     _page = _Page.instructions;
   });
 
@@ -246,13 +247,13 @@ class _PairingFlowState extends State<PairingFlow> {
     final close = GrIconButton(
       key: const Key('pairing-close'),
       icon: Icons.close_rounded,
-      tooltip: 'Close',
+      tooltip: context.l10n.pairingClose,
       onPressed: _close,
     );
     final back = GrIconButton(
       key: const Key('pairing-back'),
       icon: Icons.arrow_back_rounded,
-      tooltip: 'Back',
+      tooltip: context.l10n.pairingBack,
       onPressed: _back,
     );
     final page = switch (_page) {
@@ -274,13 +275,14 @@ class _PairingFlowState extends State<PairingFlow> {
       _Page.pairing => _PairingPage(
         leading: back,
         trailing: close,
-        cameraName: _cameraName,
+        cameraName: _selected!.model.shortName,
         stage: _stage,
         onCancel: () => _cancelPairing(leave: true),
       ),
       _Page.failed => _FailurePage(
         leading: close,
-        info: _failure!,
+        error: _pairingError!,
+        cameraName: _selected!.model.shortName,
         onPairAgain: _pairAgain,
       ),
     };
@@ -352,37 +354,43 @@ class _FindPage extends StatelessWidget {
   final ValueChanged<NearbyCamera> onSelect;
 
   @override
-  Widget build(BuildContext context) => _PageLayout(
-    pageKey: const Key('pairing-find'),
-    step: 1,
-    leading: leading,
-    children: [
-      const SizedBox(height: 34),
-      RadarHero(
-        icon: bluetooth == _Bluetooth.ready || bluetooth == _Bluetooth.checking
-            ? Icons.bluetooth_rounded
-            : Icons.bluetooth_disabled_rounded,
-      ),
-      const PairingHeadline(
-        title: 'Add a camera',
-        body: [
-          TextSpan(
-            text:
-                'Turn your GR on and keep it near the phone. Cameras nearby '
-                'appear below.',
-          ),
-        ],
-      ),
-      ..._status(context),
-      const FootNote(
-        'Not listed? On the camera, open MENU → E6 Wireless Connection → '
-        'Wireless Communication and set Action Mode to On.',
-      ),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return _PageLayout(
+      pageKey: const Key('pairing-find'),
+      step: 1,
+      leading: leading,
+      children: [
+        const SizedBox(height: 34),
+        RadarHero(
+          icon:
+              bluetooth == _Bluetooth.ready || bluetooth == _Bluetooth.checking
+              ? Icons.bluetooth_rounded
+              : Icons.bluetooth_disabled_rounded,
+        ),
+        PairingHeadline(
+          title: l10n.pairingFindTitle,
+          body: l10n.pairingFindBody,
+        ),
+        ..._status(context),
+        FootNote(l10n.pairingFindNotListed),
+      ],
+    );
+  }
+
+  /// What the find page says about a Bluetooth or scan [error].
+  static String _errorText(AppLocalizations l10n, Object error) =>
+      switch (error) {
+        BleException(code: BleErrorCode.poweredOff) =>
+          l10n.pairingBluetoothOffBody,
+        BleException(code: BleErrorCode.unauthorized) =>
+          l10n.pairingBluetoothDeniedBody,
+        _ => l10n.pairingErrorCode(PairingFailureInfo.errorCode(error)),
+      };
 
   List<Widget> _status(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     Widget problem(String key, IconData icon, String title, String body) =>
         Padding(
           key: Key(key),
@@ -398,7 +406,7 @@ class _FindPage extends StatelessWidget {
                 child: OutlinedButton(
                   key: const Key('pairing-retry'),
                   onPressed: onRetry,
-                  child: const Text('Try again'),
+                  child: Text(l10n.pairingTryAgain),
                 ),
               ),
             ],
@@ -407,10 +415,13 @@ class _FindPage extends StatelessWidget {
     switch (bluetooth) {
       case _Bluetooth.checking:
         return [
-          const SectionLabel('Nearby'),
+          SectionLabel(l10n.pairingNearbySection),
           GroupBox(
             children: [
-              GroupRow(leading: _spinner(c), title: 'Checking Bluetooth…'),
+              GroupRow(
+                leading: _spinner(c),
+                title: l10n.pairingCheckingBluetooth,
+              ),
             ],
           ),
         ];
@@ -419,8 +430,8 @@ class _FindPage extends StatelessWidget {
           problem(
             'pairing-bluetooth-off',
             Icons.bluetooth_disabled_rounded,
-            'Bluetooth is off',
-            'Turn on Bluetooth on this phone, then try again.',
+            l10n.pairingBluetoothOffTitle,
+            l10n.pairingBluetoothOffBody,
           ),
         ];
       case _Bluetooth.denied:
@@ -428,23 +439,21 @@ class _FindPage extends StatelessWidget {
           problem(
             'pairing-bluetooth-denied',
             Icons.block_rounded,
-            "GR Lab can't use Bluetooth",
-            'Allow Bluetooth (on Android: Nearby devices) for GR Lab in the '
-                "phone's settings, then try again.",
+            l10n.pairingBluetoothDeniedTitle,
+            l10n.pairingBluetoothDeniedBody,
           ),
         ];
       case _Bluetooth.unsupported:
         return [
-          const Padding(
-            key: Key('pairing-bluetooth-unsupported'),
-            padding: EdgeInsets.only(top: 22),
+          Padding(
+            key: const Key('pairing-bluetooth-unsupported'),
+            padding: const EdgeInsets.only(top: 22),
             child: GroupBox(
               children: [
                 GroupRow(
                   icon: Icons.bluetooth_disabled_rounded,
-                  title: 'No Bluetooth LE',
-                  subtitle:
-                      "This phone can't talk to GR cameras over Bluetooth.",
+                  title: l10n.pairingBluetoothUnsupportedTitle,
+                  subtitle: l10n.pairingBluetoothUnsupportedBody,
                 ),
               ],
             ),
@@ -455,14 +464,14 @@ class _FindPage extends StatelessWidget {
           problem(
             'pairing-bluetooth-error',
             Icons.error_outline_rounded,
-            "Couldn't start Bluetooth",
-            '$bluetoothError',
+            l10n.pairingBluetoothErrorTitle,
+            _errorText(l10n, bluetoothError!),
           ),
         ];
       case _Bluetooth.ready:
         final scanner = this.scanner!;
         return [
-          const SectionLabel('Nearby'),
+          SectionLabel(l10n.pairingNearbySection),
           ListenableBuilder(
             listenable: scanner,
             builder: (context, _) => GroupBox(
@@ -478,18 +487,21 @@ class _FindPage extends StatelessWidget {
                 if (scanner.error case final error?)
                   GroupRow(
                     icon: Icons.error_outline_rounded,
-                    title: 'Scanning stopped',
-                    subtitle: '$error',
+                    title: l10n.pairingScanStopped,
+                    subtitle: _errorText(l10n, error),
                     trailing: TrailingFit(
-                      child: _SmallButton(label: 'Retry', onPressed: onRetry),
+                      child: _SmallButton(
+                        label: l10n.pairingRetry,
+                        onPressed: onRetry,
+                      ),
                     ),
                   )
                 else
                   GroupRow(
                     leading: _spinner(c),
                     title: scanner.cameras.isEmpty
-                        ? 'Looking for cameras…'
-                        : 'Still looking…',
+                        ? l10n.pairingLookingForCameras
+                        : l10n.pairingStillLooking,
                   ),
               ],
             ),
@@ -511,6 +523,16 @@ class _FindPage extends StatelessWidget {
   );
 }
 
+/// The Bluetooth name and serial number a nearby [camera] advertises, as
+/// one line, or null when it advertises neither.
+String? _cameraDetails(AppLocalizations l10n, NearbyCamera camera) =>
+    switch ((camera.bluetoothName, camera.serial)) {
+      (final name?, final serial?) => l10n.pairingNameAndSerial(name, serial),
+      (null, final serial?) => l10n.pairingSerialNumber(serial),
+      (final name?, null) => name,
+      (null, null) => null,
+    };
+
 class _NearbyRow extends StatelessWidget {
   const new({required this.camera, required this.paired, required this.onAdd});
 
@@ -521,15 +543,13 @@ class _NearbyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
     final off = camera.powerOn == false;
-    final details = [
-      ?camera.bluetoothName,
-      if (camera.serial case final serial?) 'No. $serial',
-    ].join(' · ');
+    final details = _cameraDetails(l10n, camera);
     final note = off
-        ? 'Off · turn it on to pair'
+        ? l10n.pairingNearbyOff
         : paired
-        ? 'Paired with GR Lab'
+        ? l10n.pairingNearbyPaired
         : null;
     return Padding(
       key: Key('nearby-${camera.key}'),
@@ -554,7 +574,7 @@ class _NearbyRow extends StatelessWidget {
                   camera.model.shortName,
                   style: TextStyle(fontSize: 15, color: c.t1),
                 ),
-                if (details.isNotEmpty)
+                if (details != null)
                   Text(details, style: GrFonts.monoStyle(context, size: 11.5)),
                 if (note != null)
                   Text(note, style: TextStyle(fontSize: 12, color: c.t3)),
@@ -564,7 +584,7 @@ class _NearbyRow extends StatelessWidget {
           const SizedBox(width: 10),
           _SmallButton(
             key: Key('pair-add-${camera.key}'),
-            label: 'Add',
+            label: l10n.pairingAdd,
             onPressed: off ? null : onAdd,
           ),
         ],
@@ -613,10 +633,7 @@ class _InstructionsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    final details = [
-      ?camera.bluetoothName,
-      if (camera.serial case final serial?) 'No. $serial',
-    ].join(' · ');
+    final l10n = context.l10n;
     return _PageLayout(
       pageKey: const Key('pairing-instructions'),
       step: 2,
@@ -628,7 +645,7 @@ class _InstructionsPage extends StatelessWidget {
             FilledButton(
               key: const Key('pair-start'),
               onPressed: onPair,
-              child: const Text('Pair'),
+              child: Text(l10n.pairingPair),
             ),
           ],
         ),
@@ -637,18 +654,8 @@ class _InstructionsPage extends StatelessWidget {
         const SizedBox(height: 30),
         const CameraScreenHero.pairingMenu(),
         PairingHeadline(
-          title: 'Open Execute Pairing on the camera',
-          body: [
-            const TextSpan(
-              text:
-                  'MENU → E6 Wireless Connection → Wireless Communication. '
-                  'Set Action Mode to On, then Pairing → ',
-            ),
-            PairingHeadline.bold('Execute Pairing'),
-            const TextSpan(text: '. Leave that screen open and tap '),
-            PairingHeadline.bold('Pair'),
-            const TextSpan(text: ' below.'),
-          ],
+          title: l10n.pairingInstructionsTitle,
+          body: l10n.pairingInstructionsBody,
         ),
         const SizedBox(height: 24),
         GroupBox(
@@ -663,22 +670,17 @@ class _InstructionsPage extends StatelessWidget {
                 ),
                 child: Icon(Icons.check_rounded, size: 18, color: c.ok),
               ),
-              title: 'Found ${camera.model.shortName}',
-              subtitle: details.isEmpty ? null : details,
+              title: l10n.pairingFoundCamera(camera.model.shortName),
+              subtitle: _cameraDetails(l10n, camera),
             ),
-            const GroupRow(
+            GroupRow(
               icon: Icons.bluetooth_rounded,
-              title: 'Then confirm a code',
-              subtitle:
-                  'Your phone will ask you to confirm a code, and the camera '
-                  'to press OK',
+              title: l10n.pairingConfirmCodeTitle,
+              subtitle: l10n.pairingConfirmCodeBody,
             ),
           ],
         ),
-        const FootNote(
-          "Pairing again? Delete this phone from the camera's Paired Devices "
-          'first.',
-        ),
+        FootNote(l10n.pairingInstructionsPairingAgain),
       ],
     );
   }
@@ -703,6 +705,7 @@ class _PairingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final confirming = stage != GrPairingStage.scanning;
     GrStepState state(GrPairingStage s) => s.index < stage.index
         ? GrStepState.done
@@ -720,7 +723,7 @@ class _PairingPage extends StatelessWidget {
             OutlinedButton(
               key: const Key('pairing-cancel'),
               onPressed: onCancel,
-              child: const Text('Cancel'),
+              child: Text(l10n.pairingCancel),
             ),
           ],
         ),
@@ -733,39 +736,29 @@ class _PairingPage extends StatelessWidget {
           const RadarHero(),
         if (confirming)
           PairingHeadline(
-            title: 'Check the code',
-            body: [
-              const TextSpan(
-                text: 'If the code on your phone matches the camera, tap ',
-              ),
-              PairingHeadline.bold('Pair'),
-              const TextSpan(text: ' on the phone, then press '),
-              PairingHeadline.bold('OK'),
-              const TextSpan(text: ' on the camera.'),
-            ],
+            title: l10n.pairingCheckCodeTitle,
+            body: l10n.pairingCheckCodeBody,
           )
         else
           PairingHeadline(
-            title: 'Connecting to $cameraName',
-            body: const [
-              TextSpan(text: 'Keep Execute Pairing open on the camera.'),
-            ],
+            title: l10n.pairingConnectingTo(cameraName),
+            body: l10n.pairingConnectingBody,
           ),
         Padding(
           padding: const EdgeInsets.fromLTRB(28, 26, 28, 0),
           child: GrStepList(
             steps: [
               GrStep(
-                'Connecting to $cameraName',
+                l10n.pairingConnectingTo(cameraName),
                 state(GrPairingStage.scanning),
               ),
               GrStep(
-                'Confirm the code',
+                l10n.pairingStageConfirm,
                 state(GrPairingStage.awaitingConfirmation),
-                detail: 'Pair on the phone, then OK on the camera',
+                detail: l10n.pairingStageConfirmDetail,
               ),
               GrStep(
-                'Saving the pairing on the camera',
+                l10n.pairingStageRegister,
                 state(GrPairingStage.registering),
               ),
             ],
@@ -781,17 +774,23 @@ class _PairingPage extends StatelessWidget {
 class _FailurePage extends StatelessWidget {
   const new({
     required this.leading,
-    required this.info,
+    required this.error,
+    required this.cameraName,
     required this.onPairAgain,
   });
 
   final Widget? leading;
-  final PairingFailureInfo info;
+
+  /// What `pairCamera` threw.
+  final Object error;
+  final String cameraName;
   final VoidCallback onPairAgain;
 
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
+    final l10n = context.l10n;
+    final info = PairingFailureInfo.from(error, camera: cameraName, l10n: l10n);
     return _PageLayout(
       pageKey: const Key('pairing-failure'),
       step: 3,
@@ -802,7 +801,7 @@ class _FailurePage extends StatelessWidget {
             FilledButton(
               key: const Key('pair-again'),
               onPressed: onPairAgain,
-              child: const Text('Pair again'),
+              child: Text(l10n.pairingPairAgain),
             ),
           ],
         ),
@@ -819,10 +818,7 @@ class _FailurePage extends StatelessWidget {
             ),
           ),
         ),
-        PairingHeadline(
-          title: info.title,
-          body: [TextSpan(text: info.body)],
-        ),
+        PairingHeadline(title: info.title, body: info.body),
         const SizedBox(height: 20),
         GroupBox(
           children: [
@@ -842,14 +838,13 @@ class _FailurePage extends StatelessWidget {
             ],
           ),
         ],
-        if (info.detail case final detail?)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(28, 14, 28, 0),
-            child: Text(
-              detail,
-              style: GrFonts.monoStyle(context, size: 11, color: c.t3),
-            ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(28, 14, 28, 0),
+          child: Text(
+            info.detail,
+            style: GrFonts.monoStyle(context, size: 11, color: c.t3),
           ),
+        ),
       ],
     );
   }

@@ -242,6 +242,7 @@ void main() {
       for (final text in [
         'Reopen Execute Pairing on the camera',
         'Paired this phone before?',
+        'Error code: notConfirmed/unauthorized',
       ]) {
         await tester.scrollUntilVisible(
           find.text(text),

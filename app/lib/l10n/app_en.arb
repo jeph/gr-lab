@@ -3,5 +3,427 @@
   "appTitle": "GR Lab",
   "@appTitle": {
     "description": "The app's name, shown by the system (task switcher, window title)."
+  },
+  "pairingAdd": "Add",
+  "@pairingAdd": {
+    "description": "Button on a nearby camera's row that starts adding it."
+  },
+  "pairingBack": "Back",
+  "@pairingBack": {
+    "description": "Tooltip of the pairing flow's back button."
+  },
+  "pairingBluetoothDeniedBody": "Allow Bluetooth (on Android: Nearby devices) for GR Lab in the phone's settings, then try again.",
+  "@pairingBluetoothDeniedBody": {
+    "description": "Explains how to grant the Bluetooth permission. 'Nearby devices' is Android's name for the permission; use Android's wording in this language."
+  },
+  "pairingBluetoothDeniedTitle": "GR Lab can't use Bluetooth",
+  "@pairingBluetoothDeniedTitle": {
+    "description": "Title when the Bluetooth permission is denied."
+  },
+  "pairingBluetoothErrorTitle": "Couldn't start Bluetooth",
+  "@pairingBluetoothErrorTitle": {
+    "description": "Title when checking the phone's Bluetooth failed with an unexpected error."
+  },
+  "pairingBluetoothOffBody": "Turn on Bluetooth on this phone, then try again.",
+  "@pairingBluetoothOffBody": {
+    "description": "Shown when the phone's Bluetooth is off."
+  },
+  "pairingBluetoothOffTitle": "Bluetooth is off",
+  "@pairingBluetoothOffTitle": {
+    "description": "Title when the phone's Bluetooth is off."
+  },
+  "pairingBluetoothUnsupportedBody": "This phone can't talk to GR cameras over Bluetooth.",
+  "@pairingBluetoothUnsupportedBody": {
+    "description": "Shown when the phone has no Bluetooth Low Energy."
+  },
+  "pairingBluetoothUnsupportedTitle": "No Bluetooth LE",
+  "@pairingBluetoothUnsupportedTitle": {
+    "description": "Title when the phone has no Bluetooth Low Energy."
+  },
+  "pairingBondUnusableBody": "The phone paired, but the camera would not share its details over the new pairing. Start again from a clean state:",
+  "@pairingBondUnusableBody": {
+    "description": "Pairing failure: the Bluetooth pairing succeeded but the camera's information could not be read. Followed by numbered steps."
+  },
+  "pairingBondUnusableTitle": "{camera} didn't answer after pairing",
+  "@pairingBondUnusableTitle": {
+    "description": "Pairing failure title: the camera did not answer over the new pairing.",
+    "placeholders": {
+      "camera": {
+        "type": "String",
+        "description": "Short model name of the camera being paired, as the camera reports it, e.g. GR IV."
+      }
+    }
+  },
+  "pairingCameraOffBody": "Pairing needs the camera switched on. To try again:",
+  "@pairingCameraOffBody": {
+    "description": "Pairing failure: the camera is off. Followed by numbered steps."
+  },
+  "pairingCameraOffTitle": "{camera} is off",
+  "@pairingCameraOffTitle": {
+    "description": "Pairing failure title: the camera is switched off.",
+    "placeholders": {
+      "camera": {
+        "type": "String",
+        "description": "Short model name of the camera being paired, as the camera reports it, e.g. GR IV."
+      }
+    }
+  },
+  "pairingCameraScreenCodeTitle": "AUTHENTICATION CODE",
+  "@pairingCameraScreenCodeTitle": {
+    "description": "Heading in a drawing of the camera's screen while it shows the pairing code. Use the text the GR shows in this language."
+  },
+  "pairingCameraScreenExecutePairing": "Execute Pairing",
+  "@pairingCameraScreenExecutePairing": {
+    "description": "Menu item in a drawing of the camera's Pairing menu. Use the text the GR shows in this language."
+  },
+  "pairingCameraScreenOk": "OK",
+  "@pairingCameraScreenOk": {
+    "description": "Button in a drawing of the camera's screen while it shows the pairing code. Use the text the GR shows in this language."
+  },
+  "pairingCameraScreenPairedDevices": "Paired Devices",
+  "@pairingCameraScreenPairedDevices": {
+    "description": "Menu item in a drawing of the camera's Pairing menu. Use the text the GR shows in this language."
+  },
+  "pairingCameraScreenPairingTitle": "PAIRING",
+  "@pairingCameraScreenPairingTitle": {
+    "description": "Heading in a drawing of the camera's Pairing menu. Use the text the GR shows in this language."
+  },
+  "pairingCancel": "Cancel",
+  "@pairingCancel": {
+    "description": "Button that stops a running pairing attempt."
+  },
+  "pairingCheckCodeBody": "If the code on your phone matches the camera, tap <b>Pair</b> on the phone, then press <b>OK</b> on the camera.",
+  "@pairingCheckCodeBody": {
+    "description": "Shown while the phone and camera show a pairing code. Text between <b> and </b> is shown bold; keep the tags around the button names. 'Pair' is the phone's button, 'OK' the camera's."
+  },
+  "pairingCheckCodeTitle": "Check the code",
+  "@pairingCheckCodeTitle": {
+    "description": "Title while the phone and camera show a pairing code."
+  },
+  "pairingCheckingBluetooth": "Checking Bluetooth…",
+  "@pairingCheckingBluetooth": {
+    "description": "Shown while the app checks the phone's Bluetooth state."
+  },
+  "pairingClose": "Close",
+  "@pairingClose": {
+    "description": "Tooltip of the button that closes the pairing flow."
+  },
+  "pairingConfirmCodeBody": "Your phone will ask you to confirm a code, and the camera to press OK",
+  "@pairingConfirmCodeBody": {
+    "description": "Explains the code confirmation that comes next. 'OK' is the camera's button."
+  },
+  "pairingConfirmCodeTitle": "Then confirm a code",
+  "@pairingConfirmCodeTitle": {
+    "description": "Row title: what happens after tapping Pair."
+  },
+  "pairingConnectFailedBody": "The camera was found but the Bluetooth connection did not open. To try again:",
+  "@pairingConnectFailedBody": {
+    "description": "Pairing failure: the Bluetooth connection did not open. Followed by numbered steps."
+  },
+  "pairingConnectFailedTitle": "Couldn't connect to {camera}",
+  "@pairingConnectFailedTitle": {
+    "description": "Pairing failure title: the Bluetooth connection did not open.",
+    "placeholders": {
+      "camera": {
+        "type": "String",
+        "description": "Short model name of the camera being paired, as the camera reports it, e.g. GR IV."
+      }
+    }
+  },
+  "pairingConnectingBody": "Keep Execute Pairing open on the camera.",
+  "@pairingConnectingBody": {
+    "description": "Shown while connecting to the camera to pair. 'Execute Pairing' is the camera's menu item; use the text the GR shows in this language."
+  },
+  "pairingConnectingTo": "Connecting to {camera}",
+  "@pairingConnectingTo": {
+    "description": "Title and progress step while connecting to the camera to pair.",
+    "placeholders": {
+      "camera": {
+        "type": "String",
+        "description": "Short model name of the camera being paired, as the camera reports it, e.g. GR IV."
+      }
+    }
+  },
+  "pairingDone": "Done",
+  "@pairingDone": {
+    "description": "Button that closes the pairing flow after a successful pairing."
+  },
+  "pairingDoneCameraName": "Camera name",
+  "@pairingDoneCameraName": {
+    "description": "Row on the paired page that opens renaming the camera."
+  },
+  "pairingDoneNameSection": "Name",
+  "@pairingDoneNameSection": {
+    "description": "Section heading above the camera's name on the paired page."
+  },
+  "pairingDoneSerialAndFirmware": "No. {serial} · fw {firmware}",
+  "@pairingDoneSerialAndFirmware": {
+    "description": "The paired camera's serial number and firmware version.",
+    "placeholders": {
+      "serial": {
+        "type": "String",
+        "description": "The camera's serial number, as the camera reports it."
+      },
+      "firmware": {
+        "type": "String",
+        "description": "The camera's firmware version, as the camera reports it, e.g. 1.20."
+      }
+    }
+  },
+  "pairingDoneTitle": "{camera} is paired",
+  "@pairingDoneTitle": {
+    "description": "Title after a successful pairing.",
+    "placeholders": {
+      "camera": {
+        "type": "String",
+        "description": "The name saved for the camera; the user can change it."
+      }
+    }
+  },
+  "pairingDoneTitleUnsaved": "Camera is paired",
+  "@pairingDoneTitleUnsaved": {
+    "description": "Title after a successful pairing, in the moment before the camera's name is saved."
+  },
+  "pairingDoneUnsavedName": "Camera",
+  "@pairingDoneUnsavedName": {
+    "description": "Shown as the camera's name in the moment before it is saved."
+  },
+  "pairingErrorCode": "Error code: {code}",
+  "@pairingErrorCode": {
+    "description": "Small technical detail under a pairing or Bluetooth error, for support.",
+    "placeholders": {
+      "code": {
+        "type": "String",
+        "description": "Technical error code, not translated, e.g. notConfirmed/bondRejected."
+      }
+    }
+  },
+  "pairingFailedTitle": "Pairing didn't finish",
+  "@pairingFailedTitle": {
+    "description": "Pairing failure title when the camera did not confirm, or for an unexpected error."
+  },
+  "pairingFailedUnexpectedBody": "Something went wrong talking to the camera. It may have left pairing mode. To try again:",
+  "@pairingFailedUnexpectedBody": {
+    "description": "Pairing failure: an unexpected error. Followed by numbered steps."
+  },
+  "pairingFindBody": "Turn your GR on and keep it near the phone. Cameras nearby appear below.",
+  "@pairingFindBody": {
+    "description": "Explains the first pairing page, which lists cameras nearby."
+  },
+  "pairingFindNotListed": "Not listed? On the camera, open MENU → E6 Wireless Connection → Wireless Communication and set Action Mode to On.",
+  "@pairingFindNotListed": {
+    "description": "Hint under the list of nearby cameras. Camera menu path; use the menu names the GR shows in this language."
+  },
+  "pairingFindTitle": "Add a camera",
+  "@pairingFindTitle": {
+    "description": "Title of the first pairing page."
+  },
+  "pairingFoundCamera": "Found {camera}",
+  "@pairingFoundCamera": {
+    "description": "Row naming the camera picked for pairing.",
+    "placeholders": {
+      "camera": {
+        "type": "String",
+        "description": "Short model name of the camera being paired, as the camera reports it, e.g. GR IV."
+      }
+    }
+  },
+  "pairingInstructionsBody": "MENU → E6 Wireless Connection → Wireless Communication. Set Action Mode to On, then Pairing → <b>Execute Pairing</b>. Leave that screen open and tap <b>Pair</b> below.",
+  "@pairingInstructionsBody": {
+    "description": "How to open the camera's pairing screen. Camera menu path; use the menu names the GR shows in this language. Text between <b> and </b> is shown bold; keep the tags. 'Execute Pairing' is the camera's menu item, 'Pair' the button below."
+  },
+  "pairingInstructionsPairingAgain": "Pairing again? Delete this phone from the camera's Paired Devices first.",
+  "@pairingInstructionsPairingAgain": {
+    "description": "Hint for re-pairing a camera. 'Paired Devices' is the camera's menu item; use the text the GR shows in this language."
+  },
+  "pairingInstructionsTitle": "Open Execute Pairing on the camera",
+  "@pairingInstructionsTitle": {
+    "description": "Title of the page explaining how to open pairing on the camera. 'Execute Pairing' is the camera's menu item; use the text the GR shows in this language."
+  },
+  "pairingLookingForCameras": "Looking for cameras…",
+  "@pairingLookingForCameras": {
+    "description": "Shown while scanning before any camera was found."
+  },
+  "pairingNameAndSerial": "{name} · No. {serial}",
+  "@pairingNameAndSerial": {
+    "description": "A nearby camera's Bluetooth name and serial number.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "description": "The camera's Bluetooth name, as the camera advertises it."
+      },
+      "serial": {
+        "type": "String",
+        "description": "The camera's serial number, as the camera reports it."
+      }
+    }
+  },
+  "pairingNearbyOff": "Off · turn it on to pair",
+  "@pairingNearbyOff": {
+    "description": "Note on a nearby camera that is switched off."
+  },
+  "pairingNearbyPaired": "Paired with GR Lab",
+  "@pairingNearbyPaired": {
+    "description": "Note on a nearby camera that GR Lab already paired with."
+  },
+  "pairingNearbySection": "Nearby",
+  "@pairingNearbySection": {
+    "description": "Section heading above the list of cameras nearby."
+  },
+  "pairingNotConfirmedBody": "The camera didn't confirm, and it has left pairing mode. To try again:",
+  "@pairingNotConfirmedBody": {
+    "description": "Pairing failure: the pairing was not confirmed. Followed by numbered steps."
+  },
+  "pairingNotFoundBody": "The camera stopped showing up nearby. To try again:",
+  "@pairingNotFoundBody": {
+    "description": "Pairing failure: the camera is no longer found. Followed by numbered steps."
+  },
+  "pairingNotFoundTitle": "Couldn't find {camera}",
+  "@pairingNotFoundTitle": {
+    "description": "Pairing failure title: the camera is no longer found nearby.",
+    "placeholders": {
+      "camera": {
+        "type": "String",
+        "description": "Short model name of the camera being paired, as the camera reports it, e.g. GR IV."
+      }
+    }
+  },
+  "pairingPair": "Pair",
+  "@pairingPair": {
+    "description": "Button that starts pairing with the camera."
+  },
+  "pairingPairAgain": "Pair again",
+  "@pairingPairAgain": {
+    "description": "Button on the pairing failure page that starts over."
+  },
+  "pairingPairedBeforeBody": "Delete it from the camera's Paired Devices and delete the camera from your phone's Bluetooth settings first",
+  "@pairingPairedBeforeBody": {
+    "description": "Hint body for a phone that paired with the camera before. 'Paired Devices' is the camera's menu item; use the text the GR shows in this language."
+  },
+  "pairingPairedBeforeTitle": "Paired this phone before?",
+  "@pairingPairedBeforeTitle": {
+    "description": "Hint title on the pairing failure page."
+  },
+  "pairingRefusedBody": "The camera rejected the pairing this phone still keeps for it. Remove the old pairing on both sides first:",
+  "@pairingRefusedBody": {
+    "description": "Pairing failure: the camera refused the phone's stored pairing. Followed by numbered steps."
+  },
+  "pairingRefusedTitle": "{camera} refused this phone",
+  "@pairingRefusedTitle": {
+    "description": "Pairing failure title: the camera refused the phone's stored pairing.",
+    "placeholders": {
+      "camera": {
+        "type": "String",
+        "description": "Short model name of the camera being paired, as the camera reports it, e.g. GR IV."
+      }
+    }
+  },
+  "pairingRegistrationFailedBody": "The camera keeps a pairing only after OK is pressed on it. To try again:",
+  "@pairingRegistrationFailedBody": {
+    "description": "Pairing failure: the camera did not record the pairing. 'OK' is the camera's button. Followed by numbered steps."
+  },
+  "pairingRegistrationFailedTitle": "{camera} didn't keep the pairing",
+  "@pairingRegistrationFailedTitle": {
+    "description": "Pairing failure title: the camera did not record the pairing.",
+    "placeholders": {
+      "camera": {
+        "type": "String",
+        "description": "Short model name of the camera being paired, as the camera reports it, e.g. GR IV."
+      }
+    }
+  },
+  "pairingRetry": "Retry",
+  "@pairingRetry": {
+    "description": "Small button that restarts scanning after it stopped."
+  },
+  "pairingScanStopped": "Scanning stopped",
+  "@pairingScanStopped": {
+    "description": "Shown when scanning for nearby cameras stopped with an error."
+  },
+  "pairingSerialNumber": "No. {serial}",
+  "@pairingSerialNumber": {
+    "description": "A camera's serial number.",
+    "placeholders": {
+      "serial": {
+        "type": "String",
+        "description": "The camera's serial number, as the camera reports it."
+      }
+    }
+  },
+  "pairingStageConfirm": "Confirm the code",
+  "@pairingStageConfirm": {
+    "description": "Progress step: confirming the pairing code."
+  },
+  "pairingStageConfirmDetail": "Pair on the phone, then OK on the camera",
+  "@pairingStageConfirmDetail": {
+    "description": "Detail of the code confirmation step. 'Pair' is the phone's button, 'OK' the camera's."
+  },
+  "pairingStageRegister": "Saving the pairing on the camera",
+  "@pairingStageRegister": {
+    "description": "Progress step: the camera records the pairing."
+  },
+  "pairingStepCheckActionMode": "Check Action Mode is On (MENU → E6 Wireless Connection → Wireless Communication)",
+  "@pairingStepCheckActionMode": {
+    "description": "Numbered step after a failed pairing. Camera menu path; use the menu names the GR shows in this language."
+  },
+  "pairingStepCounter": "{step} of {total}",
+  "@pairingStepCounter": {
+    "description": "Progress through the pairing pages, e.g. 2 of 4.",
+    "placeholders": {
+      "step": {
+        "type": "int",
+        "description": "Number of the current page.",
+        "format": "decimalPattern"
+      },
+      "total": {
+        "type": "int",
+        "description": "Number of pages.",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "pairingStepDeleteCameraFromPhone": "Delete the camera from this phone's Bluetooth settings",
+  "@pairingStepDeleteCameraFromPhone": {
+    "description": "Numbered step after a failed pairing."
+  },
+  "pairingStepDeletePhoneFromCamera": "Delete this phone from the camera's Paired Devices",
+  "@pairingStepDeletePhoneFromCamera": {
+    "description": "Numbered step after a failed pairing. 'Paired Devices' is the camera's menu item; use the text the GR shows in this language."
+  },
+  "pairingStepKeepClose": "Keep the camera close to the phone",
+  "@pairingStepKeepClose": {
+    "description": "Numbered step after a failed pairing."
+  },
+  "pairingStepPressOk": "Press OK on the camera",
+  "@pairingStepPressOk": {
+    "description": "Numbered step after a failed pairing. 'OK' is the camera's button."
+  },
+  "pairingStepReopenExecutePairing": "Reopen Execute Pairing on the camera",
+  "@pairingStepReopenExecutePairing": {
+    "description": "Numbered step after a failed pairing. 'Execute Pairing' is the camera's menu item; use the text the GR shows in this language."
+  },
+  "pairingStepTapPair": "Tap Pair on the phone",
+  "@pairingStepTapPair": {
+    "description": "Numbered step after a failed pairing. 'Pair' is the app's button."
+  },
+  "pairingStepTapPairThenOk": "Tap Pair on the phone, then press OK on the camera",
+  "@pairingStepTapPairThenOk": {
+    "description": "Numbered step after a failed pairing. 'Pair' is the app's button, 'OK' the camera's."
+  },
+  "pairingStepTurnOn": "Turn the camera on",
+  "@pairingStepTurnOn": {
+    "description": "Numbered step after a failed pairing."
+  },
+  "pairingStepTurnOnAndKeepClose": "Turn the camera on and keep it close to the phone",
+  "@pairingStepTurnOnAndKeepClose": {
+    "description": "Numbered step after a failed pairing."
+  },
+  "pairingStillLooking": "Still looking…",
+  "@pairingStillLooking": {
+    "description": "Shown under the cameras found so far while scanning goes on."
+  },
+  "pairingTryAgain": "Try again",
+  "@pairingTryAgain": {
+    "description": "Button that checks Bluetooth and scans again."
   }
 }

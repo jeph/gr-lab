@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/connection/camera_sheet.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart';
@@ -29,7 +30,9 @@ class PairingDoneScreen extends StatelessWidget {
             final camera = models.cameras.cameras
                 .where((c) => c.serial == serial)
                 .firstOrNull;
-            final name = camera?.name ?? 'Camera';
+            final l10n = context.l10n;
+            // Saving the camera finishes just after this page opens.
+            final name = camera?.name;
             final firmware = camera?.paired.firmwareRevision;
             return Column(
               key: const Key('pairing-done'),
@@ -48,7 +51,9 @@ class PairingDoneScreen extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(28, 22, 28, 0),
                         child: Text(
-                          '$name is paired',
+                          name == null
+                              ? l10n.pairingDoneTitleUnsaved
+                              : l10n.pairingDoneTitle(name),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 26,
@@ -60,21 +65,26 @@ class PairingDoneScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        [
-                          'No. $serial',
-                          if (firmware != null) 'fw $firmware',
-                        ].join(' · '),
+                        firmware == null
+                            ? l10n.pairingSerialNumber(serial)
+                            : l10n.pairingDoneSerialAndFirmware(
+                                serial,
+                                firmware,
+                              ),
                         textAlign: TextAlign.center,
                         style: GrFonts.monoStyle(context),
                       ),
-                      const SectionLabel('Name'),
+                      SectionLabel(l10n.pairingDoneNameSection),
                       GroupBox(
                         children: [
                           GroupRow(
                             key: const Key('pairing-done-name'),
                             icon: Icons.photo_camera_outlined,
-                            title: 'Camera name',
-                            trailing: TrailingFit.value(context, name),
+                            title: l10n.pairingDoneCameraName,
+                            trailing: TrailingFit.value(
+                              context,
+                              name ?? l10n.pairingDoneUnsavedName,
+                            ),
                             chevron: true,
                             onTap: camera == null
                                 ? null
@@ -90,7 +100,7 @@ class PairingDoneScreen extends StatelessWidget {
                     FilledButton(
                       key: const Key('pairing-done-button'),
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Done'),
+                      child: Text(l10n.pairingDone),
                     ),
                   ],
                 ),

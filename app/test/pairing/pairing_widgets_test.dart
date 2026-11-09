@@ -35,4 +35,32 @@ void main() {
       );
     }
   }
+
+  testWidgets('headline draws <b> parts of the body bold', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: grTheme(Brightness.dark),
+        home: const Scaffold(
+          body: PairingHeadline(
+            title: 'Title',
+            body: 'Tap <b>Pair</b>, then <b>OK</b>.',
+          ),
+        ),
+      ),
+    );
+    final body = tester.widget<RichText>(
+      find.byWidgetPredicate(
+        (w) => w is RichText && w.text.toPlainText() == 'Tap Pair, then OK.',
+      ),
+    );
+    final bold = <String>[];
+    body.text.visitChildren((span) {
+      if (span case TextSpan(:final text?, :final style?)
+          when style.fontWeight == FontWeight.w700) {
+        bold.add(text);
+      }
+      return true;
+    });
+    expect(bold, ['Pair', 'OK']);
+  });
 }
