@@ -57,7 +57,8 @@ import io.flutter.plugin.common.MethodChannel
  * while the phone rejoined home Wi-Fi). Phones that join the camera on a
  * second, concurrent Wi-Fi interface get no such broadcast, so there the
  * request is never repeated. Neither is it while Android's approval
- * screen is up.
+ * screen (or anything else) covers the app; the repeats start again when
+ * the app is back in the foreground and the join is still pending.
  *
  * Every log line also goes to Dart (`log`), which records it in the
  * camera trace: the debug log a tester exports is then enough to see what
@@ -85,6 +86,12 @@ class WifiChannel(private val context: Context, messenger: BinaryMessenger) :
     private var stateReceiver: BroadcastReceiver? = null
     private var requests = 0
 
+    /**
+     * The pending join repeats its request ([startRescans]); kept for the
+     * whole join, so a pause that stops the repeats can restart them.
+     */
+    private var rescans = false
+
     /** Whether the activity is resumed; [GrCameraPlugin] reports changes. */
     private var resumed = true
 
@@ -97,9 +104,15 @@ class WifiChannel(private val context: Context, messenger: BinaryMessenger) :
 
     fun onResume() {
         resumed = true
+        if (callback == null || pending == null) return
         // Back from the approval screen (or the user returned to the app):
-        // give the pending join its full window from now.
-        if (callback != null && pending != null) armTimeout()
+        // give the pending join its full window from now, and repeat its
+        // request again if the pause stopped that.
+        armTimeout()
+        if (rescans && rescan == null) {
+            log("back in the foreground; repeating the request for \"$requestedSsid\" again")
+            startRescans()
+        }
     }
 
     fun onPause() {
@@ -207,7 +220,7 @@ class WifiChannel(private val context: Context, messenger: BinaryMessenger) :
         this.timeoutMs = timeoutMs
         requests = 0
         val wifi = context.getSystemService(WifiManager::class.java)
-        val rescans = approved && !wifi.isStaConcurrencyForLocalOnlyConnectionsSupported
+        rescans = approved && !wifi.isStaConcurrencyForLocalOnlyConnectionsSupported
         log("requesting \"$ssid\" ($security, approved $approved, repeated requests $rescans)")
         if (!requestNetwork()) return
         if (resumed) armTimeout()
@@ -277,9 +290,11 @@ class WifiChannel(private val context: Context, messenger: BinaryMessenger) :
 
     /**
      * Repeats the request every [RESCAN_MS], holding off while the Wi-Fi
-     * state moves (see the class comment).
+     * state moves (see the class comment). Replaces any earlier repeats, so
+     * one timer and one receiver run at most.
      */
     private fun startRescans() {
+        stopRescans()
         val tick = object : Runnable {
             override fun run() {
                 if (rescan !== this || pending == null || !resumed) return
@@ -389,6 +404,7 @@ class WifiChannel(private val context: Context, messenger: BinaryMessenger) :
     private fun release() {
         cancelTimeout()
         stopRescans()
+        rescans = false
         unregisterCallback()
         request = null
         val joined = network
