@@ -222,7 +222,8 @@ final class GrWifiCredentials {
 
   /// Security to join with. When the characteristic is absent this is WPA2,
   /// GR WORLD's read-all default, and [securityAssumed] is true. Null when
-  /// the camera reports an undocumented security value.
+  /// the camera reports an undocumented security value or the present
+  /// characteristic could not be read or decoded.
   final WifiSecurity? wifiSecurity;
 
   /// True when [wifiSecurity] is GR WORLD's WPA2 default because the camera
@@ -707,14 +708,17 @@ final class GrBleClient {
     final available5GHz = await optional(GrBleCatalog.available5GHz);
     final channel = await optional(GrBleCatalog.wlanChannel);
     final networkType = await optional(GrBleCatalog.networkType);
+    // GR WORLD's WPA2 default is for cameras without the characteristic;
+    // a present one that could not be read or decoded is unknown security.
+    final securityAbsent = isPresent(GrBleCatalog.wlanSecurity) == false;
     return GrWifiCredentials(
       ssid: ssid.value ?? '',
       passphrase: passphrase.value ?? '',
       security: security,
-      wifiSecurity: security == null
+      wifiSecurity: securityAbsent
           ? WifiSecurity.wpa2
-          : security.known?.wifiSecurity,
-      securityAssumed: security == null,
+          : security?.known?.wifiSecurity,
+      securityAssumed: securityAbsent,
       frequency: frequency,
       channel: channel,
       available5GHz: available5GHz,
