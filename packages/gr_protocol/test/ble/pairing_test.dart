@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:gr_protocol/src/ble/ble.dart';
 import 'package:gr_protocol/src/ble/transport.dart';
+import 'package:gr_protocol/src/trace.dart';
 import 'package:test/test.dart';
 
 import 'wake_test.dart' show advert, ms;
@@ -16,12 +17,16 @@ final class PairingCamera implements BleTransport {
     this.pairError,
     this.failDiscover = false,
     this.failRegistration = false,
-  });
+    this.failDisconnect = false,
+    List<BleAdvertisement>? adverts,
+  }) : adverts = adverts ?? [advert('cam', serial: 1234567, power: power)];
 
   final int power;
   final BleException? pairError;
   final bool failDiscover;
   final bool failRegistration;
+  final bool failDisconnect;
+  final List<BleAdvertisement> adverts;
 
   /// Every GATT/pairing operation in order.
   final ops = <String>[];
@@ -35,7 +40,7 @@ final class PairingCamera implements BleTransport {
 
   @override
   Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) =>
-      Stream.value(advert('cam', serial: 1234567, power: power));
+      Stream.fromIterable(adverts);
 
   @override
   Future<BleConnection> connect(
@@ -67,7 +72,12 @@ final class PairingConnection implements BleConnection {
   Future<BleDisconnect> get disconnected => Completer<BleDisconnect>().future;
 
   @override
-  Future<void> disconnect() async => disconnects++;
+  Future<void> disconnect() async {
+    disconnects++;
+    if (camera.failDisconnect) {
+      throw const BleException(BleErrorCode.gatt, 'disconnect failed');
+    }
+  }
 
   @override
   Future<List<BleServiceInfo>> discover() async {
@@ -151,13 +161,19 @@ final class PairingConnection implements BleConnection {
       const Stream.empty();
 }
 
-Future<GrPairing> pair(PairingCamera camera, {List<GrPairingStage>? stages}) =>
-    pairCamera(
-      camera,
-      clientName: 'GR Lab Mac',
-      scanTimeout: ms(200),
-      onStage: stages?.add,
-    );
+Future<GrPairing> pair(
+  PairingCamera camera, {
+  List<GrPairingStage>? stages,
+  String? serial,
+  TraceSink? trace,
+}) => pairCamera(
+  camera,
+  clientName: 'GR Lab Mac',
+  serial: serial,
+  scanTimeout: ms(200),
+  onStage: stages?.add,
+  trace: trace,
+);
 
 Matcher failsWith(GrPairingFailure f) =>
     throwsA(isA<GrPairingException>().having((e) => e.failure, 'failure', f));
@@ -210,6 +226,61 @@ void main() {
     await expectLater(pair(camera), failsWith(GrPairingFailure.cameraOff));
     expect(camera.connects, 0);
   });
+
+  test('untargeted scan skips an off camera and pairs an on one', () async {
+    final camera = PairingCamera(
+      adverts: [
+        advert('off', serial: 1111111, power: 0),
+        advert('on', serial: 1234567, power: 1),
+      ],
+    );
+    final result = await pair(camera);
+    expect(result.camera.deviceId, 'on');
+    expect(camera.connects, 1);
+  });
+
+  test('untargeted scan seeing only off cameras reports cameraOff', () async {
+    final camera = PairingCamera(power: 0);
+    await expectLater(pair(camera), failsWith(GrPairingFailure.cameraOff));
+    expect(camera.connects, 0);
+  });
+
+  test('targeted scan for an off camera reports cameraOff', () async {
+    final camera = PairingCamera(
+      adverts: [
+        advert('off', serial: 1111111, power: 0),
+        advert('on', serial: 1234567, power: 1),
+      ],
+    );
+    await expectLater(
+      pair(camera, serial: '1111111'),
+      failsWith(GrPairingFailure.cameraOff),
+    );
+    expect(camera.connects, 0);
+  });
+
+  test(
+    'failed disconnect keeps the original failure and cause, traced',
+    () async {
+      const refused = BleException(BleErrorCode.unauthorized, 'refused');
+      final camera = PairingCamera(pairError: refused, failDisconnect: true);
+      final events = <TraceEvent>[];
+      await expectLater(
+        pair(camera, trace: events.add),
+        throwsA(
+          isA<GrPairingException>()
+              .having(
+                (e) => e.failure,
+                'failure',
+                GrPairingFailure.notConfirmed,
+              )
+              .having((e) => e.cause, 'cause', same(refused)),
+        ),
+      );
+      expect(camera.connections.single.disconnects, 1);
+      expect(events.map((e) => e.kind), contains('pair.disconnectFailed'));
+    },
+  );
 
   test('discovery failure is connectFailed and drops the link', () async {
     final camera = PairingCamera(failDiscover: true);

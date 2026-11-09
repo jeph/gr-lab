@@ -178,13 +178,26 @@ Future<GrPairing> pairCamera(
 
   onStage?.call(GrPairingStage.scanning);
   emit('scan', {'serial': serial});
+  var sawOff = false;
   final ad = await findGrAdvertisement(
     transport,
     timeout: scanTimeout,
-    where: (a) =>
-        a.isGrCamera &&
-        (serial == null || grSerialMatches(serial, a.serialNumber)),
+    // Without a target, a camera known to be off is skipped so it cannot end
+    // the search before a powered-on one advertises.
+    where: (a) {
+      if (!a.isGrCamera) return false;
+      if (serial != null) return grSerialMatches(serial, a.serialNumber);
+      if (a.powerOn != false) return true;
+      sawOff = true;
+      return false;
+    },
   );
+  if (ad == null && sawOff) {
+    throw const GrPairingException(
+      GrPairingFailure.cameraOff,
+      'turn the camera on and open Execute Pairing',
+    );
+  }
   if (ad == null) {
     throw const GrPairingException(
       GrPairingFailure.notFound,
@@ -208,7 +221,12 @@ Future<GrPairing> pairCamera(
   final client = GrBleClient(connection, trace: trace);
 
   Future<Never> fail(GrPairingFailure f, String message, Object? e) async {
-    await connection.disconnect();
+    // Best effort: a failed disconnect must not hide the pairing failure.
+    try {
+      await connection.disconnect();
+    } catch (d) {
+      emit('disconnectFailed', {'failure': f.name, 'error': '$d'});
+    }
     throw GrPairingException(f, message, e);
   }
 
