@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:gr_camera/src/environment.dart';
 import 'package:gr_camera/src/library/camera_library.dart';
 import 'package:gr_camera/src/looks/camera_looks.dart';
+import 'package:gr_camera/src/platform/wifi_control.dart';
 import 'package:gr_camera/src/shoot/live_view.dart';
 import 'package:gr_camera/src/shoot/remote.dart';
 import 'package:gr_protocol/gr_protocol.dart';
@@ -54,22 +55,28 @@ final class CameraSession {
   /// A session with the camera reached through [camera], asking [consent]
   /// before joining its Wi-Fi.
   new(GrCameraEnvironment camera, {required WifiConsent consent})
-    : _environment = camera,
-      _session = GrSession(
-        transport: camera.ble,
-        wifi: _ConsentWifi(
+    : this._(
+        camera,
+        _ConsentWifi(
           camera.wifi,
           approvalShown: camera.wifiApprovalShown,
           consent: consent,
         ),
-        host: camera.cameraHost,
-        options: camera.sessionOptions,
-        trace: camera.trace,
-        httpFactory: camera.httpFactory,
+      );
+
+  new _(this._environment, this._wifi)
+    : _session = GrSession(
+        transport: _environment.ble,
+        wifi: _wifi,
+        host: _environment.cameraHost,
+        options: _environment.sessionOptions,
+        trace: _environment.trace,
+        httpFactory: _environment.httpFactory,
       );
 
   final GrSession _session;
   final GrCameraEnvironment _environment;
+  final _ConsentWifi _wifi;
 
   /// The serial [connectBluetooth] was asked for.
   String? _serial;
@@ -128,13 +135,16 @@ final class CameraSession {
   /// recovers it. True while the camera answers.
   Future<bool> checkWifi() => _session.checkWifi();
 
-  /// Ends the session: Wi-Fi, Bluetooth and every recovery. With
+  /// Ends the session: Wi-Fi, Bluetooth and every recovery. The phone
+  /// always leaves the camera's Wi-Fi (or stops joining it). With
   /// [powerOffIfWoken], a camera this session turned on (including one
-  /// whose wake is still in flight) is turned off again.
+  /// whose wake is still in flight) is turned off again; camera power is
+  /// separate from the phone's Wi-Fi.
   Future<void> close({bool powerOffIfWoken = false}) {
     _remote?.close();
     _looks?.close();
     _liveView?.close();
+    _wifi.cancelJoins();
     return _session.close(powerOffIfWoken: powerOffIfWoken);
   }
 
@@ -211,6 +221,19 @@ final class _ConsentWifi implements WifiNetworkControl {
   final WifiConsent consent;
   bool _agreed = false;
 
+  /// Counts cancellations ([leave], [cancelJoins]): an answer to a
+  /// question asked before the latest one belongs to a cancelled join.
+  int _cancels = 0;
+
+  static const _cancelled = WifiJoinException(
+    'cancelled',
+    "the join was stopped while waiting for the user's answer",
+  );
+
+  /// Ends the joins in progress: a consent answer that arrives afterwards
+  /// starts no join.
+  void cancelJoins() => _cancels++;
+
   @override
   Future<void> join({
     required String ssid,
@@ -219,8 +242,11 @@ final class _ConsentWifi implements WifiNetworkControl {
     required Duration timeout,
     bool approved = false,
   }) async {
+    final cancels = _cancels;
     if (!_agreed) {
-      if (!await consent.ask(ssid)) {
+      final agreed = await consent.ask(ssid);
+      if (_cancels != cancels) throw _cancelled;
+      if (!agreed) {
         throw const WifiJoinDeclined("not joining the camera's Wi-Fi now");
       }
       _agreed = true;
@@ -244,7 +270,9 @@ final class _ConsentWifi implements WifiNetworkControl {
         // not an answer to the list.
         final listOutcome = e is WifiJoinDeclined || e is TimeoutException;
         if (!shown || !wasApproved || !listOutcome) rethrow;
-        if (!await consent.askAgain(ssid)) {
+        final again = await consent.askAgain(ssid);
+        if (_cancels != cancels) throw _cancelled;
+        if (!again) {
           throw const WifiJoinDeclined("not joining the camera's Wi-Fi now");
         }
       } finally {
@@ -258,7 +286,10 @@ final class _ConsentWifi implements WifiNetworkControl {
   Future<String?> currentSsid() => _inner.currentSsid();
 
   @override
-  Future<void> leave() => _inner.leave();
+  Future<void> leave() {
+    cancelJoins();
+    return _inner.leave();
+  }
 
   @override
   Stream<void> get lost => _inner.lost;
