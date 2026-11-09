@@ -346,6 +346,11 @@ final class GrSession {
   GrBleClient? _ble;
   GrBleIdentity? _identity;
   GrWifiCredentials? _credentials;
+
+  /// Security the joins use: the credentials', else what [_wlanOn] read
+  /// again, else the one a join with unknown security got through with;
+  /// null while unknown ([_joinAndVerify]).
+  WifiSecurity? _joinSecurity;
   GrHttpClient? _http;
   GrProps? _props;
   GrChangesSocket? _changes;
@@ -999,6 +1004,8 @@ final class GrSession {
   }
 
   /// Reads the Wi-Fi credentials (once per session) and writes WLAN-on.
+  /// Security the credentials left unknown is read once more after
+  /// WLAN-on, while the AP comes up ([_readSecurityAgain]).
   Future<void> _wlanOn() async {
     final ble = _link(GrSessionPhase.wlanOn);
     final credentials =
@@ -1026,6 +1033,26 @@ final class GrSession {
       'WLAN-on write',
       () => ble.setWlan(on: true),
     );
+    _joinSecurity ??= credentials.wifiSecurity ?? await _readSecurityAgain(ble);
+  }
+
+  /// Reads WLAN Security again for credentials that had it present but
+  /// unreadable or undocumented (GrWifiCredentials.wifiSecurity null); a
+  /// read that fails or decodes no known value returns null.
+  Future<WifiSecurity?> _readSecurityAgain(GrBleClient ble) async {
+    try {
+      final decoded = await ble.read(GrBleCatalog.wlanSecurity);
+      final security = decoded.value?.known?.wifiSecurity;
+      _emit('wifi.securityRead', {
+        'security': security?.name,
+        'raw': decoded.value?.raw,
+        if (decoded.issues.isNotEmpty) 'issues': decoded.issues,
+      });
+      return security;
+    } on Object catch (e) {
+      _emit('wifi.securityReadFailed', {'error': '$e'});
+      return null;
+    }
   }
 
   /// Makes sure a Wi-Fi start has a link to a camera that is on, then
@@ -1254,31 +1281,80 @@ final class GrSession {
 
   // ---------------------------------------------------------------- Wi-Fi
 
+  /// Joins the camera's network and verifies it is the camera.
+  ///
+  /// One security type per camera: Android approves a camera network per
+  /// app and security type, so alternating WPA3 and WPA2 asks the user
+  /// twice. Transition-mode APs accept WPA2, which is what GR WORLD's
+  /// approval on a test phone records (GR IV HDF, 2026-11-08).
+  ///
+  /// Security still unknown after [_wlanOn] read it again (the camera has
+  /// the characteristic, but it could not be read or decoded) is tried both
+  /// ways \[design\]: WPA2 for the first half of
+  /// [GrSessionOptions.joinTimeout], then WPA3 for the rest, each attempt
+  /// traced with its security. WPA2 first because GR WORLD joins an unknown
+  /// security type with WPA2 (research/protocol/connection-lifecycle.md
+  /// §3), the GR IV's hostapd generator takes its WPA2 branch when its
+  /// security property cannot be read or holds an unknown value, and WPA2
+  /// joins a transition-mode AP (research/firmware-network-config.md §2);
+  /// WPA3 then reaches a WPA3-only AP, whose SAE-only, PMF-required
+  /// configuration a WPA2 join cannot use. Only this case may ask for
+  /// approval twice. The security that got through is kept for later joins.
   Future<void> _joinAndVerify() async {
     final c = _credentials!;
-    // One security type per camera: Android approves a camera network per
-    // app and security type, so alternating WPA3 and WPA2 asks the user
-    // twice. Transition-mode APs accept WPA2, which is what GR WORLD's
-    // approval on a test phone records (GR IV HDF, 2026-11-08).
-    final security = c.wifiSecurity == WifiSecurity.wpa3
-        ? WifiSecurity.wpa3
-        : WifiSecurity.wpa2;
+    final now = DateTime.now();
+    final deadline = now.add(options.joinTimeout);
+    final known = _joinSecurity;
+    final tries = known == null
+        ? [
+            (WifiSecurity.wpa2, now.add(options.joinTimeout ~/ 2)),
+            (WifiSecurity.wpa3, deadline),
+          ]
+        : [
+            (
+              known == WifiSecurity.wpa3
+                  ? WifiSecurity.wpa3
+                  : WifiSecurity.wpa2,
+              deadline,
+            ),
+          ];
+    if (known == null) {
+      _emit('wifi.securityUnknown', {
+        'tries': [for (final (security, _) in tries) security.name],
+      });
+    }
+    for (final (index, (security, until)) in tries.indexed) {
+      final last = index == tries.length - 1;
+      if (!await _join(c, security, until, last: last)) continue;
+      _joinSecurity ??= security;
+      _emit('wifi.joined', {'security': security.name});
+      await _verify();
+      return;
+    }
+  }
+
+  /// Joins [c]'s network with [security] until [until]. False when that
+  /// passed without a join and another security follows; throws when this
+  /// was the [last].
+  Future<bool> _join(
+    GrWifiCredentials c,
+    WifiSecurity security,
+    DateTime until, {
+    required bool last,
+  }) async {
     _set(
       _phase == GrSessionPhase.recovering ? _phase : GrSessionPhase.joining,
       'wifi.join',
       {'ssid': c.ssid, 'security': security.name},
     );
     // The AP comes up several seconds after WLAN-on (GR IV HDF: a join at
-    // 0 s found no network, one at 16 s succeeded), so retry within
-    // joinTimeout.
-    final deadline = DateTime.now().add(options.joinTimeout);
+    // 0 s found no network, one at 16 s succeeded), so retry until [until].
     var attempt = 0;
     while (true) {
       // close() or stopWifi() during the hand-off must not leave the phone
       // retrying, and possibly joining, the camera's network afterwards.
       _checkWifiStopped(GrSessionPhase.joining);
       attempt++;
-      final left = deadline.difference(DateTime.now());
       try {
         // Held from the request on: a pending join is released as well.
         _wifiJoined = true;
@@ -1286,7 +1362,7 @@ final class GrSession {
           ssid: c.ssid,
           passphrase: c.passphrase,
           security: security,
-          timeout: left,
+          timeout: until.difference(DateTime.now()),
         );
         // A stop or close released the join while it was pending; it went
         // through all the same, so it is released again here.
@@ -1295,25 +1371,28 @@ final class GrSession {
           await _leaveWifi();
           _checkWifiStopped(GrSessionPhase.joining);
         }
-        break;
+        return true;
       } on WifiJoinDeclined catch (e) {
         _emit('wifi.declined');
         throw GrSessionException(GrSessionPhase.joining, 'declined', e);
       } catch (e) {
-        final remaining = deadline.difference(DateTime.now());
+        final remaining = until.difference(DateTime.now());
         _emit('wifi.joinRetry', {
           'attempt': attempt,
+          'security': security.name,
           'remainingMs': remaining.inMilliseconds,
           'error': '$e',
         });
-        if (remaining <= options.joinRetryDelay) {
+        if (remaining > options.joinRetryDelay) {
+          await Future<void>.delayed(options.joinRetryDelay);
+          continue;
+        }
+        if (last) {
           throw GrSessionException(GrSessionPhase.joining, 'join failed', e);
         }
-        await Future<void>.delayed(options.joinRetryDelay);
+        return false;
       }
     }
-    _emit('wifi.joined');
-    await _verify();
   }
 
   Future<void> _verify() async {

@@ -15,6 +15,8 @@ final class BondedCamera implements BleTransport {
     this.bonded = true,
     this.dropLinks = 0,
     this.security = 2,
+    this.hasSecurity = true,
+    this.securityReadFailures = 0,
   });
 
   int operationMode;
@@ -23,6 +25,12 @@ final class BondedCamera implements BleTransport {
 
   /// WLAN security byte: 0 WPA2, 1 WPA3, 2 transition (the GR IV's).
   final int security;
+
+  /// Whether discovery finds the WLAN Security characteristic.
+  final bool hasSecurity;
+
+  /// WLAN Security reads still to fail with a GATT error.
+  int securityReadFailures;
 
   /// Links whose discovery fails as if the camera dropped them (waking).
   int dropLinks;
@@ -115,6 +123,7 @@ final class _Link implements BleConnection {
     }
     final byService = <String, List<BleCharacteristicInfo>>{};
     for (final c in GrBleCatalog.all) {
+      if (c == GrBleCatalog.wlanSecurity && !camera.hasSecurity) continue;
       (byService[c.service.uuid] ??= []).add(
         BleCharacteristicInfo(uuid: c.uuid, properties: c.properties),
       );
@@ -152,6 +161,11 @@ final class _Link implements BleConnection {
     }
     if (uuid == GrBleCatalog.ssid.uuid) await camera.holdSsidRead?.future;
     if (uuid == GrBleCatalog.wlanSecurity.uuid) {
+      camera.ops.add('read security');
+      if (camera.securityReadFailures > 0) {
+        camera.securityReadFailures--;
+        throw const BleException(BleErrorCode.gatt, 'read failed');
+      }
       return Uint8List.fromList([camera.security]);
     }
     final values = {
@@ -277,6 +291,40 @@ final class SearchingWifi implements WifiNetworkControl {
   Future<void> leave() async {
     if (!_left.isCompleted) _left.complete();
   }
+
+  @override
+  Stream<void> get lost => const Stream.empty();
+}
+
+/// An AP with [security]: joins with a security it accepts (any, for a
+/// transition-mode AP) go through at once; others find no matching network
+/// until they time out. Records the security of every join.
+final class SecuredApWifi implements WifiNetworkControl {
+  new(this.security);
+
+  final WifiSecurity security;
+  final joins = <WifiSecurity>[];
+
+  @override
+  Future<void> join({
+    required String ssid,
+    required String passphrase,
+    required WifiSecurity security,
+    required Duration timeout,
+    bool approved = false,
+  }) async {
+    joins.add(security);
+    if (this.security == WifiSecurity.transition) return;
+    if (security == this.security) return;
+    await Future<void>.delayed(timeout);
+    throw StateError('no ${security.name} network');
+  }
+
+  @override
+  Future<String?> currentSsid() async => null;
+
+  @override
+  Future<void> leave() async {}
 
   @override
   Stream<void> get lost => const Stream.empty();
@@ -419,8 +467,9 @@ final class CameraServer {
 /// A session over [camera], [wifi] and [server] with quick retries.
 GrSession wifiSession(
   BondedCamera camera,
-  JoiningWifi wifi,
+  WifiNetworkControl wifi,
   CameraServer server, {
+  Duration joinTimeout = const Duration(seconds: 5),
   Duration verifyTimeout = const Duration(seconds: 5),
   TraceSink? trace,
 }) => GrSession(
@@ -429,7 +478,7 @@ GrSession wifiSession(
   httpFactory: server.client,
   trace: trace,
   options: GrSessionOptions(
-    joinTimeout: const Duration(seconds: 5),
+    joinTimeout: joinTimeout,
     joinRetryDelay: const Duration(milliseconds: 1),
     wakeSettle: const Duration(milliseconds: 20),
     verifyTimeout: verifyTimeout,
@@ -791,6 +840,85 @@ void main() {
       );
       expect(wifi.joins, hasLength(1));
     });
+
+    test('a camera without the security characteristic is joined with '
+        'WPA2 only, without reading it again', () async {
+      final camera = BondedCamera(hasSecurity: false, security: 1);
+      final wifi = RecordingWifi();
+      await expectLater(
+        withWifi(camera, wifi).connect(deviceId: 'cam'),
+        throwsA(isA<GrSessionException>()),
+      );
+      expect(wifi.joins.length, greaterThan(1));
+      expect(wifi.joins, everyElement(WifiSecurity.wpa2));
+      expect(camera.ops, isNot(contains('read security')));
+    });
+
+    test('security that could not be read is read again after WLAN-on, '
+        'and a WPA3-only camera is then joined with WPA3 only', () async {
+      final camera = BondedCamera(security: 1, securityReadFailures: 1);
+      final wifi = RecordingWifi();
+      await expectLater(
+        withWifi(camera, wifi).connect(deviceId: 'cam'),
+        throwsA(isA<GrSessionException>()),
+      );
+      expect(
+        camera.ops
+            .where((o) => o.contains('security') || o.contains('wlan'))
+            .take(3),
+        ['read security', 'write wlan 1', 'read security'],
+      );
+      expect(wifi.joins, isNotEmpty);
+      expect(wifi.joins, everyElement(WifiSecurity.wpa3));
+    });
+
+    test(
+      'a WPA3-only camera whose security stays unreadable is tried with '
+      'WPA2, then WPA3, connects, and keeps WPA3 for the next join',
+      () async {
+        final camera = BondedCamera(security: 1, securityReadFailures: 99);
+        final wifi = SecuredApWifi(WifiSecurity.wpa3);
+        final s = wifiSession(
+          camera,
+          wifi,
+          await CameraServer.start(),
+          joinTimeout: const Duration(milliseconds: 400),
+        );
+        final events = <GrSessionEvent>[];
+        s.events.listen(events.add);
+
+        await s.connect(deviceId: 'cam');
+        expect(s.phase, GrSessionPhase.connected);
+        expect(wifi.joins.first, WifiSecurity.wpa2);
+        expect(wifi.joins.last, WifiSecurity.wpa3);
+        expect(wifi.joins.where((j) => j == WifiSecurity.wpa3), hasLength(1));
+        expect(camera.ops.where((o) => o == 'read security'), hasLength(2));
+        expect(
+          events.map((e) => e.kind),
+          containsAllInOrder([
+            'wifi.securityReadFailed',
+            'wifi.securityUnknown',
+            'wifi.join',
+            'wifi.joinRetry',
+            'wifi.join',
+            'wifi.joined',
+          ]),
+        );
+        expect(
+          events
+              .where((e) => e.kind == 'wifi.join')
+              .map((e) => e.fields['security']),
+          ['wpa2', 'wpa3'],
+        );
+
+        final before = wifi.joins.length;
+        await s.stopWifi();
+        await s.startWifi();
+        expect(wifi.joins.skip(before), [WifiSecurity.wpa3]);
+        expect(camera.ops.where((o) => o == 'read security'), hasLength(2));
+        await s.close();
+      },
+    );
   });
 
   group('wake', () {
