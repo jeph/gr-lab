@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/src/camera_features.dart';
 import 'package:gr_camera/src/looks/look.dart';
-import 'package:gr_protocol/gr_protocol.dart';
 
 /// How a parameter's wire values read.
 enum LookValueKind {
@@ -360,19 +359,19 @@ const List<LookBase> _monochromeBases = [
   LookBase.solarization,
 ];
 
-/// The base images a camera of [model] offers, split by body as GR WORLD
-/// splits them (table 0x82ca84, `findSupportedByCameraType` 0xda1db4,
-/// observed in GR WORLD 2.0.0's code; research/protocol/image-control.md
-/// §3): a body with [CameraFeature.monochromeLooks] (the GR IV Monochrome)
-/// its monochrome bases (0x11–0x16, its manual p.90) and Solarized, every
-/// other body the 14 colour bases. GR WORLD gives Pictorialist to the GR
+/// The base images [camera] offers, split by body as GR WORLD splits them
+/// (table 0x82ca84, `findSupportedByCameraType` 0xda1db4, observed in GR
+/// WORLD 2.0.0's code; research/protocol/image-control.md §3): a camera
+/// with [CameraFeature.monochromeLooks] (the GR IV Monochrome) its
+/// monochrome bases (0x11–0x16, its manual p.90) and Solarized, every
+/// other camera the 14 colour bases. GR WORLD gives Pictorialist to the GR
 /// IVx Monochrome only, a body GR Lab does not know. The colour list is the
 /// GR IV manual's (p.94), and a GR IV HDF on firmware 1.20 offered exactly
 /// it in its `/v1/props` effectList (observed 2026-11-09). GR WORLD adds
 /// Palette for the GR IVx; it is left out here because its parameters are
-/// \[unknown\]. Bodies without [CameraFeature.lookSlots] get the colour list
-/// only for editing saved looks.
-List<LookBase> lookBases(GrModel? model) =>
-    model.supports(CameraFeature.monochromeLooks)
+/// \[unknown\]. Cameras without [CameraFeature.lookSlots] get the colour
+/// list only for editing saved looks.
+List<LookBase> lookBases(CameraBody camera) =>
+    camera.supports(CameraFeature.monochromeLooks)
     ? _monochromeBases
     : _colourBases;

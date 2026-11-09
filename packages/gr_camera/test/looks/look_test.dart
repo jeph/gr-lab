@@ -13,6 +13,8 @@ Look _preset(int i) =>
 Uint8List _bytes(List<int> header, List<int> parameters) =>
     Uint8List.fromList([...header, ...parameters]);
 
+CameraBody _body(GrModel model) => CameraBody(model: model, firmware: '1.20');
+
 void main() {
   test('a look reads its base and the parameters GR Lab knows, in the '
       'order it lists them', () {
@@ -164,34 +166,36 @@ void main() {
 
   test('the GR IV Monochrome offers the monochrome bases GR WORLD gives it, '
       'the GR IV the colour ones', () {
+    final mono = _body(GrModel.gr4Monochrome);
+    final gr4 = _body(GrModel.gr4);
     expect(
-      lookBases(GrModel.gr4Monochrome),
+      lookBases(mono),
       containsAllInOrder([LookBase.standardMono, LookBase.solarization]),
     );
     expect(
-      lookBases(GrModel.gr4Monochrome),
+      lookBases(mono),
       isNot(contains(LookBase.pictorialist)),
       reason: 'GR WORLD gives Pictorialist to the GR IVx Monochrome only',
     );
-    expect(lookBases(GrModel.gr4Monochrome), isNot(contains(LookBase.vivid)));
+    expect(lookBases(mono), isNot(contains(LookBase.vivid)));
     expect(
-      lookBases(GrModel.gr4),
+      lookBases(gr4),
       containsAllInOrder([LookBase.standard, LookBase.crossProcess]),
     );
-    expect(lookBases(GrModel.gr4), hasLength(14));
-    expect(lookBases(GrModel.gr4), isNot(contains(LookBase.standardMono)));
-    expect(lookBases(GrModel.gr4x), isNot(contains(LookBase.palette)));
+    expect(lookBases(gr4), hasLength(14));
+    expect(lookBases(gr4), isNot(contains(LookBase.standardMono)));
+    expect(lookBases(_body(GrModel.gr4x)), isNot(contains(LookBase.palette)));
   });
 
   test("a look is offered by a body whose bases include the look's", () {
     final positive = _preset(0);
-    expect(positive.offeredBy(GrModel.gr4), isTrue);
-    expect(positive.offeredBy(GrModel.gr4Monochrome), isFalse);
+    expect(positive.offeredBy(_body(GrModel.gr4)), isTrue);
+    expect(positive.offeredBy(_body(GrModel.gr4Monochrome)), isFalse);
     final solid = positive.withBase(LookBase.solid);
-    expect(solid.offeredBy(GrModel.gr4Monochrome), isTrue);
-    expect(solid.offeredBy(GrModel.gr4Hdf), isFalse);
+    expect(solid.offeredBy(_body(GrModel.gr4Monochrome)), isTrue);
+    expect(solid.offeredBy(_body(GrModel.gr4Hdf)), isFalse);
     final unknown = Look.fromBytes(_bytes([1, 0, 0x7a, 0], []))!;
-    expect(unknown.offeredBy(GrModel.gr4), isFalse);
+    expect(unknown.offeredBy(_body(GrModel.gr4)), isFalse);
   });
 
   test('a choice range covers its named values up to the last one', () {

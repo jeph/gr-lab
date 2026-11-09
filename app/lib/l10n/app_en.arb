@@ -1817,9 +1817,19 @@
       }
     }
   },
+  "looksSlotsNeedFirmware": "Update this camera to firmware {version} or later to load looks into its Custom slots.",
+  "@looksSlotsNeedFirmware": {
+    "description": "Shown instead of the slots for a camera whose firmware is older than the first version GR Lab can load looks into.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "description": "The oldest firmware version that works, as the camera writes it, for example 1.04."
+      }
+    }
+  },
   "looksSlotsUnsupported": "GR Lab can load looks into the GR IV family only. This camera's Custom slots can't be reached over Bluetooth.",
   "@looksSlotsUnsupported": {
-    "description": "Shown instead of the slots for a camera without Custom slot characteristics (GR III family)."
+    "description": "Shown instead of the slots for a camera whose model has no Custom slots GR Lab can reach (GR III family)."
   },
   "looksSummaryValue": "{parameter} {value}",
   "@looksSummaryValue": {

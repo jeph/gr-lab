@@ -39,9 +39,10 @@ final class SavedCamera {
   /// `/v1/props` model differs, so this is the connected camera's model too.
   String? get modelName => _modelOf(paired);
 
-  /// The camera's model, which decides what it supports ([CameraFeature]);
-  /// null when it was not read at pairing or is one GR Lab does not know.
-  GrModel? get model => paired.model;
+  /// The camera's model and firmware as last recorded, for what it
+  /// supports ([CameraFeature]).
+  CameraBody get body =>
+      CameraBody(model: paired.model, firmware: paired.firmwareRevision);
 
   /// Firmware version as the camera last reported it over Bluetooth.
   String? get firmware => paired.firmwareRevision;

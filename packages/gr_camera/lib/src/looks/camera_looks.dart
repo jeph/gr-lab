@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:gr_camera/src/camera_features.dart';
 import 'package:gr_camera/src/environment.dart';
 import 'package:gr_camera/src/looks/look.dart';
 import 'package:gr_protocol/gr_protocol.dart';
@@ -125,18 +126,19 @@ final class CameraLooks extends ChangeNotifier {
       throw const BleException(BleErrorCode.notConnected, 'no link');
     }
     final bytes = look.toBytes();
-    final model = _model;
-    if (!look.offeredBy(model)) {
+    final camera = _cameraBody;
+    if (!look.offeredBy(camera)) {
       _camera.event('looks.refused', {
         'slot': number,
         'name': name,
         'hex': BleBytes.toHex(bytes),
-        'model': model?.name,
+        'model': camera.model?.name,
+        'firmware': camera.firmware,
         'reason': look.base == null
             ? 'base ${look.unknownBaseNumber} unknown'
-            : '${look.base!.name} not offered by this model',
+            : '${look.base!.name} not offered by this camera',
       });
-      throw LookNotOffered(base: look.base, model: model);
+      throw LookNotOffered(base: look.base, model: camera.model);
     }
     _camera.event('looks.load', {
       'slot': number,
@@ -162,8 +164,11 @@ final class CameraLooks extends ChangeNotifier {
     return slot;
   }
 
-  /// The linked camera's model, as it reported it at connect.
-  GrModel? get _model => _session.identity?.model;
+  /// The linked camera as it reported itself at connect.
+  CameraBody get _cameraBody => switch (_session.identity) {
+    final identity? => CameraBody.reported(identity),
+    null => CameraBody.unknown,
+  };
 
   static Future<LookSlot> _read(GrBleClient ble, int number) async {
     final read = await ble.readImageControl(number);

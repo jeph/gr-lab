@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:gr_camera/src/camera_features.dart';
 import 'package:gr_camera/src/looks/image_control.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 
@@ -86,13 +87,13 @@ final class Look {
     ),
   );
 
-  /// Whether a camera of [model] offers this look's base image
-  /// ([lookBases]); false when the base is one GR Lab does not know. GR
-  /// WORLD offers a body only the looks of its own type (observed in GR
-  /// WORLD 2.0.0's code, `findSupportedByCameraType` 0xda1db4).
-  bool offeredBy(GrModel? model) {
+  /// Whether [camera] offers this look's base image ([lookBases]); false
+  /// when the base is one GR Lab does not know. GR WORLD offers a body only
+  /// the looks of its own type (observed in GR WORLD 2.0.0's code,
+  /// `findSupportedByCameraType` 0xda1db4).
+  bool offeredBy(CameraBody camera) {
     final base = this.base;
-    return base != null && lookBases(model).contains(base);
+    return base != null && lookBases(camera).contains(base);
   }
 
   /// Whether [other] is the same look: the same base image and the same

@@ -43,7 +43,7 @@ Future<void> openLookEditor(
 Future<void> openNewLook(BuildContext context, LooksModel model) async {
   final template = model.template;
   if (template == null) return;
-  final base = lookBases(model.model).first;
+  final base = lookBases(model.body).first;
   await openLookEditor(
     context,
     model: model,
@@ -199,7 +199,7 @@ class _LookEditorState extends State<LookEditor> {
           if (params.any((p) => groupOf(p) == g)) g,
       ];
       final group = groups.contains(_group) ? _group! : groups.firstOrNull;
-      final offered = _look.offeredBy(_model.model);
+      final offered = _look.offeredBy(_model.body);
       final canLoad =
           offered && _model.state == SlotsState.ready && _model.loading == null;
       return Scaffold(
@@ -272,7 +272,7 @@ class _LookEditorState extends State<LookEditor> {
                 height: 40,
                 child: Row(
                   children: [
-                    for (final b in lookBases(_model.model))
+                    for (final b in lookBases(_model.body))
                       Padding(
                         key: b == widget.look.base ? _openedBase : null,
                         padding: const EdgeInsets.only(right: 8),

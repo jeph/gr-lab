@@ -24,6 +24,10 @@ enum SlotsState {
   /// The camera's model has no Custom slots GR Lab can reach
   /// ([CameraFeature.lookSlots]).
   unsupported,
+
+  /// The camera's model has the Custom slots from a firmware version newer
+  /// than the one it runs ([LooksModel.slotsFirmware]).
+  needsFirmware,
 }
 
 /// A look the camera did not take, for a snack bar.
@@ -67,8 +71,17 @@ final class LooksModel extends ChangeNotifier {
   /// A load the camera refused, for a snack bar.
   Stream<LoadRefusal> get refusals => _refusals.stream;
 
-  SlotsState get state =>
-      model.supports(CameraFeature.lookSlots) ? _state : SlotsState.unsupported;
+  SlotsState get state {
+    final body = this.body;
+    if (body.supports(CameraFeature.lookSlots)) return _state;
+    return body.minimumFirmware(CameraFeature.lookSlots) == null
+        ? SlotsState.unsupported
+        : SlotsState.needsFirmware;
+  }
+
+  /// The firmware version the camera needs for its slots; null when no
+  /// version of its model has them.
+  String? get slotsFirmware => body.minimumFirmware(CameraFeature.lookSlots);
 
   /// The technical code of the last failure to read the slots.
   String? get failureCode => _failureCode;
@@ -79,10 +92,12 @@ final class LooksModel extends ChangeNotifier {
   /// The slot (1–3) a load is being written to.
   int? get loading => _loading;
 
-  /// The camera's model, for the slots and base images it offers: as it
-  /// reported it on this connection, else as it was saved at pairing.
-  GrModel? get model =>
-      connection.cameraSession?.model ?? connection.camera?.model;
+  /// The camera's model and firmware, for the slots and base images it
+  /// offers: as it reported them on this connection, else as last saved.
+  CameraBody get body =>
+      connection.cameraSession?.body ??
+      connection.camera?.body ??
+      CameraBody.unknown;
 
   /// A look the camera produced, whose header a new look copies
   /// (`Look.onBase`): a slot's look, else a saved look's; null when there

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:gr_camera/src/camera_features.dart';
 import 'package:gr_camera/src/environment.dart';
 import 'package:gr_camera/src/library/camera_library.dart';
 import 'package:gr_camera/src/looks/camera_looks.dart';
@@ -121,9 +122,12 @@ final class CameraSession {
   /// linked; null before the first link.
   String? get firmwareRevision => _session.identity?.firmwareRevision;
 
-  /// The model the camera reported over Bluetooth when it last linked;
-  /// null before the first link or when GR Lab does not know it.
-  GrModel? get model => _session.identity?.model;
+  /// The camera's model and firmware as it reported them over Bluetooth
+  /// when it last linked, for what it supports; null before the first link.
+  CameraBody? get body => switch (_session.identity) {
+    final identity? => CameraBody.reported(identity),
+    null => null,
+  };
 
   /// The newest `/v1/props` the session read over Wi-Fi.
   GrProps? get props => _session.props;

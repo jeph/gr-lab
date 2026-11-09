@@ -1,39 +1,89 @@
+import 'package:flutter/foundation.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 
-/// Something GR Lab does with a camera that not every GR model can do.
+/// Something GR Lab does with a camera that not every GR model or firmware
+/// version can do.
 ///
-/// [CameraFeatures.supports] is the one place that decides which models
-/// have which feature. Code that behaves differently by model asks
-/// `model.supports(feature)` rather than comparing models or families, and
-/// behaviour that comes to depend on the model adds a feature here, with
-/// the evidence for the models that have it.
+/// `_minimumFirmware` is the one place that decides which camera has which
+/// feature. Code that behaves differently by model or firmware asks
+/// [CameraBody.supports] rather than comparing models, families or
+/// versions, and behaviour that comes to depend on them adds a feature and
+/// its row there, with the evidence for it.
 enum CameraFeature {
   /// Reading and loading the Image Control Custom slots C1–C3 over
-  /// Bluetooth (`CameraLooks`). The GR IV family's firmware serves them; the
-  /// GR III family's has no way to read or write its slots from outside the
-  /// camera: its `bled` registers none of the Image Control characteristics
-  /// (observed in GR III firmware 2.20; research/protocol/image-control.md
-  /// §3).
+  /// Bluetooth (`CameraLooks`).
   lookSlots,
 
   /// Image Control offers the monochrome base images instead of the colour
-  /// ones (`lookBases`), as GR WORLD gives them to the GR IV Monochrome
-  /// (`findSupportedByCameraType` 0xda1db4, observed in GR WORLD 2.0.0's
-  /// code; research/protocol/image-control.md §3).
+  /// ones (`lookBases`).
   monochromeLooks,
 }
 
-/// Which [GrModel] has which [CameraFeature].
-extension CameraFeatures on GrModel? {
-  /// Whether a camera of this model has [feature]. A model GR Lab does not
-  /// know, or one that was not reported (null), has none: a new body gets a
-  /// feature only once it is added here.
+/// For each feature, the oldest firmware version of each model that has
+/// it; `0.00` (GR WORLD's own "any version") where every version does. A
+/// model that is not listed has the feature on no version.
+const _minimumFirmware = <CameraFeature, Map<GrModel, String>>{
+  // GR WORLD offers Image Control on a GR IV from firmware 1.04 and on the
+  // other GR IV bodies on any version (`isImageControlSupported`, observed
+  // in GR WORLD 2.0.0's code; research/protocol/image-control.md §1). The
+  // GR III family's `bled` registers none of the slot characteristics
+  // (observed in GR III firmware 2.20; image-control.md §3).
+  CameraFeature.lookSlots: {
+    GrModel.gr4: '1.04',
+    GrModel.gr4Hdf: '0.00',
+    GrModel.gr4Monochrome: '0.00',
+    GrModel.gr4x: '0.00',
+  },
+  // GR WORLD gives the monochrome bases to the GR IV Monochrome
+  // (`findSupportedByCameraType` 0xda1db4, observed in GR WORLD 2.0.0's
+  // code; image-control.md §3).
+  CameraFeature.monochromeLooks: {GrModel.gr4Monochrome: '0.00'},
+};
+
+/// A camera as far as what it supports goes: its model and the firmware
+/// version it runs.
+@immutable
+final class CameraBody {
+  /// A camera of [model] running [firmware].
+  const new({required this.model, required this.firmware});
+
+  /// The camera as it reported itself over Bluetooth ([identity]).
+  new reported(GrBleIdentity identity)
+    : this(model: identity.model, firmware: identity.firmwareRevision);
+
+  /// A camera whose model and firmware are not known; it has no feature.
+  static const unknown = CameraBody(model: null, firmware: null);
+
+  /// The camera's model; null when it was not reported or is one GR Lab
+  /// does not know.
+  final GrModel? model;
+
+  /// The firmware version as the camera reports it, such as `1.20`; null
+  /// when it was not read.
+  final String? firmware;
+
+  /// The oldest firmware version of this model that has [feature], such as
+  /// `1.04`; null when no version does.
+  String? minimumFirmware(CameraFeature feature) =>
+      _minimumFirmware[feature]![model];
+
+  /// Whether this camera has [feature]: its model has it and its firmware
+  /// is at least [minimumFirmware]. A firmware version that was not read
+  /// meets only a minimum of `0.00`.
   bool supports(CameraFeature feature) {
-    final model = this;
-    if (model == null) return false;
-    return switch (feature) {
-      CameraFeature.lookSlots => model.family == GrModelFamily.gr4,
-      CameraFeature.monochromeLooks => model == GrModel.gr4Monochrome,
-    };
+    final minimum = _version(minimumFirmware(feature));
+    if (minimum == null) return false;
+    if (minimum == 0) return true;
+    final version = _version(firmware);
+    return version != null && version >= minimum;
   }
+
+  /// [text] as a number: Ricoh writes versions as a major number and a
+  /// two-digit minor one (`1.04`, `1.20`), so they compare as decimals.
+  static double? _version(String? text) => text == null
+      ? null
+      : double.tryParse(text.replaceAll('\u0000', '').trim());
+
+  @override
+  String toString() => 'CameraBody(${model?.name}, firmware $firmware)';
 }

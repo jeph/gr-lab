@@ -181,6 +181,10 @@ class _SlotsSection extends StatelessWidget {
     final Widget body;
     if (model.state == SlotsState.unsupported) {
       body = _SlotsNote(text: l10n.looksSlotsUnsupported);
+    } else if (model.state == SlotsState.needsFirmware) {
+      body = _SlotsNote(
+        text: l10n.looksSlotsNeedFirmware(model.slotsFirmware!),
+      );
     } else if (model.state == SlotsState.failed && slots == null) {
       body = _SlotsNote(
         text: model.failureCode == null
@@ -290,7 +294,7 @@ class _SlotCard extends StatelessWidget {
       onWillAcceptWithDetails: (d) =>
           !reading &&
           model.loading == null &&
-          (d.data.look?.offeredBy(model.model) ?? false),
+          (d.data.look?.offeredBy(model.body) ?? false),
       onAcceptWithDetails: (d) {
         final look = d.data.look;
         if (look == null) return;
@@ -571,7 +575,7 @@ class _LookMenu extends StatelessWidget {
     final look = saved.look;
     final canLoad =
         look != null &&
-        look.offeredBy(model.model) &&
+        look.offeredBy(model.body) &&
         model.state == SlotsState.ready &&
         model.loading == null;
     return PopupMenuButton<_LookAction>(

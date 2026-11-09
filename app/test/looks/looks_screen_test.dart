@@ -13,11 +13,13 @@ const _quietLiveness = GrSessionOptions(
   livenessLossAfter: Duration(hours: 2),
 );
 
-/// The whole app with the fake camera ([model], a GR IV by default) paired
-/// and off, on the Looks tab. [saveModel] false saves it without its model.
+/// The whole app with the fake camera ([model], a GR IV by default, on
+/// [firmware]) paired and off, on the Looks tab. [saveModel] false saves it
+/// without its model.
 Future<TestApp> _inLooks(
   WidgetTester tester, {
   String model = 'RICOH GR IV',
+  String firmware = '1.20',
   bool saveModel = true,
 }) async {
   tester.view
@@ -26,7 +28,12 @@ Future<TestApp> _inLooks(
   addTearDown(tester.view.reset);
   final app = (await tester.runAsync(
     () => createTestApp(
-      config: FakeCameraConfig(bonded: true, poweredOn: false, model: model),
+      config: FakeCameraConfig(
+        bonded: true,
+        poweredOn: false,
+        model: model,
+        firmware: firmware,
+      ),
       saveCamera: true,
       saveModel: saveModel,
       sessionOptions: _quietLiveness,
@@ -161,8 +168,27 @@ void main() {
   testWidgets('a camera saved without its model shows its slots once it '
       'reports the model', (tester) async {
     final app = await _inLooks(tester, saveModel: false);
-    expect(app.models.cameras.current!.model, isNull);
+    expect(app.models.cameras.current!.body.model, isNull);
     await pumpUntilFound(tester, _inSlot(1, 'Tokyo Night'));
+    await app.dispose();
+  });
+
+  testWidgets('a GR IV on firmware older than 1.04 asks for an update and '
+      'is not turned on for its slots', (tester) async {
+    final app = await _inLooks(tester, firmware: '1.03');
+    await pumpUntilFound(
+      tester,
+      find.text(
+        'Update this camera to firmware 1.04 or later to load looks into its '
+        'Custom slots.',
+      ),
+    );
+    await pumpUntil(
+      tester,
+      () => app.models.connection.bleLinked,
+      reason: 'linked',
+    );
+    expect(app.camera.poweredOn, isFalse);
     await app.dispose();
   });
 
