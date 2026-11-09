@@ -131,15 +131,19 @@ final class CameraLibrary {
   /// Copies [f] into [file], via `<file>.part` so [file] appears only when
   /// complete. [onProgress] gets the bytes received and the camera's
   /// length (null while unknown); throwing from it stops the transfer.
+  /// Once [abort] completes, the transfer stops at once and throws the
+  /// value [abort] completed with.
   Future<void> downloadFile(
     CameraFile f,
     File file, {
     void Function(int received, int? total)? onProgress,
+    Future<Object>? abort,
   }) => _http.downloadToFile(
     f.path,
     file,
     storage: f.storage,
     onProgress: onProgress,
+    abort: abort,
   );
 
   /// Copies [files] one at a time into [dir] under their camera names and

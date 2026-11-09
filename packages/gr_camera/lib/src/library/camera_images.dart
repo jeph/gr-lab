@@ -225,9 +225,7 @@ final class CameraImages {
       sink,
       size: size,
       storage: f.storage,
-      onProgress: (_, _) {
-        if (signal.abandoned) throw const RequestCancelled();
-      },
+      abort: signal.aborted,
     );
     final bytes = sink.takeBytes();
     if (!isJpeg(bytes)) {

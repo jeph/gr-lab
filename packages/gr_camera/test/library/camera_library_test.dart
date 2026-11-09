@@ -438,6 +438,41 @@ void main() {
       expect(isJpeg(bytes!), isTrue);
       expect(isJpeg(await onDisk.readAsBytes()), isTrue);
     });
+
+    test('a request past its deadline is closed before its queue slot runs '
+        'the next one', () async {
+      final thumb = await syntheticMedia()(card().first, GrImageSize.thumb);
+      final stalling = await _StallingCamera.start(thumb);
+      addTearDown(stalling.close);
+      final stalledHttp = GrHttpClient('127.0.0.1', port: stalling.port);
+      addTearDown(() => stalledHttp.close(force: true));
+      link.value = CameraLibrary.overHttp(stalledHttp, serial: serial);
+      const deadline = Duration(milliseconds: 200);
+      final loader = CameraImages(
+        cacheDir: cache,
+        link: link,
+        queue: RequestQueue(concurrency: 1),
+        timeouts: const {
+          GrImageSize.thumb: deadline,
+          GrImageSize.xs: deadline,
+          GrImageSize.view: deadline,
+          GrImageSize.full: deadline,
+        },
+      );
+      await expectLater(
+        loader.load(serial, file, GrImageSize.thumb).future,
+        throwsA(isA<TimeoutException>()),
+      );
+      final other = CameraFile(
+        GrStorageId.sd,
+        GrPhotoPath('100RICOH', 'R0000001.DNG'),
+      );
+      expect(await loader.load(serial, other, GrImageSize.thumb).future, thumb);
+      expect(stalling.earlierClosed, [
+        true,
+        true,
+      ], reason: 'the stalled request was closed before the next one began');
+    });
   });
 
   group('MovieCache', () {
@@ -491,6 +526,37 @@ void main() {
         reason: 'no partial file left behind',
       );
     });
+
+    test('cancelling a stalled copy closes its connection at once', () async {
+      final body = await camera.media(
+        camera.photos.firstWhere((p) => p.file == 'R0000002.MOV'),
+        GrImageSize.full,
+      );
+      final stalling = await _StallingCamera.start(body);
+      addTearDown(stalling.close);
+      final stalledHttp = GrHttpClient('127.0.0.1', port: stalling.port);
+      addTearDown(() => stalledHttp.close(force: true));
+      final movies = MovieCache(cacheDir: cache);
+      final download = movies.download(
+        CameraLibrary.overHttp(stalledHttp, serial: serial),
+        movie,
+      );
+      final started = Completer<void>();
+      download.progress.addListener(() {
+        if ((download.progress.value ?? 0) > 0 && !started.isCompleted) {
+          started.complete();
+        }
+      });
+      await started.future;
+      download.cancel();
+      const guard = Duration(seconds: 5);
+      await expectLater(
+        download.done.timeout(guard),
+        throwsA(isA<MovieDownloadCancelled>()),
+      );
+      await stalling.closed.single.future.timeout(guard);
+      expect(movies.fileFor(serial, movie).parent.listSync(), isEmpty);
+    });
   });
 
   test(
@@ -532,4 +598,69 @@ void main() {
       ], reason: 'no staging files left behind');
     },
   );
+}
+
+/// A camera whose first answer stops a few bytes into [body] and keeps its
+/// connection open; every later request gets [body] in full.
+final class _StallingCamera {
+  new _(this._server, this.body) {
+    _server.listen((socket) {
+      _sockets.add(socket);
+      final closed = Completer<void>();
+      final index = this.closed.length;
+      this.closed.add(closed);
+      void done() {
+        if (!closed.isCompleted) closed.complete();
+        socket.destroy();
+      }
+
+      var answered = false;
+      socket.listen(
+        (data) {
+          if (answered || !latin1.decode(data).contains('\r\n\r\n')) return;
+          answered = true;
+          earlierClosed.add(
+            this.closed.take(index).every((c) => c.isCompleted),
+          );
+          socket
+            ..add(
+              latin1.encode(
+                'HTTP/1.1 200 OK\r\n'
+                'Content-Length: ${body.length}\r\n'
+                'Connection: close\r\n\r\n',
+              ),
+            )
+            ..add(index == 0 ? body.sublist(0, 4) : body);
+        },
+        onDone: done,
+        onError: (Object _) => done(),
+      );
+    });
+  }
+
+  static Future<_StallingCamera> start(Uint8List body) async =>
+      _StallingCamera._(
+        await ServerSocket.bind(InternetAddress.loopbackIPv4, 0),
+        body,
+      );
+
+  final ServerSocket _server;
+  final Uint8List body;
+  final _sockets = <Socket>[];
+
+  /// Per connection, completes when the client has closed it.
+  final closed = <Completer<void>>[];
+
+  /// Per request, whether every earlier connection was already closed
+  /// when it arrived.
+  final earlierClosed = <bool>[];
+
+  int get port => _server.port;
+
+  Future<void> close() async {
+    await _server.close();
+    for (final s in _sockets) {
+      s.destroy();
+    }
+  }
 }

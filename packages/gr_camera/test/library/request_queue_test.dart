@@ -115,5 +115,47 @@ void main() {
       stuck.complete(1);
       expect(await old.future, 1);
     });
+
+    test('past its deadline a run fails its callers and is aborted, but '
+        'keeps its queue slot until it has ended', () async {
+      final q = RequestQueue(concurrency: 1);
+      final shared = SharedRequests<int>(q);
+      final ends = Completer<int>();
+      late RequestSignal signal;
+      final ticket = shared.join('k', Object(), (s) {
+        signal = s;
+        return ends.future;
+      }, timeout: const Duration(milliseconds: 50));
+      await expectLater(ticket.future, throwsA(isA<TimeoutException>()));
+      expect(signal.abandoned, isTrue);
+      expect(await signal.aborted, isA<TimeoutException>());
+
+      final next = q.add(() async => 'next');
+      expect(q.running, 1, reason: 'the aborted run has not ended yet');
+      expect(next.started, isFalse);
+      ends.complete(1);
+      expect(await next.future, 'next');
+      expect(q.running, 0);
+    });
+
+    test('the last caller leaving aborts a run that asked for it', () async {
+      final shared = SharedRequests<int>(RequestQueue());
+      final ends = Completer<int>();
+      late RequestSignal signal;
+      shared
+          .join(
+            'k',
+            Object(),
+            (s) {
+              signal = s;
+              return ends.future;
+            },
+            timeout: const Duration(seconds: 5),
+            abortWhenUnwanted: true,
+          )
+          .cancel();
+      expect(await signal.aborted, isA<RequestCancelled>());
+      ends.complete(1);
+    });
   });
 }

@@ -116,12 +116,20 @@ final class RequestQueue {
 }
 
 /// Tells a started task that nobody waits for it any more (or that it ran
-/// past its deadline), so a transfer can stop at its next chunk.
+/// past its deadline), so it can close its camera request at once.
 final class RequestSignal {
-  bool _abandoned = false;
+  final Completer<Object> _aborted = Completer<Object>();
 
   /// The task should stop: no caller waits for it, or its deadline passed.
-  bool get abandoned => _abandoned;
+  bool get abandoned => _aborted.isCompleted;
+
+  /// Completes, with the error the task should end with, when the task is
+  /// [abandoned]; pass it to the HTTP client as its `abort`.
+  Future<Object> get aborted => _aborted.future;
+
+  void _abandon(Object reason) {
+    if (!_aborted.isCompleted) _aborted.complete(reason);
+  }
 }
 
 /// One caller's wait on a [SharedRequests] request.
@@ -171,8 +179,10 @@ final class _Flight<T> {
 
 /// Queued requests that every caller asking for the same key shares. A
 /// request leaves the queue once all its callers cancelled before it
-/// started, and each run has a deadline that frees its queue slot even
-/// when the camera stops answering.
+/// started. Each run has a deadline: past it the callers get an error at
+/// once and the run is aborted, but its queue slot stays taken until the
+/// run has ended, so a camera that stops answering never has more requests
+/// open than the queue allows.
 final class SharedRequests<T> {
   /// Shared requests run on [queue].
   new(this.queue);
@@ -202,30 +212,15 @@ final class SharedRequests<T> {
         abortWhenUnwanted: abortWhenUnwanted,
       );
       f.request = queue.add(
-        () => task(f.signal).timeout(
-          timeout,
-          onTimeout: () {
-            f.signal._abandoned = true;
-            throw TimeoutException('No answer within $timeout', timeout);
-          },
-        ),
+        () => _run(key, f, task, timeout),
         background: background,
       );
       _flights[key] = f;
       unawaited(
         f.request.future.then(
-          (value) {
-            _drop(key, f);
-            for (final w in f.waiters) {
-              w._complete(value);
-            }
-          },
-          onError: (Object e, StackTrace st) {
-            _drop(key, f);
-            for (final w in f.waiters) {
-              w._fail(e, st);
-            }
-          },
+          (value) => _settle(key, f, (w) => w._complete(value)),
+          onError: (Object e, StackTrace st) =>
+              _settle(key, f, (w) => w._fail(e, st)),
         ),
       );
     } else if (!background) {
@@ -235,6 +230,37 @@ final class SharedRequests<T> {
     final ticket = RequestTicket<T>._((t) => _leave(key, f, t));
     f.waiters.add(ticket);
     return ticket;
+  }
+
+  /// Runs [task] for [flight]. Past [timeout] its callers fail at once and
+  /// its signal is abandoned, but the run holds its queue slot until
+  /// [task] has ended (aborted, or by its own HTTP deadline).
+  Future<T> _run(
+    String key,
+    _Flight<T> flight,
+    Future<T> Function(RequestSignal signal) task,
+    Duration timeout,
+  ) async {
+    final deadline = Timer(timeout, () {
+      final error = TimeoutException('No answer within $timeout', timeout);
+      flight.signal._abandon(error);
+      _settle(key, flight, (w) => w._fail(error, StackTrace.current));
+    });
+    try {
+      return await task(flight.signal);
+    } finally {
+      deadline.cancel();
+    }
+  }
+
+  /// Ends [flight] for its callers; a caller arriving next starts afresh.
+  void _settle(
+    String key,
+    _Flight<T> flight,
+    void Function(RequestTicket<T> waiter) end,
+  ) {
+    _drop(key, flight);
+    flight.waiters.forEach(end);
   }
 
   void _leave(String key, _Flight<T> flight, RequestTicket<T> ticket) {
@@ -247,7 +273,7 @@ final class SharedRequests<T> {
       flight.request.cancel();
     } else if (flight.abortWhenUnwanted) {
       _drop(key, flight);
-      flight.signal._abandoned = true;
+      flight.signal._abandon(const RequestCancelled());
     }
   }
 

@@ -24,14 +24,18 @@ final class MovieDownload {
   /// The cached file once the copy is complete; fails with the transfer's
   /// error or [MovieDownloadCancelled].
   late final Future<File> done;
-  bool _cancelled = false;
+  final Completer<Object> _cancel = Completer<Object>();
+
+  bool get _cancelled => _cancel.isCompleted;
 
   /// 0..1, or null while the camera has not said how large the file is.
   ValueListenable<double?> get progress => _progress;
 
-  /// Stops the transfer; [done] fails with [MovieDownloadCancelled] and the
-  /// partial file is removed.
-  void cancel() => _cancelled = true;
+  /// Stops the transfer, closing its camera request at once; [done] fails
+  /// with [MovieDownloadCancelled] and the partial file is removed.
+  void cancel() {
+    if (!_cancel.isCompleted) _cancel.complete(const MovieDownloadCancelled());
+  }
 }
 
 /// Movies copied in full to `<cacheDir>/<serial>/movies/` before playing.
@@ -86,12 +90,9 @@ final class MovieCache {
         await library.downloadFile(
           f,
           staging,
-          onProgress: (received, total) {
-            if (download._cancelled) throw const MovieDownloadCancelled();
-            download._progress.value = total == null || total == 0
-                ? null
-                : received / total;
-          },
+          onProgress: (received, total) => download._progress.value =
+              total == null || total == 0 ? null : received / total,
+          abort: download._cancel.future,
         );
         if (download._cancelled) throw const MovieDownloadCancelled();
         await staging.rename(file.path);
