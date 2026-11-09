@@ -67,6 +67,10 @@ Many routes and characteristics were reverse-engineered, so what the camera actu
 
 Leave code you change better than you found it, and limit the cleanup to that code: don't refactor whole files or unrelated parts of the codebase. Where a change touches a function or block, flatten its nesting where you can, using early returns and guards and reordering conditions so the common path reads straight down, and simplify what's there. Some nesting is unavoidable; keep it when flattening would make the code harder to follow. Rename variables, properties and functions in that code whose names no longer match what they hold or do, or could say it more precisely.
 
+## iOS and Android
+
+GR Lab ships on iOS and Android, and every change has to work on both. A fix or feature aimed at one platform must not break or degrade the other, and shared Dart code must suit both platforms' native paths: for example, Android joins the camera network with a `WifiNetworkSpecifier` request and iOS with an `NEHotspotConfiguration`, and they differ in approval prompts, timing and errors. Keep platform differences inside the platform adapters and native code in `gr_camera`, behind one API for the UI. When one platform can't do what the other does, give it the closest equivalent and say why in the code and in `research/`. Before finishing, check what the change does on the other platform; test it on both where you can, and say in your summary which platforms you verified and which you couldn't.
+
 ## Checks
 
 Run `tool/check.sh` before considering any change done. It runs the formatter, the analyzer with `very_good_analysis` on every package and on `tool/` (infos are fatal), the camera layer boundary check, the translated-text check and every test suite. The Android and iOS builds run `tool/check.sh --static` and refuse to build when it fails.
