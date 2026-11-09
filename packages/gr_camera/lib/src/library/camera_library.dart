@@ -146,10 +146,12 @@ final class CameraLibrary {
     abort: abort,
   );
 
-  /// Copies [files] one at a time into [dir] under their camera names and
-  /// returns the copies. A file already in [dir] (finished before a pause)
-  /// is kept; only an interrupted one starts over, as the camera has no
-  /// ranged downloads.
+  /// Copies [files] one at a time into [dir] and returns the copies, each
+  /// under its camera name in a folder of [dir] named after its storage
+  /// and camera folder, so same-named files from different storages or
+  /// folders never share a copy. A copy already there (finished before a
+  /// pause) is kept; only an interrupted one starts over, as the camera has
+  /// no ranged downloads.
   ///
   /// [onProgress] gets the bytes of all files so far, the index of the
   /// file being copied, and that file's received bytes and length.
@@ -162,17 +164,18 @@ final class CameraLibrary {
     onProgress,
     void Function()? afterFile,
   }) async {
-    await dir.create(recursive: true);
     final local = <File>[];
     var before = 0;
     for (var i = 0; i < files.length; i++) {
       final f = files[i];
-      final out = File('${dir.path}/${f.name}');
+      final folder = Directory('${dir.path}/${f.storage ?? 'x'}_${f.dir}');
+      final out = File('${folder.path}/${f.name}');
       // A file finished before a pause stays; only the interrupted one
       // starts over.
       if (out.existsSync()) {
         _event('download.kept', {'file': '$f', 'path': out.path});
       } else {
+        await folder.create(recursive: true);
         await downloadFile(
           f,
           out,

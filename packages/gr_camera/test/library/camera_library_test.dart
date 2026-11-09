@@ -254,7 +254,8 @@ void main() {
         ),
         throwsStateError,
       );
-      expect(dir.listSync().map((e) => e.uri.pathSegments.last), [
+      final folder = Directory('${dir.path}/sd1_100RICOH');
+      expect(folder.listSync().map((e) => e.uri.pathSegments.last), [
         'R0000001.JPG',
       ]);
 
@@ -265,8 +266,8 @@ void main() {
         onProgress: (bytes, index, received, total) => seen.add((index, bytes)),
       );
       expect(local.map((f) => f.path), [
-        '${dir.path}/R0000001.JPG',
-        '${dir.path}/R0000001.DNG',
+        '${folder.path}/R0000001.JPG',
+        '${folder.path}/R0000001.DNG',
       ]);
       expect(seen.map((s) => s.$1).toSet(), {1}, reason: 'JPG kept');
       final jpeg = await expected(files[0]);
@@ -274,6 +275,53 @@ void main() {
       expect(await local[0].readAsBytes(), jpeg);
       expect(await local[1].readAsBytes(), await expected(files[1]));
       expect(events('download.kept').single['file'], '${files[0]}');
+    });
+
+    test('downloadFiles copies same-named files from different storages '
+        'and folders to their own copies', () async {
+      await restartCamera(
+        FakeCameraConfig(
+          httpLatency: Duration.zero,
+          photos: [...card(), FakePhoto('101RICOH', 'R0000001.JPG', _day2)],
+        ),
+        syntheticMedia(jpegBytes: 4096),
+      );
+      final files = [
+        CameraFile(
+          GrStorageId.internal,
+          GrPhotoPath('100RICOH', 'R0000001.JPG'),
+        ),
+        CameraFile(GrStorageId.sd, GrPhotoPath('100RICOH', 'R0000001.JPG')),
+        CameraFile(GrStorageId.sd, GrPhotoPath('101RICOH', 'R0000001.JPG')),
+      ];
+      final dir = Directory('${cache.path}/job');
+      final local = await connected().downloadFiles(
+        files,
+        dir,
+        onProgress: (_, _, _, _) {},
+      );
+      expect(local.map((f) => f.path).toSet(), hasLength(3));
+      expect(local.map((f) => f.uri.pathSegments.last).toSet(), {
+        'R0000001.JPG',
+      }, reason: 'each copy keeps its camera name');
+      final contents = [
+        for (final f in files)
+          await camera.media(
+            camera.photos.firstWhere(
+              (p) => p.storage == f.storage && p.path == f.path,
+            ),
+            GrImageSize.full,
+          ),
+      ];
+      expect(contents.map(String.fromCharCodes).toSet(), hasLength(3));
+      for (var i = 0; i < files.length; i++) {
+        expect(
+          await local[i].readAsBytes(),
+          contents[i],
+          reason: '${files[i]}',
+        );
+      }
+      expect(events('download.kept'), isEmpty);
     });
 
     test('tells broken links from refusals', () {
