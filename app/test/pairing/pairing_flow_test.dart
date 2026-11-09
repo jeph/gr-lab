@@ -494,7 +494,7 @@ void main() {
     final app = await _create(
       tester,
       const FakeCameraConfig(
-        serial: '1234567',
+        serial: '7654321',
         deviceId: targetId,
         bluetoothName: 'GR_TARGET',
         executePairingOpen: true,
@@ -520,7 +520,7 @@ void main() {
     );
     expect(app.ble.connected, isNotEmpty);
     expect(app.ble.connected, everyElement(targetId));
-    expect(app.models.cameras.current?.serial, '1234567');
+    expect(app.models.cameras.current?.serial, '7654321');
     expect(app.models.cameras.current?.paired.deviceId, targetId);
 
     await app.dispose();
