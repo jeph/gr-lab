@@ -34,15 +34,162 @@ final class ImageControlRange {
 
 const _steps = ImageControlRange(ImageControlValueKind.steps, -4, 4);
 
-ImageControlRange _choices(int min, int max) =>
-    ImageControlRange(ImageControlValueKind.choice, min, max);
+/// A named value of a choice parameter, as GR WORLD's value formatter
+/// names it (research/protocol/image-control.md §4).
+enum ImageControlChoice {
+  /// Off.
+  off,
+
+  /// Sepia.
+  sepia,
+
+  /// Red.
+  red,
+
+  /// Green.
+  green,
+
+  /// Blue.
+  blue,
+
+  /// Purple.
+  purple,
+
+  /// Low.
+  low,
+
+  /// Medium.
+  medium,
+
+  /// High.
+  high,
+
+  /// Normal.
+  normal,
+
+  /// Cool.
+  cool,
+
+  /// Warm.
+  warm,
+
+  /// Black & White.
+  blackAndWhite,
+
+  /// Custom filter 1.
+  customFilter1,
+
+  /// Custom filter 2.
+  customFilter2,
+
+  /// Custom filter 3.
+  customFilter3,
+
+  /// Custom filter 4.
+  customFilter4,
+
+  /// On.
+  on,
+
+  /// Small.
+  small,
+
+  /// Large.
+  large,
+
+  /// Basic.
+  basic,
+
+  /// Magenta.
+  magenta,
+
+  /// Yellow.
+  yellow,
+}
+
+/// The named values of [parameter], indexed by wire value, or null when
+/// the camera shows its value as a number. These are the cases of GR
+/// WORLD's value formatter (code 0x95abc8–0x95b7f8,
+/// research/protocol/image-control.md §4).
+List<ImageControlChoice>? imageControlChoices(
+  BleImageControlParameter parameter,
+) => switch (parameter) {
+  BleImageControlParameter.toningMonotone => const [
+    ImageControlChoice.off,
+    ImageControlChoice.sepia,
+    ImageControlChoice.red,
+    ImageControlChoice.green,
+    ImageControlChoice.blue,
+    ImageControlChoice.purple,
+  ],
+  BleImageControlParameter.toningCinema ||
+  BleImageControlParameter.grainStrength => const [
+    ImageControlChoice.low,
+    ImageControlChoice.medium,
+    ImageControlChoice.high,
+  ],
+  BleImageControlParameter.toningBleachBypass => const [
+    ImageControlChoice.off,
+    ImageControlChoice.normal,
+    ImageControlChoice.cool,
+    ImageControlChoice.warm,
+  ],
+  BleImageControlParameter.toningHdr => const [
+    ImageControlChoice.off,
+    ImageControlChoice.blackAndWhite,
+    ImageControlChoice.sepia,
+  ],
+  // GR WORLD tells only 0 (Off) from anything else (On); that 1–4 select
+  // custom filters 1–4 is \[inferred\] from the GR IIIx firmware.
+  BleImageControlParameter.filterEffect => const [
+    ImageControlChoice.off,
+    ImageControlChoice.customFilter1,
+    ImageControlChoice.customFilter2,
+    ImageControlChoice.customFilter3,
+    ImageControlChoice.customFilter4,
+  ],
+  // That On is 1 is \[inferred\].
+  BleImageControlParameter.grain => const [
+    ImageControlChoice.off,
+    ImageControlChoice.on,
+  ],
+  BleImageControlParameter.grainSize => const [
+    ImageControlChoice.small,
+    ImageControlChoice.medium,
+    ImageControlChoice.large,
+  ],
+  BleImageControlParameter.hdrStrength => const [
+    ImageControlChoice.off,
+    ImageControlChoice.low,
+    ImageControlChoice.medium,
+    ImageControlChoice.high,
+  ],
+  BleImageControlParameter.crossProcess => const [
+    ImageControlChoice.basic,
+    ImageControlChoice.magenta,
+    ImageControlChoice.yellow,
+  ],
+  _ => null,
+};
+
+/// [parameter]'s [imageControlChoices] from [min] to the last one, or null
+/// when it has none.
+ImageControlRange? _choices(BleImageControlParameter parameter, {int min = 0}) {
+  final choices = imageControlChoices(parameter);
+  if (choices == null) return null;
+  return ImageControlRange(
+    ImageControlValueKind.choice,
+    min,
+    choices.length - 1,
+  );
+}
 
 /// The values [parameter] takes, or null when they are not known well
 /// enough to edit; such parameters keep the value the camera gave them.
 ///
-/// Choices are the cases of GR WORLD's value formatter (code
-/// 0x95abc8–0x95b7f8, research/protocol/image-control.md §4); where the
-/// GR IIIx firmware's settings start a choice at 1, so does the range.
+/// Choices run over [imageControlChoices]; where the GR IIIx firmware's
+/// settings start a choice at 1, so does the range
+/// (research/protocol/image-control.md §4).
 /// Steps are −4..+4 \[inferred\]: GR WORLD shows the wire value itself and
 /// has no range table; −4..+4 is the GR IIIx firmware's vocabulary (`M4`
 /// to `P4`) as a third-party settings dump reads it.
@@ -58,28 +205,17 @@ ImageControlRange? imageControlRange(BleImageControlParameter parameter) =>
       BleImageControlParameter.toningRetro ||
       BleImageControlParameter.shading ||
       BleImageControlParameter.clarity => _steps,
-      // Off, Sepia, Red, Green, Blue, Purple.
-      BleImageControlParameter.toningMonotone => _choices(0, 5),
-      // Low, Medium, High.
-      BleImageControlParameter.toningCinema => _choices(0, 2),
-      // Normal, Cool, Warm.
-      BleImageControlParameter.toningBleachBypass => _choices(1, 3),
-      // Off, Black & White, Sepia.
-      BleImageControlParameter.toningHdr => _choices(0, 2),
-      // Off, On; that On is 1 is \[inferred\].
-      BleImageControlParameter.grain => _choices(0, 1),
-      // Small, Medium, Large.
-      BleImageControlParameter.grainSize => _choices(0, 2),
-      // Low, Medium, High.
-      BleImageControlParameter.grainStrength => _choices(0, 2),
-      // Low, Medium, High.
-      BleImageControlParameter.hdrStrength => _choices(1, 3),
-      // Basic, Magenta, Yellow.
-      BleImageControlParameter.crossProcess => _choices(0, 2),
+      // GR WORLD names 0 Off; that the camera takes only 1..3, as the GR
+      // IIIx firmware's settings do, is \[inferred\].
+      BleImageControlParameter.toningBleachBypass ||
+      BleImageControlParameter.hdrStrength => _choices(parameter, min: 1),
       // The filter effect picks one of four custom filters whose R, G and
-      // B values have an unknown range; the solarization type and the
-      // GR IVx's Palette parameters have unknown ranges too.
-      _ => null,
+      // B values have an unknown range.
+      BleImageControlParameter.filterEffect => null,
+      // The rest are choices where GR WORLD names the values. The custom
+      // filter values, the solarization type and the GR IVx's Palette
+      // parameters have no names and unknown ranges.
+      _ => _choices(parameter),
     };
 
 const List<BleImageControlParameter> _filter = [

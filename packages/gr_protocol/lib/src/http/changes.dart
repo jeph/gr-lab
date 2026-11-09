@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:gr_protocol/src/camera_address.dart';
 import 'package:gr_protocol/src/http/json.dart';
 import 'package:gr_protocol/src/http/request.dart';
 import 'package:gr_protocol/src/trace.dart';
@@ -334,7 +335,7 @@ final class GrChangesSocket {
   /// Socket for camera [host]; nothing connects until [connect].
   new(
     this.host, {
-    this.port = 80,
+    this.port = grCameraHttpPort,
     HttpClient? httpClient,
     this.connectTimeout = const Duration(seconds: 7),
     this.reconnect = const GrBackoffReconnect(),
@@ -343,10 +344,10 @@ final class GrChangesSocket {
   }) : _http = httpClient,
        _now = clock ?? DateTime.now;
 
-  /// Camera address, `192.168.0.1` on the camera's own access point.
+  /// Camera address, [grCameraHost] on the camera's own access point.
   final String host;
 
-  /// HTTP port of the camera's web API.
+  /// HTTP port of the camera's web API, [grCameraHttpPort] on a camera.
   final int port;
 
   /// Image Sync uses 7 s (connection-imagesync.md §2.2).

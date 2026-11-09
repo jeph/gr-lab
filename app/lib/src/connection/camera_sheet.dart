@@ -7,6 +7,7 @@ import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/cameras/camera_identity.dart';
 import 'package:grlab/src/connection/camera_pill.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/connection/link_state.dart';
 import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart';
 import 'package:grlab/src/theme/tokens.dart';
@@ -83,13 +84,14 @@ class CameraSheet extends StatelessWidget {
     final count = NumberFormat.decimalPattern(
       Localizations.localeOf(context).toString(),
     );
-    final props = connection.props;
-    final battery = props?.battery;
-    final storages = _storages(l10n, props);
+    final status = connection.cameraStatus;
+    final battery = status?.battery;
+    final storages = _storages(l10n, status);
+    final link = LinkState.of(connection);
     return [
       _Header(
         title: camera.name,
-        subtitle: camera.identityLine(l10n, props: props),
+        subtitle: camera.identityLine(l10n),
         large: true,
       ),
       Padding(
@@ -167,13 +169,23 @@ class CameraSheet extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 2),
                   child: Row(
                     children: [
-                      Icon(Icons.bluetooth_rounded, size: 18, color: c.ok),
+                      Icon(
+                        Icons.bluetooth_rounded,
+                        size: 18,
+                        color: link.bluetooth ? c.ok : c.t3,
+                      ),
                       const SizedBox(width: 6),
-                      Icon(Icons.wifi_rounded, size: 18, color: c.ok),
+                      Icon(
+                        Icons.wifi_rounded,
+                        size: 18,
+                        color: link.label == LinkLabel.wifi ? c.ok : c.accent,
+                      ),
                     ],
                   ),
                 ),
-                caption: l10n.connectionSheetLinkWifi,
+                caption: link.label == LinkLabel.wifi
+                    ? l10n.connectionSheetLinkWifi
+                    : link.label.text(l10n),
               ),
             ),
           ],
@@ -194,20 +206,20 @@ class CameraSheet extends StatelessWidget {
   /// where photos normally go.
   static List<({String id, String label, int? remain})> _storages(
     AppLocalizations l10n,
-    GrProps? props,
+    CameraStatus? status,
   ) {
     final storages = [
-      for (final s in props?.storages ?? const <GrStorageInfo>[])
-        if (s.equipped != false)
+      for (final s in status?.storages ?? const <CameraStorage>[])
+        if (s.present)
           (
-            id: s.name ?? '?',
-            label: switch (s.name) {
-              'sd1' => l10n.connectionSheetStorageSd,
-              'in' => l10n.connectionSheetStorageInternal,
-              final name? => name,
-              null => l10n.connectionSheetStorageUnnamed,
+            id: s.id,
+            label: switch (s.kind) {
+              CameraStorageKind.sd1 => l10n.connectionSheetStorageSd,
+              CameraStorageKind.internal => l10n.connectionSheetStorageInternal,
+              _ when s.id == '?' => l10n.connectionSheetStorageUnnamed,
+              _ => s.id,
             },
-            remain: s.remain,
+            remain: s.remainingPictures,
           ),
     ];
     int rank(String id) => switch (id) {

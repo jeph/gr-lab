@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/connection/camera_sheet.dart';
-import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/connection/link_state.dart';
 import 'package:grlab/src/theme/tokens.dart';
 import 'package:intl/intl.dart';
 
@@ -20,7 +20,8 @@ class CameraPill extends StatelessWidget {
         final camera = models.cameras.current;
         if (camera == null) return const SizedBox.shrink();
         final c = GrColors.of(context);
-        final link = PillLinkState.of(models.connection);
+        final link = LinkState.of(models.connection);
+        final battery = models.connection.cameraStatus?.battery;
         return Semantics(
           button: true,
           label: context.l10n.connectionPillSemantics(
@@ -65,7 +66,10 @@ class CameraPill extends StatelessWidget {
                           color: c.t1,
                         ),
                       );
-                      final meta = _Meta(link: link);
+                      final meta = _Meta(
+                        link: link,
+                        battery: link.label == LinkLabel.wifi ? battery : null,
+                      );
                       // Headers may give the pill unbounded width (a Row
                       // child), where Flexible is not allowed; there the
                       // name gets a fixed cap instead. When bounded, the
@@ -112,113 +116,29 @@ class CameraPill extends StatelessWidget {
   }
 }
 
-/// What the pill says about the link, derived from the controller.
-@immutable
-final class PillLinkState {
-  const new _(this.label, {this.battery});
-
-  factory of(ConnectionController connection) => switch (connection.status) {
-    ConnectionStatus.offline => const PillLinkState._(PillLinkLabel.offline),
-    ConnectionStatus.failed => const PillLinkState._(
-      PillLinkLabel.notConnected,
-    ),
-    ConnectionStatus.connecting when connection.reconnecting =>
-      const PillLinkState._(PillLinkLabel.reconnecting),
-    ConnectionStatus.connecting => PillLinkState._(
-      connection.step == ConnectStep.wifi
-          ? PillLinkLabel.connectingWifi
-          : PillLinkLabel.connecting,
-    ),
-    ConnectionStatus.bluetooth => const PillLinkState._(
-      PillLinkLabel.bluetooth,
-    ),
-    // Switched off with the Library open: red while it is woken and
-    // its Wi-Fi joined again.
-    ConnectionStatus.connected when connection.reconnecting =>
-      connection.cameraOff
-          ? const PillLinkState._(PillLinkLabel.cameraOff)
-          : const PillLinkState._(PillLinkLabel.reconnecting),
-    ConnectionStatus.connected => PillLinkState._(
-      PillLinkLabel.wifi,
-      battery: connection.props?.battery,
-    ),
-  };
-
-  final PillLinkLabel label;
-
-  PillLinkKind get kind => switch (label) {
-    PillLinkLabel.offline => PillLinkKind.offline,
-    PillLinkLabel.connecting ||
-    PillLinkLabel.connectingWifi => PillLinkKind.connecting,
-    PillLinkLabel.bluetooth || PillLinkLabel.wifi => PillLinkKind.connected,
-    PillLinkLabel.reconnecting => PillLinkKind.reconnecting,
-    PillLinkLabel.notConnected ||
-    PillLinkLabel.cameraOff => PillLinkKind.failed,
-  };
-
-  /// Percent, when connected and the camera reported it.
-  final int? battery;
-}
-
-enum PillLinkKind { offline, connecting, connected, reconnecting, failed }
-
-/// The link state the pill names.
-enum PillLinkLabel {
-  offline,
-
-  /// Connecting failed.
-  notConnected,
-
-  /// Linking over Bluetooth.
-  connecting,
-
-  /// Joining the camera's Wi-Fi.
-  connectingWifi,
-
-  /// Getting a lost link back.
-  reconnecting,
-
-  /// Linked over Bluetooth only.
-  bluetooth,
-
-  /// On the camera's Wi-Fi.
-  wifi,
-
-  /// Switched off with the Library open, while it is turned back on.
-  cameraOff;
-
-  String text(AppLocalizations l10n) => switch (this) {
-    offline => l10n.connectionPillOffline,
-    notConnected => l10n.connectionPillNotConnected,
-    connecting => l10n.connectionPillConnecting,
-    connectingWifi => l10n.connectionPillConnectingWifi,
-    reconnecting => l10n.connectionPillReconnecting,
-    bluetooth => l10n.connectionPillBluetooth,
-    wifi => l10n.connectionPillWifi,
-    cameraOff => l10n.connectionPillCameraOff,
-  };
-}
-
 class _Meta extends StatelessWidget {
-  const new({required this.link});
+  const new({required this.link, required this.battery});
 
-  final PillLinkState link;
+  final LinkState link;
+
+  /// Percent, on the camera's Wi-Fi when the camera reported it.
+  final int? battery;
 
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
     final color = switch (link.kind) {
-      PillLinkKind.offline => c.t3,
-      PillLinkKind.connecting || PillLinkKind.reconnecting => c.accent,
-      PillLinkKind.connected => c.t2,
-      PillLinkKind.failed => c.danger,
+      LinkKind.offline => c.t3,
+      LinkKind.connecting || LinkKind.reconnecting => c.accent,
+      LinkKind.connected => c.t2,
+      LinkKind.failed => c.danger,
     };
     final style = GrFonts.monoStyle(context, size: 11.5, color: color);
-    final battery = link.battery;
+    final battery = this.battery;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (link.kind == PillLinkKind.connected) ...[
+        if (link.kind == LinkKind.connected) ...[
           Container(
             width: 7,
             height: 7,

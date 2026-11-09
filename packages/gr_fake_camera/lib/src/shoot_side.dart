@@ -1,32 +1,32 @@
 part of 'fake_camera.dart';
 
-/// Image Sync's `shootMode` values (remote-shooting.md §4.3) in BLE Drive
-/// Mode order (ble.md, Drive mode row): the index is the wire value 0–15,
-/// so `/v1/props` `shootMode` and BLE Drive Mode are one setting.
-const _shootModes = [
-  'single',
-  'self10s',
-  'self2s',
-  'continuous',
-  'bracket',
-  'bracketSelf10s',
-  'bracketSelf2s',
-  'multiExp',
-  'multiExpSelf10s',
-  'multiExpSelf2s',
-  'interval',
-  'intervalSelf10s',
-  'intervalSelf2s',
-  'intervalComp',
-  'intervalCompSelf10s',
-  'intervalCompSelf2s',
-];
+/// Image Sync's `shootMode` value (remote-shooting.md §4.3) of each GR
+/// Drive Mode (ble.md, Drive mode row): `/v1/props` `shootMode` and BLE
+/// Drive Mode are one setting.
+const _shootModes = <BleDriveMode, String>{
+  BleDriveMode.single: 'single',
+  BleDriveMode.selfTimer10s: 'self10s',
+  BleDriveMode.selfTimer2s: 'self2s',
+  BleDriveMode.continuous: 'continuous',
+  BleDriveMode.bracket: 'bracket',
+  BleDriveMode.bracketSelfTimer10s: 'bracketSelf10s',
+  BleDriveMode.bracketSelfTimer2s: 'bracketSelf2s',
+  BleDriveMode.multipleExposure: 'multiExp',
+  BleDriveMode.multipleExposureSelfTimer10s: 'multiExpSelf10s',
+  BleDriveMode.multipleExposureSelfTimer2s: 'multiExpSelf2s',
+  BleDriveMode.interval: 'interval',
+  BleDriveMode.intervalSelfTimer10s: 'intervalSelf10s',
+  BleDriveMode.intervalSelfTimer2s: 'intervalSelf2s',
+  BleDriveMode.intervalComposite: 'intervalComp',
+  BleDriveMode.intervalCompositeSelfTimer10s: 'intervalCompSelf10s',
+  BleDriveMode.intervalCompositeSelfTimer2s: 'intervalCompSelf2s',
+};
 
 /// Writable settings and the values `/v1/props` lists for them. Spelling
 /// follows Image Sync's GR III tables (remote-shooting.md §4.3); the
 /// ranges are a GR IV's \[design\]: f/2.8–16 and ISO 100–204800 in 1/3 steps,
 /// 1/4000–30 s, ±5 EV. A real camera's lists come from its own props.
-const _settingLists = <String, List<String>>{
+final _settingLists = <String, List<String>>{
   'av': [
     '2.8', '3.2', '3.5', '4.0', '4.5', '5.0', '5.6', '6.3', //
     '7.1', '8.0', '9.0', '10', '11', '13', '14', '16',
@@ -61,7 +61,7 @@ const _settingLists = <String, List<String>>{
     'efc_softMonochrome', 'efc_hardMonochrome', 'efc_highContrast',
     'efc_posiFilm', 'efc_bleachBypass', 'efc_retro', 'efc_HDRTone',
   ],
-  'shootMode': _shootModes,
+  'shootMode': _shootModes.values.toList(),
 };
 
 /// Mode-dial positions `/v1/props` lists for the read-only `exposureMode`
@@ -93,21 +93,18 @@ typedef _Refusal = (int, String);
 /// change events a capture produces (remote-shooting.md §2.3), plus the
 /// settings behind `/v1/props` and `PUT /v1/params/camera`.
 extension on FakeGrCamera {
-  /// Self-timer length of the current drive mode (ble.md, Drive mode row),
-  /// scaled by [FakeCameraConfig.selfTimerScale], or null for none.
+  /// Self-timer length of the current drive mode, scaled by
+  /// [FakeCameraConfig.selfTimerScale], or null for none.
   Duration? get _selfTimer {
-    final seconds = switch (_driveMode) {
-      1 || 5 || 8 || 11 || 14 => 10,
-      2 || 6 || 9 || 12 || 15 => 2,
-      _ => null,
-    };
-    if (seconds == null) return null;
+    final length = driveMode.selfTimer;
+    if (length == null) return null;
     return Duration(
-      microseconds:
-          (seconds * Duration.microsecondsPerSecond * config.selfTimerScale)
-              .round(),
+      microseconds: (length.inMicroseconds * config.selfTimerScale).round(),
     );
   }
+
+  /// `/v1/props` `shootMode`: the current drive mode's.
+  String get _shootMode => _shootModes[driveMode]!;
 
   bool get _releaseBusy => _capturing || _countdown != BleCountdown.none;
 
@@ -167,7 +164,7 @@ extension on FakeGrCamera {
   /// `countDown` as Image Sync reads it (remote-shooting.md §2.3).
   String get _countDownText => _countdown == BleCountdown.none
       ? 'idle'
-      : const {1, 5, 8, 11, 14}.contains(_driveMode)
+      : driveMode.selfTimer == const Duration(seconds: 10)
       ? 'busy10s'
       : 'busy2s';
 
@@ -307,7 +304,7 @@ extension on FakeGrCamera {
     'stateMovie': 'idle',
     'countDown': _countDownText,
     'capturing': _capturing,
-    'shootMode': _shootModes[_driveMode],
+    'shootMode': _shootMode,
   });
 
   /// The next file on the active storage: the newest directory, the next
@@ -361,6 +358,11 @@ extension on FakeGrCamera {
     _push({'errCode': 200, 'changed': 'camera'});
   }
 
+  /// The drive mode Image Sync's `shootMode` [value] names; [value] is one
+  /// of `shootModeList`.
+  BleDriveMode _driveModeOf(String value) =>
+      _shootModes.entries.firstWhere((e) => e.value == value).key;
+
   /// Applies a `PUT /v1/params/camera` body; returns the refused pair, or
   /// null when every value was in its `<key>List` and has been set.
   /// Read-only keys (`exposureMode`: the dial decides, remote-shooting.md
@@ -374,7 +376,7 @@ extension on FakeGrCamera {
     }
     for (final MapEntry(:key, :value) in params.entries) {
       if (key == 'shootMode') {
-        _setDriveMode(_shootModes.indexOf(value));
+        _setDriveMode(_driveModeOf(value).wire);
       } else if (_settings[key] != value) {
         _settings[key] = value;
         _push({'errCode': 200, 'changed': 'camera'});

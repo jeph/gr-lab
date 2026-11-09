@@ -73,7 +73,7 @@ final class LivenessPoll {
     required this.consecutiveFailures,
     required this.sinceLastSuccess,
     required this.lost,
-    this.identity,
+    this.props,
     this.identityMismatch = false,
     this.error,
   });
@@ -87,8 +87,11 @@ final class LivenessPoll {
   /// Time the probe took.
   final Duration latency;
 
-  /// Identity from this probe's `/v1/props`, when it answered.
-  final GrCameraIdentity? identity;
+  /// This probe's `/v1/props`, when the camera answered.
+  final GrProps? props;
+
+  /// Identity from [props].
+  GrCameraIdentity? get identity => props?.identity;
 
   /// The camera answered, but as a different camera than expected.
   final bool identityMismatch;
@@ -223,12 +226,12 @@ final class LivenessMonitor {
       lossAfter: lossAfter,
     );
     final watch = Stopwatch()..start();
-    GrCameraIdentity? seen;
+    GrProps? props;
     Object? error;
     var mismatch = false;
     try {
-      final props = await _probe();
-      seen = props.identity;
+      props = await _probe();
+      final seen = props.identity;
       final expected = _identity ??= seen;
       mismatch = expected != seen;
     } on Object catch (e) {
@@ -247,7 +250,7 @@ final class LivenessMonitor {
       at: at,
       ok: ok,
       latency: watch.elapsed,
-      identity: seen,
+      props: props,
       identityMismatch: mismatch,
       error: error,
       consecutiveFailures: tracker.consecutiveFailures,

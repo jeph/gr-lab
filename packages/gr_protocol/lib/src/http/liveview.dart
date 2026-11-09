@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:gr_protocol/src/camera_address.dart';
 import 'package:gr_protocol/src/http/errors.dart';
 import 'package:gr_protocol/src/http/json.dart';
 import 'package:gr_protocol/src/http/mjpeg.dart';
@@ -160,7 +161,7 @@ final class LiveViewStream {
   /// forever like Image Sync.
   static Future<LiveViewStream> open(
     String host, {
-    int port = 80,
+    int port = grCameraHttpPort,
     int? maxFps,
     String? reso,
     Duration connectTimeout = const Duration(seconds: 10),
@@ -233,7 +234,7 @@ final class LiveViewStream {
   /// Builds the live-view URL; throws [ArgumentError] for invalid options.
   static Uri liveViewUri(
     String host, {
-    int port = 80,
+    int port = grCameraHttpPort,
     int? maxFps,
     String? reso,
   }) {

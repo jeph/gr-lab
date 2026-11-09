@@ -39,7 +39,8 @@ final class GrPairedCamera {
   /// Camera Information model name (firmware model property), when read.
   final String? modelName;
 
-  /// Camera Information firmware version at pairing time, when read.
+  /// Camera Information firmware version as last read: at pairing, then
+  /// whenever the owner records a newer reading ([withFirmwareRevision]).
   final String? firmwareRevision;
 
   /// Camera's Bluetooth device name, when read.
@@ -53,6 +54,16 @@ final class GrPairedCamera {
     final m = modelName;
     return m == null ? null : GrModel.fromModelString(m);
   }
+
+  /// This record with [revision] as the firmware version.
+  GrPairedCamera withFirmwareRevision(String revision) => GrPairedCamera(
+    deviceId: deviceId,
+    serialNumber: serialNumber,
+    modelName: modelName,
+    firmwareRevision: revision,
+    bluetoothDeviceName: bluetoothDeviceName,
+    bluetoothMacAddress: bluetoothMacAddress,
+  );
 
   /// JSON to persist; read back with [GrPairedCamera.fromJson].
   Map<String, Object?> toJson() => {

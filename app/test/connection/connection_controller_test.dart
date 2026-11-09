@@ -15,8 +15,8 @@ import 'package:gr_protocol/gr_protocol.dart'
         WifiJoinDeclined,
         WifiNetworkControl,
         WifiSecurity;
-import 'package:grlab/src/connection/camera_pill.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/connection/link_state.dart';
 import 'package:grlab/src/data/cameras.dart';
 
 import '../support/test_app.dart';
@@ -330,6 +330,22 @@ void main() {
       await expectRecoveredInPlace(app);
     });
 
+    test('a Bluetooth drop on Wi-Fi shows Bluetooth down with the Library '
+        'kept', () async {
+      final app = await connected(const FakeCameraConfig(bonded: true));
+      final connection = app.models.connection;
+      expect(LinkState.of(connection).bluetooth, isTrue);
+
+      app.camera
+        ..adapterState = BleAdapterState.poweredOff
+        ..dropBluetooth();
+      await _until(() => !connection.bleLinked);
+      final link = LinkState.of(connection);
+      expect(link.bluetooth, isFalse);
+      expect(link.label, LinkLabel.wifi);
+      expect(connection.inSession, isTrue);
+    });
+
     test('a camera switched off shows as off, is turned back on and '
         'rejoined', () async {
       final app = await connected(const FakeCameraConfig(bonded: true));
@@ -337,8 +353,8 @@ void main() {
       final off = <bool>[];
       // The camera pill turns red while the Library stays.
       void record() {
-        final pill = PillLinkState.of(connection);
-        off.add(connection.inSession && pill.label == PillLinkLabel.cameraOff);
+        final pill = LinkState.of(connection);
+        off.add(connection.inSession && pill.label == LinkLabel.cameraOff);
       }
 
       connection.addListener(record);

@@ -6,6 +6,7 @@ import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:grlab/src/connection/camera_pill.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/connection/link_state.dart';
 
 import '../support/test_app.dart';
 
@@ -70,9 +71,9 @@ void main() {
     expect(find.text('GR IV'), findsOneWidget);
     expect(find.text('Offline'), findsOneWidget);
 
-    final seen = <PillLinkLabel>[];
+    final seen = <LinkLabel>[];
     void record() {
-      final label = PillLinkState.of(connection).label;
+      final label = LinkState.of(connection).label;
       if (seen.isEmpty || seen.last != label) seen.add(label);
     }
 
@@ -87,10 +88,10 @@ void main() {
     expect(find.text('Wi-Fi'), findsOneWidget);
     expect(find.text('82%'), findsOneWidget);
     expect(seen, [
-      PillLinkLabel.connecting,
-      PillLinkLabel.bluetooth,
-      PillLinkLabel.connectingWifi,
-      PillLinkLabel.wifi,
+      LinkLabel.connecting,
+      LinkLabel.bluetooth,
+      LinkLabel.connectingWifi,
+      LinkLabel.wifi,
     ]);
     connection.removeListener(record);
 
@@ -121,6 +122,49 @@ void main() {
       () => app.models.connection.status == ConnectionStatus.bluetooth,
       reason: 'back on Bluetooth',
     );
+
+    await app.dispose();
+  });
+
+  testWidgets('the pill and the sheet both show a lost Wi-Fi link being '
+      'got back', (tester) async {
+    final app = await _start(tester);
+    await _connect(tester, app);
+    await _openSheet(tester);
+
+    app.camera.dropWifi(recoverable: false);
+    await pumpUntilFound(
+      tester,
+      find.descendant(
+        of: find.byKey(const Key('camera-sheet-connected')),
+        matching: find.text('Reconnecting…'),
+      ),
+    );
+    expect(
+      find.descendant(
+        of: find.byType(CameraPill),
+        matching: find.text('Reconnecting…'),
+      ),
+      findsOneWidget,
+    );
+
+    await app.dispose();
+  });
+
+  testWidgets('a firmware update shows in the sheet after the next link', (
+    tester,
+  ) async {
+    final app = await _start(tester);
+    final serial = app.models.cameras.current!.serial;
+    await tester.runAsync(
+      () => app.models.cameras.recordFirmware(serial, '1.10'),
+    );
+    await _openSheet(tester);
+    expect(find.text('No. 1234567 · fw 1.10'), findsOneWidget);
+
+    unawaited(app.models.connection.connect());
+    await pumpUntilFound(tester, find.text('No. 1234567 · fw 1.20'));
+    expect(app.models.cameras.current!.firmware, '1.20');
 
     await app.dispose();
   });

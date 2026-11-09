@@ -1,17 +1,21 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:gr_camera/gr_camera.dart';
 import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/cameras/camera_details.dart';
 import 'package:grlab/src/cameras/camera_identity.dart';
 import 'package:grlab/src/cameras/camera_presence.dart';
-import 'package:grlab/src/cameras/recent_thumbs.dart';
 import 'package:grlab/src/connection/connect_failure_view.dart';
 import 'package:grlab/src/connection/connect_steps.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/library/image_orientation.dart';
+import 'package:grlab/src/library/library_model.dart';
+import 'package:grlab/src/library/shot.dart';
 import 'package:grlab/src/pairing/pairing_flow.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart';
 import 'package:grlab/src/settings/settings_screen.dart';
@@ -684,11 +688,18 @@ class _Banner extends StatelessWidget {
   }
 }
 
-/// Thumbnails of the newest shots kept from the camera's last visit;
-/// nothing until the Library has loaded some.
+/// A thumbnail on the card: a shot's grid image and the layout its EXIF
+/// orientation applies to.
+typedef _Thumb = ({CameraFile file, Uint8List bytes, JpegLayout? layout});
+
+/// Thumbnails of the newest shots in the [LibraryModel]'s listing whose
+/// grid image ([Shot.gridSize]) the Library has in memory or on disk;
+/// nothing is fetched from the camera, so the card shows none until the
+/// Library has loaded some. Follows the listing as it changes.
 class _Thumbs extends StatefulWidget {
   const new({required this.serial});
 
+  /// The card's camera; the listing shows once it is this camera's.
   final String serial;
 
   @override
@@ -696,55 +707,135 @@ class _Thumbs extends StatefulWidget {
 }
 
 class _ThumbsState extends State<_Thumbs> {
-  late Future<List<RecentThumb>> _thumbs = _load();
+  static const _count = 4;
 
-  Future<List<RecentThumb>> _load() =>
-      loadRecentThumbs(AppScope.of(context).services.cacheDir, widget.serial);
+  late final LibraryModel _model = AppScope.of(context).library.model;
+  late final CameraImages _images = AppScope.of(context).library.images;
+  bool _listening = false;
+  List<_Thumb> _thumbs = const [];
+
+  /// The camera [_thumbs] are of.
+  String? _thumbsOf;
+  bool _scanning = false;
+  bool _scanAgain = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_listening) return;
+    _listening = true;
+    _model.addListener(_onModel);
+    _onModel();
+  }
 
   @override
   void didUpdateWidget(_Thumbs oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.serial != widget.serial) _thumbs = _load();
+    if (oldWidget.serial != widget.serial) _onModel();
   }
 
   @override
-  Widget build(BuildContext context) => FutureBuilder(
-    future: _thumbs,
-    builder: (context, snapshot) {
-      final thumbs = snapshot.data;
-      if (thumbs == null || thumbs.isEmpty) return const SizedBox.shrink();
-      final px = (MediaQuery.devicePixelRatioOf(context) * 96).round();
-      return Padding(
-        key: const Key('camera-card-thumbs'),
-        padding: const EdgeInsets.only(top: 14),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Row(
-            children: [
-              for (var i = 0; i < 4; i++) ...[
-                if (i > 0) const SizedBox(width: 3),
-                Expanded(
-                  child: AspectRatio(
-                    aspectRatio: 1,
-                    child: i < thumbs.length
-                        ? ExifOrientation(
-                            orientation: thumbs[i].orientation,
-                            child: Image.memory(
-                              thumbs[i].bytes,
-                              fit: BoxFit.cover,
-                              cacheWidth: px,
-                              gaplessPlayback: true,
-                            ),
-                          )
-                        : ColoredBox(color: GrColors.of(context).s2),
-                  ),
+  void dispose() {
+    _model.removeListener(_onModel);
+    super.dispose();
+  }
+
+  void _onModel() => unawaited(_scan());
+
+  /// Finds the thumbnails to show; a change during a scan scans again
+  /// afterwards.
+  Future<void> _scan() async {
+    if (_scanning) {
+      _scanAgain = true;
+      return;
+    }
+    _scanning = true;
+    do {
+      _scanAgain = false;
+      final serial = widget.serial;
+      final thumbs = await _newestLocal(serial);
+      if (!mounted) return;
+      setState(() {
+        _thumbs = thumbs;
+        _thumbsOf = serial;
+      });
+    } while (_scanAgain);
+    _scanning = false;
+  }
+
+  /// Up to [_count] of [serial]'s newest shots whose grid image is local,
+  /// newest first; images read before are kept.
+  Future<List<_Thumb>> _newestLocal(String serial) async {
+    final shots = _model.serial == serial ? _model.shots : null;
+    if (shots == null) return const [];
+    final known = _thumbsOf == serial
+        ? {for (final t in _thumbs) t.file.key: t}
+        : const <String, _Thumb>{};
+    final thumbs = <_Thumb>[];
+    for (final shot in shots) {
+      if (thumbs.length == _count) break;
+      final thumb = known[shot.primary.key] ?? await _readLocal(serial, shot);
+      if (thumb != null) thumbs.add(thumb);
+    }
+    return thumbs;
+  }
+
+  /// [shot]'s grid image from memory or disk; null when the Library never
+  /// loaded it.
+  Future<_Thumb?> _readLocal(String serial, Shot shot) async {
+    final file = shot.primary;
+    final size = shot.gridSize;
+    final disk = CameraImages.diskFile(_images.cacheDir, serial, file, size);
+    final Uint8List bytes;
+    try {
+      bytes = _images.cached(serial, file, size) ?? await disk.readAsBytes();
+    } on FileSystemException {
+      return null;
+    }
+    return (file: file, bytes: bytes, layout: readJpegLayout(bytes));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final thumbs = _thumbsOf == widget.serial ? _thumbs : const <_Thumb>[];
+    if (thumbs.isEmpty) return const SizedBox.shrink();
+    final px = (MediaQuery.devicePixelRatioOf(context) * 96).round();
+    return Padding(
+      key: const Key('camera-card-thumbs'),
+      padding: const EdgeInsets.only(top: 14),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Row(
+          children: [
+            for (var i = 0; i < _count; i++) ...[
+              if (i > 0) const SizedBox(width: 3),
+              Expanded(
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: i < thumbs.length
+                      ? _image(thumbs[i], px)
+                      : ColoredBox(color: GrColors.of(context).s2),
                 ),
-              ],
+              ),
             ],
-          ),
+          ],
         ),
-      );
-    },
+      ),
+    );
+  }
+
+  Widget _image(_Thumb thumb, int px) => ExifOrientation(
+    orientation: orientationToApply(
+      thumb.layout,
+      _model.info(thumb.file)?.orientation,
+    ),
+    child: Image.memory(
+      thumb.bytes,
+      key: ValueKey('camera-card-thumb:${thumb.file.key}'),
+      fit: BoxFit.cover,
+      cacheWidth: px,
+      gaplessPlayback: true,
+    ),
   );
 }
 
@@ -777,7 +868,7 @@ class _NearLabel extends StatelessWidget {
       // Not scanning (no Bluetooth permission, Bluetooth off): unknown.
       Presence.away => null,
     };
-    final model = withModel ? camera.model() : null;
+    final model = withModel ? camera.model : null;
     final text = switch ((model, seen)) {
       (null, null) => '',
       (final model?, null) => model,

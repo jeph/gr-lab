@@ -98,10 +98,12 @@ export 'src/looks/camera_looks.dart'
         lookNameMaxLength;
 export 'src/looks/image_control.dart'
     show
+        ImageControlChoice,
         ImageControlEdits,
         ImageControlRange,
         ImageControlValueKind,
         imageControlBases,
+        imageControlChoices,
         imageControlParameters,
         imageControlRange,
         newImageControl;
@@ -111,3 +113,4 @@ export 'src/presence.dart' show CameraSighting, PresenceScanner;
 export 'src/session.dart' show CameraSession, WifiConsent;
 export 'src/shoot/live_view.dart' show CameraLiveView, FocusMark, FocusState;
 export 'src/shoot/remote.dart' show CameraRemote;
+export 'src/status.dart' show CameraStatus, CameraStorage, CameraStorageKind;

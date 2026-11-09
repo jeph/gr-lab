@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart'
-    show BleOperationMode, GrBleCatalog, TraceDirection;
+    show BleOperationMode, GrBleCatalog, TraceDirection, grCameraHost;
 
 import 'rig.dart';
 
@@ -12,23 +12,22 @@ void main() {
   tearDown(() => rig.close());
 
   test('wake turns an off camera on in shooting mode; watching reads the '
-      'mode, shots left and battery; the shutter takes a picture', () async {
+      'mode; the shutter takes a picture', () async {
     rig = await ShootRig.start(
       config: const FakeCameraConfig(bonded: true, poweredOn: false),
     );
     final remote = rig.remote;
+    final status = rig.session.status;
     await remote.wake();
     expect(rig.camera.poweredOn, isTrue);
     expect(rig.camera.operationMode, BleOperationMode.capture);
     expect(rig.camera.wlanOn, isFalse, reason: 'the remote needs no Wi-Fi');
-    expect(remote.linked, isTrue);
+    expect(rig.session.bleLinked, isTrue);
 
     remote.watching = true;
-    await until(
-      () => remote.shotsLeft == 1234 && remote.battery == 82,
-      reason: 'readouts',
-    );
+    await until(() => remote.exposure != null, reason: 'mode');
     expect(remote.exposure!.mode.known, BleExposureMode.av);
+    await until(() => status.shotsLeft == 1234, reason: 'shots left');
 
     final before = rig.camera.photos.length;
     await remote.shutter();
@@ -36,29 +35,29 @@ void main() {
       () => rig.camera.photos.length == before + 1,
       reason: 'picture taken',
     );
-    await until(() => remote.shotsLeft == 1233, reason: 'shots left after');
+    await until(() => status.shotsLeft == 1233, reason: 'shots left after');
   });
 
-  test('the readouts follow the camera only while watched', () async {
+  test('the mode follows the camera only while watched', () async {
     rig = await ShootRig.start();
     final remote = rig.remote;
     await remote.wake();
     remote.watching = true;
-    await until(
-      () => remote.exposure != null && remote.battery == 82,
-      reason: 'readouts',
-    );
+    await until(() => remote.exposure != null, reason: 'mode');
     rig.camera.setExposureMode(BleExposureMode.m);
     await until(
       () => remote.exposure!.mode.known == BleExposureMode.m,
       reason: 'mode dial notification',
     );
     remote.watching = false;
-    rig.camera.battery = 40;
+    rig.camera.setExposureMode(BleExposureMode.p);
     await Future<void>.delayed(const Duration(milliseconds: 200));
-    expect(remote.battery, 82);
+    expect(remote.exposure!.mode.known, BleExposureMode.m);
     remote.watching = true;
-    await until(() => remote.battery == 40, reason: 'read when watching');
+    await until(
+      () => remote.exposure!.mode.known == BleExposureMode.p,
+      reason: 'read when watching',
+    );
   });
 
   test("a running self-timer is cancelled with GR WORLD's 1-byte write, "
@@ -120,6 +119,55 @@ void main() {
     expect(rig.camera.driveMode, BleDriveMode.continuous);
   });
 
+  test('a refused drive mode goes back to what the camera reports', () async {
+    rig = await ShootRig.start();
+    final remote = rig.remote;
+    await remote.wake();
+    remote.watching = true;
+    await until(() => remote.drive != null, reason: 'drive');
+    // The simulated GR IV refuses PENTAX-only Drive Mode values.
+    await expectLater(
+      remote.setDriveMode(BleDriveMode.singleRemote),
+      throwsA(anything),
+    );
+    expect(remote.drive!.known, BleDriveMode.single);
+  });
+
+  test('a refused drive mode keeps a newer write', () async {
+    rig = await ShootRig.start();
+    final remote = rig.remote;
+    await remote.wake();
+    final refused = remote.setDriveMode(BleDriveMode.singleRemote);
+    final newer = remote.setDriveMode(BleDriveMode.continuous);
+    await expectLater(refused, throwsA(anything));
+    expect(remote.drive!.known, BleDriveMode.continuous);
+    await newer;
+    expect(remote.drive!.known, BleDriveMode.continuous);
+    expect(rig.camera.driveMode, BleDriveMode.continuous);
+  });
+
+  test('a refused drive mode keeps a newer notification', () async {
+    rig = await ShootRig.start(
+      config: const FakeCameraConfig(
+        bonded: true,
+        bleLatency: Duration(milliseconds: 200),
+      ),
+    );
+    final remote = rig.remote;
+    await remote.wake();
+    remote.watching = true;
+    await until(() => remote.drive != null, reason: 'drive');
+    final refused = remote.setDriveMode(BleDriveMode.singleRemote);
+    // The drive is changed on the camera (here over HTTP) while the write
+    // is under way; Drive Mode notifies it.
+    final http = rig.camera.httpClient(grCameraHost, null);
+    addTearDown(() => http.close(force: true));
+    await http.setCameraParams({'shootMode': 'continuous'});
+    await expectLater(refused, throwsA(anything));
+    expect(rig.camera.driveMode, BleDriveMode.continuous);
+    expect(remote.drive!.known, BleDriveMode.continuous);
+  });
+
   test(
     'a camera switched off forgets the capture but keeps the readouts',
     () async {
@@ -137,7 +185,6 @@ void main() {
       expect(remote.countdownEnds, isNull);
       expect(remote.countdown, isNull);
       expect(remote.capturing, isFalse);
-      expect(remote.battery, 82);
     },
   );
 }

@@ -38,7 +38,10 @@ final class DebugLog extends ChangeNotifier {
     required this.maxFileBytes,
     required this.maxFiles,
     required this._share,
-  }) : _enabled = _settings.debugLogging ?? defaultEnabled;
+  }) {
+    // The setting may change from anywhere; listeners of the log hear it.
+    _settings.addListener(notifyListeners);
+  }
 
   /// Opens the log in [dir], continuing the newest file left by an earlier
   /// run. [settings] holds the user's choice, which overrides
@@ -119,7 +122,6 @@ final class DebugLog extends ChangeNotifier {
   final SettingsController _settings;
   final ShareLogFiles _share;
 
-  bool _enabled;
   bool _available = true;
 
   /// Lines recorded but not yet handed to a file write.
@@ -142,18 +144,17 @@ final class DebugLog extends ChangeNotifier {
   int _sharing = 0;
   int _snapshotCount = 0;
 
-  /// Whether debug logs are kept now (Settings, "Enable debug logging").
-  /// While off, nothing is recorded and `runWithDebugLog` keeps app prints
-  /// off the console too; only the engine's own report of uncaught errors
-  /// still reaches it ([onUncaughtError]).
-  bool get enabled => _enabled;
+  /// Whether debug logs are kept now (Settings, "Enable debug logging"):
+  /// the user's choice in the settings, else [defaultEnabled]. While off,
+  /// nothing is recorded and `runWithDebugLog` keeps app prints off the
+  /// console too; only the engine's own report of uncaught errors still
+  /// reaches it ([onUncaughtError]).
+  bool get enabled => _settings.debugLogging ?? defaultEnabled;
 
   /// Persists the user's choice; it wins over [defaultEnabled] from now on.
   set enabled(bool value) {
-    if (value == _enabled && _settings.debugLogging == value) return;
-    _enabled = value;
+    if (_settings.debugLogging == value) return;
     _settings.debugLogging = value;
-    notifyListeners();
   }
 
   /// False when the log's folder could not be opened at start-up: nothing
@@ -196,7 +197,7 @@ final class DebugLog extends ChangeNotifier {
   void _record(TraceEvent event) => _recordJson(event.toJson());
 
   void _recordJson(Map<String, Object?> json) {
-    if (!_enabled || !_available || _closed) return;
+    if (!enabled || !_available || _closed) return;
     // Fields come from many protocol layers; anything JSON cannot encode
     // natively is kept as its string form rather than losing the event.
     _pending.add('${jsonEncode(json, toEncodable: _fallback)}\n');
@@ -287,6 +288,12 @@ final class DebugLog extends ChangeNotifier {
     await flush();
     await _current?.close();
     _current = null;
+  }
+
+  @override
+  void dispose() {
+    _settings.removeListener(notifyListeners);
+    super.dispose();
   }
 
   Future<void> _drain() async {

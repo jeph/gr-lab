@@ -4,6 +4,7 @@ library;
 
 export 'src/ble/ble.dart';
 export 'src/ble/transport.dart';
+export 'src/camera_address.dart';
 export 'src/http/http.dart';
 export 'src/session/session.dart';
 export 'src/trace.dart';

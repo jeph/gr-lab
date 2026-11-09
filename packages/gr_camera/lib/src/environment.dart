@@ -27,7 +27,7 @@ final class GrCameraEnvironment {
     required BleTransport ble,
     required WifiNetworkControl wifi,
     required this.trace,
-    this.cameraHost = '192.168.0.1',
+    this.cameraHost = grCameraHost,
     this._httpFactory,
     this.sessionOptions = const GrSessionOptions(),
     this.wifiApprovalShown = const Stream.empty(),
@@ -54,8 +54,7 @@ final class GrCameraEnvironment {
   /// and Wi-Fi on its behalf.
   final TraceSink trace;
 
-  /// Address of the camera on its own access point; GR cameras serve their
-  /// HTTP API at `192.168.0.1`.
+  /// Address of the camera's HTTP API; [grCameraHost] for a real camera.
   final String cameraHost;
 
   /// Timing and retry settings for camera sessions this environment opens.

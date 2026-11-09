@@ -95,6 +95,10 @@ final class TestApp {
         models.connection.disconnect().whenComplete(() => closed = true),
       );
       await pumpUntil(tester, () => closed, reason: 'session close');
+      var flushed = false;
+      unawaited(_flushLibrary().whenComplete(() => flushed = true));
+      await pumpUntil(tester, () => flushed, reason: 'library flush');
+      models.library.dispose();
       models.idle.dispose();
       models.connection.dispose();
       await tester.runAsync(camera.close);
@@ -108,12 +112,20 @@ final class TestApp {
       await tester.runAsync(_deleteRoot);
     } else {
       await models.connection.disconnect();
+      await _flushLibrary();
+      models.library.dispose();
       models.idle.dispose();
       models.connection.dispose();
       await camera.close();
       await models.debugLog.close();
       await _deleteRoot();
     }
+  }
+
+  /// Waits until the library's listing and download records are on disk.
+  Future<void> _flushLibrary() async {
+    await models.library.model.flush();
+    await models.library.engine.flush();
   }
 
   Future<void> _deleteRoot() async {

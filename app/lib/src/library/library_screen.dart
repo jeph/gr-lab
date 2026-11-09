@@ -21,41 +21,14 @@ import 'package:grlab/src/widgets/group.dart';
 /// The camera's photos (mocks `b-library-ios` / `b-library-android`): camera
 /// pill and settings, filter chips, a grid by day, selection with a
 /// download bar, and the download mini bar.
-class LibraryScreen extends StatefulWidget {
+class LibraryScreen extends StatelessWidget {
   const new({super.key});
 
   @override
-  State<LibraryScreen> createState() => _LibraryScreenState();
-}
-
-class _LibraryScreenState extends State<LibraryScreen> {
-  late final AppModels _app = AppScope.of(context);
-  LibraryContext? _library;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_library == null) {
-      _library = LibraryContext.create(_app);
-      _app.cameras.addListener(_onCameras);
-      _onCameras();
-    }
-  }
-
-  void _onCameras() {
-    unawaited(_library!.model.setCamera(_app.cameras.current?.serial));
-  }
-
-  @override
-  void dispose() {
-    _app.cameras.removeListener(_onCameras);
-    _library?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) =>
-      LibraryScope(library: _library!, child: const _LibraryView());
+  Widget build(BuildContext context) => LibraryScope(
+    library: AppScope.of(context).library,
+    child: const _LibraryView(),
+  );
 }
 
 class _LibraryView extends StatefulWidget {

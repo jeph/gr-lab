@@ -34,17 +34,27 @@ final class SavedCamera {
 
   String get serial => paired.serialNumber;
 
-  /// Model without "RICOH", from [props] when connected.
-  String? model([GrProps? props]) =>
-      stripRicohPrefix(props?.model)?.nonEmpty ??
-      stripRicohPrefix(paired.modelName)?.nonEmpty;
+  /// Model without "RICOH", as the camera reported it at pairing. The
+  /// identity check over Wi-Fi refuses a camera whose `/v1/props` model
+  /// differs, so this is the connected camera's model too.
+  String? get model => _modelOf(paired);
+
+  /// Firmware version as the camera last reported it over Bluetooth.
+  String? get firmware => paired.firmwareRevision;
 
   /// Default display name for a newly paired camera.
   static String defaultName(GrPairedCamera paired) =>
-      stripRicohPrefix(paired.modelName)?.nonEmpty ?? 'GR camera';
+      _modelOf(paired) ?? 'GR camera';
 
-  SavedCamera copyWith({String? name, bool? wifiApproved}) => SavedCamera(
-    paired: paired,
+  static String? _modelOf(GrPairedCamera paired) =>
+      stripRicohPrefix(paired.modelName)?.nonEmpty;
+
+  SavedCamera copyWith({
+    String? name,
+    bool? wifiApproved,
+    GrPairedCamera? paired,
+  }) => SavedCamera(
+    paired: paired ?? this.paired,
     name: name ?? this.name,
     pairedAt: pairedAt,
     wifiApproved: wifiApproved ?? this.wifiApproved,
@@ -118,6 +128,18 @@ final class CameraStore extends ChangeNotifier {
     final i = _cameras.indexWhere((c) => c.serial == serial);
     if (i < 0 || _cameras[i].wifiApproved) return Future.value();
     _cameras[i] = _cameras[i].copyWith(wifiApproved: true);
+    return _save();
+  }
+
+  /// Keeps [serial]'s firmware version as the camera reported it on
+  /// linking, so a firmware update shows everywhere the camera's
+  /// identity does.
+  Future<void> recordFirmware(String serial, String firmware) {
+    final i = _cameras.indexWhere((c) => c.serial == serial);
+    if (i < 0 || _cameras[i].firmware == firmware) return Future.value();
+    _cameras[i] = _cameras[i].copyWith(
+      paired: _cameras[i].paired.withFirmwareRevision(firmware),
+    );
     return _save();
   }
 

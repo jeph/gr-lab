@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/camera/camera_top_bar.dart';
+import 'package:grlab/src/connection/camera_pill.dart' show formatBattery;
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/connection/idle_disconnect.dart' show IdleDisconnect;
 import 'package:grlab/src/data/settings.dart';
@@ -170,8 +171,7 @@ class _RemoteView extends StatelessWidget {
                       label: l10n.shootStatBattery,
                       value: battery == null
                           ? '—'
-                          : NumberFormat.percentPattern(locale)
-                                .format(battery / 100),
+                          : formatBattery(context, battery),
                     ),
                   ),
                 ],

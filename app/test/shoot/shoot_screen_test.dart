@@ -76,10 +76,11 @@ void main() {
     expect(app.camera.wlanOn, isFalse, reason: 'Remote needs no Wi-Fi');
     await pumpUntil(
       tester,
-      () => _stat(tester, 'shoot-stat-shots') == '1,234',
-      reason: 'shots left',
+      () =>
+          _stat(tester, 'shoot-stat-shots') == '1,234' &&
+          _stat(tester, 'shoot-stat-mode') == 'Av',
+      reason: 'shots left and mode',
     );
-    expect(_stat(tester, 'shoot-stat-mode'), 'Av');
     expect(_stat(tester, 'shoot-stat-battery'), '82%');
 
     final before = app.camera.photos.length;

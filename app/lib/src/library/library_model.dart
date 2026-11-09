@@ -4,17 +4,19 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
 
+import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/library/shot.dart';
 
 enum LibraryFilter { all, jpeg, raw, video, notDownloaded }
 
-/// The camera's photos as shots, kept per camera serial in
-/// `<cacheDir>/<serial>/library.json` so the grid appears at once and
-/// offline. Refreshes whenever the camera connects and when its
+/// The current camera's ([CameraStore.current]) photos as shots, kept per
+/// camera serial in `<cacheDir>/<serial>/library.json` so the grid appears
+/// at once and offline. Refreshes whenever the camera connects and when its
 /// `/v1/changes` socket reports a storage change.
 final class LibraryModel extends ChangeNotifier {
   new({
     required this.cacheDir,
+    required this.cameras,
     required this.link,
     required this.queue,
     this.changeDebounce = const Duration(milliseconds: 800),
@@ -22,9 +24,14 @@ final class LibraryModel extends ChangeNotifier {
     this.infoTimeout = const Duration(seconds: 10),
   }) : _infoRequests = SharedRequests(queue) {
     link.addListener(_onLink);
+    cameras.addListener(_followCurrent);
+    _followCurrent();
   }
 
   final Directory cacheDir;
+
+  /// The paired cameras; the model shows the current one's library.
+  final CameraStore cameras;
   final ValueListenable<CameraLibrary?> link;
 
   /// Shared with the image loader so the camera sees at most its
@@ -37,6 +44,11 @@ final class LibraryModel extends ChangeNotifier {
   /// frees its queue slot and the grid can retry.
   final Duration infoTimeout;
   final SharedRequests<FileInfo> _infoRequests;
+
+  /// [CameraStore.current]'s serial when last seen. [serial] becomes it
+  /// once the previous camera's listing is saved.
+  String? _current;
+  Future<void> _switched = Future.value();
 
   String? _serial;
   List<Shot>? _shots;
@@ -55,6 +67,8 @@ final class LibraryModel extends ChangeNotifier {
   int _generation = 0;
   bool _disposed = false;
 
+  /// The camera whose listing this is. Lags behind [CameraStore.current]
+  /// while the previous camera's listing is saved.
   String? get serial => _serial;
 
   /// Shots newest first; null until a listing or the cache is read.
@@ -63,8 +77,8 @@ final class LibraryModel extends ChangeNotifier {
   /// When the shown listing was read from the camera.
   DateTime? get listedAt => _listedAt;
 
-  /// The current camera is connected.
-  bool get connected => link.value != null && link.value!.serial == _serial;
+  /// The camera of the listing is connected.
+  bool get connected => _ownLink != null;
 
   bool get refreshing => _refreshing;
   bool get loadingCache => _loadingCache;
@@ -74,11 +88,35 @@ final class LibraryModel extends ChangeNotifier {
 
   FileInfo? info(CameraFile f) => _info[f.key];
 
+  /// Completes when the model has switched to the current camera's
+  /// library: its cached listing is read and, when it is connected, its
+  /// refresh has started.
+  Future<void> get switched => _switched;
+
+  /// The link when it belongs to the camera of the listing ([serial]),
+  /// else null. The one place that matches the connection to the listing:
+  /// the link follows whichever camera is connected, and [serial] can lag
+  /// behind it while a switch saves and reads cached listings, so nothing
+  /// for one camera reaches another's listing.
+  CameraLibrary? get _ownLink {
+    final current = link.value;
+    return current != null && current.serial == _serial ? current : null;
+  }
+
+  void _followCurrent() {
+    final serial = cameras.current?.serial;
+    if (serial == _current) return;
+    _current = serial;
+    _switched = _switchTo(serial);
+  }
+
   /// Switches to [serial]'s library, showing its cached listing at once and
-  /// refreshing it if that camera is connected.
-  Future<void> setCamera(String? serial) async {
+  /// refreshing it if that camera is connected. A switch superseded while
+  /// it saves the previous listing stops there.
+  Future<void> _switchTo(String? serial) async {
     if (serial == _serial) return;
     await _flushSave();
+    if (_disposed || serial != _current) return;
     final generation = ++_generation;
     _serial = serial;
     _shots = null;
@@ -113,9 +151,8 @@ final class LibraryModel extends ChangeNotifier {
 
   /// [reason] says why the listing is read, for the trace.
   Future<void> _refresh(String reason) async {
-    final current = link.value;
-    final serial = _serial;
-    if (current == null || serial == null || current.serial != serial) return;
+    final current = _ownLink;
+    if (current == null) return;
     if (_refreshing) {
       _refreshAgain = true;
       return;
@@ -169,15 +206,11 @@ final class LibraryModel extends ChangeNotifier {
   RequestTicket<FileInfo>? requestInfo(CameraFile f) {
     final known = _info[f.key];
     if (known != null) return RequestTicket.done(known);
-    final current = link.value;
-    final serial = _serial;
-    if (current == null || serial == null || current.serial != serial) {
-      return null;
-    }
+    final current = _ownLink;
+    if (current == null) return null;
     final generation = _generation;
-    return _infoRequests.join('$serial|$generation|${f.key}', current, (
-      _,
-    ) async {
+    final key = '${current.serial}|$generation|${f.key}';
+    return _infoRequests.join(key, current, (_) async {
       final info = await current.fileInfo(f);
       if (generation == _generation) {
         _info[f.key] = info;
@@ -189,9 +222,9 @@ final class LibraryModel extends ChangeNotifier {
   }
 
   void _onLink() {
-    if (_serial == null || _loadingCache) return;
-    final current = link.value;
-    if (current == null || current.serial != _serial) {
+    if (_loadingCache) return;
+    final current = _ownLink;
+    if (current == null) {
       _subscribeChanges(null);
       _notify();
       return;
@@ -270,6 +303,7 @@ final class LibraryModel extends ChangeNotifier {
     // A refresh or info request still in flight must not write afterwards.
     _generation++;
     link.removeListener(_onLink);
+    cameras.removeListener(_followCurrent);
     _changeTimer?.cancel();
     unawaited(_changes?.cancel());
     if (_saveTimer != null) {

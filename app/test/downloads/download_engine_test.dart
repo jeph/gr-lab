@@ -217,6 +217,20 @@ void main() {
     });
   });
 
+  test('a pair with only its JPEG saved counts as downloaded for the grid '
+      'but not for its RAW', () async {
+    h = await Harness.start(
+      config: FakeCameraConfig(httpLatency: Duration.zero, photos: card()),
+    );
+    final engine = h.engine();
+    final pair = h.shot('R0000001');
+    await engine.enqueue(serial, [pair], kinds: {FileKind.jpeg});
+    await engine.whenIdle();
+    expect(engine.isShotDownloaded(serial, pair), isTrue);
+    expect(engine.areFilesDownloaded(serial, [pair.jpeg!]), isTrue);
+    expect(engine.areFilesDownloaded(serial, [pair.raw!]), isFalse);
+  });
+
   group('duplicates', () {
     test('downloaded files download again when asked', () async {
       h = await Harness.start(

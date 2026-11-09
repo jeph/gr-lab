@@ -78,8 +78,7 @@ final class LooksModel extends ChangeNotifier {
   int? get loading => _loading;
 
   /// The model the connected camera reports, for the base images it offers.
-  GrModel? get model =>
-      GrModel.fromModelString(connection.camera?.paired.modelName ?? '');
+  GrModel? get model => connection.camera?.paired.model;
 
   /// A blob the camera produced, whose header bytes a new look copies
   /// (`newImageControl`): a slot's look, else a saved look's; null when
@@ -160,10 +159,7 @@ final class LooksModel extends ChangeNotifier {
     final session = connection.cameraSession;
     if (!identical(session, _session)) _attach(session);
     final looks = _looks;
-    final linked =
-        looks != null &&
-        (connection.status == ConnectionStatus.bluetooth ||
-            connection.status == ConnectionStatus.connected);
+    final linked = looks != null && connection.bleLinked;
     if (linked && looks.hasSlots == false) _state = SlotsState.unsupported;
     if (_visible && linked && _state == SlotsState.idle) {
       unawaited(_read(looks));

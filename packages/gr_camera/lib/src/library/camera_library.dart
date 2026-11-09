@@ -14,7 +14,7 @@ final class CameraLibrary {
   new _(
     this._http, {
     required this.serial,
-    required this.storages,
+    required this._storages,
     required this._changes,
     required this._checkWifi,
     required this._event,
@@ -36,7 +36,7 @@ final class CameraLibrary {
   }) => CameraLibrary._(
     http,
     serial: serial,
-    storages: storages,
+    storages: () => storages,
     changes: () => changes,
     checkWifi: checkWifi,
     event: (kind, fields) => trace?.call(
@@ -50,6 +50,7 @@ final class CameraLibrary {
   );
 
   final GrHttpClient _http;
+  final List<String?> Function() _storages;
   final Stream<GrChangeEvent>? Function() _changes;
   final Future<bool> Function()? _checkWifi;
   final void Function(String kind, Map<String, Object?> fields) _event;
@@ -57,9 +58,9 @@ final class CameraLibrary {
   /// The paired camera's serial number.
   final String serial;
 
-  /// Storages to list: `in` and `sd1` on a two-storage camera, a single
+  /// Storages to list now: `in` and `sd1` on a two-storage camera, a single
   /// null (no `storage=` parameter) on a camera with one.
-  final List<String?> storages;
+  List<String?> get storages => _storages();
 
   /// Emits when the camera's `/v1/changes` socket reports a storage change
   /// (a shot taken or deleted). Empty when the socket is not open.
@@ -71,6 +72,7 @@ final class CameraLibrary {
   /// the error is thrown when none does. [reason] says why the listing is
   /// read (`connected`, `storageChange`, `user`), for the trace.
   Future<List<CameraFile>> listFiles({String reason = 'request'}) async {
+    final storages = this.storages;
     _event('library.list', {'reason': reason, 'storages': storages});
     final files = <CameraFile>[];
     GrApiException? failure;
@@ -202,18 +204,20 @@ extension LibraryInternals on CameraLibrary {
       _event(kind, fields);
 }
 
-/// Builds a session's library; see [CameraLibrary].
+/// Builds a session's library; see [CameraLibrary]. [props] gives the
+/// session's newest `/v1/props`, which decides the storages each listing
+/// reads.
 CameraLibrary newCameraLibrary(
   GrHttpClient http, {
   required String serial,
-  required GrProps? props,
+  required GrProps? Function() props,
   required Stream<GrChangeEvent>? Function() changes,
   required Future<bool> Function() checkWifi,
   required void Function(String kind, Map<String, Object?> fields) event,
 }) => CameraLibrary._(
   http,
   serial: serial,
-  storages: listedStorages(props),
+  storages: () => listedStorages(props()),
   changes: changes,
   checkWifi: checkWifi,
   event: event,

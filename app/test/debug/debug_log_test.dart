@@ -82,6 +82,32 @@ void main() {
     expect((await open()).enabled, isFalse);
   });
 
+  test('follows the setting wherever it changes, and says so', () async {
+    final log = await open(defaultEnabled: false);
+    var notified = 0;
+    log.addListener(() => notified++);
+
+    settings.debugLogging = true;
+    expect((log.enabled, notified), (true, 1));
+    settings.debugLogging = false;
+    expect((log.enabled, notified), (false, 2));
+    // Cleared, the build's default applies again.
+    settings.debugLogging = null;
+    expect((log.enabled, notified), (false, 3));
+    log.dispose();
+    settings.debugLogging = true;
+    expect(notified, 3);
+
+    // Recording follows the setting too.
+    final reopened = await open(defaultEnabled: false)
+      ..sink(event(0));
+    settings.debugLogging = false;
+    reopened.sink(event(1));
+    await reopened.flush();
+    await settings.flush();
+    expect(reopened.sizeBytes, lineBytes);
+  });
+
   test('records nothing while off', () async {
     final log = await open(defaultEnabled: false);
     log

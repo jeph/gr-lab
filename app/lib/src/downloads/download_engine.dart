@@ -293,11 +293,18 @@ final class DownloadEngine extends ChangeNotifier {
   bool isFileDownloaded(String serial, CameraFile f) =>
       _downloaded[serial]?.contains(f.key) ?? false;
 
-  /// Some file of [shot] was saved to the phone. The app cannot see whether
-  /// it is still in the photo library, so this is a hint only: it never
-  /// stops a download.
+  /// Some file of [shot] was saved to the phone: the grid's mark and the
+  /// "Not downloaded" filter use this. The app cannot see whether it is
+  /// still in the photo library, so this is a hint only: it never stops a
+  /// download.
   bool isShotDownloaded(String serial, Shot shot) =>
       shot.files.any((f) => isFileDownloaded(serial, f));
+
+  /// Every one of [files] (one kind of a shot) was saved to the phone: the
+  /// viewer's per-kind download buttons use this, so a RAW+JPEG pair with
+  /// only the JPEG saved still offers its RAW.
+  bool areFilesDownloaded(String serial, Iterable<CameraFile> files) =>
+      files.every((f) => isFileDownloaded(serial, f));
 
   /// Files of [serial]'s camera in a queued or running job.
   bool isFileQueued(String serial, CameraFile f) =>

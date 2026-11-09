@@ -52,8 +52,9 @@ enum GrModel {
   /// server build it speaks.
   final GrModelFamily family;
 
-  /// Model string without the `RICOH ` prefix, as GR WORLD stores it.
-  String get shortName => modelString.substring('RICOH '.length);
+  /// Model string without `RICOH` ([stripRicohPrefix]), as GR WORLD stores
+  /// it.
+  String get shortName => stripRicohPrefix(modelString)!;
 
   /// Whether GR WORLD 2.0.0's scan accepts this code (ble.md §Camera models).
   bool get acceptedByGrWorld => this != GrModel.gr4x;
@@ -79,6 +80,10 @@ enum GrModel {
     return null;
   }
 }
+
+/// Model string with every `RICOH` removed and trimmed, as GR WORLD stores it.
+String? stripRicohPrefix(String? model) =>
+    model?.replaceAll('RICOH', '').trim();
 
 /// Advertised model code that keeps unknown values (PENTAX codes, future
 /// bodies) raw.

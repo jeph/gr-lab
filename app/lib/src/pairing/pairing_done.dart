@@ -33,7 +33,7 @@ class PairingDoneScreen extends StatelessWidget {
             final l10n = context.l10n;
             // Saving the camera finishes just after this page opens.
             final name = camera?.name;
-            final firmware = camera?.paired.firmwareRevision;
+            final firmware = camera?.firmware;
             return Column(
               key: const Key('pairing-done'),
               children: [

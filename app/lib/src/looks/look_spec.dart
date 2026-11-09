@@ -165,69 +165,40 @@ String valueLabel(
   BleImageControlParameter parameter,
   int value,
 ) {
-  final choices = _choiceLabels(l10n, parameter);
+  final choices = imageControlChoices(parameter);
   if (choices != null && value >= 0 && value < choices.length) {
-    return choices[value];
+    return _choiceLabel(l10n, choices[value]);
   }
   final number = NumberFormat.decimalPattern(l10n.localeName).format(value);
   return value > 0 ? '+$number' : number;
 }
 
-/// Names of [parameter]'s values by wire value (GR WORLD's formatter,
-/// research/protocol/image-control.md §4); null for a number.
-List<String>? _choiceLabels(
-  AppLocalizations l10n,
-  BleImageControlParameter parameter,
-) {
-  final lowMediumHigh = [
-    l10n.looksValueLow,
-    l10n.looksValueMedium,
-    l10n.looksValueHigh,
-  ];
-  return switch (parameter) {
-    BleImageControlParameter.toningMonotone => [
-      l10n.looksValueOff,
-      l10n.looksValueSepia,
-      l10n.looksValueRed,
-      l10n.looksValueGreen,
-      l10n.looksValueBlue,
-      l10n.looksValuePurple,
-    ],
-    BleImageControlParameter.toningCinema ||
-    BleImageControlParameter.grainStrength => lowMediumHigh,
-    BleImageControlParameter.toningBleachBypass => [
-      l10n.looksValueOff,
-      l10n.looksValueNormal,
-      l10n.looksValueCool,
-      l10n.looksValueWarm,
-    ],
-    BleImageControlParameter.toningHdr => [
-      l10n.looksValueOff,
-      l10n.looksValueBlackAndWhite,
-      l10n.looksValueSepia,
-    ],
-    BleImageControlParameter.filterEffect => [
-      l10n.looksValueOff,
-      for (var n = 1; n <= 4; n++) l10n.looksValueCustomFilter(n),
-    ],
-    BleImageControlParameter.grain => [l10n.looksValueOff, l10n.looksValueOn],
-    BleImageControlParameter.grainSize => [
-      l10n.looksValueSmall,
-      l10n.looksValueMedium,
-      l10n.looksValueLarge,
-    ],
-    BleImageControlParameter.hdrStrength => [
-      l10n.looksValueOff,
-      ...lowMediumHigh,
-    ],
-    BleImageControlParameter.crossProcess => [
-      l10n.looksValueBasic,
-      l10n.looksValueMagenta,
-      l10n.looksValueYellow,
-    ],
-    _ => null,
-  };
-}
+String _choiceLabel(AppLocalizations l10n, ImageControlChoice choice) =>
+    switch (choice) {
+      ImageControlChoice.off => l10n.looksValueOff,
+      ImageControlChoice.sepia => l10n.looksValueSepia,
+      ImageControlChoice.red => l10n.looksValueRed,
+      ImageControlChoice.green => l10n.looksValueGreen,
+      ImageControlChoice.blue => l10n.looksValueBlue,
+      ImageControlChoice.purple => l10n.looksValuePurple,
+      ImageControlChoice.low => l10n.looksValueLow,
+      ImageControlChoice.medium => l10n.looksValueMedium,
+      ImageControlChoice.high => l10n.looksValueHigh,
+      ImageControlChoice.normal => l10n.looksValueNormal,
+      ImageControlChoice.cool => l10n.looksValueCool,
+      ImageControlChoice.warm => l10n.looksValueWarm,
+      ImageControlChoice.blackAndWhite => l10n.looksValueBlackAndWhite,
+      ImageControlChoice.customFilter1 => l10n.looksValueCustomFilter(1),
+      ImageControlChoice.customFilter2 => l10n.looksValueCustomFilter(2),
+      ImageControlChoice.customFilter3 => l10n.looksValueCustomFilter(3),
+      ImageControlChoice.customFilter4 => l10n.looksValueCustomFilter(4),
+      ImageControlChoice.on => l10n.looksValueOn,
+      ImageControlChoice.small => l10n.looksValueSmall,
+      ImageControlChoice.large => l10n.looksValueLarge,
+      ImageControlChoice.basic => l10n.looksValueBasic,
+      ImageControlChoice.magenta => l10n.looksValueMagenta,
+      ImageControlChoice.yellow => l10n.looksValueYellow,
+    };
 
 /// One line about [look] (mock `.lookcard .d`): the base image, then each
 /// adjustment that is not neutral, as `Contrast +1`. [withBase] false

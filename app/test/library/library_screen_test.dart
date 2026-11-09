@@ -255,6 +255,8 @@ void main() {
     );
     await _openLibrary(tester);
     await pumpUntilFound(tester, _cell(raw));
+    // The shared listing shows at once, while the route still slides in.
+    await tester.pump(const Duration(milliseconds: 500));
     await tester.longPress(_cell(raw));
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('selection-download:raw')));

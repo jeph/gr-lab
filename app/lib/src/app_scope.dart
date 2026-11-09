@@ -10,6 +10,7 @@ import 'package:grlab/src/data/settings.dart';
 import 'package:grlab/src/debug/debug_log.dart';
 import 'package:grlab/src/downloads/download_engine.dart';
 import 'package:grlab/src/library/camera_link.dart';
+import 'package:grlab/src/library/library_scope.dart';
 import 'package:grlab/src/looks/looks_store.dart';
 import 'package:grlab/src/services.dart';
 
@@ -23,13 +24,10 @@ final class AppModels {
     required this.connection,
     required this.debugLog,
     required this.looks,
-  }) : idle = IdleDisconnect(connection: connection, settings: settings),
-       downloads = DownloadEngine(
-         dataDir: services.dataDir,
-         cacheDir: services.cacheDir,
-         media: services.media,
-         link: ConnectionLink(connection),
-       );
+    required this.idle,
+    required this.downloads,
+    required this.library,
+  });
 
   static Future<AppModels> load(AppServices services) async {
     final settings = await SettingsController.load(services.dataDir);
@@ -51,13 +49,36 @@ final class AppModels {
       nativeLogging = debugLog.enabled;
       unawaited(services.camera.setNativeLogging(enabled: nativeLogging));
     });
+    final connection = ConnectionController(
+      services: services,
+      cameras: cameras,
+    );
+    final idle = IdleDisconnect(connection: connection, settings: settings);
+    // One link for the app: the Library and the download engine see the
+    // same camera library.
+    final link = ConnectionLink(connection);
+    final downloads = DownloadEngine(
+      dataDir: services.dataDir,
+      cacheDir: services.cacheDir,
+      media: services.media,
+      link: link,
+    );
     return AppModels(
       services: services,
       settings: settings,
       cameras: cameras,
-      connection: ConnectionController(services: services, cameras: cameras),
+      connection: connection,
       debugLog: debugLog,
       looks: looks,
+      idle: idle,
+      downloads: downloads,
+      library: LibraryContext.create(
+        services: services,
+        cameras: cameras,
+        link: link,
+        downloads: downloads,
+        idle: idle,
+      ),
     );
   }
 
@@ -81,6 +102,10 @@ final class AppModels {
   /// when the camera pages close finishes in it, and the queue carries on
   /// when they open again.
   final DownloadEngine downloads;
+
+  /// The current camera's photos, for the Library and the Cameras screen;
+  /// its cached listing is read at start.
+  final LibraryContext library;
 
   /// Lets screens know when another route covers them (the Cameras screen
   /// stops scanning then).

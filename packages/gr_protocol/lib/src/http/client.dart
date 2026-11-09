@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:gr_protocol/src/camera_address.dart';
 import 'package:gr_protocol/src/http/changes.dart';
 import 'package:gr_protocol/src/http/errors.dart';
 import 'package:gr_protocol/src/http/json.dart';
@@ -113,7 +114,7 @@ final class GrHttpClient {
   /// Client for the camera at [host]; nothing connects until a request.
   new(
     this.host, {
-    this.port = 80,
+    this.port = grCameraHttpPort,
     HttpClient? httpClient,
     this._trace,
     this.timeouts = const GrHttpTimeouts(),
@@ -122,10 +123,10 @@ final class GrHttpClient {
            httpClient ?? (HttpClient()..connectionTimeout = timeouts.connect),
        _ownsHttp = httpClient == null;
 
-  /// Camera address, `192.168.0.1` on the camera's own access point.
+  /// Camera address, [grCameraHost] on the camera's own access point.
   final String host;
 
-  /// HTTP port of the camera's web API.
+  /// HTTP port of the camera's web API, [grCameraHttpPort] on a camera.
   final int port;
 
   /// Per-route deadlines.

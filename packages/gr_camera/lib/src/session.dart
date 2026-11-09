@@ -6,6 +6,7 @@ import 'package:gr_camera/src/looks/camera_looks.dart';
 import 'package:gr_camera/src/platform/wifi_control.dart';
 import 'package:gr_camera/src/shoot/live_view.dart';
 import 'package:gr_camera/src/shoot/remote.dart';
+import 'package:gr_camera/src/status.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 
 /// What a [CameraSession] asks the app before and around joining the
@@ -72,13 +73,18 @@ final class CameraSession {
         options: _environment.sessionOptions,
         trace: _environment.trace,
         httpFactory: _environment.httpFactory,
-      );
+      ) {
+    status = createCameraStatus(_session, _environment);
+  }
 
   final GrSession _session;
   final GrCameraEnvironment _environment;
   final _ConsentWifi _wifi;
 
-  /// The serial [connectBluetooth] was asked for.
+  /// The camera's battery and storages, for the whole session.
+  late final CameraStatus status;
+
+  /// The paired camera's serial number, which [connectBluetooth] links to.
   String? _serial;
   CameraLibrary? _library;
 
@@ -101,7 +107,21 @@ final class CameraSession {
   /// or reported turning off.
   bool get cameraOff => _session.cameraOff;
 
-  /// `/v1/props` from the last identity check over Wi-Fi.
+  /// The Bluetooth link is up.
+  bool get bleLinked => _session.ble != null;
+
+  /// The Bluetooth link dropped on its own and the session is linking
+  /// again.
+  bool get bleReconnecting => _session.bleReconnecting;
+
+  /// The camera's Wi-Fi was lost and the session is getting it back.
+  bool get wifiRecovering => _session.wifiRecovering;
+
+  /// The firmware version the camera reported over Bluetooth when it last
+  /// linked; null before the first link.
+  String? get firmwareRevision => _session.identity?.firmwareRevision;
+
+  /// The newest `/v1/props` the session read over Wi-Fi.
   GrProps? get props => _session.props;
 
   /// The camera network's name, once the session has read it.
@@ -111,7 +131,10 @@ final class CameraSession {
   /// recorded, matching [serial]. A camera that is off is not woken; it
   /// drops the link soon after, and [startWifi] links again. Throws
   /// [GrSessionException]; check [GrSessionException.needsPairing].
-  Future<void> connectBluetooth({required String deviceId, String? serial}) {
+  Future<void> connectBluetooth({
+    required String deviceId,
+    required String serial,
+  }) {
     _serial = serial;
     return _session.connectBluetooth(deviceId: deviceId, serial: serial);
   }
@@ -141,6 +164,7 @@ final class CameraSession {
   /// whose wake is still in flight) is turned off again; camera power is
   /// separate from the phone's Wi-Fi.
   Future<void> close({bool powerOffIfWoken = false}) {
+    status.close();
     _remote?.close();
     _looks?.close();
     _liveView?.close();
@@ -163,7 +187,7 @@ final class CameraSession {
     // a new change socket for each verified one, so the socket marks the
     // link.
     final link = _session.changes;
-    final serial = _serial ?? _session.props?.serialNo;
+    final serial = _serial;
     if (http == null ||
         link == null ||
         serial == null ||
@@ -180,7 +204,7 @@ final class CameraSession {
     return _library = newCameraLibrary(
       http,
       serial: serial,
-      props: _session.props,
+      props: () => _session.props,
       // Read when a view-model listens; a later link's socket must not
       // reach this library.
       changes: () => identical(_session.changes, link) ? link.events : null,

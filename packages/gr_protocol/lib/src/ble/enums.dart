@@ -257,9 +257,38 @@ enum BleDriveMode implements BleWireEnum {
   @override
   String get label => name;
 
-  /// True for the 10 s self-timer variants that GR WORLD's shutter handler
-  /// cancels instead of releasing (ble.md §Remote shooting).
-  bool get isSelfTimer10s => const {1, 5, 8, 11, 14}.contains(wire);
+  /// Self-timer length of this drive mode (ble.md, Drive mode row, and
+  /// `def_ble.yaml` for the PENTAX values), or null for none. IR remote
+  /// delays are not self-timers.
+  Duration? get selfTimer => switch (this) {
+    selfTimer10s ||
+    bracketSelfTimer10s ||
+    multipleExposureSelfTimer10s ||
+    intervalSelfTimer10s ||
+    intervalCompositeSelfTimer10s => const Duration(seconds: 10),
+    selfTimer2s ||
+    bracketSelfTimer2s ||
+    multipleExposureSelfTimer2s ||
+    intervalSelfTimer2s ||
+    intervalCompositeSelfTimer2s ||
+    continuousHighSelfTimer2s ||
+    continuousMediumSelfTimer2s ||
+    continuousLowSelfTimer2s ||
+    intervalMovieSelfTimer2s ||
+    motionBracketSelfTimer2s ||
+    depthOfFieldBracketSelfTimer2s ||
+    mirrorUpSelfTimer2s ||
+    starStreamSelfTimer2s => const Duration(seconds: 2),
+    continuousHighSelfTimer12s ||
+    continuousMediumSelfTimer12s ||
+    continuousLowSelfTimer12s ||
+    intervalMovieSelfTimer12s ||
+    motionBracketSelfTimer12s ||
+    depthOfFieldBracketSelfTimer12s ||
+    mirrorUpSelfTimer12s ||
+    starStreamSelfTimer12s => const Duration(seconds: 12),
+    _ => null,
+  };
 }
 
 /// Shooting Mode byte 0 (exposure program). GR WORLD decodes 0–6 and 19;

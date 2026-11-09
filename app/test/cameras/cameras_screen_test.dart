@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
@@ -393,6 +395,55 @@ void main() {
     await pumpUntilFound(tester, find.byKey(const Key('cameras-welcome')));
     expect(app.models.cameras.cameras, isEmpty);
     expect(app.models.connection.status, ConnectionStatus.offline);
+
+    await app.dispose();
+  });
+
+  testWidgets('the card shows the Library listing as it changes, with the '
+      'images the grid loaded', (tester) async {
+    final app = await _start(tester);
+    final model = app.models.library.model;
+    await pumpUntilFound(tester, find.byKey(const Key('camera-card-linked')));
+    expect(find.byKey(const Key('camera-card-thumbs')), findsNothing);
+
+    await _tap(tester, const Key('camera-card-library'));
+    await _untilStatus(tester, app, ConnectionStatus.connected);
+    await pumpUntil(tester, () => model.shots != null, reason: 'listing');
+
+    // A shot taken while the Library is open shows after a refresh.
+    const added = 'sd1|101RICOH/R0000271.JPG';
+    app.camera.addPhoto(
+      FakePhoto('101RICOH', 'R0000271.JPG', DateTime(2026, 11, 6, 9)),
+    );
+    unawaited(model.refresh());
+    await pumpUntil(
+      tester,
+      () => model.shots!.first.primary.key == added,
+      reason: 'listing with the new shot',
+    );
+    final newest = [for (final s in model.shots!.take(4)) s.primary.key];
+    for (final key in newest) {
+      await pumpUntilFound(tester, find.byKey(ValueKey('image:view:$key')));
+    }
+
+    await _tap(tester, const Key('camera-pill'));
+    await _tap(tester, const Key('camera-sheet-disconnect'));
+    await pumpUntilFound(tester, find.byKey(_cameras));
+    await pumpUntilFound(
+      tester,
+      find.byKey(const ValueKey('camera-card-thumb:$added')),
+    );
+    final thumbs = find.descendant(
+      of: find.byKey(const Key('camera-card-thumbs')),
+      matching: find.byType(Image),
+    );
+    expect(
+      [
+        for (final e in thumbs.evaluate())
+          (e.widget.key! as ValueKey<String>).value,
+      ],
+      [for (final key in newest) 'camera-card-thumb:$key'],
+    );
 
     await app.dispose();
   });

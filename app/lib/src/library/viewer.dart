@@ -780,7 +780,7 @@ class _DownloadAction extends StatelessWidget {
     final failed = jobs
         .where((j) => j.state == DownloadState.failed)
         .firstOrNull;
-    final downloaded = files.every((f) => engine.isFileDownloaded(serial, f));
+    final downloaded = engine.areFilesDownloaded(serial, files);
     final (IconData icon, String text) = any(DownloadState.running)
         ? (Icons.downloading_rounded, l10n.viewerDownloading)
         : any(DownloadState.queued)

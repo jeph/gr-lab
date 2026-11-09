@@ -118,11 +118,12 @@ final class ShootModel extends ChangeNotifier {
   /// Mode dial position, from Shooting Mode.
   BleShootingMode? get exposure => _remote?.exposure;
 
-  /// Battery percent, from Battery Level.
-  int? get battery => _remote?.battery;
+  /// Battery percent, as the session's camera status has it.
+  int? get battery => connection.cameraStatus?.battery;
 
-  /// Pictures that fit on the storage in use, from Storage Information.
-  int? get shotsLeft => _remote?.shotsLeft;
+  /// Pictures that fit on the storage in use, as the session's camera
+  /// status has it.
+  int? get shotsLeft => connection.cameraStatus?.shotsLeft;
 
   /// Drive Mode as the camera reports it.
   BleEnumValue<BleDriveMode>? get drive => _remote?.drive;
@@ -143,8 +144,8 @@ final class ShootModel extends ChangeNotifier {
   /// Bluetooth link is up.
   bool get canShoot => _power == ShootPower.ready && linked;
 
-  /// The Bluetooth link to the camera is up.
-  bool get linked => _remote?.linked ?? false;
+  /// The Bluetooth link is up ([ConnectionController.bleLinked]).
+  bool get linked => connection.bleLinked;
 
   ShootMode get mode => settings.shootMode;
   set mode(ShootMode value) {
@@ -223,10 +224,7 @@ final class ShootModel extends ChangeNotifier {
     final session = connection.cameraSession;
     if (!identical(session, _session)) _attach(session);
     final remote = _remote;
-    final linked =
-        remote != null &&
-        (connection.status == ConnectionStatus.bluetooth ||
-            connection.status == ConnectionStatus.connected);
+    final linked = remote != null && connection.bleLinked;
     if (_power == ShootPower.ready && connection.cameraOff) {
       // Switched off with its power button, or by the session after a
       // failed Wi-Fi recovery.

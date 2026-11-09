@@ -161,7 +161,7 @@ extension on FakeGrCamera {
     'exposureModeList': _exposureModes,
     'exposureMode': _exposureModeText,
     for (final key in _settingLists.keys) ...{
-      key: key == 'shootMode' ? _shootModes[_driveMode] : _settings[key],
+      key: key == 'shootMode' ? _shootMode : _settings[key],
       '${key}List': _listFor(key),
     },
     'focusMode': 'af',

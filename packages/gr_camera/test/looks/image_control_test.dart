@@ -141,4 +141,39 @@ void main() {
       isNot(contains(BleImageControlBase.standardMono)),
     );
   });
+
+  test('a choice range covers its named values up to the last one', () {
+    for (final p in BleImageControlParameter.values) {
+      final range = imageControlRange(p);
+      final choices = imageControlChoices(p);
+      if (range?.kind != ImageControlValueKind.choice) {
+        expect(
+          range == null || choices == null,
+          isTrue,
+          reason: '$p: a number has no names',
+        );
+        continue;
+      }
+      expect(choices, isNotNull, reason: '$p');
+      expect(range!.min, greaterThanOrEqualTo(0), reason: '$p');
+      expect(range.max, choices!.length - 1, reason: '$p');
+    }
+    // Named, but its custom filters' values are unknown, so not editable.
+    expect(imageControlChoices(BleImageControlParameter.filterEffect), [
+      ImageControlChoice.off,
+      ImageControlChoice.customFilter1,
+      ImageControlChoice.customFilter2,
+      ImageControlChoice.customFilter3,
+      ImageControlChoice.customFilter4,
+    ]);
+    expect(imageControlRange(BleImageControlParameter.filterEffect), isNull);
+    // GR WORLD names Off, but the camera starts these at 1.
+    for (final p in [
+      BleImageControlParameter.toningBleachBypass,
+      BleImageControlParameter.hdrStrength,
+    ]) {
+      expect(imageControlChoices(p)?.first, ImageControlChoice.off);
+      expect((imageControlRange(p)!.min, imageControlRange(p)!.max), (1, 3));
+    }
+  });
 }

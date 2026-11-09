@@ -251,7 +251,10 @@ final class CameraLiveView extends ChangeNotifier {
           _ => null,
         },
       });
-      if (answer.setting(key) == null) answer = await http.props();
+      if (answer.setting(key) == null) {
+        answer = await http.props();
+        _session.recordProps(answer);
+      }
       if (_closed) return;
       _settings.succeeded(change, key, answer);
       notifyListeners();
@@ -285,6 +288,7 @@ final class CameraLiveView extends ChangeNotifier {
       if (_settings.props == null) {
         final since = _settings.startRead();
         final props = await http.props();
+        _session.recordProps(props);
         // Image Sync honours a tap only in AF and inside
         // `focusEffectiveArea` (remote-shooting.md §3.1-3.2).
         _log('props.focus', {
@@ -469,6 +473,7 @@ final class CameraLiveView extends ChangeNotifier {
     try {
       final props = await http.props();
       if (_closed) return true;
+      _session.recordProps(props);
       final summary = {
         'exposureMode': props.exposureMode,
         for (final key in const ['av', 'tv', 'sv', 'xv']) ...{

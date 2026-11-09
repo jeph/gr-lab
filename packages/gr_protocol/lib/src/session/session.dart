@@ -4,8 +4,10 @@ import 'package:gr_protocol/src/ble/advertising.dart';
 import 'package:gr_protocol/src/ble/catalog.dart';
 import 'package:gr_protocol/src/ble/client.dart';
 import 'package:gr_protocol/src/ble/enums.dart';
+import 'package:gr_protocol/src/ble/model.dart';
 import 'package:gr_protocol/src/ble/transport.dart';
 import 'package:gr_protocol/src/ble/wake.dart';
+import 'package:gr_protocol/src/camera_address.dart';
 import 'package:gr_protocol/src/http/changes.dart';
 import 'package:gr_protocol/src/http/client.dart';
 import 'package:gr_protocol/src/http/liveness.dart';
@@ -247,10 +249,6 @@ List<String> verifyCameraProps(
   return problems;
 }
 
-/// Model string with every `RICOH` removed and trimmed, as GR WORLD stores it.
-String? stripRicohPrefix(String? model) =>
-    model?.replaceAll('RICOH', '').trim();
-
 /// One camera connection: BLE link, camera Wi-Fi, HTTP client, change
 /// WebSocket and liveness monitor, with independent BLE and Wi-Fi recovery
 /// (connection-lifecycle.md §9: a BLE blip never tears down Wi-Fi, and Wi-Fi
@@ -261,7 +259,7 @@ final class GrSession {
   new({
     required this.transport,
     required this.wifi,
-    this.host = '192.168.0.1',
+    this.host = grCameraHost,
     this.options = const GrSessionOptions(),
     this._trace,
     GrHttpClient Function(String host, TraceSink? trace)? httpFactory,
@@ -285,6 +283,7 @@ final class GrSession {
   final GrHttpClient Function(String host, TraceSink? trace) _httpFactory;
 
   final StreamController<GrSessionEvent> _events = StreamController.broadcast();
+  final StreamController<GrProps> _propsUpdates = StreamController.broadcast();
   GrSessionPhase _phase = GrSessionPhase.idle;
 
   String? _serial;
@@ -319,6 +318,10 @@ final class GrSession {
   /// The session turned the camera off; the link drop that follows is
   /// reported as expected.
   bool _poweringOff = false;
+
+  /// The link dropped without the session turning the camera off, and the
+  /// session is getting it back ([bleReconnecting]).
+  bool _bleLostUnexpectedly = false;
 
   /// The wake running now (a Wi-Fi start's or recovery's, or [wake]'s); the
   /// next one waits for it, so two wakes never overlap.
@@ -361,6 +364,10 @@ final class GrSession {
   Future<void>? _bleReconnect;
   Future<void>? _wifiRecovery;
 
+  /// Set from `wifi.lost` until `recovery.done` or `recovery.gaveUp`, so
+  /// readers notified by those events see the outcome.
+  bool _wifiRecovering = false;
+
   /// Every step, in order (broadcast).
   Stream<GrSessionEvent> get events => _events.stream;
 
@@ -369,6 +376,16 @@ final class GrSession {
 
   /// Null while BLE is down (reconnecting) or before connecting.
   GrBleClient? get ble => _ble;
+
+  /// The link dropped on its own (not after the session turned the camera
+  /// off) and the session is linking again; false once it is back, or
+  /// when the reconnect gave up.
+  bool get bleReconnecting => _ble == null && _bleLostUnexpectedly;
+
+  /// The camera's Wi-Fi was lost and is being got back: from `wifi.lost`
+  /// until `recovery.done` or `recovery.gaveUp`, through every phase the
+  /// recovery passes (waking, WLAN-on, joining).
+  bool get wifiRecovering => _wifiRecovering;
 
   /// Model, serial and other identity read over BLE at connect.
   GrBleIdentity? get identity => _identity;
@@ -392,8 +409,13 @@ final class GrSession {
   /// The camera HTTP client; non-null from [GrSessionPhase.verifying] on.
   GrHttpClient? get http => _http;
 
-  /// `/v1/props` from the last successful identity check.
+  /// The newest `/v1/props` the session read: the identity check, then
+  /// every liveness poll while Wi-Fi services run. Kept after the Wi-Fi
+  /// goes, as the last reading.
   GrProps? get props => _props;
+
+  /// Every `/v1/props` reading [props] takes (broadcast).
+  Stream<GrProps> get propsUpdates => _propsUpdates.stream;
 
   /// The `/v1/changes` socket; non-null while Wi-Fi services run.
   GrChangesSocket? get changes => _changes;
@@ -851,6 +873,7 @@ final class GrSession {
     }
     _set(GrSessionPhase.closed, 'closed');
     await _events.close();
+    await _propsUpdates.close();
   }
 
   // ------------------------------------------------------------------ BLE
@@ -956,6 +979,7 @@ final class GrSession {
       rethrow;
     }
     _ble = client;
+    _bleLostUnexpectedly = false;
     _emit('ble.ready', {
       'missingCharacteristics': report.missing.length,
       'identity': {
@@ -1222,6 +1246,7 @@ final class GrSession {
       _emit('ble.lostWhileWaking', fields);
       return;
     }
+    _bleLostUnexpectedly = !_poweringOff && !d.bondRejected;
     _emit('ble.lost', {...fields, if (_poweringOff) 'afterPowerOff': true});
     _poweringOff = false;
     if (d.bondRejected) {
@@ -1270,11 +1295,13 @@ final class GrSession {
         _emit('ble.reconnectFailed', {'attempt': attempt + 1, 'error': '$e'});
         if (e is! GrSessionException) continue;
         if (e.needsPairing) {
+          _bleLostUnexpectedly = false;
           _emit('ble.needsPairing');
           return false;
         }
       }
     }
+    _bleLostUnexpectedly = false;
     _emit('ble.gaveUp', {'attempts': options.maxBleReconnectAttempts});
     return false;
   }
@@ -1425,7 +1452,7 @@ final class GrSession {
             'joined a different camera: ${problems.join('; ')}',
           );
         }
-        _props = props;
+        _setProps(props);
         _emit('verify.ok', {
           'probes': probes,
           'model': props.model,
@@ -1493,7 +1520,27 @@ final class GrSession {
       }),
     );
     _lostSub = wifi.lost.listen((_) => _wifiLost('network'));
+    // Ends with the monitor: stopping it closes its polls.
+    monitor.polls.listen((poll) {
+      final props = poll.props;
+      if (poll.ok && props != null && identical(_monitor, monitor)) {
+        _setProps(props);
+      }
+    });
     monitor.start();
+  }
+
+  /// Records a `/v1/props` reading taken on this session's HTTP client
+  /// outside the session (live view's settings reads), so [props] and
+  /// [propsUpdates] stay the newest reading from any source.
+  void recordProps(GrProps props) {
+    if (_closing) return;
+    _setProps(props);
+  }
+
+  void _setProps(GrProps props) {
+    _props = props;
+    if (!_propsUpdates.isClosed) _propsUpdates.add(props);
   }
 
   /// Whether the camera still answers over Wi-Fi, for a caller whose
@@ -1512,8 +1559,12 @@ final class GrSession {
   /// off): emits `wifi.lost`, then recovers.
   void _wifiLost(String reason, [Map<String, Object?> fields = const {}]) {
     if (_closing || _monitor == null || _wifiRecovery != null) return;
+    _wifiRecovering = true;
     _emit('wifi.lost', {'reason': reason, ...fields});
-    _wifiRecovery = _recoverWifi().whenComplete(() => _wifiRecovery = null);
+    _wifiRecovery = _recoverWifi().whenComplete(() {
+      _wifiRecovery = null;
+      _wifiRecovering = false;
+    });
   }
 
   Future<void> _stopWifiServices() async {
@@ -1588,6 +1639,7 @@ final class GrSession {
           await _joinAndVerify();
         }
         await _startWifiServices(GrSessionPhase.recovering);
+        _wifiRecovering = false;
         _set(GrSessionPhase.connected, 'recovery.done', {
           'attempt': attempt + 1,
         });
@@ -1601,6 +1653,7 @@ final class GrSession {
         }
       }
     }
+    _wifiRecovering = false;
     _set(GrSessionPhase.lost, 'recovery.gaveUp', {
       'attempts': attempts,
       if (declined) 'declined': true,
@@ -1641,7 +1694,7 @@ final class GrSession {
       ).isNotEmpty) {
         return false;
       }
-      _props = props;
+      _setProps(props);
       return true;
     } on Object {
       return false;

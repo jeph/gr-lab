@@ -152,7 +152,10 @@ final class ConnectionController extends ChangeNotifier {
 
   ConnectionStatus _status = ConnectionStatus.offline;
   ConnectStep? _step;
-  bool _reconnecting = false;
+
+  /// The Wi-Fi join under way is a quiet rejoin after a loss, or one
+  /// waiting to run ([_scheduleRedial]).
+  bool _quietRejoin = false;
   ConnectFailure? _failure;
   CameraSession? _session;
   StreamSubscription<GrSessionEvent>? _events;
@@ -202,9 +205,23 @@ final class ConnectionController extends ChangeNotifier {
   /// The link being set up while [status] is connecting.
   ConnectStep? get step => _step;
 
-  /// Getting a lost link back: Bluetooth while [status] is bluetooth, the
-  /// camera's Wi-Fi while the Library is open.
-  bool get reconnecting => _reconnecting;
+  /// Getting a lost link back: Bluetooth while [status] is bluetooth and
+  /// the camera's Wi-Fi while connected (both as the session reports
+  /// them), or a quiet rejoin of the Wi-Fi while connecting.
+  bool get reconnecting => switch (_status) {
+    ConnectionStatus.connecting => _quietRejoin,
+    ConnectionStatus.bluetooth => _session?.bleReconnecting ?? false,
+    ConnectionStatus.connected => _session?.wifiRecovering ?? false,
+    ConnectionStatus.offline || ConnectionStatus.failed => false,
+  };
+
+  /// Bluetooth is linked and usable: the connection is set up and the
+  /// session's link is up now. Shoot and Looks talk to the camera only
+  /// then.
+  bool get bleLinked =>
+      (_status == ConnectionStatus.bluetooth ||
+          _status == ConnectionStatus.connected) &&
+      (_session?.bleLinked ?? false);
 
   /// Why the last attempt failed. Set with [ConnectionStatus.failed] for
   /// Bluetooth, and next to [ConnectionStatus.bluetooth] when only the
@@ -247,8 +264,9 @@ final class ConnectionController extends ChangeNotifier {
   /// until the session ends.
   CameraSession? get cameraSession => _session;
 
-  /// `/v1/props` from the identity check.
-  GrProps? get props => _session?.props;
+  /// The camera's battery and storages for this session; null without
+  /// one. Its changes notify this controller's listeners.
+  CameraStatus? get cameraStatus => _session?.status;
 
   /// The camera network's name, once the session has read it.
   String? get ssid => _session?.ssid;
@@ -396,7 +414,7 @@ final class ConnectionController extends ChangeNotifier {
     _declineConsent();
     _status = ConnectionStatus.bluetooth;
     _step = null;
-    _reconnecting = false;
+    _quietRejoin = false;
     _failure = null;
     _idleClosedAfter = idleFor;
     notifyListeners();
@@ -421,7 +439,7 @@ final class ConnectionController extends ChangeNotifier {
     if (target == null) return;
     final generation = ++_generation;
     _failure = null;
-    _reconnecting = false;
+    _quietRejoin = false;
     _bleGaveUp = false;
     _status = ConnectionStatus.connecting;
     _step = ConnectStep.bluetooth;
@@ -464,6 +482,7 @@ final class ConnectionController extends ChangeNotifier {
     );
     _session = session;
     _events = session.events.listen((e) => _onEvent(generation, e));
+    session.status.addListener(notifyListeners);
     try {
       await session.connectBluetooth(
         deviceId: target.paired.deviceId,
@@ -488,7 +507,7 @@ final class ConnectionController extends ChangeNotifier {
     bool stale() => generation != _generation || run != _wifiRun;
     _failure = null;
     _idleClosedAfter = null;
-    _reconnecting = quiet;
+    _quietRejoin = quiet;
     _status = ConnectionStatus.connecting;
     _step = ConnectStep.wifi;
     notifyListeners();
@@ -505,7 +524,7 @@ final class ConnectionController extends ChangeNotifier {
     if (stale()) return;
     _status = ConnectionStatus.connected;
     _step = null;
-    _reconnecting = false;
+    _quietRejoin = false;
     _redials = 0;
     notifyListeners();
     _wifiUp.add(null);
@@ -524,7 +543,7 @@ final class ConnectionController extends ChangeNotifier {
     _tab = null;
     _status = ConnectionStatus.offline;
     _step = null;
-    _reconnecting = false;
+    _quietRejoin = false;
     _idleClosedAfter = null;
     _declineConsent();
     final closing = _endSession();
@@ -573,11 +592,13 @@ final class ConnectionController extends ChangeNotifier {
   void _onEvent(int generation, GrSessionEvent e) {
     if (generation != _generation) return;
     switch (e.kind) {
-      case 'ble.lost' when _status == ConnectionStatus.bluetooth:
-        // The drop after the app turned the camera off is expected.
-        _reconnecting = e.fields['afterPowerOff'] != true;
-      case 'ble.restored' when _status == ConnectionStatus.bluetooth:
-        _reconnecting = false;
+      case 'ble.ready':
+        // A firmware update shows on the next link.
+        final firmware = _session?.firmwareRevision;
+        final serial = camera?.serial;
+        if (firmware != null && serial != null) {
+          unawaited(cameras.recordFirmware(serial, firmware));
+        }
       case 'ble.gaveUp' || 'ble.needsPairing':
         _bleGaveUp = true;
         // With the Library open, Wi-Fi carries on without Bluetooth; the
@@ -595,10 +616,7 @@ final class ConnectionController extends ChangeNotifier {
             ),
           );
         }
-      case 'wifi.lost' when _status == ConnectionStatus.connected:
-        _reconnecting = true;
       case 'recovery.done' when _status == ConnectionStatus.connected:
-        _reconnecting = false;
         notifyListeners();
         _wifiUp.add(null);
         return;
@@ -625,7 +643,7 @@ final class ConnectionController extends ChangeNotifier {
     if (session == null || _status != ConnectionStatus.connected) return;
     _wifiRun++;
     _step = null;
-    _reconnecting = false;
+    _quietRejoin = false;
     if (noBle || _bleGaveUp) {
       _failure = const ConnectFailure(
         ConnectFailureKind.unreachable,
@@ -673,12 +691,12 @@ final class ConnectionController extends ChangeNotifier {
         failure.kind == ConnectFailureKind.unreachable;
     final redial =
         transient &&
-        (_reconnecting ||
+        (_quietRejoin ||
             (!_foreground && failure.kind == ConnectFailureKind.wifi));
     if (redial && _scheduleRedial()) return;
     _failure = failure;
     _step = null;
-    _reconnecting = false;
+    _quietRejoin = false;
     _status = ConnectionStatus.bluetooth;
     notifyListeners();
     if (_bleGaveUp) unawaited(_relinkLater());
@@ -705,7 +723,7 @@ final class ConnectionController extends ChangeNotifier {
     final generation = _generation;
     _status = ConnectionStatus.connecting;
     _step = ConnectStep.wifi;
-    _reconnecting = true;
+    _quietRejoin = true;
     _failure = null;
     notifyListeners();
     if (!_foreground) {
@@ -738,7 +756,7 @@ final class ConnectionController extends ChangeNotifier {
     _status = ConnectionStatus.failed;
     _failure = failure;
     _step = null;
-    _reconnecting = false;
+    _quietRejoin = false;
     notifyListeners();
   }
 
@@ -748,6 +766,7 @@ final class ConnectionController extends ChangeNotifier {
     _bleGaveUp = false;
     await _events?.cancel();
     _events = null;
+    session?.status.removeListener(notifyListeners);
     if (session != null) {
       try {
         // Leaving a camera the app turned on turns it back off, including

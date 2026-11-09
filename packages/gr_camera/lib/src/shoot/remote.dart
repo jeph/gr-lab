@@ -6,7 +6,8 @@ import 'package:gr_protocol/gr_protocol.dart';
 
 /// Remote shooting over Bluetooth for one session (mock `b-remote`): the
 /// camera turned on in shooting mode, its readouts, the shutter, the
-/// self-timer and the drive mode.
+/// self-timer and the drive mode. Battery and shots left are the
+/// session's `CameraStatus`.
 ///
 /// Every readout and control is BLE (ble.md, Camera Control and Camera
 /// State services); the shutter is Operation Request `01 01` (release with
@@ -32,9 +33,9 @@ final class CameraRemote extends ChangeNotifier {
   bool _closed = false;
 
   BleShootingMode? _exposure;
-  int? _battery;
-  int? _shotsLeft;
-  BleEnumValue<BleDriveMode>? _drive;
+  BleEnumValue<BleDriveMode>? _reportedDrive;
+  BleEnumValue<BleDriveMode>? _pendingDrive;
+  int _driveWrites = 0;
   bool _capturing = false;
   DateTime? _countdownEnds;
   Duration? _countdown;
@@ -42,14 +43,8 @@ final class CameraRemote extends ChangeNotifier {
   /// Mode dial position, from Shooting Mode.
   BleShootingMode? get exposure => _exposure;
 
-  /// Battery percent, from Battery Level.
-  int? get battery => _battery;
-
-  /// Pictures that fit on the storage in use, from Storage Information.
-  int? get shotsLeft => _shotsLeft;
-
-  /// Drive Mode as the camera reports it.
-  BleEnumValue<BleDriveMode>? get drive => _drive;
+  /// Drive Mode being written, else as the camera last reported it.
+  BleEnumValue<BleDriveMode>? get drive => _pendingDrive ?? _reportedDrive;
 
   /// The camera is taking a picture (Capture Status byte 0).
   bool get capturing => _capturing;
@@ -61,17 +56,14 @@ final class CameraRemote extends ChangeNotifier {
   /// Full length of the running self-timer countdown; null when none runs.
   Duration? get countdown => _countdown;
 
-  /// The Bluetooth link is up, so the shutter and the drive can be used.
-  bool get linked => _session.ble != null;
-
   /// Turns the camera on in shooting mode, or switches a camera that is on
   /// to shooting (Operation Mode capture), like GR WORLD's Remote button
   /// (power-on-grworld.md §1.2, 0xe4d738). Throws [GrSessionException].
   Future<void> wake() => _session.wake(BleOperationMode.capture);
 
   /// Whether the readouts follow the camera: Capture Status, Shooting
-  /// Mode, Drive Mode, Battery Level and Storage Information notifications,
-  /// read once when watching starts and again after every Bluetooth relink.
+  /// Mode and Drive Mode notifications, read once when watching starts and
+  /// again after every Bluetooth relink.
   bool get watching => _watching;
   set watching(bool value) {
     if (_closed || _watching == value) return;
@@ -109,13 +101,15 @@ final class CameraRemote extends ChangeNotifier {
   }
 
   /// Sets Drive Mode (drive and self-timer in one value). [drive] shows
-  /// [mode] at once and goes back if the camera refuses it, and this
-  /// throws then. Does nothing without a link or when [mode] is set.
+  /// [mode] at once; if the camera refuses it, and no newer write is under
+  /// way, [drive] goes back to what the camera reports, and this throws.
+  /// Does nothing without a link or when [mode] is set.
   Future<void> setDriveMode(BleDriveMode mode) async {
     final ble = _session.ble;
-    if (ble == null || _drive?.known == mode) return;
-    final before = _drive;
-    _drive = BleEnumValue.of(mode);
+    if (ble == null || drive?.known == mode) return;
+    final value = BleEnumValue.of(mode);
+    final write = ++_driveWrites;
+    _pendingDrive = value;
     notifyListeners();
     try {
       await ble.setDriveMode(mode);
@@ -124,20 +118,23 @@ final class CameraRemote extends ChangeNotifier {
         'mode': mode.name,
         'error': '$e',
       });
-      if (!_closed) {
-        _drive = before;
+      if (!_closed && write == _driveWrites) {
+        _pendingDrive = null;
         notifyListeners();
       }
       rethrow;
     }
+    if (_closed || write != _driveWrites) return;
+    // The camera took it; its notification may not have arrived yet.
+    _reportedDrive = value;
+    _pendingDrive = null;
+    notifyListeners();
   }
 
   static final _watched = <GrBleCharacteristic<Object>>[
     GrBleCatalog.captureStatus,
     GrBleCatalog.shootingMode,
     GrBleCatalog.driveMode,
-    GrBleCatalog.batteryLevel,
-    GrBleCatalog.storageInformation,
   ];
 
   void _subscribe() {
@@ -177,12 +174,8 @@ final class CameraRemote extends ChangeNotifier {
           });
           _onModeChanged();
         }
-      case BleBatteryLevel():
-        _battery = value.level < 0 ? null : value.level;
-      case BleStorageInformation():
-        _shotsLeft = _remaining(value);
       case BleEnumValue<BleDriveMode>():
-        _drive = value;
+        _reportedDrive = value;
       default:
         return;
     }
@@ -197,39 +190,17 @@ final class CameraRemote extends ChangeNotifier {
       _countdown = null;
     } else if (_countdownEnds == null) {
       // The camera says a countdown runs, not how long is left; the
-      // self-timer it was set to gives the length.
-      final length = _selfTimer(_drive?.known);
+      // self-timer it was set to gives the length, 10 s when that drive
+      // mode has none or is unknown.
+      final length =
+          _reportedDrive?.known?.selfTimer ?? const Duration(seconds: 10);
       _countdown = length;
       _countdownEnds = DateTime.now().add(length);
     }
   }
 
-  /// The self-timer of a GR III/IV Drive Mode value; 10 s when it has none
-  /// or is outside that table.
-  static Duration _selfTimer(BleDriveMode? mode) => switch (mode) {
-    BleDriveMode.selfTimer2s ||
-    BleDriveMode.bracketSelfTimer2s ||
-    BleDriveMode.multipleExposureSelfTimer2s ||
-    BleDriveMode.intervalSelfTimer2s ||
-    BleDriveMode.intervalCompositeSelfTimer2s => const Duration(seconds: 2),
-    _ => const Duration(seconds: 10),
-  };
-
   static bool _sameMode(BleShootingMode a, BleShootingMode b) =>
       a.mode.raw == b.mode.raw && a.userMode.raw == b.userMode.raw;
-
-  /// The storage pictures go to: the one marked active, else the first
-  /// usable one.
-  static int? _remaining(BleStorageInformation info) {
-    final entries = info.entries;
-    for (final e in entries) {
-      if (e.active == true) return e.remainingPictures;
-    }
-    for (final e in entries) {
-      if (e.exists && e.available) return e.remainingPictures;
-    }
-    return null;
-  }
 
   void _close() {
     _closed = true;
