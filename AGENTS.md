@@ -36,6 +36,7 @@ Commits are signed through 1Password, so commit normally first. If 1Password doe
 `research/` is the record of what the camera does and how we know it. The code cites it (for example `research/protocol/remote-shooting.md §4.2`).
 
 - Read the relevant file before changing protocol behaviour.
+- When a change depends on protocol behaviour that `research/` doesn't establish, find it out rather than guessing: use the REA reverse-engineering tools (the `rea` MCP server) on Ricoh's apps (GR WORLD, Image Sync) or the camera firmware in `../gr`, then record what you found in `research/` with its source. A camera fact that only hardware can settle is marked unknown and listed for a hardware test.
 - Update it in the same change whenever you discover something new or notice drift: the camera, a firmware version or Ricoh's apps behaving differently from what the notes say, or the code relying on behaviour the notes don't describe. Correct the wrong text rather than appending a contradiction, and say what was seen, on which body and firmware, and when.
 - Mark every fact as observed (on hardware, with date, body and firmware), found in code (with its source), inferred or unknown, as the files already do.
 - Paths such as `firmware/evidence/…`, `work/…` and `apk/…` refer to the local research workspace (`../gr`), which holds Ricoh's APKs, their decompilation and the extracted firmware. Those are Ricoh's copyrighted files: never add them, or large excerpts of decompiled code, to this repository.
