@@ -1,6 +1,6 @@
 # Image Control looks: blob contents, parameters and slot names
 
-What the Image Control blob in the Custom 1–3 slots and `/imgctrl` holds, which parameters each base image has, what their values mean, and the rules for slot names. The wire layout itself is in [ble.md § Image Control blob](ble.md#image-control-blob); the HTTP read is in [http-api.md §4.3](http-api.md). Researched 2026-11-08 from GR WORLD 2.0.0 and GR IV firmware 1.20; nothing here has been tried on a camera yet.
+What the Image Control blob in the Custom 1–3 slots and `/imgctrl` holds, which parameters each base image has, what their values mean, and the rules for slot names. The wire layout itself is in [ble.md § Image Control blob](ble.md#image-control-blob); the HTTP read is in [http-api.md §4.3](http-api.md). Researched 2026-11-08 from GR WORLD 2.0.0 and GR IV firmware 1.20. The only hardware result so far is the blob length, observed on a GR IV HDF on 2026-11-09 and recorded in ble.md; nothing else here has been tried on a camera yet.
 
 Evidence tags:
 - `[code 0x…]`: address in GR WORLD's Dart AOT disassembly (`work/dis/dis.txt`).
@@ -113,7 +113,7 @@ These are GR Lab's choices **[design]**, in `packages/gr_camera/lib/src/looks/`:
 - **Changing the base** keeps the values both bases share, drops the parameters the new base lacks and adds the missing ones at 0, or at the lowest value where 0 is out of range (bleach-bypass toning and HDR Tone Level start at 1). New parameters follow the ascending order of §3, and a base with the filter effect gets the six R, G and B bytes at 0. Whether the camera accepts a blob ordered differently from its own is **[unknown]**.
 - **Editing** covers the parameters whose values are known: the numeric ones as −4..+4 and the enumerated ones as listed in §4, with bleach-bypass toning and HDR Tone Level limited to 1..3. The filter effect, the solarization type and the GR IVx parameters are shown but kept as the camera set them.
 - **Slot names** follow §2: at most 32 characters from GR WORLD's character set.
-- **Loading** writes the data, then the name, then reads the slot back, as GR WORLD does ([notes/ble/CamSvcChars.md](../notes/ble/CamSvcChars.md) §7), and traces whether the camera kept the bytes as written.
+- **Loading** writes the data, then the name, then reads the slot back, as GR WORLD does ([notes/ble/CamSvcChars.md](../notes/ble/CamSvcChars.md) §7), and traces whether the camera kept the bytes as written. Every look is written as a 56-byte blob with zeros after the parameters, the only length the camera has been seen to accept ([ble.md § Image Control blob](ble.md#image-control-blob)).
 - **Before reading the slots** GR Lab turns the camera on into shooting mode, because the slots are served by the main firmware rather than the Bluetooth-only state of a camera that is off **[inferred]** ([firmware-bonding.md §6](firmware-bonding.md)).
 
 ## 7. Open questions

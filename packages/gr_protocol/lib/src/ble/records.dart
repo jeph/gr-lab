@@ -527,22 +527,28 @@ final class BleImageControlEntry {
 }
 
 /// Image Control custom 1–3 data blob (ble.md §Image Control blob):
-/// `[version][unknown][base image][N][N × (id, sint8 value)]`.
-/// GR WORLD accepts versions 1, 2 and 4 only.
+/// `[version][unknown][base image][N][N × (id, sint8 value)]`, zero-filled
+/// to [length] bytes. GR WORLD accepts versions 1, 2 and 4 only.
 final class BleImageControlBlob {
-  /// Copies [parameters] into an unmodifiable list; [trailing] defaults to
-  /// no bytes.
+  /// Copies [parameters] into an unmodifiable list.
   new({
     required this.version,
     required this.reserved,
     required this.base,
     required List<BleImageControlEntry> parameters,
-    Uint8List? trailing,
-  }) : parameters = List.unmodifiable(parameters),
-       trailing = trailing ?? Uint8List(0);
+  }) : parameters = List.unmodifiable(parameters);
 
   /// Versions GR WORLD accepts; it ignores blobs with any other version.
   static const supportedVersions = {1, 2, 4};
+
+  /// Bytes in every blob the Custom slots and `/imgctrl` carry, zero after
+  /// the parameters. A GR IV HDF on firmware 1.20 refused slot writes of
+  /// 22 and 74 bytes and accepted 56 (observed 2026-11-09, ble.md § Image
+  /// Control blob).
+  static const length = 56;
+
+  /// The most parameters that fit in [length].
+  static const int maxParameters = (length - 4) ~/ 2;
 
   /// Byte 0: blob format version, see [supportedVersions].
   final int version;
@@ -556,17 +562,12 @@ final class BleImageControlBlob {
   /// Adjustments in wire order (count in byte 3); unmodifiable.
   final List<BleImageControlEntry> parameters;
 
-  /// Bytes after the declared parameters; not documented, kept verbatim.
-  final Uint8List trailing;
-
-  /// Header fields and parameters; `trailingHex` only when [trailing] is
-  /// not empty.
+  /// Header fields and parameters.
   Map<String, Object?> toJson() => {
     'version': version,
     'reserved': reserved,
     'base': base.toJson(),
     'parameters': [for (final p in parameters) p.toJson()],
-    if (trailing.isNotEmpty) 'trailingHex': BleBytes.toHex(trailing),
   };
 }
 
@@ -582,6 +583,9 @@ final class BleImageControlCodec extends BleCodec<BleImageControlBlob> {
       return result(bytes, null, [
         'expected at least 4 header bytes, got ${bytes.length}',
       ]);
+    }
+    if (bytes.length != BleImageControlBlob.length) {
+      issues.add('${bytes.length} bytes, not ${BleImageControlBlob.length}');
     }
     final version = bytes[0];
     if (!BleImageControlBlob.supportedVersions.contains(version)) {
@@ -603,10 +607,8 @@ final class BleImageControlCodec extends BleCodec<BleImageControlBlob> {
           BleIntFormat.sint8.read(bytes, 5 + 2 * i),
         ),
     ];
-    final end = 4 + 2 * n;
-    final trailing = Uint8List.fromList(bytes.sublist(end));
-    if (trailing.isNotEmpty) {
-      issues.add('${trailing.length} byte(s) after the parameters');
+    if (bytes.skip(4 + 2 * n).any((b) => b != 0)) {
+      issues.add('non-zero byte(s) after the parameters');
     }
     return result(
       bytes,
@@ -615,7 +617,6 @@ final class BleImageControlCodec extends BleCodec<BleImageControlBlob> {
         reserved: bytes[1],
         base: BleEnumValue.decode(bytes[2], BleImageControlBase.values),
         parameters: params,
-        trailing: trailing,
       ),
       issues,
     );
@@ -623,7 +624,15 @@ final class BleImageControlCodec extends BleCodec<BleImageControlBlob> {
 
   @override
   Uint8List encode(BleImageControlBlob value) {
-    final out = Uint8List(4 + 2 * value.parameters.length);
+    if (value.parameters.length > BleImageControlBlob.maxParameters) {
+      throw ArgumentError.value(
+        value.parameters.length,
+        'parameters',
+        'at most ${BleImageControlBlob.maxParameters} fit in '
+            '${BleImageControlBlob.length} bytes',
+      );
+    }
+    final out = Uint8List(BleImageControlBlob.length);
     _put(out, 0, value.version, 'version', BleIntFormat.uint8);
     _put(out, 1, value.reserved, 'reserved', BleIntFormat.uint8);
     _put(out, 2, value.base.raw, 'base', BleIntFormat.uint8);
@@ -633,7 +642,7 @@ final class BleImageControlCodec extends BleCodec<BleImageControlBlob> {
       _put(out, 4 + 2 * i, p.parameter.raw, 'parameter', BleIntFormat.uint8);
       _put(out, 5 + 2 * i, p.value, 'value');
     }
-    return Uint8List.fromList([...out, ...value.trailing]);
+    return out;
   }
 
   @override

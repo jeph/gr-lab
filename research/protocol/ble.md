@@ -432,6 +432,8 @@ Parser 0xd8e104 (custom 1–3 data characteristics):
 
 Unknown parameter ids are logged ("イメコン不正値") and skipped. Which parameters each base image has, what the values mean, the slot-name rules and who builds a blob are in [image-control.md](image-control.md).
 
+Length: every blob is 56 bytes, zero after the last pair, so a slot holds at most 26 parameters. Observed on a GR IV HDF, firmware 1.20, on 2026-11-09: all three slots and eight photos' `/imgctrl` answers were 56 bytes with version 1. The camera answered a write-with-response to Custom 1 data with an ATT error for a 74-byte blob (18 parameters followed by 34 zero bytes) and for a 22-byte blob (9 parameters, no padding), and accepted a 56-byte blob identical to what the slot held. A 56-byte blob with new content has not yet been written to a camera. The ATT error code was not captured (Android reports only "Failed to write").
+
 ### Storage information
 
 Read 0xe5f82c and notify parser 0x57c5a4. Byte 0 = entry count N; the remaining length must equal N × 14 (0x57ced4), otherwise the app throws a RangeError.

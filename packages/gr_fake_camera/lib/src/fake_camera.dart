@@ -258,12 +258,14 @@ final class FakeGrCamera {
   /// The `pos` of every focus the camera ran, in percent, in order.
   List<(int, int)> get focusPoints => List.unmodifiable(_focusPoints);
 
-  /// What Custom slot [number] (1–3) holds: its name and blob.
+  /// What Custom slot [number] (1–3) holds: its name and look. The slot
+  /// only ever holds blobs it accepted, so they decode.
   FakeLook lookSlot(int number) {
     final slot = GrBleCatalog.imageControlSlots[number - 1];
+    final data = _values[slot.data.uuid]!;
     return FakeLook(
       utf8.decode(_values[slot.name.uuid]!),
-      _values[slot.data.uuid]!,
+      slot.data.codec.decode(data).value!,
     );
   }
 

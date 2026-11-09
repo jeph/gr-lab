@@ -420,10 +420,14 @@ extension on FakeGrCamera {
       case GrBleCatalog.imageControl1Data ||
           GrBleCatalog.imageControl2Data ||
           GrBleCatalog.imageControl3Data:
-        // A blob GR WORLD would ignore is refused \[design\]: what the
-        // camera does with one is \[unknown\].
+        // The camera refuses a blob that is not BleImageControlBlob.length
+        // bytes (observed, ble.md § Image Control blob). Other blobs GR
+        // WORLD would ignore are refused too \[design\]: what the camera
+        // does with one is \[unknown\].
         final decoded = GrBleCatalog.imageControl1Data.codec.decode(v);
-        if (decoded.value == null || decoded.issues.isNotEmpty) {
+        if (v.length != BleImageControlBlob.length ||
+            decoded.value == null ||
+            decoded.issues.isNotEmpty) {
           throw BleException(BleErrorCode.gatt, '${c.key}: invalid value');
         }
         _values[c.uuid] = v;

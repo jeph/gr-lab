@@ -326,11 +326,15 @@ void main() {
 
   group('Image Control blob', () {
     final codec = GrBleCatalog.imageControl1Data.codec;
+    List<int> padded(List<int> head) => [
+      ...head,
+      ...List.filled(BleImageControlBlob.length - head.length, 0),
+    ];
 
-    test('decodes version, base image and signed parameters', () {
-      final d = codec.decode(
-        b([0x02, 0x00, 0x11, 0x02, 0x03, 0xfe, 0x23, 0x01]),
-      );
+    test('decodes version, base image and signed parameters, and encodes '
+        'them back zero-filled to the slot length', () {
+      final wire = padded([0x02, 0x00, 0x11, 0x02, 0x03, 0xfe, 0x23, 0x01]);
+      final d = codec.decode(b(wire));
       expect(d.issues, isEmpty);
       final v = d.value!;
       expect(v.version, 2);
@@ -344,17 +348,47 @@ void main() {
         v.parameters[1].parameter.known,
         BleImageControlParameter.solarizationType,
       );
-      expect(codec.encode(v), [0x02, 0x00, 0x11, 0x02, 0x03, 0xfe, 0x23, 0x01]);
+      expect(codec.encode(v), wire);
     });
 
-    test('unsupported version, unknown ids, truncation and trailing bytes', () {
+    test('more parameters than the slot holds are refused', () {
+      BleImageControlBlob withCount(int n) => BleImageControlBlob(
+        version: 1,
+        reserved: 0,
+        base: BleEnumValue.of(BleImageControlBase.standard),
+        parameters: [
+          for (var i = 0; i < n; i++)
+            BleImageControlEntry(
+              BleEnumValue.of(BleImageControlParameter.saturation),
+              0,
+            ),
+        ],
+      );
+      expect(
+        codec.encode(withCount(BleImageControlBlob.maxParameters)),
+        hasLength(BleImageControlBlob.length),
+      );
+      expect(
+        () => codec.encode(withCount(BleImageControlBlob.maxParameters + 1)),
+        throwsArgumentError,
+      );
+    });
+
+    test('wrong lengths, non-zero padding, unsupported versions and '
+        'truncation are reported, and the look still decodes', () {
       final d = codec.decode(b([0x03, 0x00, 0x0a, 0x02, 0x40, 0x01]));
       expect(d.value!.parameters.single.parameter.raw, 0x40);
       expect(d.value!.base.known, isNull);
-      expect(d.issues, hasLength(2));
-      final trailing = codec.decode(b([0x01, 0x00, 0x00, 0x00, 0x99]));
-      expect(trailing.value!.trailing, [0x99]);
-      expect(codec.encode(trailing.value!), [0x01, 0x00, 0x00, 0x00, 0x99]);
+      expect(d.issues, hasLength(3), reason: 'length, version, truncation');
+      final long = codec.decode(
+        b([
+          ...padded([1, 0, 0, 0]),
+          0,
+        ]),
+      );
+      expect(long.issues.single, contains('57 bytes'));
+      final dirty = codec.decode(b(padded([1, 0, 0, 0])..last = 0x99));
+      expect(dirty.issues.single, contains('non-zero'));
       expect(codec.decode(b([1, 0, 0])).value, isNull);
     });
   });

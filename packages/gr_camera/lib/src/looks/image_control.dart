@@ -430,9 +430,9 @@ extension ImageControlEdits on BleImageControlBlob {
 
   /// This look on [base] instead: the parameters [base] has, in wire-id
   /// order, each keeping its value when this look has it and starting at
-  /// its initial value when not. The header bytes and any bytes after the
-  /// parameters stay. That the camera wants exactly its base's parameters
-  /// is \[inferred\] from the firmware's per-base settings.
+  /// its initial value when not. The header bytes stay. That the camera
+  /// wants exactly its base's parameters is \[inferred\] from the
+  /// firmware's per-base settings.
   BleImageControlBlob withBase(BleImageControlBase base) => BleImageControlBlob(
     version: version,
     reserved: reserved,
@@ -441,7 +441,6 @@ extension ImageControlEdits on BleImageControlBlob {
       for (final p in imageControlParameters(base))
         BleImageControlEntry(BleEnumValue.of(p), valueOf(p) ?? _initial(p)),
     ],
-    trailing: trailing,
   );
 
   /// Whether [other] is the same look: the same base image and the same
@@ -461,6 +460,5 @@ extension ImageControlEdits on BleImageControlBlob {
         reserved: reserved,
         base: base,
         parameters: entries,
-        trailing: trailing,
       );
 }

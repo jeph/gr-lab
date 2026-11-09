@@ -186,56 +186,128 @@ final class FakePhoto {
   String toString() => '$storage:$dir/$file';
 }
 
+typedef _P = BleImageControlParameter;
+
 /// A look on the simulated camera: a Custom slot's name and Image Control
 /// blob (ble.md § Image Control blob), also what `/imgctrl` serves.
 final class FakeLook {
-  /// A look named [name] holding blob [data].
-  const new(this.name, this.data);
+  /// A look named [name] holding [look].
+  const new(this.name, this.look);
+
+  /// A look named [name] on [base] with [values] in that order, in format
+  /// version 1.
+  new _preset(
+    String name,
+    BleImageControlBase base,
+    Map<BleImageControlParameter, int> values,
+  ) : this(
+        name,
+        BleImageControlBlob(
+          version: 1,
+          reserved: 0,
+          base: BleEnumValue.of(base),
+          parameters: [
+            for (final MapEntry(:key, :value) in values.entries)
+              BleImageControlEntry(BleEnumValue.of(key), value),
+          ],
+        ),
+      );
 
   /// Slot name, as the camera keeps it.
   final String name;
 
-  /// The blob: `[version][byte 1][base][N][N × (id, value)]`.
-  final List<int> data;
+  /// Base image and parameters.
+  final BleImageControlBlob look;
+
+  /// [look] as the camera stores and serves it.
+  Uint8List get data => GrBleCatalog.imageControl1Data.codec.encode(look);
 
   /// Looks for the demo and tests. Each carries every parameter its base
   /// has in the GR IV firmware's settings (research/protocol/image-control.md
-  /// §3), with values in GR Lab's ranges, in the version-2 layout
-  /// \[design\]: what a real camera stores is \[unknown\]. The first three
-  /// fill C1–C3 by default.
-  static const presets = [
+  /// §3), with values in GR Lab's ranges, in format version 1 as a GR IV
+  /// HDF on firmware 1.20 stores its looks (observed 2026-11-09). The first
+  /// three fill C1–C3 by default.
+  static final presets = List<FakeLook>.unmodifiable([
     // Positive Film: saturation +1, key −1, grain on, medium, high.
-    FakeLook('Tokyo Night', [
-      2, 0, 0x06, 12, //
-      0x00, 1, 0x01, 0, 0x02, 0xff, 0x03, 0, 0x04, 0, 0x05, 0, 0x06, 0,
-      0x13, 0, 0x14, 0, 0x15, 1, 0x16, 1, 0x17, 2,
-    ]),
+    FakeLook._preset('Tokyo Night', BleImageControlBase.positiveFilm, {
+      _P.saturation: 1,
+      _P.hue: 0,
+      _P.key: -1,
+      _P.contrast: 0,
+      _P.contrastHigh: 0,
+      _P.contrastLow: 0,
+      _P.sharpness: 0,
+      _P.shading: 0,
+      _P.clarity: 0,
+      _P.grain: 1,
+      _P.grainSize: 1,
+      _P.grainStrength: 2,
+    }),
     // Hi-Contrast B&W: shading −2, grain on, large, high.
-    FakeLook('Daido', [
-      2, 0, 0x05, 18, //
-      0x02, 0, 0x03, 0, 0x04, 0, 0x05, 0, 0x06, 0, 0x07, 0,
-      0x0c, 0, 0x0d, 0, 0x0e, 0, 0x0f, 0, 0x10, 0, 0x11, 0, 0x12, 0,
-      0x13, 0xfe, 0x14, 0, 0x15, 1, 0x16, 2, 0x17, 2,
-    ]),
+    FakeLook._preset('Daido', BleImageControlBase.highContrast, {
+      _P.key: 0,
+      _P.contrast: 0,
+      _P.contrastHigh: 0,
+      _P.contrastLow: 0,
+      _P.sharpness: 0,
+      _P.toningMonotone: 0,
+      _P.filterEffect: 0,
+      _P.filterEffectRedHigh: 0,
+      _P.filterEffectRedLow: 0,
+      _P.filterEffectGreenHigh: 0,
+      _P.filterEffectGreenLow: 0,
+      _P.filterEffectBlueHigh: 0,
+      _P.filterEffectBlueLow: 0,
+      _P.shading: -2,
+      _P.clarity: 0,
+      _P.grain: 1,
+      _P.grainSize: 2,
+      _P.grainStrength: 2,
+    }),
     // Negative Film: saturation −1, hue +1, key +1.
-    FakeLook('Soft Summer', [
-      2, 0, 0x0d, 12, //
-      0x00, 0xff, 0x01, 1, 0x02, 1, 0x03, 0, 0x04, 0, 0x05, 0, 0x06, 0,
-      0x13, 0, 0x14, 0, 0x15, 0, 0x16, 0, 0x17, 0,
-    ]),
+    FakeLook._preset('Soft Summer', BleImageControlBase.negativeFilm, {
+      _P.saturation: -1,
+      _P.hue: 1,
+      _P.key: 1,
+      _P.contrast: 0,
+      _P.contrastHigh: 0,
+      _P.contrastLow: 0,
+      _P.sharpness: 0,
+      _P.shading: 0,
+      _P.clarity: 0,
+      _P.grain: 0,
+      _P.grainSize: 0,
+      _P.grainStrength: 0,
+    }),
     // Cinema (Green): cinema toning high, clarity +1.
-    FakeLook('Cine Teal', [
-      2, 0, 0x0f, 13, //
-      0x00, 0, 0x01, 0, 0x02, 0, 0x03, 0, 0x04, 0, 0x05, 0, 0x06, 0,
-      0x08, 2, 0x13, 0, 0x14, 1, 0x15, 0, 0x16, 0, 0x17, 0,
-    ]),
+    FakeLook._preset('Cine Teal', BleImageControlBase.cineGreen, {
+      _P.saturation: 0,
+      _P.hue: 0,
+      _P.key: 0,
+      _P.contrast: 0,
+      _P.contrastHigh: 0,
+      _P.contrastLow: 0,
+      _P.sharpness: 0,
+      _P.toningCinema: 2,
+      _P.shading: 0,
+      _P.clarity: 1,
+      _P.grain: 0,
+      _P.grainSize: 0,
+      _P.grainStrength: 0,
+    }),
     // Standard, unchanged.
-    FakeLook('Standard', [
-      2, 0, 0x00, 9, //
-      0x00, 0, 0x01, 0, 0x02, 0, 0x03, 0, 0x04, 0, 0x05, 0, 0x06, 0,
-      0x13, 0, 0x14, 0,
-    ]),
-  ];
+    FakeLook._preset('Standard', BleImageControlBase.standard, {
+      _P.saturation: 0,
+      _P.hue: 0,
+      _P.key: 0,
+      _P.contrast: 0,
+      _P.contrastHigh: 0,
+      _P.contrastLow: 0,
+      _P.sharpness: 0,
+      _P.shading: 0,
+      _P.clarity: 0,
+    }),
+  ]);
 }
 
 /// Identity, timing and failure injection for a [FakeGrCamera].

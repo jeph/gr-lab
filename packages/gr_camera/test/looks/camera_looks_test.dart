@@ -72,6 +72,27 @@ void main() {
     });
   });
 
+  test('looks with more or fewer parameters than the slot held load and '
+      'read back', () async {
+    rig = await ShootRig.start();
+    final looks = rig.session.looks;
+    await looks.wake();
+    await looks.readSlots();
+    final held = looks.slots![0].look!;
+    final rebased = held.withBase(BleImageControlBase.highContrast);
+    final fresh = newImageControl(BleImageControlBase.standard, template: held);
+    expect(rebased.parameters.length, greaterThan(held.parameters.length));
+    expect(fresh.parameters.length, lessThan(held.parameters.length));
+
+    final first = await looks.load(1, name: 'Rebased', look: rebased);
+    final second = await looks.load(2, name: 'Fresh', look: fresh);
+
+    expect(first.look!.sameLookAs(rebased), isTrue);
+    expect(second.look!.sameLookAs(fresh), isTrue);
+    expect(rig.camera.lookSlot(1).look.sameLookAs(rebased), isTrue);
+    expect(rig.camera.lookSlot(2).look.sameLookAs(fresh), isTrue);
+  });
+
   test('a blob the camera refuses leaves the slot as it was', () async {
     rig = await ShootRig.start();
     final looks = rig.session.looks;
