@@ -566,7 +566,7 @@ final class GrSession {
     _http = null;
     final ble = _ble;
     if (ble != null && powerOffIfWoken && _wokeCamera) {
-      await _powerOffWoken(ble);
+      await _powerOff(ble);
     } else if (ble != null) {
       try {
         await ble.setWlan(on: false);
@@ -720,26 +720,43 @@ final class GrSession {
     return true;
   }
 
-  /// In [GrSessionPhase.bluetooth] with no Wi-Fi start running: turns a
-  /// camera this session turned on ([wokeCamera]) off over BLE, as
-  /// `stopWifi(powerOffIfWoken: true)` does (Camera Power `00`; the link
-  /// drop that follows is expected; `power.off` or `power.offFailed`).
-  /// Does nothing otherwise, like [stopWifi] before Wi-Fi was started: use
-  /// `stopWifi(powerOffIfWoken: true)` while Wi-Fi is in use. A [wake] in
-  /// progress is cut short first, and a camera its write turned on is
-  /// turned off too.
-  Future<void> powerOffIfWoken() async {
+  /// Turns the camera on as GR WORLD's home power button does: a [wake]
+  /// into playback (power-on-grworld.md §1.2). The user asked for it, so
+  /// the camera then does not count as one this session woke
+  /// ([wokeCamera]): leaving Wi-Fi or closing the session leaves it on
+  /// \[design\]. Throws as [wake] does.
+  Future<void> powerOn() async {
+    await wake(BleOperationMode.playback);
+    _wokeCamera = false;
+  }
+
+  /// Turns the camera off as GR WORLD's home power button does (Camera
+  /// Power `00`, ble.md "Camera power off"); the link drop that follows is
+  /// expected (`power.off`, or `power.offFailed`). Only in
+  /// [GrSessionPhase.bluetooth] with no Wi-Fi start running: leave the
+  /// Wi-Fi first ([stopWifi]). A [wake] in progress is cut short first.
+  /// Returns whether the camera took the write.
+  Future<bool> powerOff() => _powerOffOverBle(onlyIfWoken: false);
+
+  /// As [powerOff], but only for a camera this session turned on
+  /// ([wokeCamera]), as `stopWifi(powerOffIfWoken: true)` does; a camera
+  /// that a [wake] in progress turned on is turned off too. Does nothing
+  /// otherwise: use `stopWifi(powerOffIfWoken: true)` while Wi-Fi is in
+  /// use.
+  Future<void> powerOffIfWoken() => _powerOffOverBle(onlyIfWoken: true);
+
+  Future<bool> _powerOffOverBle({required bool onlyIfWoken}) async {
     final phase = _phase == GrSessionPhase.waking && _wakeCall != null
         ? _wakeReturnTo ?? _phase
         : _phase;
     if (_closing || phase != GrSessionPhase.bluetooth || _wifiStart != null) {
-      return;
+      return false;
     }
     _stopWake();
     await _wakeCall;
     final ble = _ble;
-    if (_closing || ble == null || !_wokeCamera) return;
-    await _powerOffWoken(ble);
+    if (_closing || ble == null || (onlyIfWoken && !_wokeCamera)) return false;
+    return await _powerOff(ble);
   }
 
   /// Cuts a running [wake] short; its waits and drop watch end at once.
@@ -749,18 +766,21 @@ final class GrSession {
     _wakeSettle?.cancel();
   }
 
-  /// Turns a camera the session woke off (Camera Power `00`, GR WORLD's
-  /// power-off flow); the link drop that follows is reported as expected.
-  Future<void> _powerOffWoken(GrBleClient ble) async {
+  /// Turns the camera off (Camera Power `00`, GR WORLD's power-off flow);
+  /// the link drop that follows is reported as expected. Returns whether
+  /// the camera took the write.
+  Future<bool> _powerOff(GrBleClient ble) async {
     try {
       _poweringOff = true;
       await ble.powerOff();
       _cameraOff = true;
       _wokeCamera = false;
       _emit('power.off');
+      return true;
     } on Object catch (e) {
       _poweringOff = false;
       _emit('power.offFailed', {'error': '$e'});
+      return false;
     }
   }
 

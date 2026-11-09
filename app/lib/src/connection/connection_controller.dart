@@ -40,6 +40,9 @@ enum CameraTab {
   looks,
 }
 
+/// What the Cameras screen's power button is doing.
+enum CameraPowerChange { on, off }
+
 enum ConnectFailureKind {
   bluetoothOff,
   bluetoothDenied,
@@ -195,6 +198,8 @@ final class ConnectionController extends ChangeNotifier {
   WifiConsentRequest? _consent;
   Completer<bool>? _consentAnswer;
   CameraTab? _tab;
+  CameraPowerChange? _powerChange;
+  bool _disposed = false;
 
   ConnectionStatus get status => _status;
 
@@ -241,6 +246,65 @@ final class ConnectionController extends ChangeNotifier {
 
   /// The camera is off (BT-only), or reported turning off.
   bool get cameraOff => _session?.cameraOff ?? false;
+
+  /// The power button's request under way ([powerOn], [powerOff]); null
+  /// when none is.
+  CameraPowerChange? get powerChange => _powerChange;
+
+  /// Turns [camera] on, as GR WORLD's power button does (the Cameras
+  /// screen's power button), linking it over Bluetooth first when needed.
+  /// The camera stays on when the app leaves it. A camera found on is left
+  /// as it is. Returns false when the camera could not be linked (see
+  /// [failure]) or did not turn on.
+  Future<bool> powerOn() => _changePower(CameraPowerChange.on, (session) async {
+    if (!session.cameraOff) return true;
+    try {
+      await session.powerOn();
+      return true;
+    } on GrSessionException {
+      return false;
+    }
+  });
+
+  /// Turns [camera] off over Bluetooth, as GR WORLD's power button does,
+  /// linking it first when needed and leaving its Wi-Fi first when in use.
+  /// The session stays: it links the camera again in its off state, as
+  /// after [closeCamera] turns off a camera the app woke. Returns false
+  /// when the camera could not be linked or did not take the request.
+  Future<bool> powerOff() =>
+      _changePower(CameraPowerChange.off, (session) async {
+        if (session.cameraOff) return true;
+        await _leaveWifi(powerOff: false);
+        if (!identical(session, _session)) return false;
+        return await session.powerOff();
+      });
+
+  /// Links the camera when needed, then runs [body] on the session; one
+  /// power request at a time.
+  Future<bool> _changePower(
+    CameraPowerChange change,
+    Future<bool> Function(CameraSession session) body,
+  ) async {
+    if (_powerChange != null) return false;
+    _powerChange = change;
+    notifyListeners();
+    try {
+      final linking =
+          _status == ConnectionStatus.connecting &&
+          _step == ConnectStep.bluetooth;
+      await (linking ? _linking : connect());
+      final session = _session;
+      if (session == null ||
+          _status == ConnectionStatus.offline ||
+          _status == ConnectionStatus.failed) {
+        return false;
+      }
+      return await body(session);
+    } finally {
+      _powerChange = null;
+      if (!_disposed) notifyListeners();
+    }
+  }
 
   /// A Library request failed: asks the camera once whether its Wi-Fi
   /// still works; when it does not, the session counts the link as lost
@@ -795,6 +859,7 @@ final class ConnectionController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     cameras.removeListener(_onCamerasChanged);
     _generation++;
     _cancelRedial();

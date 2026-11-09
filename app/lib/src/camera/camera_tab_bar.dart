@@ -15,12 +15,21 @@ class CameraTabBar extends StatelessWidget {
   final CameraTab tab;
   final ValueChanged<CameraTab> onSelect;
 
-  static (IconData, String) _look(AppLocalizations l10n, CameraTab t) =>
-      switch (t) {
-        CameraTab.library => (Icons.grid_view_rounded, l10n.cameraBarLibrary),
-        CameraTab.shoot => (Icons.camera_outlined, l10n.cameraBarShoot),
-        CameraTab.looks => (Icons.tune_rounded, l10n.cameraBarLooks),
-      };
+  /// The icon of [tab]'s page, here and on the camera card's buttons.
+  static IconData icon(CameraTab tab) => switch (tab) {
+    CameraTab.library => Icons.photo_library_outlined,
+    CameraTab.shoot => Icons.photo_camera_outlined,
+    CameraTab.looks => Icons.palette_outlined,
+  };
+
+  static (IconData, String) _look(AppLocalizations l10n, CameraTab t) => (
+    icon(t),
+    switch (t) {
+      CameraTab.library => l10n.cameraBarLibrary,
+      CameraTab.shoot => l10n.cameraBarShoot,
+      CameraTab.looks => l10n.cameraBarLooks,
+    },
+  );
 
   @override
   Widget build(BuildContext context) {

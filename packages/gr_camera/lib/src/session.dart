@@ -153,6 +153,16 @@ final class CameraSession {
   /// Turns the camera off if this session turned it on.
   Future<void> powerOffIfWoken() => _session.powerOffIfWoken();
 
+  /// Turns the camera on into playback, as GR WORLD's power button does,
+  /// linking again first when the link is down. The camera stays on when
+  /// the session ends. Throws [GrSessionException].
+  Future<void> powerOn() => _session.powerOn();
+
+  /// Turns the camera off over Bluetooth, as GR WORLD's power button does;
+  /// the camera drops the link. Only while the camera's Wi-Fi is not in
+  /// use ([stopWifi] first). Returns whether the camera took it.
+  Future<bool> powerOff() => _session.powerOff();
+
   /// A request over Wi-Fi failed: asks the camera once whether its Wi-Fi
   /// still works; when it does not, the session counts the link as lost and
   /// recovers it. True while the camera answers.

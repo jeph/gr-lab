@@ -1,21 +1,17 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:gr_camera/gr_camera.dart';
 import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/camera/camera_tab_bar.dart';
 import 'package:grlab/src/cameras/camera_details.dart';
+import 'package:grlab/src/cameras/camera_drawing.dart';
 import 'package:grlab/src/cameras/camera_identity.dart';
 import 'package:grlab/src/cameras/camera_presence.dart';
 import 'package:grlab/src/connection/connect_failure_view.dart';
 import 'package:grlab/src/connection/connect_steps.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/data/cameras.dart';
-import 'package:grlab/src/library/image_orientation.dart';
-import 'package:grlab/src/library/library_model.dart';
-import 'package:grlab/src/library/shot.dart';
 import 'package:grlab/src/pairing/pairing_flow.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart';
 import 'package:grlab/src/settings/settings_screen.dart';
@@ -24,10 +20,10 @@ import 'package:grlab/src/widgets/group.dart';
 
 /// Where the app opens and where it returns whenever no camera is
 /// connected (mock `b-home` … `b-home-lost`, and `b-welcome` before any
-/// camera is paired). The camera used last is on a card with thumbnails
-/// from its last visit; the others are listed below it. While the screen
-/// is in front it scans, so each camera says whether it is nearby and
-/// switched on. One camera is connected at a time.
+/// camera is paired). The camera used last is on a card with a drawing
+/// of it, its link and power, and its pages; the others are listed below
+/// it. While the screen is in front it scans, so each camera says whether
+/// it is nearby and switched on. One camera is connected at a time.
 class CamerasScreen extends StatefulWidget {
   const new({super.key, this.autoConnect = false});
 
@@ -425,9 +421,8 @@ class _CameraList extends StatelessWidget {
             camera: current,
             presence: presence,
             connection: connection,
-            // The banner says what happened; the card offers Connect.
+            // The banner says what happened.
             failure: lost ? null : failure,
-            onConnect: () => onConnect(current.serial),
           ),
           SectionLabel(context.l10n.camerasOtherCameras),
           IgnorePointer(
@@ -457,31 +452,40 @@ class _CameraList extends StatelessWidget {
 
 // ----------------------------------------------------------------- card
 
-/// The camera used last (mock `.ccard`): thumbnails, the link, buttons
-/// to the camera's Library and Shoot pages, and Connect while it is not
-/// linked; or the steps while connecting, or why the last attempt failed.
+/// The camera used last (mock `.ccard`, drawing after mock direction H):
+/// a drawing of the camera, an icon for its link, its power button and
+/// buttons to its Library, Shoot and Looks pages; or the steps while
+/// connecting, or why the last attempt failed.
 class _CameraCard extends StatelessWidget {
   const new({
     required this.camera,
     required this.presence,
     required this.connection,
     required this.failure,
-    required this.onConnect,
   });
 
   final SavedCamera camera;
   final CameraPresence presence;
   final ConnectionController connection;
   final ConnectFailure? failure;
-  final VoidCallback onConnect;
+
+  /// Whether the camera is on: from its session while there is one, else
+  /// from its advertisement; null when neither says.
+  bool? _cameraOn(Presence seen) => switch (connection.status) {
+    ConnectionStatus.bluetooth ||
+    ConnectionStatus.connected => !connection.cameraOff,
+    _ => switch (seen) {
+      Presence.nearbyOn => true,
+      Presence.nearbyOff => false,
+      Presence.nearby || Presence.away => null,
+    },
+  };
 
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    final status = connection.status;
-    final connecting = status == ConnectionStatus.connecting;
-    final linked = status == ConnectionStatus.bluetooth;
-    final failure = this.failure;
+    final seen = presence.of(camera);
+    final on = _cameraOn(seen);
     return Container(
       key: const Key('camera-card'),
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
@@ -496,16 +500,33 @@ class _CameraCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: c.s3,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(Icons.photo_camera_outlined, size: 24, color: c.t1),
+              _LinkIcon(_Link.of(connection, seen)),
+              const Spacer(),
+              GrIconButton(
+                key: const Key('camera-card-more'),
+                icon: Icons.more_horiz_rounded,
+                tooltip: context.l10n.camerasDetailsTooltip,
+                onPressed: () =>
+                    unawaited(CameraDetailsScreen.push(context, camera.serial)),
               ),
-              const SizedBox(width: 12),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 4, 14, 18),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 300),
+                child: ExcludeSemantics(
+                  child: CameraDrawing(
+                    key: const Key('camera-card-drawing'),
+                    on: on ?? false,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Row(
+            children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -513,9 +534,9 @@ class _CameraCard extends StatelessWidget {
                     Text(
                       camera.name,
                       style: const TextStyle(
-                        fontSize: 18,
+                        fontSize: 24,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: -.2,
+                        letterSpacing: -.4,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -526,112 +547,281 @@ class _CameraCard extends StatelessWidget {
                   ],
                 ),
               ),
-              GrIconButton(
-                key: const Key('camera-card-more'),
-                icon: Icons.more_horiz_rounded,
-                tooltip: context.l10n.camerasDetailsTooltip,
-                size: 32,
-                onPressed: () =>
-                    unawaited(CameraDetailsScreen.push(context, camera.serial)),
-              ),
+              const SizedBox(width: 12),
+              _PowerButton(camera: camera, connection: connection, on: on),
             ],
           ),
-          if (connecting) ...[
-            Padding(
-              key: const Key('camera-card-connecting'),
-              padding: const EdgeInsets.fromLTRB(4, 16, 4, 0),
-              child: ConnectSteps(connection: connection),
-            ),
-            const SizedBox(height: 14),
-            OutlinedButton(
-              key: const Key('camera-card-cancel'),
-              style: smallOutlinedStyle,
-              // Cancelling the join keeps Bluetooth; cancelling the link
-              // ends the attempt.
-              onPressed: () => unawaited(
-                connection.step == ConnectStep.wifi
-                    ? connection.closeCamera()
-                    : connection.disconnect(),
+          ..._actions(context),
+        ],
+      ),
+    );
+  }
+
+  /// The steps while connecting, why the last attempt failed, or the
+  /// buttons to the camera's pages.
+  List<Widget> _actions(BuildContext context) {
+    final failure = this.failure;
+    if (connection.status == ConnectionStatus.connecting) {
+      return [
+        Padding(
+          key: const Key('camera-card-connecting'),
+          padding: const EdgeInsets.fromLTRB(4, 16, 4, 0),
+          child: ConnectSteps(connection: connection),
+        ),
+        const SizedBox(height: 14),
+        OutlinedButton(
+          key: const Key('camera-card-cancel'),
+          style: smallOutlinedStyle,
+          // Cancelling the join keeps Bluetooth; cancelling the link
+          // ends the attempt.
+          onPressed: () => unawaited(
+            connection.step == ConnectStep.wifi
+                ? connection.closeCamera()
+                : connection.disconnect(),
+          ),
+          child: Text(context.l10n.camerasCancel),
+        ),
+      ];
+    }
+    if (failure != null) {
+      return [
+        ConnectFailureView(
+          camera: camera,
+          failure: failure,
+          connection: connection,
+        ),
+      ];
+    }
+    final l10n = context.l10n;
+    return [
+      const SizedBox(height: 16),
+      Row(
+        children: [
+          for (final (i, (tab, label)) in [
+            (CameraTab.library, l10n.camerasLibrary),
+            (CameraTab.shoot, l10n.camerasShoot),
+            (CameraTab.looks, l10n.camerasLooks),
+          ].indexed) ...[
+            if (i > 0) const SizedBox(width: 8),
+            Expanded(
+              child: _PageButton(
+                key: Key('camera-card-${tab.name}'),
+                icon: CameraTabBar.icon(tab),
+                label: label,
+                onPressed: () => unawaited(connection.openCamera(tab)),
               ),
-              child: Text(context.l10n.camerasCancel),
-            ),
-          ] else if (failure != null)
-            ConnectFailureView(
-              camera: camera,
-              failure: failure,
-              connection: connection,
-            )
-          else ...[
-            _Thumbs(serial: camera.serial),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                  child: linked
-                      ? const _LinkedLabel()
-                      : _NearLabel(
-                          presence: presence,
-                          camera: camera,
-                          withModel: false,
-                        ),
-                ),
-                const SizedBox(width: 10),
-                GrIconButton(
-                  key: const Key('camera-card-library'),
-                  icon: Icons.grid_view_rounded,
-                  tooltip: context.l10n.camerasLibrary,
-                  size: 34,
-                  onPressed: () =>
-                      unawaited(connection.openCamera(CameraTab.library)),
-                ),
-                const SizedBox(width: 8),
-                GrIconButton(
-                  key: const Key('camera-card-shoot'),
-                  icon: Icons.camera_outlined,
-                  tooltip: context.l10n.camerasShoot,
-                  size: 34,
-                  onPressed: () =>
-                      unawaited(connection.openCamera(CameraTab.shoot)),
-                ),
-                if (!linked) ...[
-                  const SizedBox(width: 10),
-                  FilledButton(
-                    key: const Key('camera-card-connect'),
-                    style: smallFilledStyle,
-                    onPressed: onConnect,
-                    child: Text(context.l10n.camerasConnect),
-                  ),
-                ],
-              ],
             ),
           ],
         ],
+      ),
+    ];
+  }
+}
+
+/// The camera's link as the card's icon shows it.
+enum _Link {
+  /// Not linked, and the scan does not see it (or cannot look).
+  away,
+
+  /// Not linked, but nearby; or linked and getting the link back.
+  nearby,
+
+  /// Linked over Bluetooth.
+  bluetooth,
+
+  /// On the camera's Wi-Fi.
+  wifi;
+
+  static _Link of(ConnectionController connection, Presence seen) {
+    if (connection.status == ConnectionStatus.connected) return wifi;
+    if (connection.bleLinked) return bluetooth;
+    // The session links the camera again, as after turning it off.
+    if (connection.status == ConnectionStatus.bluetooth) return nearby;
+    return seen == Presence.away ? away : nearby;
+  }
+}
+
+/// The card's link, as an icon alone; its words are the tooltip and the
+/// accessibility label.
+class _LinkIcon extends StatelessWidget {
+  const new(this.link);
+
+  final _Link link;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = GrColors.of(context);
+    final l10n = context.l10n;
+    final (icon, color, label) = switch (link) {
+      _Link.away => (
+        Icons.bluetooth_disabled_rounded,
+        c.t3,
+        l10n.camerasLinkAway,
+      ),
+      _Link.nearby => (Icons.bluetooth_rounded, c.t2, l10n.camerasLinkNearby),
+      _Link.bluetooth => (
+        Icons.bluetooth_connected_rounded,
+        c.ok,
+        l10n.camerasLinkBluetooth,
+      ),
+      _Link.wifi => (Icons.wifi_rounded, c.ok, l10n.camerasLinkWifi),
+    };
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        label: label,
+        excludeSemantics: true,
+        child: Container(
+          key: Key('camera-card-link-${link.name}'),
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: c.s2,
+            shape: BoxShape.circle,
+            border: Border.all(color: c.line),
+          ),
+          child: Icon(icon, size: 18, color: color),
+        ),
       ),
     );
   }
 }
 
-/// The card's link line while connected over Bluetooth.
-class _LinkedLabel extends StatelessWidget {
-  const new();
+/// Turns the camera on or off ([ConnectionController.powerOn] and
+/// [ConnectionController.powerOff]); filled while the camera is on.
+class _PowerButton extends StatelessWidget {
+  const new({required this.camera, required this.connection, required this.on});
+
+  final SavedCamera camera;
+  final ConnectionController connection;
+
+  /// Whether the camera is on; null when unknown, and the button then
+  /// turns it on.
+  final bool? on;
+
+  Future<void> _press(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = context.l10n;
+    final turnOff = on ?? false;
+    final done = turnOff
+        ? await connection.powerOff()
+        : await connection.powerOn();
+    // A link that could not be made shows on the card instead, and one
+    // that was cancelled needs no word.
+    final linked = switch (connection.status) {
+      ConnectionStatus.bluetooth || ConnectionStatus.connected => true,
+      _ => false,
+    };
+    if (done || !linked) return;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          turnOff
+              ? l10n.camerasPowerOffFailed(camera.name)
+              : l10n.camerasPowerOnFailed(camera.name),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    return Row(
-      key: const Key('camera-card-linked'),
-      children: [
-        Icon(Icons.bluetooth_connected_rounded, size: 16, color: c.ok),
-        const SizedBox(width: 6),
-        Flexible(
-          child: Text(
-            context.l10n.camerasConnectedViaBluetooth,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 12.5, color: c.t2),
+    final busy = connection.powerChange != null;
+    final lit = on ?? false;
+    final label = lit
+        ? context.l10n.camerasPowerOff(camera.name)
+        : context.l10n.camerasPowerOn(camera.name);
+    final color = lit ? c.invFg : c.t1;
+    return Tooltip(
+      message: label,
+      child: Semantics(
+        button: true,
+        toggled: on,
+        label: label,
+        excludeSemantics: true,
+        child: Material(
+          key: Key('camera-card-power-${lit ? 'on' : 'off'}'),
+          color: lit ? c.invBg : c.s2,
+          shape: CircleBorder(side: BorderSide(color: lit ? c.invBg : c.line2)),
+          child: InkWell(
+            key: const Key('camera-card-power'),
+            customBorder: const CircleBorder(),
+            onTap: busy ? null : () => unawaited(_press(context)),
+            child: SizedBox.square(
+              dimension: 52,
+              child: Center(
+                child: busy
+                    ? SizedBox.square(
+                        dimension: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: color,
+                        ),
+                      )
+                    : Icon(
+                        Icons.power_settings_new_rounded,
+                        size: 24,
+                        color: color,
+                      ),
+              ),
+            ),
           ),
         ),
-      ],
+      ),
+    );
+  }
+}
+
+/// A large button to one of the camera's pages: its icon over its name.
+class _PageButton extends StatelessWidget {
+  const new({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = GrColors.of(context);
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(GrRadii.md),
+      side: BorderSide(color: c.line),
+    );
+    return Material(
+      color: c.s2,
+      shape: shape,
+      child: InkWell(
+        customBorder: shape,
+        onTap: onPressed,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 84),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 28, color: c.t1),
+                const SizedBox(height: 8),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -688,172 +878,14 @@ class _Banner extends StatelessWidget {
   }
 }
 
-/// A thumbnail on the card: a shot's grid image and the layout its EXIF
-/// orientation applies to.
-typedef _Thumb = ({CameraFile file, Uint8List bytes, JpegLayout? layout});
-
-/// Thumbnails of the newest shots in the [LibraryModel]'s listing whose
-/// grid image ([Shot.gridSize]) the Library has in memory or on disk;
-/// nothing is fetched from the camera, so the card shows none until the
-/// Library has loaded some. Follows the listing as it changes.
-class _Thumbs extends StatefulWidget {
-  const new({required this.serial});
-
-  /// The card's camera; the listing shows once it is this camera's.
-  final String serial;
-
-  @override
-  State<_Thumbs> createState() => _ThumbsState();
-}
-
-class _ThumbsState extends State<_Thumbs> {
-  static const _count = 4;
-
-  late final LibraryModel _model = AppScope.of(context).library.model;
-  late final CameraImages _images = AppScope.of(context).library.images;
-  bool _listening = false;
-  List<_Thumb> _thumbs = const [];
-
-  /// The camera [_thumbs] are of.
-  String? _thumbsOf;
-  bool _scanning = false;
-  bool _scanAgain = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_listening) return;
-    _listening = true;
-    _model.addListener(_onModel);
-    _onModel();
-  }
-
-  @override
-  void didUpdateWidget(_Thumbs oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.serial != widget.serial) _onModel();
-  }
-
-  @override
-  void dispose() {
-    _model.removeListener(_onModel);
-    super.dispose();
-  }
-
-  void _onModel() => unawaited(_scan());
-
-  /// Finds the thumbnails to show; a change during a scan scans again
-  /// afterwards.
-  Future<void> _scan() async {
-    if (_scanning) {
-      _scanAgain = true;
-      return;
-    }
-    _scanning = true;
-    do {
-      _scanAgain = false;
-      final serial = widget.serial;
-      final thumbs = await _newestLocal(serial);
-      if (!mounted) return;
-      setState(() {
-        _thumbs = thumbs;
-        _thumbsOf = serial;
-      });
-    } while (_scanAgain);
-    _scanning = false;
-  }
-
-  /// Up to [_count] of [serial]'s newest shots whose grid image is local,
-  /// newest first; images read before are kept.
-  Future<List<_Thumb>> _newestLocal(String serial) async {
-    final shots = _model.serial == serial ? _model.shots : null;
-    if (shots == null) return const [];
-    final known = _thumbsOf == serial
-        ? {for (final t in _thumbs) t.file.key: t}
-        : const <String, _Thumb>{};
-    final thumbs = <_Thumb>[];
-    for (final shot in shots) {
-      if (thumbs.length == _count) break;
-      final thumb = known[shot.primary.key] ?? await _readLocal(serial, shot);
-      if (thumb != null) thumbs.add(thumb);
-    }
-    return thumbs;
-  }
-
-  /// [shot]'s grid image from memory or disk; null when the Library never
-  /// loaded it.
-  Future<_Thumb?> _readLocal(String serial, Shot shot) async {
-    final file = shot.primary;
-    final size = shot.gridSize;
-    final disk = CameraImages.diskFile(_images.cacheDir, serial, file, size);
-    final Uint8List bytes;
-    try {
-      bytes = _images.cached(serial, file, size) ?? await disk.readAsBytes();
-    } on FileSystemException {
-      return null;
-    }
-    return (file: file, bytes: bytes, layout: readJpegLayout(bytes));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final thumbs = _thumbsOf == widget.serial ? _thumbs : const <_Thumb>[];
-    if (thumbs.isEmpty) return const SizedBox.shrink();
-    final px = (MediaQuery.devicePixelRatioOf(context) * 96).round();
-    return Padding(
-      key: const Key('camera-card-thumbs'),
-      padding: const EdgeInsets.only(top: 14),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Row(
-          children: [
-            for (var i = 0; i < _count; i++) ...[
-              if (i > 0) const SizedBox(width: 3),
-              Expanded(
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: i < thumbs.length
-                      ? _image(thumbs[i], px)
-                      : ColoredBox(color: GrColors.of(context).s2),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _image(_Thumb thumb, int px) => ExifOrientation(
-    orientation: orientationToApply(
-      thumb.layout,
-      _model.info(thumb.file)?.orientation,
-    ),
-    child: Image.memory(
-      thumb.bytes,
-      key: ValueKey('camera-card-thumb:${thumb.file.key}'),
-      fit: BoxFit.cover,
-      cacheWidth: px,
-      gaplessPlayback: true,
-    ),
-  );
-}
-
 // ------------------------------------------------------------ other rows
 
 /// `GR IIIx · not nearby` with the presence dot (mock `.near`).
 class _NearLabel extends StatelessWidget {
-  const new({
-    required this.presence,
-    required this.camera,
-    required this.withModel,
-  });
+  const new({required this.presence, required this.camera});
 
   final CameraPresence presence;
   final SavedCamera camera;
-
-  /// Rows say the model; the card already shows it.
-  final bool withModel;
 
   @override
   Widget build(BuildContext context) {
@@ -868,7 +900,7 @@ class _NearLabel extends StatelessWidget {
       // Not scanning (no Bluetooth permission, Bluetooth off): unknown.
       Presence.away => null,
     };
-    final model = withModel ? camera.model : null;
+    final model = camera.model;
     final text = switch ((model, seen)) {
       (null, null) => '',
       (final model?, null) => model,
@@ -896,7 +928,7 @@ class _NearLabel extends StatelessWidget {
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: withModel ? 12 : 12.5, color: c.t2),
+            style: TextStyle(fontSize: 12, color: c.t2),
           ),
         ),
       ],
@@ -950,15 +982,7 @@ class _OtherCameraRow extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
         child: Row(
           children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: c.s3,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: Icon(Icons.photo_camera_outlined, size: 18, color: c.t1),
-            ),
+            const SizedBox(width: 40, child: CameraDrawing(strokeWidth: 1.1)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -969,11 +993,7 @@ class _OtherCameraRow extends StatelessWidget {
                     style: TextStyle(fontSize: 15, color: c.t1),
                   ),
                   const SizedBox(height: 3),
-                  _NearLabel(
-                    presence: presence,
-                    camera: camera,
-                    withModel: true,
-                  ),
+                  _NearLabel(presence: presence, camera: camera),
                 ],
               ),
             ),

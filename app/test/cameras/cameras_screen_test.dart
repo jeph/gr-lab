@@ -76,6 +76,17 @@ const _failFast = GrSessionOptions(
   bleConnectAttempts: 1,
 );
 
+/// Ends the session the way switching or forgetting the camera does, and
+/// waits for the close (it runs on the fake camera's pumped timers).
+Future<void> _disconnect(
+  WidgetTester tester,
+  ConnectionController connection,
+) async {
+  var closed = false;
+  unawaited(connection.disconnect().whenComplete(() => closed = true));
+  await pumpUntil(tester, () => closed, reason: 'session closed');
+}
+
 void main() {
   testWidgets('opens on Welcome before any camera is paired', (tester) async {
     tester.view
@@ -192,7 +203,10 @@ void main() {
       tester,
       find.byKey(const Key('camera-card-connecting')),
     );
-    await pumpUntilFound(tester, find.byKey(const Key('camera-card-linked')));
+    await pumpUntilFound(
+      tester,
+      find.byKey(const Key('camera-card-link-bluetooth')),
+    );
     expect(app.models.connection.status, ConnectionStatus.bluetooth);
     await pumpRounds(tester, 30);
     expect(app.camera.wlanOn, isFalse);
@@ -251,10 +265,12 @@ void main() {
         sessionOptions: _failFast,
       );
 
-      // Not advertising, so not nearby and not connected by itself.
+      // Not advertising, so not nearby and not connected by itself; the
+      // power button links it.
       await pumpRounds(tester, 20);
       expect(app.ble.connects, 0);
-      await _tap(tester, const Key('camera-card-connect'));
+      expect(find.byKey(const Key('camera-card-link-away')), findsOneWidget);
+      await _tap(tester, const Key('camera-card-power'));
       await _untilStatus(tester, app, ConnectionStatus.failed);
       await pumpUntilFound(
         tester,
@@ -364,9 +380,9 @@ void main() {
   testWidgets('a camera says whether the scan sees it, and its details show '
       'its identity and pairing date', (tester) async {
     final app = await _start(tester, config: _unreachable, withOther: true);
-    // The GR IV is on the card, the GR IIIx in the list with its model.
-    await pumpUntilFound(tester, find.text('Looking…'));
-    expect(find.text('GR IIIx · looking…'), findsOneWidget);
+    // The GR IIIx in the list with its model; the card's icon alone.
+    await pumpUntilFound(tester, find.text('GR IIIx · looking…'));
+    expect(find.byKey(const Key('camera-card-link-away')), findsOneWidget);
 
     await _tap(tester, const Key('camera-row-1111111'));
     await pumpUntilFound(tester, find.byKey(const Key('camera-details')));
@@ -384,7 +400,7 @@ void main() {
       config: _unreachable,
       sessionOptions: const GrSessionOptions(scanTimeout: Duration(minutes: 1)),
     );
-    await _tap(tester, const Key('camera-card-connect'));
+    await _tap(tester, const Key('camera-card-power'));
     await _untilStatus(tester, app, ConnectionStatus.connecting);
 
     await _tap(tester, const Key('camera-card-more'));
@@ -399,51 +415,70 @@ void main() {
     await app.dispose();
   });
 
-  testWidgets('the card shows the Library listing as it changes, with the '
-      'images the grid loaded', (tester) async {
+  testWidgets('the power button turns the camera off and on, keeping the '
+      'link, and a camera turned on this way stays on', (tester) async {
     final app = await _start(tester);
-    final model = app.models.library.model;
-    await pumpUntilFound(tester, find.byKey(const Key('camera-card-linked')));
-    expect(find.byKey(const Key('camera-card-thumbs')), findsNothing);
-
-    await _tap(tester, const Key('camera-card-library'));
-    await _untilStatus(tester, app, ConnectionStatus.connected);
-    await pumpUntil(tester, () => model.shots != null, reason: 'listing');
-
-    // A shot taken while the Library is open shows after a refresh.
-    const added = 'sd1|101RICOH/R0000271.JPG';
-    app.camera.addPhoto(
-      FakePhoto('101RICOH', 'R0000271.JPG', DateTime(2026, 11, 6, 9)),
-    );
-    unawaited(model.refresh());
-    await pumpUntil(
-      tester,
-      () => model.shots!.first.primary.key == added,
-      reason: 'listing with the new shot',
-    );
-    final newest = [for (final s in model.shots!.take(4)) s.primary.key];
-    for (final key in newest) {
-      await pumpUntilFound(tester, find.byKey(ValueKey('image:view:$key')));
-    }
-
-    await _tap(tester, const Key('camera-pill'));
-    await _tap(tester, const Key('camera-sheet-disconnect'));
-    await pumpUntilFound(tester, find.byKey(_cameras));
+    final connection = app.models.connection;
     await pumpUntilFound(
       tester,
-      find.byKey(const ValueKey('camera-card-thumb:$added')),
+      find.byKey(const Key('camera-card-link-bluetooth')),
     );
-    final thumbs = find.descendant(
-      of: find.byKey(const Key('camera-card-thumbs')),
-      matching: find.byType(Image),
+    expect(find.byKey(const Key('camera-card-power-on')), findsOneWidget);
+
+    await _tap(tester, const Key('camera-card-power'));
+    await pumpUntil(tester, () => !app.camera.poweredOn, reason: 'off');
+    await pumpUntilFound(
+      tester,
+      find.byKey(const Key('camera-card-power-off')),
     );
-    expect(
-      [
-        for (final e in thumbs.evaluate())
-          (e.widget.key! as ValueKey<String>).value,
-      ],
-      [for (final key in newest) 'camera-card-thumb:$key'],
+    // The session links the camera again in its off state.
+    await pumpUntil(tester, () => connection.bleLinked, reason: 'relinked');
+    expect(connection.status, ConnectionStatus.bluetooth);
+    expect(connection.cameraOff, isTrue);
+    expect(app.camera.poweredOn, isFalse);
+
+    await _tap(tester, const Key('camera-card-power'));
+    await pumpUntil(tester, () => app.camera.poweredOn, reason: 'on');
+    await pumpUntilFound(tester, find.byKey(const Key('camera-card-power-on')));
+    await pumpUntil(
+      tester,
+      () => connection.powerChange == null,
+      reason: 'power on done',
     );
+    expect(connection.cameraOff, isFalse);
+
+    // Ending the session turns off only cameras the app woke for itself.
+    await _disconnect(tester, connection);
+    expect(app.camera.poweredOn, isTrue);
+
+    await app.dispose();
+  });
+
+  testWidgets('the power button links an unlinked camera that is off and '
+      'turns it on', (tester) async {
+    final app = await _start(
+      tester,
+      config: const FakeCameraConfig(bonded: true, poweredOn: false),
+    );
+    final connection = app.models.connection;
+    await _untilStatus(tester, app, ConnectionStatus.bluetooth);
+    await _disconnect(tester, connection);
+    // The scan sees it nearby and switched off.
+    await pumpUntilFound(
+      tester,
+      find.byKey(const Key('camera-card-link-nearby')),
+    );
+    expect(find.byKey(const Key('camera-card-power-off')), findsOneWidget);
+
+    await _tap(tester, const Key('camera-card-power'));
+    await pumpUntil(tester, () => app.camera.poweredOn, reason: 'on');
+    await pumpUntil(
+      tester,
+      () => connection.powerChange == null,
+      reason: 'power on done',
+    );
+    expect(connection.status, ConnectionStatus.bluetooth);
+    expect(find.byKey(const Key('camera-card-power-on')), findsOneWidget);
 
     await app.dispose();
   });

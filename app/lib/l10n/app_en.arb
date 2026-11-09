@@ -38,11 +38,7 @@
   },
   "camerasConnect": "Connect",
   "@camerasConnect": {
-    "description": "Button that connects to a paired camera (camera card, other cameras list, camera details)."
-  },
-  "camerasConnectedViaBluetooth": "Connected via Bluetooth",
-  "@camerasConnectedViaBluetooth": {
-    "description": "Link line on the camera card while the camera is connected over Bluetooth only."
+    "description": "Button that connects to a paired camera (other cameras list, camera details)."
   },
   "camerasDetailsForget": "Forget camera",
   "@camerasDetailsForget": {
@@ -169,7 +165,27 @@
   },
   "camerasLibrary": "Library",
   "@camerasLibrary": {
-    "description": "Tooltip of the camera card's button that opens the photos on the camera."
+    "description": "Label of the camera card's button that opens the photos on the camera."
+  },
+  "camerasLinkAway": "Not nearby",
+  "@camerasLinkAway": {
+    "description": "Accessibility label and tooltip of the camera card's link icon: the camera is not linked and the scan does not see it."
+  },
+  "camerasLinkBluetooth": "Connected over Bluetooth",
+  "@camerasLinkBluetooth": {
+    "description": "Accessibility label and tooltip of the camera card's link icon: the camera is linked over Bluetooth only."
+  },
+  "camerasLinkNearby": "Nearby",
+  "@camerasLinkNearby": {
+    "description": "Accessibility label and tooltip of the camera card's link icon: the scan sees the camera nearby, but it is not linked."
+  },
+  "camerasLinkWifi": "Connected over Wi-Fi",
+  "@camerasLinkWifi": {
+    "description": "Accessibility label and tooltip of the camera card's link icon: the phone is on the camera's Wi-Fi."
+  },
+  "camerasLooks": "Looks",
+  "@camerasLooks": {
+    "description": "Label of the camera card's button that opens the camera's Image Control looks."
   },
   "camerasLostBluetoothBody": "The camera stopped answering over Bluetooth.",
   "@camerasLostBluetoothBody": {
@@ -193,25 +209,65 @@
   "@camerasOtherCameras": {
     "description": "Section heading on the Cameras screen above the other paired cameras."
   },
+  "camerasPowerOff": "Turn {cameraName} off",
+  "@camerasPowerOff": {
+    "description": "Tooltip and accessibility label of the camera card's power button while the camera is on.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name as the user named it, for example GR IV."
+      }
+    }
+  },
+  "camerasPowerOffFailed": "Couldn't turn {cameraName} off",
+  "@camerasPowerOffFailed": {
+    "description": "Snackbar on the Cameras screen when the camera did not take the request to turn off.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name as the user named it, for example GR IV."
+      }
+    }
+  },
+  "camerasPowerOn": "Turn {cameraName} on",
+  "@camerasPowerOn": {
+    "description": "Tooltip and accessibility label of the camera card's power button while the camera is off, or while GR Lab does not know whether it is on.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name as the user named it, for example GR IV."
+      }
+    }
+  },
+  "camerasPowerOnFailed": "Couldn't turn {cameraName} on",
+  "@camerasPowerOnFailed": {
+    "description": "Snackbar on the Cameras screen when the camera was linked but did not turn on.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name as the user named it, for example GR IV."
+      }
+    }
+  },
   "camerasPresenceAway": "Not nearby",
   "@camerasPresenceAway": {
-    "description": "Presence line on the camera card: the last scan did not see the camera."
+    "description": "Line under a camera's name in the other cameras list when its model is unknown: the last scan did not see the camera."
   },
   "camerasPresenceLooking": "Looking…",
   "@camerasPresenceLooking": {
-    "description": "Presence line on the camera card: the scan is still looking for the camera."
+    "description": "Line under a camera's name in the other cameras list when its model is unknown: the scan is still looking for the camera."
   },
   "camerasPresenceNearby": "Nearby",
   "@camerasPresenceNearby": {
-    "description": "Presence line on the camera card: the camera is nearby; whether it is on is unknown."
+    "description": "Line under a camera's name in the other cameras list when its model is unknown: the camera is nearby; whether it is on is unknown."
   },
   "camerasPresenceNearbyOff": "Nearby · switched off",
   "@camerasPresenceNearbyOff": {
-    "description": "Presence line on the camera card: the camera is nearby and switched off."
+    "description": "Line under a camera's name in the other cameras list when its model is unknown: the camera is nearby and switched off."
   },
   "camerasPresenceNearbyOn": "Nearby · on",
   "@camerasPresenceNearbyOn": {
-    "description": "Presence line on the camera card: the camera is nearby and switched on."
+    "description": "Line under a camera's name in the other cameras list when its model is unknown: the camera is nearby and switched on."
   },
   "camerasPresenceWithModelAway": "{model} · not nearby",
   "@camerasPresenceWithModelAway": {
@@ -269,7 +325,7 @@
   },
   "camerasShoot": "Shoot",
   "@camerasShoot": {
-    "description": "Tooltip of the camera card's button that opens remote shooting."
+    "description": "Label of the camera card's button that opens remote shooting."
   },
   "camerasTitle": "Cameras",
   "@camerasTitle": {
