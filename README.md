@@ -39,7 +39,7 @@ Demo mode keeps its data in a separate `demo/` folder. On first launch, Add a ca
 
 ### Debug log
 
-GR Lab keeps debug logs while Settings > Enable debug logging is on: everything it sends to and receives from the camera (Bluetooth scans, reads, writes and notifications, every HTTP request and answer, WebSocket messages, live-view frame sizes, and the Wi-Fi joining steps), every line the app prints, uncaught errors, and the native Wi-Fi code's lines. The setting is on by default in `dev` and off in `prod`. While it is off nothing is logged, not even to logcat or the console. Settings > Debug log exports the log through the share sheet as JSON Lines files and clears it. The log keeps about 50 MB. It contains the camera's Wi-Fi password.
+GR Lab keeps debug logs while Settings > Enable debug logging is on: everything it sends to and receives from the camera (Bluetooth scans, reads, writes and notifications, every HTTP request and answer, WebSocket messages, live-view frame sizes, and the Wi-Fi joining steps), every line the app prints, uncaught errors, and the native Wi-Fi code's lines. The setting is on by default in `dev` and off in `prod`. While it is off nothing is logged, not even to logcat or the console, with one exception: the Flutter engine still reports uncaught errors there itself, so crashes stay visible. Settings > Debug log exports the log through the share sheet as JSON Lines files and clears it. The log keeps about 50 MB. It contains the camera's Wi-Fi password.
 
 ## Checks
 

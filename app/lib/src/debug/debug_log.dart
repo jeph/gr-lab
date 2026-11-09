@@ -133,7 +133,8 @@ final class DebugLog extends ChangeNotifier {
 
   /// Whether debug logs are kept now (Settings, "Enable debug logging").
   /// While off, nothing is recorded and `runWithDebugLog` keeps app prints
-  /// off the console too.
+  /// off the console too; only the engine's own report of uncaught errors
+  /// still reaches it ([onUncaughtError]).
   bool get enabled => _enabled;
 
   /// Persists the user's choice; it wins over [defaultEnabled] from now on.
@@ -161,8 +162,10 @@ final class DebugLog extends ChangeNotifier {
     'fields': {'message': line},
   });
 
-  /// For `PlatformDispatcher.onError`: records an error nothing caught.
-  /// Returns false, so the engine still reports it as unhandled.
+  /// For `PlatformDispatcher.onError`: records an error nothing caught
+  /// (only while [enabled]). Returns false, so the engine still reports it
+  /// as unhandled to logcat or the console whether or not debug logging is
+  /// on; crashes stay visible.
   bool onUncaughtError(Object error, StackTrace stack) {
     _recordJson({
       'time': DateTime.now().toUtc().toIso8601String(),
