@@ -607,4 +607,48 @@ void main() {
 
     await app.dispose();
   });
+
+  testWidgets('Play cannot be tapped again while the camera confirms the '
+      'movie', (tester) async {
+    final app = (await tester.runAsync(
+      () => createTestApp(
+        config: FakeCameraConfig(
+          bonded: true,
+          photos: [
+            FakePhoto(
+              '100RICOH',
+              'R0000001.MOV',
+              DateTime(2026, 11, 5, 8),
+              videoLength: const Duration(seconds: 5),
+            ),
+          ],
+        ),
+        saveCamera: true,
+      ),
+    ))!;
+    final gate = app.camera.infoGate = Completer<void>();
+    await app.pumpApp(tester);
+    await _openLibrary(tester);
+    await tapWhenReady(tester, _cell('sd1|100RICOH/R0000001.MOV'));
+    final play = _inViewer('viewer-play');
+    await tapWhenReady(tester, play);
+    expect(play, findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(ShotViewer),
+        matching: find.byType(CircularProgressIndicator),
+      ),
+      findsOneWidget,
+    );
+
+    gate.complete();
+    app.camera.infoGate = null;
+    await pumpUntil(
+      tester,
+      () => find.textContaining('Copying').evaluate().isNotEmpty,
+      reason: 'the copy starts once the camera answers',
+    );
+
+    await app.dispose();
+  });
 }

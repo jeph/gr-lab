@@ -70,6 +70,7 @@ extension on FakeGrCamera {
         case ['photos', 'latest', 'info']:
           return await _error(request, 400, 'Bad Request', httpStatus: 200);
         case ['photos', final dir, final file, 'info']:
+          if (infoGate case final gate?) await gate.future;
           return await _info(request, dir, file);
         case ['photos', final dir, final file, 'imgctrl']:
           return await _imageControl(request, dir, file);

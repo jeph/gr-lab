@@ -216,6 +216,10 @@ class _VideoPageState extends State<_VideoPage> {
   MovieDownload? _download;
   _MovieProblem? _problem;
 
+  /// Set while Play waits for the camera to confirm the movie, so a
+  /// second tap can't start a second copy or player.
+  bool _checking = false;
+
   /// Keeps the movie's copy on disk while the page shows: the player
   /// reads the file without asking the cache again.
   CacheHold? _movieHold;
@@ -269,9 +273,15 @@ class _VideoPageState extends State<_VideoPage> {
   /// connected, the camera first confirms the cached copy is of the movie
   /// now at its path (the library drops it otherwise).
   Future<void> _play() async {
+    if (_checking || _download != null || _video != null) return;
     final file = widget.shot.primary;
+    setState(() {
+      _checking = true;
+      _problem = null;
+    });
     await _library.model.ensureInfo(file);
     if (!mounted) return;
+    setState(() => _checking = false);
     var local = _library.movies.cached(widget.serial, file);
     if (local == null) {
       final link = _library.link.value;
@@ -372,7 +382,7 @@ class _VideoPageState extends State<_VideoPage> {
             padding: const EdgeInsets.all(24),
             child: download != null
                 ? _Copying(download: download, onCancel: _cancel)
-                : video != null
+                : video != null || _checking
                 ? const CircularProgressIndicator()
                 : ValueListenableBuilder(
                     valueListenable: _library.link,

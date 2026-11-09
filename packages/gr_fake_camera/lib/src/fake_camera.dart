@@ -98,6 +98,10 @@ final class FakeGrCamera {
   /// Last name written to Client Registration by a bonded client.
   String? registeredClientName;
 
+  /// While set, `/v1/photos/<dir>/<file>/info` answers only once it
+  /// completes: a camera slow to describe a file.
+  Completer<void>? infoGate;
+
   bool _poweredOn;
   int _mode = BleOperationMode.playback.wire;
   bool _bonded;
