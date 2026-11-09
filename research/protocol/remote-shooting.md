@@ -310,7 +310,7 @@ The YAML `rest_value` maps SDK constant name → wire value. GR III, GR III HDF,
 - Found in code: Image Sync shows AUTO only when `sv` is the string `auto` (`m/r4.java:973-998`).
 - Observed on a GR IV HDF (reported 2026-11-09, firmware not recorded): after AUTO was picked on GR Lab's ISO dial, the readout showed a number at the next props read.
 - Observed on a GR IV HDF (fw 1.20, 2026-11-07, Av): `svList` was `100 … 204800` with no `auto`, `sv` was `6400`. Whether ISO was AUTO on the body then is **[unknown]**.
-- **[unknown]**: any HTTP, WebSocket or BLE field that says ISO is AUTO while `sv` shows a number. **[inferred]**: an empty `svList` may mean the camera sets ISO itself (as `tvList: []` did in Av), which would cover TAv but not AUTO in P, Av or Tv. Next step: a debug log in Av and TAv, each with ISO AUTO and with a fixed ISO.
+- **[unknown]**: any HTTP, WebSocket or BLE field that says ISO is AUTO while `sv` shows a number. **[inferred]**: an empty `svList` may mean the camera sets ISO itself (as `tvList: []` did in Av). The GR IV has no TAv on its mode dial: its modes are P, Av, Tv, Snap and M, and M with ISO AUTO lets the camera set the ISO (GR IV user manual pp. 52-53). Next step: a debug log in Av and in M, each with ISO AUTO and with a fixed ISO.
 
 - Camera (device) params: `camera_ricoh_gr_iii.yaml`:
   - `datetime`, `channel` `1..11`, `key`, `ssid`
