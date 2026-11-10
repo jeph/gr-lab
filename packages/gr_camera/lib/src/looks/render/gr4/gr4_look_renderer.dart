@@ -37,12 +37,13 @@ final class Gr4LookRenderer implements LookRenderer {
     if (!_canUndo(source)) return null;
     final stages = _Stages.of(source);
     if (stages == null) return null;
-    return stages.setsChroma ? stages.decodeGrey : stages.decode;
+    if (!stages.setsChroma) return stages.decode;
+    return stages.undoesGrey ? stages.decodeGrey : null;
   }
 
   @override
   LookSourceFit sourceFit(Look source, Look target) {
-    if (!_canUndo(source)) return LookSourceFit.unusable;
+    if (decoder(source) == null) return LookSourceFit.unusable;
     if (_isMonochrome(source)) {
       // A grey photo has its tones to offer another black-and-white look,
       // and nothing to offer a colour one.
@@ -338,6 +339,11 @@ const double _hueStep = 2.46 * math.pi / 180;
 /// input `16 · i`.
 const double _curveScale = 4095 / 16;
 
+/// The least a black-and-white look's brightest grey may be, of full
+/// scale, for a photo of it to be undone \[design\]: under a quarter, the
+/// photo holds too few levels to stretch back into a scene.
+const double _leastGreyRange = 0.25;
+
 /// The stages of one look's rendering, worked out once per look.
 final class _Stages {
   new _({
@@ -543,8 +549,9 @@ final class _Stages {
   final double cb;
   final double cr;
 
-  /// Scene-linear RGB to this look's encoded RGB.
-  void encode(Float64List v) {
+  /// The stages before the chroma is set: scene-linear RGB through the
+  /// base's matrix, the multi-axis correction, the curves and block 1.
+  void _develop(Float64List v) {
     mat3Apply(fromScene, v);
     axes?.apply(v);
     // The curves hold their end values for what lies outside 0..1. Where
@@ -554,6 +561,11 @@ final class _Stages {
       v[c] = curveAt(curves[c], v[c] * _curveScale);
     }
     mat3Apply(mix, v);
+  }
+
+  /// Scene-linear RGB to this look's encoded RGB.
+  void encode(Float64List v) {
+    _develop(v);
     rgbToYcc(v);
     if (setsChroma) {
       v[1] = cb;
@@ -584,11 +596,38 @@ final class _Stages {
     mat3Apply(toScene, v);
   }
 
+  /// The luma this look gives a grey scene, at each of the tone curve's
+  /// points (point `i` is a scene value of `i / _curveScale`), through the
+  /// base's matrix, its curves and its black-and-white mix: a filter whose
+  /// values do not add up to 100 % brightens or darkens the photo, and
+  /// undoing the look has to take that out as well. Where the luma would
+  /// fall as the scene brightens it stays level, so it can be inverted.
+  late final Float64List greyResponse = () {
+    final response = Float64List(gr4CurvePoints);
+    final v = Float64List(3);
+    var highest = double.negativeInfinity;
+    for (var i = 0; i < response.length; i++) {
+      v.fillRange(0, 3, i / _curveScale);
+      _develop(v);
+      final luma = lumaRed * v[0] + lumaGreen * v[1] + lumaBlue * v[2];
+      if (luma > highest) highest = luma;
+      response[i] = highest;
+    }
+    return response;
+  }();
+
+  /// Whether a black-and-white photo of this look has tones to undo: its
+  /// brightest grey reaches [_leastGreyRange]. A filter whose values add up
+  /// to little, nothing or less leaves a photo too dark to read a scene
+  /// from.
+  bool get undoesGrey => greyResponse.last >= _leastGreyRange;
+
   /// The nearest thing to an inverse of [encode] for a black-and-white
-  /// look \[design\]: the grey the scene would be if it had no colour.
+  /// look \[design\]: the grey scene that would give the pixel's luma
+  /// ([greyResponse]).
   void decodeGrey(Float64List v) {
     final luma = lumaRed * v[0] + lumaGreen * v[1] + lumaBlue * v[2];
-    final grey = curveInverse(curves[1], luma) / _curveScale;
+    final grey = curveInverse(greyResponse, luma) / _curveScale;
     v[0] = grey;
     v[1] = grey;
     v[2] = grey;

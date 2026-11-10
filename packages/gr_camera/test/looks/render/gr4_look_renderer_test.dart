@@ -258,6 +258,73 @@ void main() {
     expect(_render(monotone, harder, [190, 190, 190])[1], greaterThan(195));
   });
 
+  /// [base] with the filter effect on and [red], [green] and [blue] as its
+  /// percentages, each split over two bytes as the look holds them.
+  Look filtered(LookBase base, int red, int green, int blue) => _look(base, {
+    LookParameter.filterEffect: 1,
+    LookParameter.filterEffectRedHigh: (red >> 8) & 0xff,
+    LookParameter.filterEffectRedLow: red & 0xff,
+    LookParameter.filterEffectGreenHigh: (green >> 8) & 0xff,
+    LookParameter.filterEffectGreenLow: green & 0xff,
+    LookParameter.filterEffectBlueHigh: (blue >> 8) & 0xff,
+    LookParameter.filterEffectBlueLow: blue & 0xff,
+  });
+
+  test('a black-and-white photo taken through a filter is unchanged under '
+      'its own look, whatever its filter values add up to', () {
+    // The last number is the brightest level such a photo holds: a filter
+    // that adds up to 60 % leaves the top of the range unused.
+    for (final (base, red, green, blue, brightest) in [
+      (LookBase.monotone, 120, -10, -10, 247),
+      (LookBase.monotone, 200, 0, 0, 247),
+      (LookBase.softMonotone, 30, 20, 10, 150),
+      (LookBase.highContrast, 90, 80, -20, 247),
+    ]) {
+      final look = filtered(base, red, green, blue);
+      for (final level in [8, 40, 119, brightest]) {
+        expect(
+          _render(look, look, [level, level, level])[1],
+          closeTo(level, 1),
+          reason: '$base through $red, $green, $blue at $level',
+        );
+      }
+    }
+    // Twice the light reached that photo: under the unfiltered look its
+    // tones are those of half as much.
+    final doubled = filtered(LookBase.monotone, 200, 0, 0);
+    final plain = _look(LookBase.monotone);
+    final halved = _render(doubled, plain, [200, 200, 200])[1];
+    expect(
+      _render(plain, doubled, [
+        halved.round(),
+        halved.round(),
+        halved.round(),
+      ])[1],
+      closeTo(200, 2),
+    );
+    expect(halved, lessThan(150));
+  });
+
+  test('a photo whose filter values add up to little, nothing or less is '
+      'too dark to be undone', () {
+    final plain = _look(LookBase.monotone);
+    for (final (base, red, green, blue) in [
+      (LookBase.monotone, 0, 0, 0),
+      (LookBase.monotone, 50, -30, -20),
+      (LookBase.softMonotone, 20, 0, 0),
+      (LookBase.highContrast, -100, 0, 0),
+    ]) {
+      final look = filtered(base, red, green, blue);
+      final reason = '$base through $red, $green, $blue';
+      expect(_renderer.decoder(look), isNull, reason: reason);
+      expect(
+        _renderer.sourceFit(look, plain),
+        LookSourceFit.unusable,
+        reason: reason,
+      );
+    }
+  });
+
   test('HDR Tone, Solarized Effect and bases GR Lab does not know cannot '
       'be undone', () {
     final unknownBase = Look.fromBytes(Uint8List.fromList([1, 0, 0x7f, 0]))!;
