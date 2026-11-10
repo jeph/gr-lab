@@ -159,6 +159,9 @@ final class FakeGrCamera {
   final _wifiLost = StreamController<void>.broadcast();
 
   HttpServer? _server;
+
+  /// The zone [startHttp] was called in, where the server's sockets run.
+  Zone _httpZone = Zone.current;
   final Set<WebSocket> _sockets = {};
   final Map<FakePhoto, int> _fullSizes = Map.identity();
 
@@ -322,9 +325,7 @@ final class FakeGrCamera {
   /// camera keeps no changes for a socket that is not open, so changes
   /// until a client reopens one reach nobody.
   void dropChangeSockets() {
-    for (final ws in _sockets.toList()) {
-      unawaited(ws.close(WebSocketStatus.goingAway));
-    }
+    _onChangeSockets((ws) => unawaited(ws.close(WebSocketStatus.goingAway)));
     _sockets.clear();
   }
 
@@ -392,10 +393,7 @@ final class FakeGrCamera {
       unawaited(scan.close());
     }
     _scans.clear();
-    for (final ws in _sockets.toList()) {
-      unawaited(ws.close(WebSocketStatus.goingAway));
-    }
-    _sockets.clear();
+    dropChangeSockets();
     _endLiveViews();
     unawaited(_wifiLost.close());
     await _server?.close(force: true);
@@ -515,10 +513,7 @@ final class FakeGrCamera {
     final waiting = _apUp;
     _apUp = null;
     if (waiting != null && !waiting.isCompleted) waiting.complete(false);
-    for (final ws in _sockets.toList()) {
-      unawaited(ws.close(WebSocketStatus.goingAway));
-    }
-    _sockets.clear();
+    dropChangeSockets();
     _endLiveViews();
     if (wasOn) _notify(GrBleCatalog.networkType, [BleNetworkType.off.wire]);
   }
@@ -554,8 +549,16 @@ final class FakeGrCamera {
 
   void _push(Map<String, Object?> message) {
     final text = jsonEncode(message);
-    for (final ws in _sockets) {
-      ws.add(text);
-    }
+    _onChangeSockets((ws) => ws.add(text));
+  }
+
+  /// Runs [action] on every change socket in [_httpZone]. A WebSocket's
+  /// sending side belongs to the zone of its first send or close, and
+  /// changes come from other zones: a widget test sets camera state in its
+  /// fake-time zone, where a failed write to a socket the client has left
+  /// is reported only on the test's next pump, by which time the socket is
+  /// closed (`Cannot add event after closing`).
+  void _onChangeSockets(void Function(WebSocket ws) action) {
+    _httpZone.run(() => _sockets.toList().forEach(action));
   }
 }

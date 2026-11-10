@@ -405,6 +405,47 @@ void main() {
     expect((await s.http!.props()).battery, 40);
   });
 
+  test(
+    'a change made from another zone, as a widget test makes it in fake '
+    "time, is sent without the camera's sockets entering that zone",
+    () async {
+      camera = await startCamera(fastConfig(bonded: true));
+      final s = await connect();
+      final changes = s.changes!;
+      Future<GrBatteryChange?> batteryChange() =>
+          changes.waitFor<GrBatteryChange>(
+            (_) => true,
+            timeout: const Duration(seconds: 2),
+          );
+
+      var entered = 0;
+      R count<R>(R Function() body) {
+        entered++;
+        return body();
+      }
+
+      final callers = Zone.current.fork(
+        specification: ZoneSpecification(
+          run: <R>(_, parent, zone, f) => count(() => parent.run(zone, f)),
+          runUnary: <R, T>(_, parent, zone, f, arg) =>
+              count(() => parent.runUnary(zone, f, arg)),
+          runBinary: <R, T1, T2>(_, parent, zone, f, a, b) =>
+              count(() => parent.runBinary(zone, f, a, b)),
+        ),
+      );
+      final first = batteryChange();
+      callers.run(() => camera.battery = 40);
+      expect(await first, isNotNull);
+
+      entered = 0;
+      final second = batteryChange();
+      camera.battery = 30;
+      expect(await second, isNotNull);
+      await camera.close();
+      expect(entered, 0);
+    },
+  );
+
   test('dropWifiAfter: liveness reports the loss, then WLAN-on over BLE '
       'and a rejoin recover the session', () async {
     camera = await startCamera(

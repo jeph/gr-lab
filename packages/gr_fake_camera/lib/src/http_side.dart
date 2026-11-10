@@ -8,6 +8,7 @@ extension on FakeGrCamera {
     final running = _server;
     if (running != null) return running.port;
     if (_closed) throw StateError('FakeGrCamera is closed');
+    _httpZone = Zone.current;
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
     _server = server;
     server.listen((request) => unawaited(_handle(request)));
