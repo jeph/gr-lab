@@ -144,7 +144,10 @@ final class WifiConsentRequest {
 /// stays.
 ///
 /// The session's BLE reconnect runs underneath and shows as
-/// [reconnecting]. When the camera's Wi-Fi is lost while a page needs it,
+/// [reconnecting]. On Bluetooth alone it ends when the session counts the
+/// camera as gone (`GrSessionOptions.bleLostAfter`): the session ends, the
+/// app goes back to the Cameras screen and it says the connection was
+/// lost. When the camera's Wi-Fi is lost while a page needs it,
 /// the session gets it back (turning the camera on again when it was
 /// switched off) while the pages stay, also shown as [reconnecting]. When
 /// that fails with Bluetooth still there, the pages stay and the Library

@@ -217,10 +217,12 @@ final class GrSessionOptions {
   /// BLE reconnect attempts before automatic reconnects stop.
   final int maxBleReconnectAttempts;
 
-  /// How long Wi-Fi recovery waits for a lost Bluetooth link to come back
-  /// before the camera counts as gone (switched off with its Bluetooth, or
-  /// out of range). Design choice: a GR IV that was switched off links
-  /// again ~15 s after the drop (GR IV HDF, 2026-11-08).
+  /// How long a lost Bluetooth link may stay down before the camera counts
+  /// as gone (switched off with its Bluetooth, or out of range): the BLE
+  /// reconnect stops then unless the camera's Wi-Fi is in use, and Wi-Fi
+  /// recovery waits this long for the link to come back. Design choice: a
+  /// GR IV that was switched off links again ~15 s after the drop (GR IV
+  /// HDF, 2026-11-08).
   final Duration bleLostAfter;
 }
 
@@ -946,7 +948,9 @@ final class GrSession {
     return ad;
   }
 
-  Future<void> _connectBle({required bool initial}) async {
+  /// Links over BLE, trying again when a connect fails. With [until], no
+  /// connect runs past it and none is started after it.
+  Future<void> _connectBle({required bool initial, DateTime? until}) async {
     final ble = _ble;
     final lastOff = ble?.lastPowerOff;
     if (lastOff != null) {
@@ -960,14 +964,15 @@ final class GrSession {
     if (initial) _set(GrSessionPhase.bleConnecting, 'ble.connect');
     for (var attempt = 1; ; attempt++) {
       try {
-        await _openBle();
+        await _openBle(until);
         return;
       } on GrSessionException catch (e) {
         // The first link to an off camera drops (supervision timeout
         // ~5.5 s); GR WORLD reconnects ~0.1 s later. A lost bond is final.
         if (_closing ||
             e.needsPairing ||
-            attempt >= options.bleConnectAttempts) {
+            attempt >= options.bleConnectAttempts ||
+            _isPast(until)) {
           rethrow;
         }
         _emit('ble.connectRetry', {'attempt': attempt, 'error': '$e'});
@@ -976,14 +981,20 @@ final class GrSession {
     }
   }
 
-  /// One connect: link, discovery, power-on check, encrypted identity.
-  Future<void> _openBle() async {
+  /// One connect: link, discovery, power-on check, encrypted identity. The
+  /// link has until [until] to open when that is sooner than
+  /// [GrSessionOptions.bleConnectTimeout].
+  Future<void> _openBle(DateTime? until) async {
+    final left = until?.difference(DateTime.now());
+    final timeout = left != null && left < options.bleConnectTimeout
+        ? left
+        : options.bleConnectTimeout;
     // close() may have started during a retry pause or a power-off guard.
     if (_closing) throw _closed;
     final connection = await _step(
       GrSessionPhase.bleConnecting,
       'BLE connect',
-      () => transport.connect(_deviceId!, timeout: options.bleConnectTimeout),
+      () => transport.connect(_deviceId!, timeout: timeout),
     );
     final client = GrBleClient(connection, trace: _trace);
     final GrBleDiscoveryReport report;
@@ -1316,25 +1327,34 @@ final class GrSession {
       _ble ?? (throw GrSessionException(phase, 'the Bluetooth link dropped'));
 
   /// Reconnects BLE only; Wi-Fi state is untouched (no WLAN writes). Stops
-  /// for good when the bond is gone. Returns whether the link is back.
+  /// for good when the bond is gone, when the attempts are used up and,
+  /// unless the camera's Wi-Fi is in use, once the link has been down for
+  /// [GrSessionOptions.bleLostAfter]: nothing reaches the camera then, so
+  /// it counts as gone. Returns whether the link is back.
   Future<bool> _reconnectBle() async {
-    for (
-      var attempt = 0;
-      attempt < options.maxBleReconnectAttempts;
-      attempt++
-    ) {
+    final lostAt = DateTime.now();
+    final goneAt = lostAt.add(options.bleLostAfter);
+    // With its Wi-Fi in use the camera is still reached, and a Wi-Fi that
+    // goes too has its own wait for this link ([_recoverWifi]).
+    DateTime? deadline() => _wifiInUse ? null : goneAt;
+    var attempts = 0;
+    while (attempts < options.maxBleReconnectAttempts) {
       await _until(
         _closeSignal.future,
-        Future<void>.delayed(_delay(options.bleReconnectDelays, attempt)),
+        Future<void>.delayed(_delay(options.bleReconnectDelays, attempts)),
+        deadline()?.difference(DateTime.now()),
       );
       if (_closing) return false;
-      _emit('ble.reconnect', {'attempt': attempt + 1});
+      final until = deadline();
+      if (_isPast(until)) break;
+      attempts++;
+      _emit('ble.reconnect', {'attempt': attempts});
       try {
-        await _connectBle(initial: false);
-        _emit('ble.restored', {'attempt': attempt + 1});
+        await _connectBle(initial: false, until: until);
+        _emit('ble.restored', {'attempt': attempts});
         return true;
       } on Object catch (e) {
-        _emit('ble.reconnectFailed', {'attempt': attempt + 1, 'error': '$e'});
+        _emit('ble.reconnectFailed', {'attempt': attempts, 'error': '$e'});
         if (e is! GrSessionException) continue;
         if (e.needsPairing) {
           _bleLostUnexpectedly = false;
@@ -1344,9 +1364,15 @@ final class GrSession {
       }
     }
     _bleLostUnexpectedly = false;
-    _emit('ble.gaveUp', {'attempts': options.maxBleReconnectAttempts});
+    _emit('ble.gaveUp', {
+      'attempts': attempts,
+      'downMs': DateTime.now().difference(lostAt).inMilliseconds,
+    });
     return false;
   }
+
+  static bool _isPast(DateTime? time) =>
+      time != null && !DateTime.now().isBefore(time);
 
   // ---------------------------------------------------------------- Wi-Fi
 

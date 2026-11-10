@@ -40,6 +40,13 @@ final class BondedCamera implements BleTransport {
   /// While set, a connect waits for it before the link opens.
   Completer<void>? holdConnect;
 
+  /// While set, a connect gets no answer and fails once its timeout is
+  /// over, as when the camera is out of range.
+  bool outOfRange = false;
+
+  /// The timeout every connect was given.
+  final connectTimeouts = <Duration>[];
+
   /// While set, an Operation Mode write waits for it before it lands.
   Completer<void>? holdModeWrite;
 
@@ -83,8 +90,13 @@ final class BondedCamera implements BleTransport {
     required Duration timeout,
   }) async {
     ops.add('connect $deviceId');
+    connectTimeouts.add(timeout);
     final e = connectError;
     if (e != null) throw e;
+    if (outOfRange) {
+      await Future<void>.delayed(timeout);
+      throw BleException(BleErrorCode.timeout, 'no answer from $deviceId');
+    }
     await holdConnect?.future;
     final link = _Link(this, deviceId);
     _links.add(link);
@@ -1560,6 +1572,40 @@ void main() {
       },
       timeout: const Timeout(Duration(seconds: 10)),
     );
+
+    test('of a camera that does not come back is given up once the link '
+        'has been down for bleLostAfter, with no connect running past '
+        'it', () async {
+      final camera = BondedCamera();
+      const lostAfter = Duration(milliseconds: 300);
+      final s = GrSession(
+        transport: camera,
+        wifi: FailingWifi(),
+        options: const GrSessionOptions(
+          bleReconnectDelays: [Duration.zero],
+          bleLostAfter: lostAfter,
+        ),
+      );
+      await s.connectBluetooth(deviceId: 'cam');
+      final linked = camera.connectTimeouts.length;
+      final gaveUp = next(s, 'ble.gaveUp');
+      camera
+        ..outOfRange = true
+        ..dropAll();
+      await pumpEventQueue();
+      expect(s.bleReconnecting, isTrue);
+
+      // Each connect would wait 35 s for the camera on its own.
+      await gaveUp;
+      expect(s.ble, isNull);
+      expect(s.bleReconnecting, isFalse);
+      expect(camera.connectTimeouts.skip(linked), isNotEmpty);
+      expect(
+        camera.connectTimeouts.skip(linked),
+        everyElement(lessThanOrEqualTo(lostAfter)),
+      );
+      await s.close();
+    }, timeout: const Timeout(Duration(seconds: 10)));
   });
 
   group('close is final', () {

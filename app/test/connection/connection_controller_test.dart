@@ -447,6 +447,35 @@ void main() {
       expect(connection.failure?.loss, ConnectLoss.camera);
     });
 
+    test('a Bluetooth link that stays down is still being linked after the '
+        'time a camera counts as gone on Bluetooth alone, since the Wi-Fi '
+        'still reaches it', () async {
+      final app = await connected(
+        const FakeCameraConfig(bonded: true),
+        const GrSessionOptions(
+          livenessInterval: Duration(seconds: 30),
+          livenessLossAfter: Duration(seconds: 30),
+          bleReconnectDelays: [Duration(milliseconds: 50)],
+          maxBleReconnectAttempts: 1000,
+          bleLostAfter: Duration(milliseconds: 300),
+        ),
+      );
+      final connection = app.models.connection;
+      app.camera
+        ..adapterState = BleAdapterState.poweredOff
+        ..dropBluetooth();
+      await _until(() => !connection.bleLinked);
+      await Future<void>.delayed(const Duration(seconds: 1));
+      expect(connection.status, ConnectionStatus.connected);
+      expect(connection.bleLinking, isTrue);
+
+      app.camera.adapterState = BleAdapterState.poweredOn;
+      await _until(
+        () => connection.bleLinked,
+        timeout: const Duration(seconds: 5),
+      );
+    });
+
     test(
       'leaving the Wi-Fi turns a camera the app turned on back off',
       () async {

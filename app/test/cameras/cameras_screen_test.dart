@@ -7,10 +7,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:grlab/src/camera/camera_top_bar.dart';
+import 'package:grlab/src/connection/camera_pill.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/library/library_screen.dart';
+import 'package:grlab/src/looks/looks_screen.dart';
 import 'package:grlab/src/pairing/pairing_flow.dart';
+import 'package:grlab/src/shoot/shoot_screen.dart';
 
 import '../support/test_app.dart';
 
@@ -77,6 +80,14 @@ const _failFast = GrSessionOptions(
   scanTimeout: Duration(seconds: 1),
   bleConnectTimeout: Duration(seconds: 1),
   bleConnectAttempts: 1,
+);
+
+/// A camera whose lost Bluetooth link counts as gone after 1.5 s; only
+/// that time ends the reconnect.
+const _goneSoon = GrSessionOptions(
+  bleReconnectDelays: [Duration(milliseconds: 100)],
+  maxBleReconnectAttempts: 1000,
+  bleLostAfter: Duration(milliseconds: 1500),
 );
 
 /// Ends the session the way switching or forgetting the camera does, and
@@ -720,6 +731,56 @@ void main() {
       find.byKey(const Key('camera-card-link-wifi')),
     );
     expect(_iconOpacity(tester, 'wifi'), 1);
+
+    await app.dispose();
+  });
+
+  testWidgets('a camera gone while only Bluetooth links it shows as '
+      'reconnecting on its pages, then the app returns to Cameras and says '
+      'it was lost', (tester) async {
+    final app = await _start(tester, sessionOptions: _goneSoon);
+    final connection = app.models.connection;
+    await _tap(tester, const Key('camera-card-shoot'));
+    await pumpUntilFound(tester, find.byType(ShootScreen));
+    await pumpUntil(tester, () => connection.bleLinked, reason: 'linked');
+
+    app.camera.powerOffFully();
+    await pumpUntilFound(
+      tester,
+      find.descendant(
+        of: find.byType(CameraPill),
+        matching: find.text('Reconnecting…'),
+      ),
+    );
+
+    await _untilStatus(tester, app, ConnectionStatus.failed);
+    await pumpUntil(
+      tester,
+      () => find.byType(ShootScreen).evaluate().isEmpty,
+      reason: "the camera's pages closed",
+    );
+    await pumpUntilFound(
+      tester,
+      find.byKey(const Key('cameras-lost')).hitTestable(),
+    );
+    expect(connection.failure?.loss, ConnectLoss.bluetooth);
+
+    await app.dispose();
+  });
+
+  testWidgets('a camera gone while the home dock shows the saved looks '
+      'leaves them in front', (tester) async {
+    final app = await _start(tester, sessionOptions: _goneSoon);
+    await pumpUntilFound(
+      tester,
+      find.byKey(const Key('camera-card-link-bluetooth')),
+    );
+    await _tap(tester, const Key('home-tab-looks'));
+
+    app.camera.powerOffFully();
+    await _untilStatus(tester, app, ConnectionStatus.failed);
+    await pumpRounds(tester, 20);
+    expect(find.byType(LooksScreen).hitTestable(), findsOneWidget);
 
     await app.dispose();
   });

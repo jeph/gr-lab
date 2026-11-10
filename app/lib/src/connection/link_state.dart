@@ -13,7 +13,8 @@ final class LinkState {
     final label = switch (connection.status) {
       ConnectionStatus.offline => LinkLabel.offline,
       ConnectionStatus.failed => LinkLabel.notConnected,
-      ConnectionStatus.connecting when connection.reconnecting =>
+      ConnectionStatus.connecting || ConnectionStatus.bluetooth
+          when connection.reconnecting =>
         LinkLabel.reconnecting,
       ConnectionStatus.connecting =>
         connection.step == ConnectStep.wifi
