@@ -172,6 +172,46 @@ void main() {
     });
   });
 
+  group('gridLines', () {
+    final shots = groupShots([
+      for (var i = 1; i <= 8; i++) f('100RICOH/R000000$i.JPG'),
+    ]);
+
+    String describe(GridLine line) => switch (line) {
+      GridDayLine(:final section) => 'day ${section.day?.day}',
+      GridShotsLine(:final first, :final shots, :final endsDay) =>
+        '$first: ${[for (final s in shots) s.base].join(',')}'
+            '${endsDay ? ' end' : ''}',
+    };
+
+    test('puts each day under a line of its own, in rows of the columns, '
+        'each row knowing where it starts among all the shots', () {
+      final dates = {
+        'R0000007': DateTime(2026, 11, 7, 9),
+        'R0000003': DateTime(2026, 11, 3, 8),
+      };
+      final lines = gridLines(daySections(shots, (s) => dates[s.base]), 3);
+      expect(lines.map(describe), [
+        'day null',
+        '0: R0000008 end',
+        'day 7',
+        '1: R0000007,R0000006,R0000005',
+        '4: R0000004 end',
+        'day 3',
+        '5: R0000003,R0000002,R0000001 end',
+      ]);
+    });
+
+    test('shots without dates get no line over them while they are all '
+        'there is', () {
+      final lines = gridLines(daySections(shots, (_) => null), 5);
+      expect(lines.map(describe), [
+        '0: R0000008,R0000007,R0000006,R0000005,R0000004',
+        '5: R0000003,R0000002,R0000001 end',
+      ]);
+    });
+  });
+
   test('FilteredShots counts every chip', () {
     final shots = groupShots([
       f('100RICOH/R0000001.JPG'),

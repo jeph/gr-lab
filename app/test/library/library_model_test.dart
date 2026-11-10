@@ -238,6 +238,56 @@ void main() {
     expect((await old.ensureInfo(held))?.orientation, 6);
   });
 
+  test('an /info answer that confirms what is cached is not announced; one '
+      'that differs is, and gives the grid new dates', () async {
+    final m = await model();
+    link.value = connected();
+    await until(() => m.shots != null && !m.refreshing, reason: 'listing');
+    final files = [for (final s in m.shots!) ...s.files];
+    for (final f in files) {
+      await m.ensureInfo(f);
+    }
+    final dates = m.datesRevision;
+
+    // What the model announces once a refresh has ended: the answers to
+    // the checks the refresh started.
+    var refreshing = false;
+    var refreshed = false;
+    var announced = 0;
+    m.addListener(() {
+      if (refreshed) {
+        announced++;
+      } else if (m.refreshing) {
+        refreshing = true;
+      } else if (refreshing) {
+        refreshed = true;
+      }
+    });
+    Future<void> checked() async {
+      await until(() => refreshed, reason: 'refresh');
+      for (final f in files) {
+        await m.ensureInfo(f);
+      }
+    }
+
+    // A new link checks every cached file again.
+    link.value = connected();
+    await checked();
+    expect(announced, 0);
+    expect(m.datesRevision, dates);
+
+    final replaced = files.firstWhere((f) => f.storage == GrStorageId.sd);
+    expect(camera.removePhoto(replaced.path), isTrue);
+    camera.addPhoto(FakePhoto(replaced.dir, replaced.name, _day3));
+    refreshing = false;
+    refreshed = false;
+    await m.refresh();
+    await checked();
+    expect(m.info(replaced)?.taken, _day3);
+    expect(announced, 1);
+    expect(m.datesRevision, dates + 1);
+  });
+
   test('refreshes when /v1/changes reports a storage change', () async {
     final socket = http.changesSocket();
     await socket.connect();

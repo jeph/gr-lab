@@ -120,14 +120,9 @@ class _LibraryViewState extends State<_LibraryView> {
 
   Widget _build(BuildContext context) {
     final model = _library.model;
-    final engine = _library.engine;
     final serial = model.serial;
     final all = model.shots;
-    bool downloaded(Shot s) =>
-        serial != null && engine.isShotDownloaded(serial, s);
-    final filtered = all == null
-        ? null
-        : FilteredShots.of(all, _filter, downloaded);
+    final filtered = _library.grid.filtered(_filter);
     final shots = filtered?.shots;
     final selectedShots = [
       if (_selecting && all != null)
@@ -192,7 +187,7 @@ class _LibraryViewState extends State<_LibraryView> {
                         ),
                       )
                     else
-                      ..._grid(context, serial, shots),
+                      _grid(context, serial, shots),
                   ],
                   SliverToBoxAdapter(child: SizedBox(height: 96 + bottomInset)),
                 ],
@@ -218,53 +213,53 @@ class _LibraryViewState extends State<_LibraryView> {
     );
   }
 
-  List<Widget> _grid(BuildContext context, String serial, List<Shot> shots) {
+  /// [shots] by day, a line at a time ([gridLines]).
+  Widget _grid(BuildContext context, String serial, List<Shot> shots) {
     final model = _library.model;
     final engine = _library.engine;
     final columns = MediaQuery.sizeOf(context).width >= 600 ? 5 : 3;
     final now = DateTime.now();
-    final sections = daySections(shots, (s) => model.info(s.primary)?.taken);
-    var offset = 0;
-    final slivers = <Widget>[];
-    for (final section in sections) {
-      final start = offset;
-      offset += section.shots.length;
-      if (section.day != null) {
-        slivers.add(
-          SliverToBoxAdapter(
-            child: _DayLabel(
-              title: formatDay(context, section.day!, now),
-              shots: section.shots,
-            ),
-          ),
-        );
-      } else if (sections.length > 1 || start > 0) {
-        slivers.add(const SliverToBoxAdapter(child: SizedBox(height: 8)));
-      }
-      slivers.add(
-        SliverGrid(
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            mainAxisSpacing: 2,
-            crossAxisSpacing: 2,
-          ),
-          delegate: SliverChildBuilderDelegate((context, i) {
-            final shot = section.shots[i];
-            return ShotCell(
-              key: ValueKey(shot.key),
-              serial: serial,
-              shot: shot,
-              mark: _markFor(engine, serial, shot),
-              duration: model.info(shot.primary)?.duration,
-              onTap: () => _selecting ? _toggle(shot) : _open(shots, start + i),
-              onLongPress: () =>
-                  _selecting ? _toggle(shot) : _startSelecting(shot),
-            );
-          }, childCount: section.shots.length),
+    final (:lines, :indexOf) = _library.grid.lines(shots, columns);
+    Widget cell(Shot shot, int index) => ShotCell(
+      key: ValueKey(shot.key),
+      serial: serial,
+      shot: shot,
+      mark: _markFor(engine, serial, shot),
+      duration: model.info(shot.primary)?.duration,
+      onTap: () => _selecting ? _toggle(shot) : _open(shots, index),
+      onLongPress: () => _selecting ? _toggle(shot) : _startSelecting(shot),
+    );
+    Widget line(GridLine line) => switch (line) {
+      GridDayLine(section: DaySection(:final day?, shots: final ofDay)) =>
+        _DayLabel(title: formatDay(context, day, now), shots: ofDay),
+      GridDayLine() => const SizedBox(height: 8),
+      GridShotsLine(:final first, shots: final row, :final endsDay) => Padding(
+        padding: EdgeInsets.only(bottom: endsDay ? 0 : _cellGap),
+        child: Row(
+          children: [
+            for (var column = 0; column < columns; column++) ...[
+              if (column > 0) const SizedBox(width: _cellGap),
+              Expanded(
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: column < row.length
+                      ? cell(row[column], first + column)
+                      : null,
+                ),
+              ),
+            ],
+          ],
         ),
-      );
-    }
-    return slivers;
+      ),
+    };
+    return SliverList.builder(
+      itemCount: lines.length,
+      // A line that moves, as the lines under a label that just appeared
+      // do, keeps its cells and the pictures they loaded or wait for.
+      findChildIndexCallback: (key) => indexOf[(key as ValueKey<String>).value],
+      itemBuilder: (context, i) =>
+          KeyedSubtree(key: ValueKey(lines[i].id), child: line(lines[i])),
+    );
   }
 
   CellMark _markFor(DownloadEngine engine, String serial, Shot shot) {
@@ -281,6 +276,9 @@ class _LibraryViewState extends State<_LibraryView> {
     return CellMark.none;
   }
 }
+
+/// Space between the grid's cells.
+const double _cellGap = 2;
 
 /// Explains how to allow photo-library access after the OS refused it.
 Future<void> showPermissionGuidance(BuildContext context) {

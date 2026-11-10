@@ -97,6 +97,17 @@ final class FileInfo {
     if (duration != null) 'v': duration!.inSeconds,
     'o': ?orientation,
   };
+
+  @override
+  bool operator ==(Object other) =>
+      other is FileInfo &&
+      other.taken == taken &&
+      other.size == size &&
+      other.duration == duration &&
+      other.orientation == orientation;
+
+  @override
+  int get hashCode => Object.hash(taken, size, duration, orientation);
 }
 
 /// [FileInfo] of the camera's `/info` answer.

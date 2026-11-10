@@ -32,11 +32,14 @@ Joining is timed around the camera's access point, which comes up a varying time
 ```sh
 cd app
 flutter run                                  # dev build, real camera (needs a phone with Bluetooth)
+flutter run --profile                        # the same, at the speed of a release build
 flutter run --flavor prod --release          # the build users get
 flutter run --dart-define=GR_DEMO=true       # simulated camera, works on the Android emulator and iOS simulator
 ```
 
 There are two builds. `dev` (`io.jeph.grlab.dev`, named "GR Lab Dev") installs beside `prod` (`io.jeph.grlab`, "GR Lab"). Without `--flavor`, `flutter run` and `flutter build` build `dev`.
+
+`flutter run` alone makes a debug build, which builds each frame several times slower than a profile or release build (3 to 4 times in the Library on an Android emulator, 2026-11-10). Judge how smooth a screen is with `--profile` or `--release`.
 
 Demo mode keeps its data in a separate `demo/` folder. On first launch, Add a camera finds the simulated camera and it confirms pairing by itself; later launches start with the camera off, which stays off until you open the Library (waking it is part of joining its Wi-Fi) or press the card's power button. Demo RAW files are JPEG bytes with a `.DNG` name.
 

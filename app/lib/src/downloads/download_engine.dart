@@ -285,6 +285,7 @@ final class DownloadEngine extends ChangeNotifier {
   /// capture time its camera reported when it was saved (null when the
   /// camera did not answer, and for records from before they were kept).
   final Map<String, Map<String, FileInfo?>> _downloaded = {};
+  int _downloadedRevision = 0;
   int _nextId = 0;
 
   bool _looping = false;
@@ -348,6 +349,10 @@ final class DownloadEngine extends ChangeNotifier {
   bool isFileDownloaded(String serial, CameraFile f) =>
       _downloaded[serial]?.containsKey(f.key) ?? false;
 
+  /// Changes each time [isFileDownloaded] may answer differently, so what
+  /// is counted over a whole card is counted again only then.
+  int get downloadedRevision => _downloadedRevision;
+
   /// Some file of [shot] was saved to the phone: the grid's mark and the
   /// "Not downloaded" filter use this. The app cannot see whether it is
   /// still in the photo library, so this is a hint only: it never stops a
@@ -376,6 +381,7 @@ final class DownloadEngine extends ChangeNotifier {
       return;
     }
     records.remove(f.key);
+    _downloadedRevision++;
     _save();
     _notify();
   }
@@ -423,6 +429,7 @@ final class DownloadEngine extends ChangeNotifier {
       return;
     }
     records.remove(f.key);
+    _downloadedRevision++;
     _save();
     _notify();
   }
@@ -558,6 +565,7 @@ final class DownloadEngine extends ChangeNotifier {
     // A job being saved records its files once the save ends.
     if (running?.serial == serial) await whenIdle();
     if (_downloaded.remove(serial) == null) return;
+    _downloadedRevision++;
     _save();
     _notify();
   }
@@ -701,6 +709,7 @@ final class DownloadEngine extends ChangeNotifier {
       for (var i = 0; i < files.length; i++) {
         records[files[i].key] = identities[i];
       }
+      _downloadedRevision++;
       if (_stop == _Stop.cancel) throw const _StopSignal(_Stop.cancel);
       _jobs.remove(job);
       _batchDone++;
@@ -864,6 +873,7 @@ final class DownloadEngine extends ChangeNotifier {
         };
       }
     }
+    _downloadedRevision++;
   }
 
   /// Writes the state as it is when the write runs, after loading, so an

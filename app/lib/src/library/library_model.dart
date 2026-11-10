@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
@@ -125,6 +126,7 @@ final class LibraryModel extends ChangeNotifier {
   /// Background `/info` checks on [_confirmedOn].
   final List<RequestTicket<FileInfo>> _checks = [];
   final Map<String, int> _revisions = {};
+  int _datesRevision = 0;
 
   /// The camera whose listing this is. Lags behind [CameraStore.current]
   /// while the previous camera's listing is saved.
@@ -150,6 +152,12 @@ final class LibraryModel extends ChangeNotifier {
   /// Changes each time [f]'s path turns out to hold another file than the
   /// one cached, so an image of it shown is loaded again.
   int revision(CameraFile f) => _revisions[f.key] ?? 0;
+
+  /// Changes each time the capture date known for a file of [shots]
+  /// ([FileInfo.taken]) does, so the days of the grid, which every shot's
+  /// date goes into, are worked out again only then. A new listing is
+  /// another [shots] and leaves this as it is.
+  int get datesRevision => _datesRevision;
 
   /// Completes when the model has switched to the current camera's
   /// library: its cached listing is read and, when it is connected, its
@@ -335,7 +343,9 @@ final class LibraryModel extends ChangeNotifier {
     );
   }
 
-  /// [info] is what [from]'s camera says of [f] now.
+  /// [info] is what [from]'s camera says of [f] now. An answer that only
+  /// confirms the info cached (every file's, after each join) changes
+  /// nothing a listener shows, so it is neither announced nor saved.
   void _accept(CameraFile f, FileInfo info, CameraLibrary from) {
     final known = _info[f.key];
     _info[f.key] = info;
@@ -350,6 +360,8 @@ final class LibraryModel extends ChangeNotifier {
     }
     if (identical(_confirming(), from)) _confirmed.add(f.key);
     copies?.checked(from.serial, f, info, vouched: same);
+    if (known == info) return;
+    if (known?.taken != info.taken) _datesRevision++;
     _scheduleSave();
     _notify();
   }
@@ -555,4 +567,69 @@ List<DaySection> daySections(List<Shot> shots, DateTime? Function(Shot) taken) {
   }
   if (current.isNotEmpty) sections.add(DaySection(day, current));
   return sections;
+}
+
+/// One line of the grid, top to bottom. The grid is a list of these so it
+/// builds only the lines near the screen: a card holds many days, and a
+/// grid of its own per day would build each day's label and first cell
+/// (and ask the camera for its picture) wherever the day is.
+@immutable
+sealed class GridLine {
+  const new();
+
+  /// Tells the line from the grid's others, and stays the same while
+  /// lines above it come and go (a label, when a day's date arrives), so
+  /// what the line shows is kept through that.
+  String get id;
+}
+
+/// The label over [section]'s shots, or the space over leading shots
+/// without a date when dated days follow them.
+final class GridDayLine extends GridLine {
+  const new(this.section);
+
+  final DaySection section;
+
+  @override
+  String get id => 'day|${section.shots.first.key}';
+}
+
+/// Up to a row of one day's shots.
+final class GridShotsLine extends GridLine {
+  const new(this.first, this.shots, {required this.endsDay});
+
+  /// Where [shots] start among the shots of all the sections.
+  final int first;
+  final List<Shot> shots;
+
+  /// The day's last row: the next line is another day's, or none.
+  final bool endsDay;
+
+  @override
+  String get id => 'shots|${shots.first.key}';
+}
+
+/// [sections] as the lines of a grid [columns] wide. Leading shots without
+/// a date get no line over them while they are all there is.
+List<GridLine> gridLines(List<DaySection> sections, int columns) {
+  final lines = <GridLine>[];
+  var first = 0;
+  for (final section in sections) {
+    if (section.day != null || sections.length > 1) {
+      lines.add(GridDayLine(section));
+    }
+    final shots = section.shots;
+    for (var i = 0; i < shots.length; i += columns) {
+      final end = min(i + columns, shots.length);
+      lines.add(
+        GridShotsLine(
+          first + i,
+          shots.sublist(i, end),
+          endsDay: end == shots.length,
+        ),
+      );
+    }
+    first += shots.length;
+  }
+  return lines;
 }

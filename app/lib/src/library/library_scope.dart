@@ -8,6 +8,7 @@ import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/downloads/download_engine.dart';
 import 'package:grlab/src/library/camera_link.dart';
 import 'package:grlab/src/library/library_model.dart';
+import 'package:grlab/src/library/shot.dart';
 import 'package:grlab/src/services.dart';
 
 /// The library's models for the current camera, created with the app's
@@ -71,6 +72,9 @@ final class LibraryContext {
   /// The app's download queue (`AppModels.downloads`).
   final DownloadEngine engine;
 
+  /// What the Library's grid shows of [model]'s listing.
+  late final LibraryGrid grid = LibraryGrid(model, engine);
+
   /// A running download keeps the camera's Wi-Fi from being left for
   /// lack of use.
   final IdleDisconnect _idle;
@@ -102,6 +106,70 @@ final class LibraryContext {
     _release?.call();
     _release = null;
     model.dispose();
+  }
+}
+
+/// What the grid shows of the listing, worked out over the whole card: the
+/// shots a filter leaves, and the lines they make. The Library rebuilds
+/// whenever the library, the downloads or the connection report anything,
+/// far more often than these change, so each is worked out again only
+/// when what it is made from does. Kept with the library's models, so the
+/// Library opens with them.
+final class LibraryGrid {
+  new(this._model, this._engine);
+
+  final LibraryModel _model;
+  final DownloadEngine _engine;
+  final _filtered =
+      _Kept<(List<Shot>, LibraryFilter, String?, int), FilteredShots>();
+  final _lines = _Kept<(List<Shot>, int, int), GridLines>();
+
+  /// The listing's shots that pass [filter], with each filter's count;
+  /// null without a listing.
+  FilteredShots? filtered(LibraryFilter filter) {
+    final all = _model.shots;
+    if (all == null) return null;
+    final serial = _model.serial;
+    return _filtered.of(
+      (all, filter, serial, _engine.downloadedRevision),
+      () => FilteredShots.of(
+        all,
+        filter,
+        (s) => serial != null && _engine.isShotDownloaded(serial, s),
+      ),
+    );
+  }
+
+  /// [shots] (from [filtered]) by day, as the lines of a grid [columns]
+  /// wide.
+  GridLines lines(List<Shot> shots, int columns) =>
+      _lines.of((shots, _model.datesRevision, columns), () {
+        final lines = gridLines(
+          daySections(shots, (s) => _model.info(s.primary)?.taken),
+          columns,
+        );
+        return (
+          lines: lines,
+          indexOf: {for (final (i, line) in lines.indexed) line.id: i},
+        );
+      });
+}
+
+/// The grid's lines top to bottom, and where each is by its [GridLine.id].
+typedef GridLines = ({List<GridLine> lines, Map<String, int> indexOf});
+
+/// A value worked out from [K], and worked out again only when that
+/// changes. A list in a record [K] counts as changed when it is another
+/// list.
+final class _Kept<K, V> {
+  (K, V)? _last;
+
+  V of(K from, V Function() make) {
+    final last = _last;
+    if (last != null && last.$1 == from) return last.$2;
+    final value = make();
+    _last = (from, value);
+    return value;
   }
 }
 

@@ -60,6 +60,11 @@ class _ShotViewerState extends State<ShotViewer>
   /// [ShotViewer.shots] still in the listing, in their order, as the
   /// listing has them now.
   late final List<Shot> _shots = [...widget.shots];
+
+  /// The listing [_shots] were last matched against. The library reports
+  /// far more than new listings (each file's info, its refresh starting
+  /// and ending); matching every shot again is for a new listing only.
+  List<Shot>? _followed;
   late final PageController _pages = PageController(
     initialPage: widget.initialIndex,
   );
@@ -183,7 +188,8 @@ class _ShotViewerState extends State<ShotViewer>
       return;
     }
     final listing = model.shots;
-    if (listing == null) return;
+    if (listing == null || identical(listing, _followed)) return;
+    _followed = listing;
     final listed = {for (final s in listing) s.key: s};
     final kept = [for (final s in _shots) ?listed[s.key]];
     if (listEquals(kept, _shots)) return;

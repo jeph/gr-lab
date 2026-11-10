@@ -9,6 +9,7 @@ import 'package:grlab/src/library/library_screen.dart';
 import 'package:grlab/src/library/shot.dart' show Shot;
 import 'package:grlab/src/library/viewer.dart';
 import 'package:grlab/src/services.dart';
+import 'package:grlab/src/widgets/group.dart';
 
 import '../support/test_app.dart';
 
@@ -225,6 +226,157 @@ void main() {
       () => find.text('R0000268.JPG + R0000268.DNG').evaluate().isEmpty,
       reason: 'viewer closed',
     );
+
+    await app.dispose();
+  });
+
+  testWidgets('a long card builds only the days near the screen: a day far '
+      'below has no label and no cell until it is scrolled to', (tester) async {
+    tester.view
+      ..physicalSize = const Size(1170, 2532)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    // Thirty days of three shots, the oldest on 30 September.
+    final app = (await tester.runAsync(
+      () => createTestApp(
+        config: FakeCameraConfig(
+          bonded: true,
+          httpLatency: Duration.zero,
+          photos: [
+            for (var day = 0; day < 30; day++)
+              for (var n = 1; n <= 3; n++)
+                FakePhoto(
+                  '100RICOH',
+                  'R${(day * 3 + n).toString().padLeft(7, '0')}.JPG',
+                  DateTime(2026, 9, 30 + day, 12, n),
+                ),
+          ],
+        ),
+        saveCamera: true,
+      ),
+    ))!;
+    await app.pumpApp(tester);
+    await _openLibrary(tester);
+    final model = app.models.library.model;
+    await pumpUntil(tester, () => model.shots != null, reason: 'listing');
+    // Every date is known, as on a card looked through before.
+    for (final s in model.shots!) {
+      unawaited(model.ensureInfo(s.primary));
+    }
+    await pumpUntil(
+      tester,
+      () => model.shots!.every((s) => model.info(s.primary) != null),
+      reason: 'every date',
+    );
+
+    const newest = 'sd1|100RICOH/R0000090';
+    const oldest = 'sd1|100RICOH/R0000003';
+    final oldestDay = find.textContaining('Sep 30', skipOffstage: false);
+    expect(_cell(newest), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey(oldest), skipOffstage: false),
+      findsNothing,
+    );
+    expect(oldestDay, findsNothing);
+
+    await tester.scrollUntilVisible(
+      _cell(oldest),
+      600,
+      scrollable: find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+      maxScrolls: 200,
+    );
+    expect(oldestDay, findsOneWidget);
+    expect(
+      find.byKey(const ValueKey(newest), skipOffstage: false),
+      findsNothing,
+    );
+
+    await app.dispose();
+  });
+
+  testWidgets('a window made wider puts more shots on a row', (tester) async {
+    tester.view
+      ..physicalSize = const Size(1170, 2532)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final app = (await tester.runAsync(
+      () => createTestApp(
+        config: FakeCameraConfig(
+          bonded: true,
+          photos: [
+            for (var n = 1; n <= 5; n++)
+              FakePhoto(
+                '100RICOH',
+                'R000000$n.JPG',
+                DateTime(2026, 11, 5, 12, n),
+              ),
+          ],
+        ),
+        saveCamera: true,
+      ),
+    ))!;
+    await app.pumpApp(tester);
+    await _openLibrary(tester);
+    final cells = [
+      for (var n = 5; n >= 1; n--) _cell('sd1|100RICOH/R000000$n'),
+    ];
+    await pumpUntilFound(tester, cells.last);
+    List<double> tops() => [for (final c in cells) tester.getTopLeft(c).dy];
+
+    final narrow = tops();
+    expect(narrow.sublist(0, 3).toSet(), hasLength(1));
+    expect(narrow[3], greaterThan(narrow[0]));
+    expect(narrow[4], narrow[3]);
+
+    // Unfolded, or turned on its side: five columns from 600 wide.
+    tester.view.physicalSize = const Size(1800, 2532);
+    await tester.pump();
+    expect(tops().toSet(), hasLength(1));
+
+    await app.dispose();
+  });
+
+  testWidgets('Not downloaded counts a shot out and drops it from the grid '
+      'once it is saved', (tester) async {
+    tester.view
+      ..physicalSize = const Size(1170, 2532)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final app = (await tester.runAsync(
+      () => createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+      ),
+    ))!;
+    await app.pumpApp(tester);
+    await _openLibrary(tester);
+    await pumpUntilFound(tester, _thumbs);
+
+    const jpeg = 'sd1|101RICOH/R0000270';
+    final chip = find.byKey(const ValueKey('chip:notDownloaded'));
+    await tester.ensureVisible(chip);
+    await tester.pump();
+    await tester.tap(chip);
+    await tester.pump();
+    expect(tester.widget<GrChip>(chip).count, 40);
+    expect(_cell(jpeg), findsOneWidget);
+
+    await tester.longPress(_cell(jpeg));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('selection-download:jpeg')));
+    await tester.pump();
+    await pumpUntil(
+      tester,
+      () => _cell(jpeg).evaluate().isEmpty,
+      reason: 'the saved shot to leave Not downloaded',
+    );
+    expect(tester.widget<GrChip>(chip).count, 39);
+    expect(app.media.shots.single.names, ['R0000270.JPG']);
 
     await app.dispose();
   });
