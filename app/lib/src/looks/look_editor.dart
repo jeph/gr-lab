@@ -90,7 +90,8 @@ class _LookEditorState extends State<LookEditor> {
   late int _target = widget.target;
   LookGroup? _group;
 
-  /// The chip of the base the editor opened on, scrolled into view once.
+  /// The chip of the base the editor opened on, scrolled into view once
+  /// along its row.
   final GlobalKey _openedBase = GlobalKey();
 
   @override
@@ -98,7 +99,12 @@ class _LookEditorState extends State<LookEditor> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final chip = _openedBase.currentContext;
-      if (chip != null) Scrollable.ensureVisible(chip, alignment: .5);
+      if (chip == null) return;
+      // The row of base images only: `Scrollable.ensureVisible` would also
+      // scroll the list the row is in when the preview scrolls with the
+      // controls, and open the editor past its preview.
+      Scrollable.of(chip).position
+          .ensureVisible(chip.findRenderObject()!, alignment: .5);
     });
   }
 

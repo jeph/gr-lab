@@ -698,7 +698,21 @@ void main() {
       expect(tester.getSize(compare).height, greaterThan(150));
       expect(tester.getSize(compare).width, closeTo(size.width, .01));
       expect(
-        tester.getRect(find.byKey(const Key('look-bases'))).top,
+        Scrollable.of(tester.element(compare)).position.pixels,
+        0,
+        reason:
+            'the editor opens with the preview at the top, not scrolled '
+            "to the look's base",
+      );
+      expect(
+        tester.getRect(compare).top,
+        greaterThanOrEqualTo(tester.getRect(list).top),
+      );
+      // The base images come after it, on screen or a scroll away.
+      expect(
+        tester
+            .getRect(find.byKey(const Key('look-bases'), skipOffstage: false))
+            .top,
         greaterThanOrEqualTo(tester.getRect(compare).bottom),
       );
       final save = tester.getRect(find.byKey(const Key('look-save')));
@@ -769,6 +783,21 @@ void main() {
       await app.dispose();
     });
   }
+
+  testWidgets('the editor opens with the base image of its look in view, '
+      'however far along the row it is', (tester) async {
+    final app = await _inLooks(tester);
+    await tapWhenReady(tester, _inSlot(3, 'Soft Summer'));
+    await _editorOpen(tester);
+
+    final bases = tester.getRect(find.byKey(const Key('look-bases')));
+    final opened = tester.getRect(
+      find.byKey(const ValueKey('look-base:negativeFilm')),
+    );
+    expect(opened.left, greaterThanOrEqualTo(bases.left));
+    expect(opened.right, lessThanOrEqualTo(bases.right));
+    await app.dispose();
+  });
 
   testWidgets('a slot saved from the editor joins the library, from C2 and '
       'tagged as in C2', (tester) async {
