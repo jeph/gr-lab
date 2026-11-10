@@ -7,6 +7,7 @@ import 'package:grlab/src/library/image_orientation.dart';
 import 'package:grlab/src/looks/look_preview.dart';
 import 'package:grlab/src/looks/look_widgets.dart';
 import 'package:grlab/src/theme/tokens.dart';
+import 'package:grlab/src/widgets/pressable.dart';
 import 'package:intl/intl.dart';
 
 /// A photo looks are previewed on, with what undoes its own rendering.
@@ -388,10 +389,12 @@ class LookCompareModeSwitch extends StatelessWidget {
               child: Semantics(
                 button: true,
                 selected: mode == selected,
-                child: GestureDetector(
+                child: Pressable(
                   key: ValueKey('look-compare:${mode.name}'),
-                  behavior: HitTestBehavior.opaque,
                   onTap: () => onSelect(mode),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(9),
+                  ),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 160),
                     width: 44,
@@ -461,10 +464,12 @@ class PreviewPhotoSwitch extends StatelessWidget {
               child: Semantics(
                 button: true,
                 selected: i == selected,
-                child: GestureDetector(
+                child: Pressable(
                   key: ValueKey('look-photo:$i'),
-                  behavior: HitTestBehavior.opaque,
                   onTap: () => onSelect(i),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(11),
+                  ),
                   child: Container(
                     width: 40,
                     height: 40,

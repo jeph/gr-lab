@@ -14,6 +14,7 @@ import 'package:grlab/src/looks/looks_model.dart';
 import 'package:grlab/src/looks/looks_store.dart';
 import 'package:grlab/src/theme/tokens.dart';
 import 'package:grlab/src/widgets/group.dart';
+import 'package:grlab/src/widgets/pressable.dart';
 import 'package:grlab/src/widgets/skeleton.dart';
 
 /// Which saved looks the list shows.
@@ -357,7 +358,7 @@ class _SlotCard extends StatelessWidget {
         return Semantics(
           button: true,
           label: l10n.looksSlotLabel(number),
-          child: GestureDetector(
+          child: Pressable(
             key: Key('looks-slot-$number'),
             onTap: slot == null || look == null
                 ? null
@@ -374,6 +375,9 @@ class _SlotCard extends StatelessWidget {
                           : null,
                     ),
                   ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(GrRadii.md),
+            ),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
               clipBehavior: Clip.antiAlias,

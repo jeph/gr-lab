@@ -7,6 +7,7 @@ import 'package:grlab/src/data/settings.dart';
 import 'package:grlab/src/shoot/shoot_format.dart';
 import 'package:grlab/src/shoot/shoot_model.dart';
 import 'package:grlab/src/theme/tokens.dart';
+import 'package:grlab/src/widgets/pressable.dart';
 import 'package:intl/intl.dart';
 
 /// Remote / Live view, at the top of Shoot in both modes (mock `.modeseg`).
@@ -43,10 +44,10 @@ class ShootModeSwitch extends StatelessWidget {
                 selected: m == mode,
                 excludeSemantics: true,
                 label: label,
-                child: GestureDetector(
+                child: Pressable(
                   key: Key('shoot-mode-${m.name}'),
-                  behavior: HitTestBehavior.opaque,
                   onTap: () => onChanged(m),
+                  shape: const StadiumBorder(),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
                     height: 32,
@@ -116,10 +117,12 @@ class ShootSegmented<T> extends StatelessWidget {
                 child: Semantics(
                   button: true,
                   selected: v == selected,
-                  child: GestureDetector(
+                  child: Pressable(
                     key: ValueKey('shoot-seg-$v'),
-                    behavior: HitTestBehavior.opaque,
                     onTap: enabled ? () => onSelect(v) : null,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(9),
+                    ),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 160),
                       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -277,9 +280,10 @@ class _ShutterButtonState extends State<ShutterButton> {
       enabled: enabled,
       label: label,
       excludeSemantics: true,
-      child: GestureDetector(
+      child: Pressable(
         key: const Key('shoot-shutter'),
         onTap: enabled ? () => unawaited(model.shutter()) : null,
+        shape: const CircleBorder(),
         child: AnimatedOpacity(
           opacity: enabled ? 1 : .35,
           duration: const Duration(milliseconds: 200),

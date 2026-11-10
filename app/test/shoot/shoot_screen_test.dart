@@ -11,6 +11,7 @@ import 'package:grlab/src/library/library_screen.dart';
 import 'package:grlab/src/shoot/live_view_controller.dart';
 import 'package:grlab/src/shoot/shoot_screen.dart';
 import 'package:grlab/src/theme/tokens.dart';
+import 'package:grlab/src/widgets/pressable.dart';
 
 import '../support/test_app.dart';
 
@@ -48,9 +49,7 @@ Future<TestApp> _inShoot(
 Future<void> _untilReady(WidgetTester tester) => pumpUntil(
   tester,
   () =>
-      tester
-          .widget<GestureDetector>(find.byKey(const Key('shoot-shutter')))
-          .onTap !=
+      tester.widget<Pressable>(find.byKey(const Key('shoot-shutter'))).onTap !=
       null,
   reason: 'shutter enabled',
 );
@@ -665,7 +664,7 @@ void main() {
       );
       bool editable(String key) =>
           tester
-              .widget<GestureDetector>(find.byKey(Key('live-readout-$key')))
+              .widget<Pressable>(find.byKey(Key('live-readout-$key')))
               .onTap !=
           null;
       await pumpUntil(

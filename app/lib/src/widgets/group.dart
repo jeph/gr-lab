@@ -32,7 +32,9 @@ class SectionLabel extends StatelessWidget {
   );
 }
 
-/// Rounded card of rows separated by hairlines (mock `.group`).
+/// Rounded card of rows separated by hairlines (mock `.group`). A
+/// `Material`, so the ink of a pressed row draws on the card rather than
+/// under it.
 class GroupBox extends StatelessWidget {
   const new({required this.children, super.key, this.margin, this.color});
 
@@ -45,22 +47,24 @@ class GroupBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    return Container(
-      margin: margin ?? const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: margin ?? const EdgeInsets.symmetric(horizontal: 16),
+      child: Material(
         color: color ?? c.s1,
-        borderRadius: BorderRadius.circular(GrRadii.lg),
-        border: Border.all(color: c.line),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const Divider(indent: 16),
-            children[i],
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(GrRadii.lg),
+          side: BorderSide(color: c.line),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              if (i > 0) const Divider(indent: 16),
+              children[i],
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

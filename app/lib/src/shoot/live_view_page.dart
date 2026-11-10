@@ -16,6 +16,7 @@ import 'package:grlab/src/shoot/shoot_model.dart';
 import 'package:grlab/src/shoot/shoot_screen.dart';
 import 'package:grlab/src/shoot/shoot_widgets.dart';
 import 'package:grlab/src/theme/tokens.dart';
+import 'package:grlab/src/widgets/pressable.dart';
 
 /// Live view (mock `b-shoot`): a viewfinder, always dark, in the chosen
 /// theme when that is dark and in the Dark theme otherwise. The picture is
@@ -914,10 +915,12 @@ class _Readouts extends StatelessWidget {
         children: [
           for (final key in readouts)
             Expanded(
-              child: GestureDetector(
+              child: Pressable(
                 key: Key('live-readout-$key'),
-                behavior: HitTestBehavior.opaque,
                 onTap: editable(key) ? () => onTap(key) : null,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 // A narrow window shrinks the text rather than wrapping
                 // a value over two lines.
                 child: Padding(
@@ -1076,10 +1079,10 @@ class _DialState extends State<_Dial> with SingleTickerProviderStateMixin {
                 key,
                 v,
               ).replaceFirst('f/', '');
-              return GestureDetector(
+              return Pressable(
                 key: Key('live-dial-option-$v'),
-                behavior: HitTestBehavior.opaque,
                 onTap: current ? null : () => widget.onSelect(v),
+                shape: const StadiumBorder(),
                 child: Center(
                   child: FittedBox(
                     child: Text(

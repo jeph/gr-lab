@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:grlab/src/theme/tokens.dart';
+import 'package:grlab/src/widgets/pressable.dart';
 
 /// One page a [Dock] switches to.
 @immutable
@@ -138,9 +139,9 @@ class _DockButton extends StatelessWidget {
       selected: selected,
       label: label,
       excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+      child: Pressable(
         onTap: onTap,
+        shape: const StadiumBorder(),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,

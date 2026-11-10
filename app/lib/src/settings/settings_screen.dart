@@ -9,6 +9,7 @@ import 'package:grlab/src/settings/debug_log_group.dart';
 import 'package:grlab/src/settings/privacy_policy_screen.dart';
 import 'package:grlab/src/theme/tokens.dart';
 import 'package:grlab/src/widgets/group.dart';
+import 'package:grlab/src/widgets/pressable.dart';
 
 /// App settings (subset of mock `b-settings`): appearance, leaving the
 /// camera's Wi-Fi when the app is not used, the debug log, licenses and the
@@ -212,8 +213,9 @@ class _ThemeTile extends StatelessWidget {
       button: true,
       selected: selected,
       label: l10n.settingsThemeSemantics(theme.name),
-      child: GestureDetector(
+      child: Pressable(
         onTap: onTap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Column(
           children: [
             Container(
