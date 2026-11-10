@@ -36,6 +36,7 @@ final class GrColors extends ThemeExtension<GrColors> {
     required this.float,
     required this.shadow,
     required this.dim,
+    this.switchThumb = const Color(0xFFFFFFFF),
   });
 
   static const dark = GrColors(
@@ -166,6 +167,7 @@ final class GrColors extends ThemeExtension<GrColors> {
     float: Color(0xEB1A324E),
     shadow: Color(0x73000000),
     dim: Color(0x8C000000),
+    switchThumb: Color(0xFF032436),
   );
 
   /// Badges drawn over photos keep the dark-theme colours on a 72 % black
@@ -197,6 +199,10 @@ final class GrColors extends ThemeExtension<GrColors> {
   final Color float;
   final Color shadow;
   final Color dim;
+
+  /// The thumb of a switch that is on, over [accent]: white, except where
+  /// the accent is too pale for white to show on it.
+  final Color switchThumb;
 
   Color get accentSoft => accent.withValues(alpha: .14);
   Color get accentLine => accent.withValues(alpha: .32);
@@ -348,7 +354,9 @@ ThemeData grTheme(GrColors c) {
       trackColor: WidgetStateProperty.resolveWith(
         (s) => s.contains(WidgetState.selected) ? c.accent : c.s4,
       ),
-      thumbColor: const WidgetStatePropertyAll(Colors.white),
+      thumbColor: WidgetStateProperty.resolveWith(
+        (s) => s.contains(WidgetState.selected) ? c.switchThumb : Colors.white,
+      ),
       trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
     ),
     dividerTheme: DividerThemeData(color: c.line, thickness: 1, space: 1),

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grlab/src/cameras/cameras_screen.dart';
@@ -38,5 +40,26 @@ void main() {
     }
 
     await app.dispose();
+  });
+
+  test('the thumb of a switch that is on stands out from its track in every '
+      'theme at least as much as in Dark', () {
+    double thumbContrast(GrColors colors) {
+      final switches = grTheme(colors).switchTheme;
+      const on = {WidgetState.selected};
+      final thumb = switches.thumbColor!.resolve(on)!.computeLuminance();
+      final track = switches.trackColor!.resolve(on)!.computeLuminance();
+      return (math.max(thumb, track) + .05) / (math.min(thumb, track) + .05);
+    }
+
+    final dark = thumbContrast(GrColors.dark);
+    for (final colors in AppTheme.values.map((theme) => theme.colors)) {
+      if (colors == null) continue;
+      expect(
+        thumbContrast(colors),
+        greaterThanOrEqualTo(dark),
+        reason: '${colors.accent}',
+      );
+    }
   });
 }
