@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'package:grlab/l10n/l10n.dart';
@@ -16,8 +18,14 @@ class CameraTopBar extends StatelessWidget {
   final bool showSettings;
 
   /// Centred in the bar, for a page in a window too short to give it a row
-  /// of its own. The camera pill then gets the room before it and no more.
+  /// of its own. It gets the width that [_minSideWidth] leaves and has to
+  /// fit that, by scaling down for example.
   final Widget? middle;
+
+  /// The room either side of [middle] keeps: the back button and a camera
+  /// pill cut down to its icon, the start of the name and the link's state
+  /// \[design\].
+  static const _minSideWidth = 144.0;
 
   @override
   Widget build(BuildContext context) {
@@ -28,46 +36,61 @@ class CameraTopBar extends StatelessWidget {
       label: context.l10n.cameraBarCameras,
       onTap: () => Navigator.of(context).maybePop(),
     );
+    const padding = EdgeInsets.fromLTRB(18, 6, 18, 0);
     final middle = this.middle;
+    if (middle == null) {
+      return Padding(
+        padding: padding,
+        child: Row(
+          children: [
+            back,
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: CameraPill(),
+              ),
+            ),
+            if (showSettings) ...[
+              const SizedBox(width: 8),
+              const SettingsButton(),
+            ],
+          ],
+        ),
+      );
+    }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
-      child: Row(
-        children: middle == null
-            ? [
-                back,
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: CameraPill(),
-                  ),
-                ),
-                if (showSettings) ...[
+      padding: padding,
+      child: LayoutBuilder(
+        builder: (context, bar) => Row(
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  back,
                   const SizedBox(width: 8),
-                  const SettingsButton(),
+                  const Flexible(child: CameraPill()),
                 ],
-              ]
-            : [
-                Expanded(
-                  child: Row(
-                    children: [
-                      back,
-                      const SizedBox(width: 8),
-                      const Flexible(child: CameraPill()),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: middle,
-                ),
-                Expanded(
-                  child: Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: showSettings ? const SettingsButton() : null,
-                  ),
-                ),
-              ],
+              ),
+            ),
+            // A Row lets a child like this be as wide as it likes.
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: math.max(0, bar.maxWidth - 2 * _minSideWidth),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: middle,
+              ),
+            ),
+            Expanded(
+              child: Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: showSettings ? const SettingsButton() : null,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

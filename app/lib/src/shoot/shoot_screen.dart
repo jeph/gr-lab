@@ -133,6 +133,7 @@ class _RemoteView extends StatelessWidget {
   static const _shutterRestHeight = 72.0;
 
   /// A window at least this wide has room for the shutter beside the rest
+  /// at text size 100 %; larger text needs a window wider in proportion
   /// \[design\].
   static const _besideWidth = 600.0;
 
@@ -144,7 +145,10 @@ class _RemoteView extends StatelessWidget {
         builder: (context, box) {
           // The stack would have to shrink the shutter, then scroll.
           final short = box.maxHeight < _stackRestHeight + _maxShutterSize;
-          return short && box.maxWidth >= _besideWidth
+          final wide =
+              box.maxWidth >=
+              MediaQuery.textScalerOf(context).scale(_besideWidth);
+          return short && wide
               ? _beside(context)
               : _stack(context, box.maxHeight);
         },

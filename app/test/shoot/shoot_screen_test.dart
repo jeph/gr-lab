@@ -250,6 +250,31 @@ void main() {
       }
     }
 
+    // The narrowest window with the shutter beside the rest: Remote / Live
+    // view shrinks in the top bar rather than crowd out the camera pill.
+    await resize(const Size(600, 320));
+    expect(rect('shoot-timer').right, lessThan(rect('shoot-shutter').left));
+    for (final key in [
+      'camera-back',
+      'camera-pill',
+      'shoot-mode',
+      'camera-settings',
+    ]) {
+      expect(find.byKey(Key(key)).hitTestable(), findsOne, reason: key);
+    }
+    expect(
+      rect('camera-pill').right,
+      lessThanOrEqualTo(rect('shoot-mode').left),
+    );
+
+    // Text at 200 % needs twice that width for the two halves: the same
+    // window stacks.
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    await resize(const Size(600, 320));
+    expect(rect('shoot-timer').top, greaterThan(rect('shoot-shutter').bottom));
+    tester.platformDispatcher.clearTextScaleFactorTestValue();
+
     await resize(const Size(412, 915));
     final shutter = rect('shoot-shutter');
     expect(shutter.height, 168);
