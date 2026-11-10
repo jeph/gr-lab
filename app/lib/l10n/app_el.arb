@@ -33,7 +33,6 @@
   "camerasLinkNearby": "Κοντά",
   "camerasLinkWifi": "Συνδεδεμένη μέσω Wi-Fi",
   "camerasLinkWifiConnecting": "Σύνδεση στο Wi-Fi…",
-  "camerasLinkWifiOff": "Χωρίς σύνδεση Wi-Fi",
   "camerasLooks": "Στιλ",
   "camerasLostBluetoothBody": "Η κάμερα σταμάτησε να αποκρίνεται μέσω Bluetooth.",
   "camerasLostTitle": "Η σύνδεση με την κάμερα {cameraName} χάθηκε",

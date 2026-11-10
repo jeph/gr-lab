@@ -33,7 +33,6 @@
   "camerasLinkNearby": "Yakınlarda",
   "camerasLinkWifi": "Wi-Fi ile bağlı",
   "camerasLinkWifiConnecting": "Wi-Fi’ye bağlanıyor…",
-  "camerasLinkWifiOff": "Wi-Fi’ye bağlı değil",
   "camerasLooks": "Stiller",
   "camerasLostBluetoothBody": "Kamera Bluetooth üzerinden yanıt vermeyi bıraktı.",
   "camerasLostTitle": "{cameraName} bağlantısı koptu",

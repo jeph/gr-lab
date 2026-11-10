@@ -33,7 +33,6 @@
   "camerasLinkNearby": "In de buurt",
   "camerasLinkWifi": "Verbonden via Wi-Fi",
   "camerasLinkWifiConnecting": "Verbinden met Wi-Fi…",
-  "camerasLinkWifiOff": "Niet verbonden met Wi-Fi",
   "camerasLooks": "Looks",
   "camerasLostBluetoothBody": "De camera reageert niet meer via Bluetooth.",
   "camerasLostTitle": "Verbinding met {cameraName} verbroken",

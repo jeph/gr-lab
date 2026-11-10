@@ -33,7 +33,6 @@
   "camerasLinkNearby": "A közelben",
   "camerasLinkWifi": "Csatlakozva: Wi-Fi",
   "camerasLinkWifiConnecting": "Wi-Fi-csatlakozás…",
-  "camerasLinkWifiOff": "Nincs Wi-Fi-kapcsolat",
   "camerasLooks": "Stílusok",
   "camerasLostBluetoothBody": "A kamera már nem válaszol Bluetooth-kapcsolaton.",
   "camerasLostTitle": "Megszakadt a kapcsolat: {cameraName}",

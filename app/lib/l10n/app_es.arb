@@ -33,7 +33,6 @@
   "camerasLinkNearby": "Cerca",
   "camerasLinkWifi": "Conectada por Wi-Fi",
   "camerasLinkWifiConnecting": "Conectando a Wi-Fi…",
-  "camerasLinkWifiOff": "Sin conexión Wi-Fi",
   "camerasLooks": "Estilos",
   "camerasLostBluetoothBody": "La cámara ha dejado de responder por Bluetooth.",
   "camerasLostTitle": "Se perdió la conexión con {cameraName}",

@@ -90,24 +90,24 @@ Future<void> _disconnect(
   await pumpUntil(tester, () => closed, reason: 'session closed');
 }
 
-/// The opacity the card's link icon [id] is drawn at.
-double _iconOpacity(WidgetTester tester, String id) => tester
+/// The opacity the card's link icon is drawn at while it shows [link].
+double _iconOpacity(WidgetTester tester, String link) => tester
     .widget<FadeTransition>(
       find.descendant(
-        of: find.byKey(Key('camera-card-$id')),
+        of: find.byKey(Key('camera-card-link-$link')),
         matching: find.byType(FadeTransition),
       ),
     )
     .opacity
     .value;
 
-/// The lowest opacity the card's link icon [id] is drawn at over the next
-/// 400 ms: below 1 while it pulses.
-Future<double> _dimmestIcon(WidgetTester tester, String id) async {
-  var dimmest = _iconOpacity(tester, id);
+/// The lowest opacity the card's link icon is drawn at over the next
+/// 400 ms while it shows [link]: below 1 while it pulses.
+Future<double> _dimmestIcon(WidgetTester tester, String link) async {
+  var dimmest = _iconOpacity(tester, link);
   for (var i = 0; i < 4; i++) {
     await tester.pump(const Duration(milliseconds: 100));
-    dimmest = math.min(dimmest, _iconOpacity(tester, id));
+    dimmest = math.min(dimmest, _iconOpacity(tester, link));
   }
   return dimmest;
 }
@@ -248,13 +248,12 @@ void main() {
       withOther: true,
     );
 
-    // While it links, the card's Bluetooth icon stands for the steps and
-    // Cancel for the buttons to the camera's pages.
+    // While it links, the card's icon stands for the steps and Cancel for
+    // the buttons to the camera's pages.
     await pumpUntilFound(
       tester,
-      find.byKey(const Key('camera-card-bluetooth-connecting')),
+      find.byKey(const Key('camera-card-link-bluetoothConnecting')),
     );
-    expect(find.byKey(const Key('camera-card-wifi-off')), findsOneWidget);
     expect(find.byKey(const Key('camera-card-cancel')), findsOneWidget);
     expect(find.textContaining('Connecting'), findsNothing);
 
@@ -262,9 +261,8 @@ void main() {
     const library = Key('camera-card-library');
     await pumpUntilFound(
       tester,
-      find.byKey(const Key('camera-card-bluetooth-connected')),
+      find.byKey(const Key('camera-card-link-bluetooth')),
     );
-    expect(find.byKey(const Key('camera-card-wifi-off')), findsOneWidget);
     expect(_footOpacity(tester, library), lessThan(1));
     await tester.pump(const Duration(milliseconds: 300));
     expect(_footOpacity(tester, library), 1);
@@ -331,10 +329,7 @@ void main() {
       // power button links it.
       await pumpRounds(tester, 20);
       expect(app.ble.connects, 0);
-      expect(
-        find.byKey(const Key('camera-card-bluetooth-away')),
-        findsOneWidget,
-      );
+      expect(find.byKey(const Key('camera-card-link-away')), findsOneWidget);
       await _tap(tester, const Key('camera-card-power'));
       await _untilStatus(tester, app, ConnectionStatus.failed);
       await pumpUntilFound(
@@ -351,14 +346,13 @@ void main() {
       await _tap(tester, const Key('connect-retry'));
       expect(app.models.connection.status, ConnectionStatus.connecting);
       // The card shrinks to Cancel, and the list scrolls back to it; the
-      // Bluetooth icon pulses for as long as the attempt runs.
+      // icon pulses for as long as the attempt runs.
       await pumpUntilFound(
         tester,
-        find.byKey(const Key('camera-card-bluetooth-connecting')),
+        find.byKey(const Key('camera-card-link-bluetoothConnecting')),
       );
       expect(find.byKey(const Key('camera-card-cancel')), findsOneWidget);
-      expect(_iconOpacity(tester, 'wifi-off'), 1);
-      expect(await _dimmestIcon(tester, 'bluetooth-connecting'), lessThan(1));
+      expect(await _dimmestIcon(tester, 'bluetoothConnecting'), lessThan(1));
       await _untilStatus(tester, app, ConnectionStatus.failed);
 
       await app.dispose();
@@ -380,12 +374,12 @@ void main() {
 
     await _tap(tester, const Key('camera-card-power'));
     expect(
-      find.byKey(const Key('camera-card-bluetooth-connecting')),
+      find.byKey(const Key('camera-card-link-bluetoothConnecting')),
       findsOneWidget,
     );
     expect(find.byKey(const Key('camera-card-cancel')), findsOneWidget);
     expect(find.byKey(const Key('camera-card-library')), findsNothing);
-    expect(await _dimmestIcon(tester, 'bluetooth-connecting'), 1);
+    expect(await _dimmestIcon(tester, 'bluetoothConnecting'), 1);
     await _untilStatus(tester, app, ConnectionStatus.failed);
 
     await app.dispose();
@@ -468,13 +462,9 @@ void main() {
     await pumpUntilFound(tester, find.byKey(const Key('camera-card-library')));
     await pumpUntilFound(
       tester,
-      find.byKey(const Key('camera-card-wifi-connected')),
+      find.byKey(const Key('camera-card-link-wifi')),
     );
-    expect(
-      find.byKey(const Key('camera-card-bluetooth-connected')),
-      findsOneWidget,
-    );
-    expect(_iconOpacity(tester, 'wifi-connected'), 1);
+    expect(_iconOpacity(tester, 'wifi'), 1);
     await pumpRounds(tester, 30);
     expect(app.models.connection.status, ConnectionStatus.connected);
     expect(await app.camera.wifi.currentSsid(), app.camera.config.ssid);
@@ -514,7 +504,7 @@ void main() {
     final app = await _start(tester, config: _unreachable, withOther: true);
     // The GR IIIx in the list with its model; the card's icon alone.
     await pumpUntilFound(tester, find.text('GR IIIx · looking…'));
-    expect(find.byKey(const Key('camera-card-bluetooth-away')), findsOneWidget);
+    expect(find.byKey(const Key('camera-card-link-away')), findsOneWidget);
 
     await _tap(tester, const Key('camera-row-1111111'));
     await pumpUntilFound(tester, find.byKey(const Key('camera-details')));
@@ -596,7 +586,7 @@ void main() {
     final connection = app.models.connection;
     await pumpUntilFound(
       tester,
-      find.byKey(const Key('camera-card-bluetooth-connected')),
+      find.byKey(const Key('camera-card-link-bluetooth')),
     );
     expect(find.byKey(const Key('camera-card-power-on')), findsOneWidget);
 
@@ -635,7 +625,7 @@ void main() {
     final app = await _start(tester);
     await pumpUntilFound(
       tester,
-      find.byKey(const Key('camera-card-bluetooth-connected')),
+      find.byKey(const Key('camera-card-link-bluetooth')),
     );
     final button = find.byKey(const Key('camera-card-power'));
     expect(
@@ -680,7 +670,7 @@ void main() {
     // The scan sees it nearby and switched off.
     await pumpUntilFound(
       tester,
-      find.byKey(const Key('camera-card-bluetooth-nearby')),
+      find.byKey(const Key('camera-card-link-nearby')),
     );
     expect(find.byKey(const Key('camera-card-power-off')), findsOneWidget);
 
@@ -697,9 +687,10 @@ void main() {
     await app.dispose();
   });
 
-  testWidgets('a camera woken for its Wi-Fi drops the Bluetooth link, and '
-      "the card's Bluetooth icon pulses beside the Wi-Fi one until it is "
-      'back', (tester) async {
+  testWidgets('while the Wi-Fi is joined the card shows the Wi-Fi alone, '
+      'pulsing, also when the wake drops the Bluetooth link under it', (
+    tester,
+  ) async {
     final app = await _start(
       tester,
       config: const FakeCameraConfig(bonded: true, poweredOn: false),
@@ -707,13 +698,13 @@ void main() {
     final connection = app.models.connection;
     await pumpUntilFound(
       tester,
-      find.byKey(const Key('camera-card-bluetooth-connected')),
+      find.byKey(const Key('camera-card-link-bluetooth')),
     );
 
     // With the camera's pages closed, as for work that goes on without
     // them.
     unawaited(connection.joinWifi());
-    final joining = find.byKey(const Key('camera-card-wifi-connecting'));
+    final joining = find.byKey(const Key('camera-card-link-wifiConnecting'));
     await pumpUntilFound(tester, joining);
     await pumpUntil(
       tester,
@@ -722,19 +713,13 @@ void main() {
     );
     expect(connection.status, ConnectionStatus.connecting);
     expect(joining, findsOneWidget);
-    expect(
-      find.byKey(const Key('camera-card-bluetooth-connecting')),
-      findsOneWidget,
-    );
+    expect(await _dimmestIcon(tester, 'wifiConnecting'), lessThan(1));
 
     await pumpUntilFound(
       tester,
-      find.byKey(const Key('camera-card-wifi-connected')),
+      find.byKey(const Key('camera-card-link-wifi')),
     );
-    expect(
-      find.byKey(const Key('camera-card-bluetooth-connected')),
-      findsOneWidget,
-    );
+    expect(_iconOpacity(tester, 'wifi'), 1);
 
     await app.dispose();
   });

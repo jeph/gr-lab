@@ -33,7 +33,6 @@
   "camerasLinkNearby": "近くにあります",
   "camerasLinkWifi": "Wi-Fiで接続中",
   "camerasLinkWifiConnecting": "Wi-Fiに接続中…",
-  "camerasLinkWifiOff": "Wi-Fi未接続",
   "camerasLooks": "ルック",
   "camerasLostBluetoothBody": "カメラからBluetoothで応答がなくなりました。",
   "camerasLostTitle": "{cameraName}との接続が切れました",

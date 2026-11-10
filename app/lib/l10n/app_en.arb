@@ -169,31 +169,27 @@
   },
   "camerasLinkAway": "Not nearby",
   "@camerasLinkAway": {
-    "description": "Accessibility label and tooltip of the camera card's Bluetooth icon: the camera is not linked and the scan does not see it."
+    "description": "Accessibility label and tooltip of the camera card's link icon: the camera is not linked and the scan does not see it."
   },
   "camerasLinkBluetooth": "Connected over Bluetooth",
   "@camerasLinkBluetooth": {
-    "description": "Accessibility label and tooltip of the camera card's Bluetooth icon: the camera is linked over Bluetooth."
+    "description": "Accessibility label and tooltip of the camera card's link icon: the camera is linked over Bluetooth only."
   },
   "camerasLinkBluetoothConnecting": "Connecting over Bluetooth…",
   "@camerasLinkBluetoothConnecting": {
-    "description": "Accessibility label and tooltip of the camera card's Bluetooth icon while it pulses: the camera is being linked over Bluetooth."
+    "description": "Accessibility label and tooltip of the camera card's link icon while it pulses: the camera is being linked over Bluetooth."
   },
   "camerasLinkNearby": "Nearby",
   "@camerasLinkNearby": {
-    "description": "Accessibility label and tooltip of the camera card's Bluetooth icon: the scan sees the camera nearby, but it is not linked."
+    "description": "Accessibility label and tooltip of the camera card's link icon: the scan sees the camera nearby, but it is not linked."
   },
   "camerasLinkWifi": "Connected over Wi-Fi",
   "@camerasLinkWifi": {
-    "description": "Accessibility label and tooltip of the camera card's Wi-Fi icon: the phone is on the camera's Wi-Fi."
+    "description": "Accessibility label and tooltip of the camera card's link icon: the phone is on the camera's Wi-Fi."
   },
   "camerasLinkWifiConnecting": "Connecting to Wi-Fi…",
   "@camerasLinkWifiConnecting": {
-    "description": "Accessibility label and tooltip of the camera card's Wi-Fi icon while it pulses: the phone is joining the camera's Wi-Fi."
-  },
-  "camerasLinkWifiOff": "Wi-Fi not connected",
-  "@camerasLinkWifiOff": {
-    "description": "Accessibility label and tooltip of the camera card's Wi-Fi icon: the phone is not on the camera's Wi-Fi."
+    "description": "Accessibility label and tooltip of the camera card's link icon while it pulses: the phone is joining the camera's Wi-Fi."
   },
   "camerasLooks": "Looks",
   "@camerasLooks": {

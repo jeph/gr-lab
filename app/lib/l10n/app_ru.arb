@@ -33,7 +33,6 @@
   "camerasLinkNearby": "Поблизости",
   "camerasLinkWifi": "Подключена по Wi-Fi",
   "camerasLinkWifiConnecting": "Подключение к Wi-Fi…",
-  "camerasLinkWifiOff": "Нет подключения к Wi-Fi",
   "camerasLooks": "Стили",
   "camerasLostBluetoothBody": "Камера перестала отвечать по Bluetooth.",
   "camerasLostTitle": "Потеряна связь с камерой «{cameraName}»",

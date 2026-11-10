@@ -33,7 +33,6 @@
   "camerasLinkNearby": "在附近",
   "camerasLinkWifi": "已通过 Wi-Fi 连接",
   "camerasLinkWifiConnecting": "正在连接 Wi-Fi…",
-  "camerasLinkWifiOff": "未连接 Wi-Fi",
   "camerasLooks": "风格",
   "camerasLostBluetoothBody": "相机不再通过蓝牙响应。",
   "camerasLostTitle": "与“{cameraName}”的连接已断开",

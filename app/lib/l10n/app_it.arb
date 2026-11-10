@@ -33,7 +33,6 @@
   "camerasLinkNearby": "Nelle vicinanze",
   "camerasLinkWifi": "Connessa tramite Wi-Fi",
   "camerasLinkWifiConnecting": "Connessione al Wi-Fi…",
-  "camerasLinkWifiOff": "Non connessa al Wi-Fi",
   "camerasLooks": "Stili",
   "camerasLostBluetoothBody": "La fotocamera non risponde più tramite Bluetooth.",
   "camerasLostTitle": "Connessione con {cameraName} persa",

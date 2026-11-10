@@ -458,8 +458,8 @@ class _CameraList extends StatelessWidget {
 // ----------------------------------------------------------------- card
 
 /// The camera used last (mock `.ccard`): a drawing of its model
-/// ([CameraDrawing]), an icon for each of its links, which pulses while
-/// that link is being made, its power button and buttons to its pages
+/// ([CameraDrawing]), an icon for its link, which pulses while the link is
+/// being made, its power button and buttons to its pages
 /// ([ConnectionController.tabs]); or Cancel while Bluetooth is linked for
 /// a new connection, or why the last attempt failed.
 class _CameraCard extends StatelessWidget {
@@ -507,9 +507,7 @@ class _CameraCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              _BluetoothLink.of(connection, seen).icon(c, l10n),
-              const SizedBox(width: 8),
-              _WifiLink.of(connection).icon(c, l10n),
+              _Link.of(connection, seen).icon(c, l10n),
               const Spacer(),
               GrIconButton(
                 key: const Key('camera-card-more'),
@@ -678,93 +676,75 @@ class _CardFoot extends StatelessWidget {
   }
 }
 
-/// The camera's Bluetooth link as the card's icon shows it.
-enum _BluetoothLink {
+/// The camera's link as the card's icon shows it. Wi-Fi counts as a step
+/// up from Bluetooth rather than as a second link, so from the join on
+/// the icon is the Wi-Fi's, whatever the Bluetooth link under it does.
+enum _Link {
   /// Not linked, and the scan does not see the camera (or cannot look).
   away,
 
   /// Not linked, but nearby.
   nearby,
 
-  /// Being linked ([ConnectionController.bleLinking]).
-  connecting,
+  /// Bluetooth is being linked ([ConnectionController.bleLinking]).
+  bluetoothConnecting,
 
-  /// Linked.
-  connected;
+  /// Linked over Bluetooth.
+  bluetooth,
 
-  static _BluetoothLink of(ConnectionController connection, Presence seen) {
-    if (connection.bleLinking) return connecting;
-    // The session's own link, which a camera woken for its Wi-Fi drops
-    // while the join carries on.
-    if (connection.cameraSession?.bleLinked ?? false) return connected;
+  /// Joining the camera's Wi-Fi, or getting it back after a loss.
+  wifiConnecting,
+
+  /// On the camera's Wi-Fi.
+  wifi;
+
+  static _Link of(ConnectionController connection, Presence seen) {
+    final onWifi = connection.status == ConnectionStatus.connected;
+    final joining =
+        connection.status == ConnectionStatus.connecting &&
+        connection.step == ConnectStep.wifi;
+    if (joining || (onWifi && connection.reconnecting)) return wifiConnecting;
+    if (onWifi) return wifi;
+    if (connection.bleLinking) return bluetoothConnecting;
+    if (connection.bleLinked) return bluetooth;
     return seen == Presence.away ? away : nearby;
   }
 
   _LinkIcon icon(GrColors c, AppLocalizations l10n) => switch (this) {
     away => _LinkIcon(
-      id: 'bluetooth-$name',
+      link: this,
       icon: Icons.bluetooth_disabled_rounded,
       color: c.t3,
       label: l10n.camerasLinkAway,
     ),
     nearby => _LinkIcon(
-      id: 'bluetooth-$name',
+      link: this,
       icon: Icons.bluetooth_disabled_rounded,
       color: c.t2,
       label: l10n.camerasLinkNearby,
     ),
-    connecting => _LinkIcon(
-      id: 'bluetooth-$name',
+    bluetoothConnecting => _LinkIcon(
+      link: this,
       icon: Icons.bluetooth_rounded,
       color: c.t1,
       label: l10n.camerasLinkBluetoothConnecting,
       pulsing: true,
     ),
-    connected => _LinkIcon(
-      id: 'bluetooth-$name',
+    bluetooth => _LinkIcon(
+      link: this,
       icon: Icons.bluetooth_connected_rounded,
       color: c.ok,
       label: l10n.camerasLinkBluetooth,
     ),
-  };
-}
-
-/// The camera's Wi-Fi link as the card's icon shows it.
-enum _WifiLink {
-  /// The phone is not on the camera's Wi-Fi.
-  off,
-
-  /// Joining the camera's Wi-Fi, or getting it back after a loss.
-  connecting,
-
-  /// On the camera's Wi-Fi.
-  connected;
-
-  static _WifiLink of(ConnectionController connection) =>
-      switch (connection.status) {
-        ConnectionStatus.connecting when connection.step == ConnectStep.wifi =>
-          connecting,
-        ConnectionStatus.connected =>
-          connection.reconnecting ? connecting : connected,
-        _ => off,
-      };
-
-  _LinkIcon icon(GrColors c, AppLocalizations l10n) => switch (this) {
-    off => _LinkIcon(
-      id: 'wifi-$name',
-      icon: Icons.wifi_off_rounded,
-      color: c.t3,
-      label: l10n.camerasLinkWifiOff,
-    ),
-    connecting => _LinkIcon(
-      id: 'wifi-$name',
+    wifiConnecting => _LinkIcon(
+      link: this,
       icon: Icons.wifi_rounded,
       color: c.t1,
       label: l10n.camerasLinkWifiConnecting,
       pulsing: true,
     ),
-    connected => _LinkIcon(
-      id: 'wifi-$name',
+    wifi => _LinkIcon(
+      link: this,
       icon: Icons.wifi_rounded,
       color: c.ok,
       label: l10n.camerasLinkWifi,
@@ -772,21 +752,19 @@ enum _WifiLink {
   };
 }
 
-/// One of the card's links, as an icon alone; its words are the tooltip
-/// and the accessibility label. The icon fades out and in while the link
-/// is being made ([pulsing]), and is still when the platform asks for
-/// less motion.
+/// The card's link, as an icon alone; its words are the tooltip and the
+/// accessibility label. The icon fades out and in while the link is being
+/// made ([pulsing]), and is still when the platform asks for less motion.
 class _LinkIcon extends StatefulWidget {
   const new({
-    required this.id,
+    required this.link,
     required this.icon,
     required this.color,
     required this.label,
     this.pulsing = false,
   });
 
-  /// The link and its state, for the icon's key (`camera-card-<id>`).
-  final String id;
+  final _Link link;
   final IconData icon;
   final Color color;
   final String label;
@@ -844,7 +822,7 @@ class _LinkIconState extends State<_LinkIcon>
         label: widget.label,
         excludeSemantics: true,
         child: Container(
-          key: Key('camera-card-${widget.id}'),
+          key: Key('camera-card-link-${widget.link.name}'),
           width: 36,
           height: 36,
           decoration: BoxDecoration(

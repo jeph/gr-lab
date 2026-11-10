@@ -33,7 +33,6 @@
   "camerasLinkNearby": "I närheten",
   "camerasLinkWifi": "Ansluten via Wi-Fi",
   "camerasLinkWifiConnecting": "Ansluter till Wi-Fi…",
-  "camerasLinkWifiOff": "Inte ansluten till Wi-Fi",
   "camerasLooks": "Stilar",
   "camerasLostBluetoothBody": "Kameran slutade svara via Bluetooth.",
   "camerasLostTitle": "Anslutningen till {cameraName} bröts",

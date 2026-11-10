@@ -33,7 +33,6 @@
   "camerasLinkNearby": "Poblíž",
   "camerasLinkWifi": "Připojeno přes Wi-Fi",
   "camerasLinkWifiConnecting": "Připojování k Wi-Fi…",
-  "camerasLinkWifiOff": "Nepřipojeno k Wi-Fi",
   "camerasLooks": "Vzhledy",
   "camerasLostBluetoothBody": "Fotoaparát přestal přes Bluetooth odpovídat.",
   "camerasLostTitle": "Spojení s fotoaparátem {cameraName} se ztratilo",
