@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The app icon's light ground, the "paper" gradient of app/icon/icon.svg.
+<!-- The app icon's light grey ground, the "ground" gradient of app/icon/icon.svg.
      It runs across the middle 72 dp of the 108 dp layer, the part a launcher
      shows, as the iOS icon's does. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
@@ -16,8 +16,8 @@
                 android:startX="0"
                 android:startY="18"
                 android:type="linear">
-                <item android:color="#FFFDFCFA" android:offset="0" />
-                <item android:color="#FFE8E6E0" android:offset="1" />
+                <item android:color="#FFECECEF" android:offset="0" />
+                <item android:color="#FFC6C7CD" android:offset="1" />
             </gradient>
         </aapt:attr>
     </path>

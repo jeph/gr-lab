@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   GR Lab's app icon: a Ricoh GR seen from the front. The camera is black on
-  a light ground on both platforms and in light and dark appearance alike,
+  a light grey ground on both platforms and in light and dark appearance alike,
   because the cameras are black.
 
   tool/render_app_icon.sh renders each "variant" group below, on its own,
@@ -16,9 +16,11 @@
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-768 -768 1536 1536" width="1536" height="1536">
   <defs>
-    <linearGradient id="paper" x1="0" y1="-512" x2="0" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FDFCFA"/>
-      <stop offset="1" stop-color="#E8E6E0"/>
+    <!-- The ground. drawable/ic_launcher_background.xml repeats these two
+         colours for Android, so change them together. -->
+    <linearGradient id="ground" x1="0" y1="-512" x2="0" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ECECEF"/>
+      <stop offset="1" stop-color="#C6C7CD"/>
     </linearGradient>
     <linearGradient id="tinted-ground" x1="0" y1="-512" x2="0" y2="512" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#2E2E30"/>
@@ -103,7 +105,7 @@
   </g>
 
   <g id="ios-default" class="variant">
-    <rect x="-512" y="-512" width="1024" height="1024" fill="url(#paper)"/>
+    <rect x="-512" y="-512" width="1024" height="1024" fill="url(#ground)"/>
     <use href="#camera" fill="#121214" transform="translate(0,-1) scale(1.26)"/>
   </g>
 </svg>
