@@ -141,6 +141,18 @@ The camera enumerates as a standard PTP device (class 6) with vendor ID `0x25FB`
 2. Meaning of the `bool` argument selecting the advertised service UUID (tag `03` itself is camera power; see §4.1).
 3. GR II `/v1/props` model string and whether GR II firmware 3.00 matches the Wi-Fi-only paths in GR WORLD.
 
+## 7. Exterior differences
+
+What tells the bodies apart by eye. GR Lab's drawing of the camera shows the front, so it carries the lens, shutter-button and finish differences (`CameraFeature.lens40mm`, `silverShutterButton` and `blackFinish`, drawn by `app/lib/src/cameras/camera_drawing.dart`). Source: Ricoh's product pages and photos, read 2026-11-09. No camera was examined.
+
+| Difference | What differs outside | Source |
+|---|---|---|
+| GR III ↔ GR IV | The back: the GR III has a control wheel around its four-way pad and an ADJ lever; the GR IV has a ± rocker, a rear dial and a plain pad. The GR IV mode dial adds Sn. From the front the two are near-identical (109.4 × 61.9 × 33.2 mm against 109.4 × 61.1 × 32.7 mm), so the drawing uses one body for both. | Exterior photos and specifications: [GR III / IIIx](https://www.ricoh-imaging.co.jp/english/products/gr-3/spec/), [GR IV](https://www.ricoh-imaging.co.jp/english/products/gr-4/spec/) |
+| 28 mm ↔ 40 mm (GR IIIx, GR IIIx HDF) | The lens only: 26.1 mm in place of 18.3 mm, with a larger front element, and a lens part 2 mm deeper (35.2 mm against 33.2 mm). The front of the lens is engraved `GR LENS f=18.3mm 1:2.8` on the GR III and GR IV; the GR IIIx engraving is too small to read in Ricoh's photos, so its `f=26.1mm` is **[inferred]** from the specification. | [GR III / IIIx specifications](https://www.ricoh-imaging.co.jp/english/products/gr-3/spec/) and front photos |
+| HDF (GR III HDF, GR IIIx HDF, GR IV HDF) | "The release button is painted a grayish silver color." Ricoh lists nothing else under the design of the HDF models. | HDF pages: [GR III / IIIx](https://www.ricoh-imaging.co.jp/english/products/gr-3/special/hdf/), [GR IV](https://www.ricoh-imaging.co.jp/english/products/gr-4/special/hdf/) |
+| GR IV Monochrome | Body, shutter button and ring cap in matte black; the front GR logo in semi-gloss black, so it shows only by its sheen. The power button's lamp is a different colour from the GR IV's green; which one was not confirmed here. | [GR IV Monochrome](https://www.ricoh-imaging.co.jp/english/products/gr-4-mono/) |
+| GR IVx | **[unknown]**: not announced, so there is nothing to draw from. Its 40 mm lens is **[inferred]** from the GR IIIx's name, and GR Lab draws it that way. | §3 |
+
 ## Evidence
 
 | Finding | Evidence file | Evidence ID |

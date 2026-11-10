@@ -17,6 +17,18 @@ enum CameraFeature {
   /// Image Control offers the monochrome base images instead of the colour
   /// ones (`lookBases`).
   monochromeLooks,
+
+  /// The 26.1 mm lens (40 mm in 35 mm terms) of the x bodies, in place of
+  /// the 18.3 mm (28 mm) one; the camera's drawing shows it.
+  lens40mm,
+
+  /// The grayish-silver shutter button Ricoh gives the HDF bodies in place
+  /// of a black one; the camera's drawing shows it.
+  silverShutterButton,
+
+  /// The Monochrome's finish: a matte black body whose GR logo is black
+  /// too; the camera's drawing shows it.
+  blackFinish,
 }
 
 /// For each feature, the oldest firmware version of each model that has
@@ -38,6 +50,20 @@ const _minimumFirmware = <CameraFeature, Map<GrModel, String>>{
   // (`findSupportedByCameraType` 0xda1db4, observed in GR WORLD 2.0.0's
   // code; image-control.md §3).
   CameraFeature.monochromeLooks: {GrModel.gr4Monochrome: '0.00'},
+  // How the bodies differ outside, which no firmware version changes
+  // (Ricoh's product pages; research/camera-models.md §7). The GR IVx is
+  // not announced: its lens is [inferred] from the GR IIIx's name.
+  CameraFeature.lens40mm: {
+    GrModel.gr3x: '0.00',
+    GrModel.gr3xHdf: '0.00',
+    GrModel.gr4x: '0.00',
+  },
+  CameraFeature.silverShutterButton: {
+    GrModel.gr3Hdf: '0.00',
+    GrModel.gr3xHdf: '0.00',
+    GrModel.gr4Hdf: '0.00',
+  },
+  CameraFeature.blackFinish: {GrModel.gr4Monochrome: '0.00'},
 };
 
 /// A camera as far as what it supports goes: its model and the firmware

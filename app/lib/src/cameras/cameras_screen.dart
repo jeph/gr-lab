@@ -458,9 +458,9 @@ class _CameraList extends StatelessWidget {
 
 // ----------------------------------------------------------------- card
 
-/// The camera used last (mock `.ccard`, drawing after mock direction H):
-/// a drawing of the camera, an icon for its link, its power button and
-/// buttons to its pages ([ConnectionController.tabs]); or the steps while
+/// The camera used last (mock `.ccard`): a drawing of its model
+/// ([CameraDrawing]), an icon for its link, its power button and buttons
+/// to its pages ([ConnectionController.tabs]); or the steps while
 /// connecting, or why the last attempt failed.
 class _CameraCard extends StatelessWidget {
   const new({
@@ -525,7 +525,7 @@ class _CameraCard extends StatelessWidget {
                 child: ExcludeSemantics(
                   child: CameraDrawing(
                     key: const Key('camera-card-drawing'),
-                    on: on ?? false,
+                    body: camera.body,
                   ),
                 ),
               ),
@@ -995,7 +995,10 @@ class _OtherCameraRow extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
         child: Row(
           children: [
-            const SizedBox(width: 40, child: CameraDrawing(strokeWidth: 1.1)),
+            SizedBox(
+              width: 40,
+              child: CameraDrawing(body: camera.body, strokeWidth: 1.1),
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
