@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gr_camera/gr_camera.dart';
@@ -28,8 +29,8 @@ import 'package:video_player/video_player.dart';
 /// zoom, file details, and Download. A RAW+JPEG pair offers its JPEG and
 /// its RAW separately. A photo shown larger than its preview, or zoomed,
 /// is replaced by the full JPEG once it arrives; a mark in its corner says
-/// so until then. A tap on a photo gives it the whole screen, and another
-/// tap or Back brings the bars and the details back.
+/// so until then. A tap on a photo gives it the whole screen. There, a tap
+/// shows a button that brings the bars and the details back, as Back does.
 ///
 /// The viewer follows the camera's listing: a shot that leaves it (deleted
 /// on the camera, or its card taken out) leaves the swipe list, a pair
@@ -47,7 +48,8 @@ class ShotViewer extends StatefulWidget {
   State<ShotViewer> createState() => _ShotViewerState();
 }
 
-class _ShotViewerState extends State<ShotViewer> {
+class _ShotViewerState extends State<ShotViewer>
+    with SingleTickerProviderStateMixin {
   late final LibraryContext _library = LibraryScope.of(context);
 
   /// The camera of [_shots]: the listing's camera when the viewer opened.
@@ -60,12 +62,23 @@ class _ShotViewerState extends State<ShotViewer> {
     initialPage: widget.initialIndex,
   );
   late int _index = widget.initialIndex;
-  bool _zoomed = false;
+
+  /// The photo shown keeps drags to itself ([_PhotoPage.onHold]) instead of
+  /// letting them swipe to another shot.
+  bool _photoHeld = false;
 
   /// The photo shown has the whole screen: the viewer's bars and details
   /// and the system's bars are hidden. Only photos: a movie's page takes
-  /// taps for playback, and would leave no way back out on iOS.
+  /// taps for playback, so a tap there could not bring up the way back out.
   bool _fullscreen = false;
+
+  /// The button that leaves full screen shows over the photo.
+  bool _exitShown = false;
+
+  /// 0 with the viewer's bars and details in place, 1 once the photo has
+  /// the whole screen ([_fullscreen]).
+  late final AnimationController _immersion;
+  late final CurvedAnimation _immersed;
 
   /// Set once nothing is left to show: the route is on its way out and
   /// shows none of [_shots] any more.
@@ -76,22 +89,52 @@ class _ShotViewerState extends State<ShotViewer> {
     super.initState();
     _serial = _library.model.serial;
     _library.model.addListener(_followListing);
+    _immersion = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
+    _immersed = CurvedAnimation(
+      parent: _immersion,
+      curve: Curves.easeInOutCubic,
+    );
   }
 
   @override
   void dispose() {
     _library.model.removeListener(_followListing);
     _pages.dispose();
+    _immersed.dispose();
+    _immersion.dispose();
     if (_fullscreen) _showSystemBars();
     super.dispose();
   }
 
-  void _toggleFullscreen() =>
-      _fullscreen ? _leaveFullscreen() : _enterFullscreen();
+  /// A tap on the photo gives it the whole screen; there, the button out
+  /// of full screen comes and goes with each tap.
+  void _onPhotoTap() {
+    if (!_fullscreen) {
+      _enterFullscreen();
+      return;
+    }
+    setState(() => _exitShown = !_exitShown);
+  }
+
+  void _onPhotoHold(bool held) {
+    if (held == _photoHeld) return;
+    // A swipe between shots that is under way goes on: stopped, it would
+    // leave the pages between two shots.
+    if (held &&
+        _pages.hasClients &&
+        _pages.position.isScrollingNotifier.value) {
+      return;
+    }
+    setState(() => _photoHeld = held);
+  }
 
   void _enterFullscreen() {
     if (_fullscreen) return;
     setState(() => _fullscreen = true);
+    _animateImmersion();
     unawaited(
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
     );
@@ -99,8 +142,24 @@ class _ShotViewerState extends State<ShotViewer> {
 
   void _leaveFullscreen() {
     if (!_fullscreen) return;
-    setState(() => _fullscreen = false);
+    setState(() {
+      _fullscreen = false;
+      _exitShown = false;
+    });
+    _animateImmersion();
     _showSystemBars();
+  }
+
+  /// Moves the bars and details to where [_fullscreen] has them: over a
+  /// moment, or at once when the platform asks for less motion.
+  void _animateImmersion() {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _immersion.value = _fullscreen ? 1 : 0;
+    } else if (_fullscreen) {
+      _immersion.forward();
+    } else {
+      _immersion.reverse();
+    }
   }
 
   /// Brings back the status and navigation bars, as the rest of the app
@@ -143,7 +202,7 @@ class _ShotViewerState extends State<ShotViewer> {
         ..addAll(kept);
       _index = index;
       // A changed shot gets a new page (keyed by the shot), unzoomed.
-      if (kept[index] != shown) _zoomed = false;
+      if (kept[index] != shown) _photoHeld = false;
     });
     if (dropped && _pages.hasClients) _pages.jumpToPage(index);
     if (kept[index].isVideo) _leaveFullscreen();
@@ -168,7 +227,7 @@ class _ShotViewerState extends State<ShotViewer> {
     if (index == _index) return;
     setState(() {
       _index = index;
-      _zoomed = false;
+      _photoHeld = false;
     });
     if (_shots[index].isVideo) _leaveFullscreen();
   }
@@ -195,91 +254,113 @@ class _ShotViewerState extends State<ShotViewer> {
           }
           final taken = library.model.info(shot.primary)?.taken;
           return Scaffold(
-            backgroundColor: fullscreen ? Colors.black : null,
-            appBar: fullscreen
-                ? null
-                : AppBar(
-                    leading: const BackButton(),
-                    title: Column(
-                      children: [
-                        Text(
-                          shot.primary.name,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
+            body: AnimatedBuilder(
+              animation: _immersed,
+              // Black around a photo that has the whole screen.
+              builder: (context, child) => ColoredBox(
+                color: Colors.black.withValues(alpha: _immersed.value),
+                child: child,
+              ),
+              child: Stack(
+                children: [
+                  Column(
+                    children: [
+                      // In the body rather than the scaffold's app bar
+                      // slot, so that it can slide away.
+                      _Bar(
+                        immersed: _immersed,
+                        top: true,
+                        child: AppBar(
+                          leading: const BackButton(),
+                          title: Column(
+                            children: [
+                              Text(
+                                shot.primary.name,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                [
+                                  if (taken != null)
+                                    formatDayTime(
+                                      context,
+                                      taken,
+                                      DateTime.now(),
+                                    ),
+                                  ?storageLabel(context, shot.storage),
+                                ].join(' · '),
+                                style: GrFonts.monoStyle(context, size: 11),
+                              ),
+                            ],
                           ),
                         ),
-                        Text(
-                          [
-                            if (taken != null)
-                              formatDayTime(context, taken, DateTime.now()),
-                            ?storageLabel(context, shot.storage),
-                          ].join(' · '),
-                          style: GrFonts.monoStyle(context, size: 11),
-                        ),
-                      ],
-                    ),
-                  ),
-            body: Column(
-              children: [
-                Expanded(
-                  child: serial == null
-                      ? const SizedBox.shrink()
-                      : PageView.builder(
-                          controller: _pages,
-                          physics: _zoomed
-                              ? const NeverScrollableScrollPhysics()
-                              : const PageScrollPhysics(),
-                          itemCount: _shots.length,
-                          onPageChanged: _onPageChanged,
-                          // A page whose shot stays keeps its state (zoom,
-                          // playback) when shots before it are dropped.
-                          findChildIndexCallback: (key) {
-                            final i = _shots.indexWhere(
-                              (s) => ValueKey(s) == key,
-                            );
-                            return i < 0 ? null : i;
-                          },
-                          itemBuilder: (context, i) {
-                            final s = _shots[i];
-                            return s.isVideo
-                                ? _VideoPage(
-                                    key: ValueKey(s),
-                                    serial: serial,
-                                    shot: s,
-                                    active: i == _index,
-                                  )
-                                : _PhotoPage(
-                                    key: ValueKey(s),
-                                    serial: serial,
-                                    shot: s,
-                                    onZoom: (zoomed) {
-                                      if (zoomed != _zoomed) {
-                                        setState(() => _zoomed = zoomed);
-                                      }
-                                    },
-                                    onTap: _toggleFullscreen,
+                      ),
+                      Expanded(
+                        child: serial == null
+                            ? const SizedBox.shrink()
+                            : PageView.builder(
+                                controller: _pages,
+                                physics: _photoHeld
+                                    ? const NeverScrollableScrollPhysics()
+                                    : const PageScrollPhysics(),
+                                itemCount: _shots.length,
+                                onPageChanged: _onPageChanged,
+                                // A page whose shot stays keeps its state
+                                // (zoom, playback) when shots before it
+                                // are dropped.
+                                findChildIndexCallback: (key) {
+                                  final i = _shots.indexWhere(
+                                    (s) => ValueKey(s) == key,
                                   );
-                          },
+                                  return i < 0 ? null : i;
+                                },
+                                itemBuilder: (context, i) {
+                                  final s = _shots[i];
+                                  return s.isVideo
+                                      ? _VideoPage(
+                                          key: ValueKey(s),
+                                          serial: serial,
+                                          shot: s,
+                                          active: i == _index,
+                                        )
+                                      : _PhotoPage(
+                                          key: ValueKey(s),
+                                          serial: serial,
+                                          shot: s,
+                                          immersed: _immersed,
+                                          onHold: _onPhotoHold,
+                                          onTap: _onPhotoTap,
+                                        );
+                                },
+                              ),
+                      ),
+                      _Bar(
+                        immersed: _immersed,
+                        top: false,
+                        child: Column(
+                          children: [
+                            _Details(shot: shot, model: library.model),
+                            if (serial != null)
+                              _ActionBar(
+                                serial: serial,
+                                shot: shot,
+                                engine: library.engine,
+                              ),
+                          ],
                         ),
-                ),
-                // Hidden, not dropped, while the photo has the screen: the
-                // details keep what they read from the camera.
-                Offstage(
-                  offstage: fullscreen,
-                  child: Column(
-                    children: [
-                      _Details(shot: shot, model: library.model),
-                      if (serial != null)
-                        _ActionBar(
-                          serial: serial,
-                          shot: shot,
-                          engine: library.engine,
-                        ),
+                      ),
                     ],
                   ),
-                ),
-              ],
+                  Positioned.fill(
+                    child: _ExitFullscreen(
+                      shown: fullscreen && _exitShown,
+                      onExit: _leaveFullscreen,
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -288,18 +369,91 @@ class _ShotViewerState extends State<ShotViewer> {
   }
 }
 
+/// One of the viewer's bars, above ([top]) or below the photo. As the
+/// photo takes the whole screen ([immersed] going from 0 to 1) the bar
+/// slides off its edge of the screen and leaves its room to the photo.
+/// Away, it keeps its state: the details keep what they read from the
+/// camera.
+class _Bar extends StatelessWidget {
+  const new({required this.immersed, required this.top, required this.child});
+
+  final Animation<double> immersed;
+  final bool top;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => SizeTransition(
+    sizeFactor: ReverseAnimation(immersed),
+    // The edge next to the photo stays on the photo's.
+    alignment: top ? Alignment.bottomCenter : Alignment.topCenter,
+    child: AnimatedBuilder(
+      animation: immersed,
+      builder: (context, child) =>
+          Offstage(offstage: immersed.value == 1, child: child),
+      child: child,
+    ),
+  );
+}
+
+/// The button out of full screen, in a top corner over the photo. A tap
+/// on the photo shows it: with the system's bars hidden, the Back gesture
+/// takes a swipe to bring them up first.
+class _ExitFullscreen extends StatelessWidget {
+  const new({required this.shown, required this.onExit});
+
+  final bool shown;
+  final VoidCallback onExit;
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    ignoring: !shown,
+    child: AnimatedOpacity(
+      opacity: shown ? 1 : 0,
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 150),
+      child: SafeArea(
+        child: Align(
+          alignment: AlignmentDirectional.topStart,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: IconButton(
+              key: const Key('viewer-exit-fullscreen'),
+              tooltip: context.l10n.viewerExitFullScreen,
+              style: IconButton.styleFrom(
+                backgroundColor: GrColors.photoBadgeScrim,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: onExit,
+              icon: const Icon(Icons.fullscreen_exit_rounded),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class _PhotoPage extends StatefulWidget {
   const new({
     required this.serial,
     required this.shot,
-    required this.onZoom,
+    required this.immersed,
+    required this.onHold,
     required this.onTap,
     super.key,
   });
 
   final String serial;
   final Shot shot;
-  final ValueChanged<bool> onZoom;
+
+  /// 0 with the viewer's bars in place, 1 once the photo has the whole
+  /// screen.
+  final Animation<double> immersed;
+
+  /// Whether the photo keeps drags to itself: it is zoomed in, where a
+  /// drag moves it, or two fingers are on it for a pinch.
+  final ValueChanged<bool> onHold;
 
   /// The photo was tapped, not pinched or dragged.
   final VoidCallback onTap;
@@ -312,14 +466,17 @@ class _PhotoPageState extends State<_PhotoPage> {
   final _transform = TransformationController();
   bool _zoomed = false;
 
+  /// The fingers on the photo.
+  final _fingers = <int>{};
+
+  /// The finger that may be tapping, as it went down; null once it moved
+  /// away or another finger joined it.
+  PointerDownEvent? _tapping;
+
   @override
   void initState() {
     super.initState();
-    _transform.addListener(() {
-      final zoomed = _transform.value.getMaxScaleOnAxis() > 1.01;
-      widget.onZoom(zoomed);
-      if (zoomed != _zoomed) setState(() => _zoomed = zoomed);
-    });
+    _transform.addListener(_onTransform);
   }
 
   @override
@@ -328,41 +485,93 @@ class _PhotoPageState extends State<_PhotoPage> {
     super.dispose();
   }
 
+  void _onTransform() {
+    final zoomed = _transform.value.getMaxScaleOnAxis() > 1.01;
+    if (zoomed != _zoomed) setState(() => _zoomed = zoomed);
+    _reportHold();
+  }
+
+  void _reportHold() => widget.onHold(_zoomed || _fingers.length > 1);
+
+  void _onFingerDown(PointerDownEvent event) {
+    _fingers.add(event.pointer);
+    _tapping = _fingers.length == 1 ? event : null;
+    _reportHold();
+  }
+
+  void _onFingerMove(PointerMoveEvent event) {
+    final down = _tapping;
+    if (down == null) return;
+    if ((event.position - down.position).distance > kTouchSlop) {
+      _tapping = null;
+    }
+  }
+
+  void _onFingerUp(PointerUpEvent event) {
+    final down = _tapping;
+    _onFingerGone(event);
+    if (down != null && event.timeStamp - down.timeStamp < kLongPressTimeout) {
+      widget.onTap();
+    }
+  }
+
+  void _onFingerGone(PointerEvent event) {
+    _fingers.remove(event.pointer);
+    _tapping = null;
+    _reportHold();
+  }
+
   @override
   Widget build(BuildContext context) {
     final shot = widget.shot;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return Semantics(
       onTap: widget.onTap,
-      child: CameraImage(
-        serial: widget.serial,
-        file: shot.primary,
-        size: GrImageSize.view,
-        fit: BoxFit.contain,
-        // Only a JPEG's full file decodes; a DNG stays at its preview.
-        sharper: shot.jpeg != null ? GrImageSize.full : null,
-        wantSharper: _zoomed,
-        // Detail for zooming in, without decoding all 26 megapixels.
-        zoomHeadroom: 3,
-        // The grid already loaded this `view`; no smaller stand-in that
-        // would be swapped out.
-        showProgress: true,
-        // The mark is outside the zoomed picture, so it keeps its corner.
-        builder:
-            (context, image, {required aspectRatio, required sharpening}) =>
-                Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    InteractiveViewer(
-                      transformationController: _transform,
-                      // Pinching out ends at the photo fitted to its page.
-                      minScale: 1,
-                      maxScale: 6,
-                      child: SizedBox.expand(child: image),
-                    ),
-                    if (sharpening) _Sharpening(aspectRatio: aspectRatio),
-                  ],
-                ),
+      // Taps are told from pinches and drags here, not by a tap
+      // recogniser: that one would contend with every pinch and drag for
+      // its first movements, which the photo would then not follow.
+      child: Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: _onFingerDown,
+        onPointerMove: _onFingerMove,
+        onPointerUp: _onFingerUp,
+        onPointerCancel: _onFingerGone,
+        child: CameraImage(
+          serial: widget.serial,
+          file: shot.primary,
+          size: GrImageSize.view,
+          fit: BoxFit.contain,
+          // Only a JPEG's full file decodes; a DNG stays at its preview.
+          sharper: shot.jpeg != null ? GrImageSize.full : null,
+          wantSharper: _zoomed,
+          // For the whole screen, which the photo gets in full screen,
+          // rather than once more for each size on the way there.
+          decodeSize: MediaQuery.sizeOf(context),
+          // Detail for zooming in, without decoding all 26 megapixels.
+          zoomHeadroom: 3,
+          // The grid already loaded this `view`; no smaller stand-in that
+          // would be swapped out.
+          showProgress: true,
+          // The mark is outside the zoomed picture, so it keeps its corner.
+          builder:
+              (context, image, {required aspectRatio, required sharpening}) =>
+                  Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      InteractiveViewer(
+                        transformationController: _transform,
+                        // Pinching out ends at the photo fitted to its page.
+                        minScale: 1,
+                        maxScale: 6,
+                        child: SizedBox.expand(child: image),
+                      ),
+                      if (sharpening)
+                        _Sharpening(
+                          aspectRatio: aspectRatio,
+                          immersed: widget.immersed,
+                        ),
+                    ],
+                  ),
+        ),
       ),
     );
   }
@@ -373,9 +582,13 @@ class _PhotoPageState extends State<_PhotoPage> {
 /// page ([aspectRatio] is its width over its height; null takes the
 /// page's corner).
 class _Sharpening extends StatelessWidget {
-  const new({required this.aspectRatio});
+  const new({required this.aspectRatio, required this.immersed});
 
   final double? aspectRatio;
+
+  /// 0 with the viewer's bars in place, 1 once the photo has the whole
+  /// screen.
+  final Animation<double> immersed;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -385,40 +598,49 @@ class _Sharpening extends StatelessWidget {
       final photo = ratio == null
           ? page
           : applyBoxFit(BoxFit.contain, Size(ratio, 1), page).destination;
-      // Clear of the status bar and the camera cut-out when the photo has
-      // the whole screen.
       final safe = MediaQuery.paddingOf(context);
-      return Stack(
-        children: [
-          PositionedDirectional(
-            top: max((page.height - photo.height) / 2, safe.top) + 12,
-            end:
-                max(
-                  (page.width - photo.width) / 2,
-                  max(safe.left, safe.right),
-                ) +
-                12,
-            child: IgnorePointer(
-              child: Semantics(
-                label: context.l10n.viewerSharpening,
-                child: Container(
-                  key: const Key('viewer-sharpening'),
-                  width: 30,
-                  height: 30,
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    color: GrColors.photoBadgeScrim,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                ),
+      return AnimatedBuilder(
+        animation: immersed,
+        builder: (context, mark) => Stack(
+          children: [
+            PositionedDirectional(
+              // Clear of the status bar and the camera cut-out, which the
+              // page reaches once the photo has the whole screen.
+              top:
+                  max(
+                    (page.height - photo.height) / 2,
+                    safe.top * immersed.value,
+                  ) +
+                  12,
+              end:
+                  max(
+                    (page.width - photo.width) / 2,
+                    max(safe.left, safe.right),
+                  ) +
+                  12,
+              child: mark!,
+            ),
+          ],
+        ),
+        child: IgnorePointer(
+          child: Semantics(
+            label: context.l10n.viewerSharpening,
+            child: Container(
+              key: const Key('viewer-sharpening'),
+              width: 30,
+              height: 30,
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: GrColors.photoBadgeScrim,
+                shape: BoxShape.circle,
+              ),
+              child: const CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
               ),
             ),
           ),
-        ],
+        ),
       );
     },
   );

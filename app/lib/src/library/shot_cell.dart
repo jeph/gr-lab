@@ -46,6 +46,7 @@ class CameraImage extends StatefulWidget {
     this.sharper,
     this.wantSharper = false,
     this.fit = BoxFit.cover,
+    this.decodeSize,
     this.zoomHeadroom = 1,
     this.placeholder,
     this.showProgress = false,
@@ -59,8 +60,13 @@ class CameraImage extends StatefulWidget {
   final bool wantSharper;
   final BoxFit fit;
 
-  /// Images are decoded at most at the box's physical size times this, so
-  /// a zoomable view keeps detail when zoomed in.
+  /// The logical size the image is decoded for; null takes the box it is
+  /// laid out in. For an image whose box changes size while it shows: each
+  /// new size would decode the whole image again.
+  final Size? decodeSize;
+
+  /// Images are decoded at most at that size in physical pixels times
+  /// this, so a zoomable view keeps detail when zoomed in.
   final double zoomHeadroom;
   final Widget? placeholder;
 
@@ -126,7 +132,8 @@ class _CameraImageState extends State<CameraImage> {
   /// The library's `LibraryModel.revision` of the file shown.
   int _revision = 0;
 
-  /// The box in physical pixels, as last laid out.
+  /// The size the image is decoded for ([CameraImage.decodeSize], or the
+  /// box as last laid out), in physical pixels.
   Size _box = Size.zero;
 
   @override
@@ -460,10 +467,7 @@ class _CameraImageState extends State<CameraImage> {
     final dpr = MediaQuery.devicePixelRatioOf(context);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final box = Size(
-          constraints.maxWidth * dpr,
-          constraints.maxHeight * dpr,
-        );
+        final box = (widget.decodeSize ?? constraints.biggest) * dpr;
         if (box != _box) {
           _box = box;
           _scheduleSharperCheck();

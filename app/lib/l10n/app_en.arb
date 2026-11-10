@@ -2909,6 +2909,10 @@
   "@viewerDownloading": {
     "description": "Viewer action while the file is being downloaded."
   },
+  "viewerExitFullScreen": "Exit full screen",
+  "@viewerExitFullScreen": {
+    "description": "Tooltip of the button over a photo that has the whole screen in the viewer; it brings back the viewer's bars and the photo's details."
+  },
   "viewerFormat": "Format",
   "@viewerFormat": {
     "description": "Label of the shot's format in the viewer details."

@@ -374,9 +374,8 @@ void main() {
   });
 
   testWidgets('a tap gives a photo the whole screen, where a pinch zooms it '
-      'in and back out; a tap or Back brings the bars and details back', (
-    tester,
-  ) async {
+      'in and back out; there a tap shows the way out, and it or Back brings '
+      'the bars and details back', (tester) async {
     final modes = <Object?>[];
     final messenger = tester.binding.defaultBinaryMessenger
       ..setMockMethodCallHandler(SystemChannels.platform, (call) async {
@@ -429,14 +428,29 @@ void main() {
     await pumpUntilFound(tester, download.hitTestable());
     await pumpRounds(tester, 30);
     final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
-    expect(tester.getSize(pages).height, lessThan(screen.height));
+    final withBars = tester.getSize(pages).height;
+    expect(withBars, lessThan(screen.height));
+    final exit = _inViewer(find.byKey(const Key('viewer-exit-fullscreen')))
+        .hitTestable();
+    // Part of the way between its two sizes: the bars slide, they don't
+    // jump.
+    Future<void> expectSliding() async {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 120));
+      expect(
+        tester.getSize(pages).height,
+        inExclusiveRange(withBars, screen.height),
+      );
+      await pumpRounds(tester, 30);
+    }
 
     await tester.tap(pages);
-    await tester.pump();
+    await expectSliding();
     expect(bar, findsNothing);
     expect(download.hitTestable(), findsNothing);
     expect(tester.getSize(pages), screen);
     expect(modes, ['SystemUiMode.immersiveSticky']);
+    expect(exit, findsNothing);
 
     await pinch(10);
     expect(zoom(), greaterThan(2));
@@ -444,19 +458,141 @@ void main() {
     await pinch(-10);
     expect(zoom(), 1);
 
+    // A tap shows the way out and the next one puts it away; the photo
+    // keeps the screen.
     await tester.tap(pages);
     await tester.pump();
-    expect(bar, findsOneWidget);
-    expect(download.hitTestable(), findsOneWidget);
-    expect(modes.last, 'SystemUiMode.edgeToEdge');
+    expect(exit, findsOneWidget);
+    await tester.tap(pages);
+    await tester.pump();
+    expect(exit, findsNothing);
+    expect(tester.getSize(pages), screen);
+    expect(modes, ['SystemUiMode.immersiveSticky']);
 
     await tester.tap(pages);
     await tester.pump();
+    await tester.tap(exit);
+    await expectSliding();
+    expect(bar, findsOneWidget);
+    expect(download.hitTestable(), findsOneWidget);
+    expect(tester.getSize(pages).height, withBars);
+    expect(exit, findsNothing);
+    expect(modes.last, 'SystemUiMode.edgeToEdge');
+
+    await tester.tap(pages);
+    await pumpRounds(tester, 30);
     expect(bar, findsNothing);
     await tester.binding.handlePopRoute();
-    await tester.pump();
+    await pumpRounds(tester, 30);
     expect(_showing('R0000002.JPG'), findsOneWidget);
+    expect(download.hitTestable(), findsOneWidget);
     expect(modes.last, 'SystemUiMode.edgeToEdge');
+
+    await app.dispose();
+  });
+
+  testWidgets('full screen comes at once when the phone asks for less '
+      'motion', (tester) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    final app = await _openViewer(tester, [
+      FakePhoto('100RICOH', 'R0000001.JPG', _taken(1)),
+    ], 'sd1|100RICOH/R0000001');
+    final pages = _inViewer(find.byType(PageView));
+    await pumpUntilFound(
+      tester,
+      _inViewer(find.byKey(const ValueKey('viewer-download'))).hitTestable(),
+    );
+    await pumpRounds(tester, 30);
+
+    await tester.tap(pages);
+    await tester.pump();
+    expect(
+      tester.getSize(pages),
+      tester.view.physicalSize / tester.view.devicePixelRatio,
+    );
+
+    await app.dispose();
+  });
+
+  testWidgets('a pinch zooms a photo and a drag moves a zoomed one from '
+      'their first movement, and one finger still swipes to the next photo', (
+    tester,
+  ) async {
+    final app = await _openViewer(tester, [
+      for (var n = 1; n <= 2; n++)
+        FakePhoto('100RICOH', 'R000000$n.JPG', _taken(n)),
+    ], 'sd1|100RICOH/R0000002');
+    final pages = _inViewer(find.byType(PageView));
+    final download = _inViewer(find.byKey(const ValueKey('viewer-download')));
+    Matrix4 transform() => tester
+        .widget<InteractiveViewer>(
+          _inViewer(find.byType(InteractiveViewer)).first,
+        )
+        .transformationController!
+        .value;
+    await pumpUntilFound(tester, download.hitTestable());
+    await pumpRounds(tester, 30);
+    final centre = tester.getCenter(pages);
+
+    // Each movement is shorter than a gesture has to be to win against a
+    // tap or a swipe between pages.
+    final left = await tester.startGesture(
+      centre - const Offset(40, 0),
+      pointer: 1,
+    );
+    final right = await tester.startGesture(
+      centre + const Offset(40, 0),
+      pointer: 2,
+    );
+    await tester.pump();
+    await left.moveBy(const Offset(-4, 0));
+    await right.moveBy(const Offset(4, 0));
+    await tester.pump();
+    expect(transform().getMaxScaleOnAxis(), closeTo(1.1, .01));
+    for (var i = 0; i < 10; i++) {
+      await left.moveBy(const Offset(-8, 0));
+      await right.moveBy(const Offset(8, 0));
+      await tester.pump();
+    }
+    await left.up();
+    await right.up();
+    await pumpRounds(tester, 30);
+    expect(transform().getMaxScaleOnAxis(), greaterThan(2));
+
+    final before = transform().getTranslation().y;
+    final finger = await tester.startGesture(centre);
+    await finger.moveBy(const Offset(0, 6));
+    await tester.pump();
+    expect(transform().getTranslation().y - before, closeTo(6, .01));
+    // Far enough not to be a tap.
+    await finger.moveBy(const Offset(0, 30));
+    await finger.up();
+    await pumpRounds(tester, 30);
+    expect(tester.widget<PageView>(pages).controller!.page, 0);
+    expect(download.hitTestable(), findsOneWidget);
+
+    // Back at the fitted photo, pages swipe again.
+    final pinchLeft = await tester.startGesture(
+      centre - const Offset(140, 0),
+      pointer: 1,
+    );
+    final pinchRight = await tester.startGesture(
+      centre + const Offset(140, 0),
+      pointer: 2,
+    );
+    for (var i = 0; i < 10; i++) {
+      await pinchLeft.moveBy(const Offset(12, 0));
+      await pinchRight.moveBy(const Offset(-12, 0));
+      await tester.pump();
+    }
+    await pinchLeft.up();
+    await pinchRight.up();
+    await pumpRounds(tester, 30);
+    expect(transform().getMaxScaleOnAxis(), 1);
+    await tester.fling(pages, const Offset(-600, 0), 1000);
+    await pumpUntilFound(tester, _showing('R0000001.JPG'));
 
     await app.dispose();
   });
