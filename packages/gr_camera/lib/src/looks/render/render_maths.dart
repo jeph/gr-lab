@@ -160,23 +160,23 @@ double curveAt(Float64List curve, double position) {
 
 /// The lowest fractional index at which the rising sampled [curve] reaches
 /// [value]: the inverse of [curveAt]. A value below the curve's start gives
-/// 0 and one above its end the last index, and across a flat stretch the
-/// answer is where the stretch begins, so what a curve clipped stays at
-/// the clip point.
+/// 0. Across a flat stretch the answer is where the stretch begins, and a
+/// value above the curve's end counts as its end, so what a curve clipped
+/// stays at the clip point however far above it the value lies.
 double curveInverse(Float64List curve, double value) {
   final last = curve.length - 1;
   if (value <= curve[0]) return 0;
-  if (value > curve[last]) return last.toDouble();
+  final reached = value > curve[last] ? curve[last] : value;
   // The first sample at or above the value.
   var low = 0;
   var high = last;
   while (high - low > 1) {
     final mid = (low + high) >> 1;
-    if (curve[mid] >= value) {
+    if (curve[mid] >= reached) {
       high = mid;
     } else {
       low = mid;
     }
   }
-  return low + (value - curve[low]) / (curve[high] - curve[low]);
+  return low + (reached - curve[low]) / (curve[high] - curve[low]);
 }

@@ -54,11 +54,11 @@ void main() {
     }
   });
 
+  // The curves are fits and the saturation matrix is a formula where the
+  // camera holds tables, so the colours agree to within a few codes, not
+  // exactly.
+  const tolerance = 2.5;
   for (final c in referenceCases) {
-    // The curves are fits, good to about a code after one look's curves.
-    // Undoing a look other than Standard first stretches that error where
-    // the look had squeezed the colours together.
-    final tolerance = c.source == LookBase.standard ? 2.5 : 4.0;
     test('${c.name}: every reference colour is within $tolerance 8-bit '
         "codes of what the camera's tables give", () {
       final source = _look(c.source, c.sourceValues);
@@ -75,6 +75,33 @@ void main() {
       }
     });
   }
+
+  test("the Hue slider alone follows the camera's rounded matrices to a "
+      'fifth of a code', () {
+    final turns = [
+      for (final c in referenceCases)
+        if (c.source == LookBase.standard &&
+            c.sourceValues.isEmpty &&
+            c.target == LookBase.standard &&
+            c.targetValues.length == 1 &&
+            c.targetValues.containsKey(LookParameter.hue))
+          c,
+    ];
+    expect(turns, hasLength(4));
+    for (final c in turns) {
+      final target = _look(c.target, c.targetValues);
+      for (var i = 0; i < referenceColours.length; i++) {
+        final ours = _render(_standard, target, referenceColours[i]);
+        for (var channel = 0; channel < 3; channel++) {
+          expect(
+            ours[channel],
+            closeTo(c.colours[i][channel], 0.2),
+            reason: '${c.name}: ${referenceColours[i]} gives $ours',
+          );
+        }
+      }
+    }
+  });
 
   /// Checks that [look]'s table for a photo of its own leaves every entry
   /// from step [first] to step [last] of 17 as it is.
@@ -194,6 +221,20 @@ void main() {
     expect(_grey(beyond, 128), _grey(most, 128));
   });
 
+  test("a value outside HDR Tone's toning choices renders as the nearest "
+      'one', () {
+    const orange = [242, 115, 26];
+    List<double> toned(int toning) => _render(
+      _standard,
+      _look(LookBase.hdrTone, {LookParameter.toningHdr: toning}),
+      orange,
+    );
+    expect(toned(-1), toned(0), reason: 'under Off');
+    expect(toned(7), toned(2), reason: 'over Sepia');
+    expect(toned(2), isNot(toned(1)));
+    expect(toned(1), isNot(toned(0)));
+  });
+
   test('a colour photo with moderate settings can be undone well', () {
     for (final source in [
       _standard,
@@ -204,6 +245,11 @@ void main() {
       }),
       _look(LookBase.cineGreen, {LookParameter.saturation: -2}),
       _look(LookBase.retro, {LookParameter.key: 2}),
+      _look(LookBase.standard, {LookParameter.key: 3}),
+      _look(LookBase.standard, {
+        LookParameter.contrast: 4,
+        LookParameter.contrastHigh: 4,
+      }),
     ]) {
       expect(
         _renderer.sourceFit(source, _standard),
@@ -219,8 +265,17 @@ void main() {
       _look(LookBase.bleachBypass),
       _look(LookBase.crossProcess),
       _look(LookBase.standard, {LookParameter.saturation: -3}),
-      _look(LookBase.standard, {LookParameter.key: 3}),
-      _look(LookBase.standard, {LookParameter.contrast: 4}),
+      // Tone sliders that put white under nine tenths of the range: High/Low
+      // Key alone at +4, or less of it with Contrast or Contrast (Highlight).
+      _look(LookBase.standard, {LookParameter.key: 4}),
+      _look(LookBase.standard, {
+        LookParameter.key: 2,
+        LookParameter.contrast: 4,
+      }),
+      _look(LookBase.standard, {
+        LookParameter.key: 3,
+        LookParameter.contrastHigh: 4,
+      }),
       _look(LookBase.standard, {LookParameter.shading: -1}),
       _look(LookBase.standard, {LookParameter.clarity: 2}),
       _look(LookBase.positiveFilm, {LookParameter.grain: 1}),
@@ -230,6 +285,34 @@ void main() {
         LookSourceFit.rough,
         reason: '${source.base} ${source.values}',
       );
+    }
+  });
+
+  test("a photo's brightest pixels are taken as the point where its look "
+      'clipped, so neighbouring highlights stay neighbours', () {
+    // Undoing the toning leaves these channels a little above the top of
+    // the photo's curve, one pixel more than the next.
+    final bleach = _look(LookBase.bleachBypass, {
+      LookParameter.key: 4,
+      LookParameter.contrast: 4,
+      LookParameter.contrastHigh: 4,
+      LookParameter.toningBleachBypass: 1,
+    });
+    final darker = _look(LookBase.standard, {LookParameter.key: -4});
+    for (final (source, target, first, second) in [
+      (bleach, _standard, [243, 255, 255], [242, 255, 255]),
+      (_standard, darker, [191, 255, 190], [191, 255, 191]),
+      (_standard, darker, [255, 255, 255], [254, 254, 254]),
+    ]) {
+      final a = _render(source, target, first);
+      final b = _render(source, target, second);
+      for (var channel = 0; channel < 3; channel++) {
+        expect(
+          a[channel],
+          closeTo(b[channel], 6),
+          reason: '$first gives $a and $second gives $b',
+        );
+      }
     }
   });
 
@@ -313,6 +396,10 @@ void main() {
       (LookBase.monotone, 50, -30, -20),
       (LookBase.softMonotone, 20, 0, 0),
       (LookBase.highContrast, -100, 0, 0),
+      // A quarter exactly, however the values are spread.
+      (LookBase.monotone, 25, 0, 0),
+      (LookBase.monotone, 13, 6, 6),
+      (LookBase.monotone, 10, 10, 5),
     ]) {
       final look = filtered(base, red, green, blue);
       final reason = '$base through $red, $green, $blue';
@@ -323,6 +410,11 @@ void main() {
         reason: reason,
       );
     }
+    expect(
+      _renderer.decoder(filtered(LookBase.monotone, 26, 0, 0)),
+      isNotNull,
+      reason: 'just over a quarter',
+    );
   });
 
   test('HDR Tone, Solarized Effect and bases GR Lab does not know cannot '

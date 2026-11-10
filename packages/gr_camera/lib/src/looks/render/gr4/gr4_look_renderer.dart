@@ -21,10 +21,10 @@ import 'package:gr_camera/src/looks/render/render_maths.dart';
 /// Left out \[design\]: the effects that are not per pixel (Shading,
 /// Clarity, Grain, HDR Tone's tone mapping, Sharpness); the gain curve
 /// that fades chroma near black and white (§4.4), which every base shares
-/// and the photo already carries; and Retro's ToneControl values (§3) and
-/// the multi-axis block's level scaling (§4.5), whose workings are
-/// \[unknown\]. Nothing here has been compared with a camera's photos
-/// yet.
+/// and the photo already carries; Cross Processing's change to the white
+/// balance (§1); and Retro's ToneControl values (§3) and the multi-axis
+/// block's level scaling (§4.5), whose workings are \[unknown\]. Nothing
+/// here has been compared with a camera's photos yet.
 final class Gr4LookRenderer implements LookRenderer {
   /// The GR IV family's rendering.
   const new();
@@ -34,16 +34,15 @@ final class Gr4LookRenderer implements LookRenderer {
 
   @override
   LookTransform? decoder(Look source) {
-    if (!_canUndo(source)) return null;
-    final stages = _Stages.of(source);
+    final stages = _undoing(source);
     if (stages == null) return null;
-    if (!stages.setsChroma) return stages.decode;
-    return stages.undoesGrey ? stages.decodeGrey : null;
+    return stages.setsChroma ? stages.decodeGrey : stages.decode;
   }
 
   @override
   LookSourceFit sourceFit(Look source, Look target) {
-    if (decoder(source) == null) return LookSourceFit.unusable;
+    final stages = _undoing(source);
+    if (stages == null) return LookSourceFit.unusable;
     if (_isMonochrome(source)) {
       // A grey photo has its tones to offer another black-and-white look,
       // and nothing to offer a colour one.
@@ -51,7 +50,18 @@ final class Gr4LookRenderer implements LookRenderer {
           ? LookSourceFit.rough
           : LookSourceFit.unusable;
     }
-    return _isLossy(source) ? LookSourceFit.rough : LookSourceFit.good;
+    return _isLossy(source) || stages.clipsHighlights
+        ? LookSourceFit.rough
+        : LookSourceFit.good;
+  }
+
+  /// The stages of [source] when its rendering can be undone; null when
+  /// it cannot.
+  static _Stages? _undoing(Look source) {
+    if (!_canUndo(source)) return null;
+    final stages = _Stages.of(source);
+    if (stages == null) return null;
+    return stages.setsChroma && !stages.undoesGrey ? null : stages;
   }
 
   /// Whether [look]'s rendering has an inverse worth using: not HDR Tone,
@@ -85,19 +95,18 @@ final class Gr4LookRenderer implements LookRenderer {
   };
 
   /// Whether a colour photo developed with [look] lost what undoing its
-  /// rendering needs. Where the line falls is \[design\]: an effect that
-  /// is not per pixel in the photo, a base that keeps under half the
-  /// colour or caps a channel (§4.1, §5), saturation under 0.8, or a tone
-  /// curve that clips the top tenth of the highlights (§3).
+  /// rendering needs, apart from what its curves clipped
+  /// ([_Stages.clipsHighlights]). Where the line falls is \[design\]: an
+  /// effect that is not per pixel in the photo, a base that keeps under
+  /// half the colour (Bleach Bypass, §4.1) or bends the channels apart
+  /// (Cross Processing, §5), or saturation under 0.8.
   static bool _isLossy(Look look) =>
       look.base == LookBase.bleachBypass ||
       look.base == LookBase.crossProcess ||
       _step(look, LookParameter.grain) != 0 ||
       _step(look, LookParameter.shading) != 0 ||
       _step(look, LookParameter.clarity) != 0 ||
-      _step(look, LookParameter.saturation) <= -3 ||
-      _step(look, LookParameter.key) >= 3 ||
-      _step(look, LookParameter.contrast) >= 4;
+      _step(look, LookParameter.saturation) <= -3;
 }
 
 /// [parameter]'s value in [look]; 0 when the look lacks it.
@@ -332,16 +341,44 @@ const List<double> _hdrGrey = [
   0.3008, 0.5859, 0.1133, //
 ];
 
+/// What the camera's saturation matrices hold besides the scaling
+/// (§4.2): every one but the neutral step's is the scaling applied after
+/// this fixed matrix, which leaks a little Cr into the luma and turns the
+/// chroma by a tenth of a degree. The values are GR Lab's fit over the
+/// camera's eight matrices, good to 0.0002 an entry.
+const List<double> _saturationSkew = [
+  1.0020, -0.0002, -0.0018, //
+  0.0011, 0.9989, 0.0000, //
+  0.0029, -0.0029, 1.0000, //
+];
+
 /// One step of the Hue slider, in radians (§4.3).
 const double _hueStep = 2.46 * math.pi / 180;
+
+/// The camera's matrix from encoded R, G, B to Y, Cb, Cr, in 1/256: the
+/// JFIF matrix rounded to that scale (§4.3). A JPEG viewer undoes it with
+/// the exact JFIF matrix, so the rounding shows as a small colour change.
+const List<double> _yccRegisters = [
+  77, 150, 29, //
+  -43, -85, 128, //
+  128, -107, -21, //
+];
+
+/// The scale of [_yccRegisters] and of the camera's hue rotation.
+const double _yccScale = 256;
+
+/// The least of the linear range a look's curves may use before they stop
+/// rising, for a photo of it to be undone closely \[design\]: a curve
+/// that is level over the top tenth has clipped those highlights.
+const double _leastCurveRange = 0.9;
 
 /// A tone curve's point for a linear value of 1: point `i` is the 12-bit
 /// input `16 · i`.
 const double _curveScale = 4095 / 16;
 
-/// The least a black-and-white look's brightest grey may be, of full
-/// scale, for a photo of it to be undone \[design\]: under a quarter, the
-/// photo holds too few levels to stretch back into a scene.
+/// How bright a black-and-white look's brightest grey has to be, of full
+/// scale, for a photo of it to be undone \[design\]: at a quarter or
+/// under, the photo holds too few levels to stretch back into a scene.
 const double _leastGreyRange = 0.25;
 
 /// The stages of one look's rendering, worked out once per look.
@@ -350,14 +387,13 @@ final class _Stages {
     required List<double> block0,
     required this.axes,
     required this.curves,
-    required this.mix,
+    required List<double> mix,
     required this.setsChroma,
-    required this.hue,
+    required int hue,
     required (int, int) chroma,
   }) : _block0 = block0,
        fromScene = mat3Multiply(block0, _cameraMatrixInverse),
-       hueCos = math.cos(hue),
-       hueSin = math.sin(hue),
+       toYcc = mat3Multiply(_yccMatrix(hue), mix),
        cb = chroma.$1 / 1024,
        cr = chroma.$2 / 1024;
 
@@ -379,9 +415,9 @@ final class _Stages {
     );
 
     final saturation = _saturation(_slider(look, LookParameter.saturation));
-    final hue = _slider(look, LookParameter.hue) * _hueStep;
+    final hue = _slider(look, LookParameter.hue);
     final monoToning = _step(look, LookParameter.toningMonotone).clamp(0, 5);
-    final hdrToning = _step(look, LookParameter.toningHdr);
+    final hdrToning = _step(look, LookParameter.toningHdr).clamp(0, 2);
     final plain = _plainCurves(tone);
 
     _Stages colour(
@@ -531,26 +567,24 @@ final class _Stages {
   /// points.
   final List<Float64List> curves;
 
-  /// Colour matrix block 1 on the encoded values: saturation, or the
-  /// black-and-white mix.
-  final List<double> mix;
-  late final Float64List unmix = mat3Inverse(mix);
+  /// From the encoded R, G, B the curves give to the camera's Y, Cb, Cr:
+  /// colour matrix block 1 (saturation, or the black-and-white mix) and
+  /// then the camera's YCbCr matrix with the Hue slider's rotation. Only a
+  /// colour look's has an inverse.
+  final Float64List toYcc;
+  late final Float64List fromYcc = mat3Inverse(toYcc);
 
   /// Whether the look replaces the chroma with ([cb], [cr]), as the
-  /// black-and-white looks do, or adds it after the hue rotation.
+  /// black-and-white looks do, or adds it to its own.
   final bool setsChroma;
-
-  /// The Hue slider's rotation of (Cb, Cr), in radians.
-  final double hue;
-  final double hueCos;
-  final double hueSin;
 
   /// The toning, as Cb and Cr of full scale.
   final double cb;
   final double cr;
 
-  /// The stages before the chroma is set: scene-linear RGB through the
-  /// base's matrix, the multi-axis correction, the curves and block 1.
+  /// Scene-linear RGB to the camera's Y, Cb, Cr before the toning: the
+  /// base's matrix, the multi-axis correction, the curves, block 1 and the
+  /// YCbCr matrix.
   void _develop(Float64List v) {
     mat3Apply(fromScene, v);
     axes?.apply(v);
@@ -560,21 +594,19 @@ final class _Stages {
     for (var c = 0; c < 3; c++) {
       v[c] = curveAt(curves[c], v[c] * _curveScale);
     }
-    mat3Apply(mix, v);
+    mat3Apply(toYcc, v);
   }
 
-  /// Scene-linear RGB to this look's encoded RGB.
+  /// Scene-linear RGB to this look's encoded RGB, as a JPEG viewer shows
+  /// the camera's Y, Cb, Cr.
   void encode(Float64List v) {
     _develop(v);
-    rgbToYcc(v);
     if (setsChroma) {
       v[1] = cb;
       v[2] = cr;
     } else {
-      final b = v[1];
-      final r = v[2];
-      v[1] = hueCos * b - hueSin * r + cb;
-      v[2] = hueSin * b + hueCos * r + cr;
+      v[1] += cb;
+      v[2] += cr;
     }
     yccToRgb(v);
     clampUnit(v);
@@ -583,18 +615,23 @@ final class _Stages {
   /// The inverse of [encode] for a colour look.
   void decode(Float64List v) {
     rgbToYcc(v);
-    final b = v[1] - cb;
-    final r = v[2] - cr;
-    v[1] = hueCos * b + hueSin * r;
-    v[2] = hueCos * r - hueSin * b;
-    yccToRgb(v);
-    mat3Apply(unmix, v);
+    v[1] -= cb;
+    v[2] -= cr;
+    mat3Apply(fromYcc, v);
     for (var c = 0; c < 3; c++) {
       v[c] = curveInverse(curves[c], v[c]) / _curveScale;
     }
     axes?.undo(v);
     mat3Apply(toScene, v);
   }
+
+  /// Whether one of the look's curves stops rising before
+  /// [_leastCurveRange] of the linear range: the High/Low Key, Contrast
+  /// and Contrast (Highlight) sliders all move the point where the tone
+  /// curve reaches white (§3), and what lies above it cannot be undone.
+  late final bool clipsHighlights = curves.any(
+    (curve) => curveInverse(curve, curve.last) < _leastCurveRange * _curveScale,
+  );
 
   /// The luma this look gives a grey scene, at each of the tone curve's
   /// points (point `i` is a scene value of `i / _curveScale`), through the
@@ -609,18 +646,17 @@ final class _Stages {
     for (var i = 0; i < response.length; i++) {
       v.fillRange(0, 3, i / _curveScale);
       _develop(v);
-      final luma = lumaRed * v[0] + lumaGreen * v[1] + lumaBlue * v[2];
-      if (luma > highest) highest = luma;
+      if (v[0] > highest) highest = v[0];
       response[i] = highest;
     }
     return response;
   }();
 
   /// Whether a black-and-white photo of this look has tones to undo: its
-  /// brightest grey reaches [_leastGreyRange]. A filter whose values add up
-  /// to little, nothing or less leaves a photo too dark to read a scene
-  /// from.
-  bool get undoesGrey => greyResponse.last >= _leastGreyRange;
+  /// brightest grey is above [_leastGreyRange], by more than rounding. A
+  /// filter whose values add up to little, nothing or less leaves a photo
+  /// too dark to read a scene from.
+  bool get undoesGrey => greyResponse.last - _leastGreyRange > 1e-9;
 
   /// The nearest thing to an inverse of [encode] for a black-and-white
   /// look \[design\]: the grey scene that would give the pixel's luma
@@ -633,14 +669,45 @@ final class _Stages {
     v[2] = grey;
   }
 
+  /// The camera's RGB to YCbCr matrix for a Hue [step] (§4.3): the camera
+  /// holds the rotation of 2.46° a step in 1/256, multiplies it into
+  /// [_yccRegisters] and rounds the product to 1/256 again.
+  static Float64List _yccMatrix(int step) {
+    final cos = (math.cos(step * _hueStep) * _yccScale).roundToDouble();
+    final sin = (math.sin(step * _hueStep) * _yccScale).roundToDouble();
+    // At four steps either way the camera's table holds 254 for Cr's own
+    // share, where rounding the cosine gives 252.
+    final crFromCr = step.abs() == 4 ? 254.0 : cos;
+    final product = mat3Multiply([
+      _yccScale,
+      0,
+      0,
+      0,
+      cos,
+      -sin,
+      0,
+      sin,
+      crFromCr,
+    ], _yccRegisters);
+    for (var i = 0; i < 9; i++) {
+      product[i] = (product[i] / _yccScale + 0.5).floorToDouble() / _yccScale;
+    }
+    return product;
+  }
+
   /// The Saturation slider's matrix (§4.2): each step scales the distance
-  /// from the luma by 1.1.
+  /// from the luma by 1.1, after [_saturationSkew] on every step but 0.
   static Float64List _saturation(int step) {
+    if (step == 0) return Float64List.fromList(mat3Identity);
     final s = math.pow(1.1, step).toDouble();
     final r = (1 - s) * lumaRed;
     final g = (1 - s) * lumaGreen;
     final b = (1 - s) * lumaBlue;
-    return Float64List.fromList([r + s, g, b, r, g + s, b, r, g, b + s]);
+    return mat3Multiply([
+      r + s, g, b, //
+      r, g + s, b, //
+      r, g, b + s, //
+    ], _saturationSkew);
   }
 
   /// The black-and-white mix of Monotone, Soft Monotone and Hi-Contrast

@@ -71,7 +71,7 @@ void main() {
   });
 
   test('the inverse of a sampled curve undoes it, and gives the start of a '
-      'flat stretch', () {
+      'flat stretch for its value and for anything above it', () {
     final curve = Float64List.fromList([0, 10, 30, 30, 30]);
     for (final position in [0.0, 0.3, 1.0, 1.9]) {
       expect(
@@ -80,7 +80,9 @@ void main() {
       );
     }
     expect(curveInverse(curve, 30), 2, reason: 'where the clip begins');
+    expect(curveInverse(curve, 30.0000001), 2, reason: 'just above the clip');
+    expect(curveInverse(curve, 99), 2);
     expect(curveInverse(curve, -5), 0);
-    expect(curveInverse(curve, 99), 4);
+    expect(curveInverse(Float64List.fromList([0, 10, 30]), 99), 2);
   });
 }

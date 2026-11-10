@@ -106,8 +106,14 @@ final class LookLut {
 final class LookRerender {
   /// For a photo developed with [source] on a camera [renderer] renders
   /// for; a null [source] is a photo whose look is not known. Tables get
-  /// [size] steps per channel.
-  new(this.renderer, {required this.source, this.size = 33})
+  /// [size] steps per channel: 49 unless told otherwise \[design\]. Between
+  /// its entries a table is only as good as straight lines are, and a look
+  /// bends most where a channel clips. In the worst pair of looks measured
+  /// the worst hundredth of the colours is 2.3 codes or more from the
+  /// renderer's own answer with 49 steps and 4.3 with 33
+  /// (research/image-control-processing.md §10.1), and the table's image
+  /// stays under the 4096 pixels some phones' graphics stop at.
+  new(this.renderer, {required this.source, this.size = 49})
     : _decoder = renderer.decoder(source ?? Look.onBase(LookBase.standard));
 
   /// The camera generation's rendering.

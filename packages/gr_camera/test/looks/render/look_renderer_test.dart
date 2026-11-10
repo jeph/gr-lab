@@ -38,6 +38,53 @@ void main() {
     }
   });
 
+  test('blending between the entries of a table of the usual size gives '
+      'what the renderer gives, within 2 codes for all but one colour in '
+      'fifty', () {
+    // A pair of looks whose colours bend sharply where channels clip.
+    var source = Look.onBase(LookBase.positiveFilm);
+    for (final MapEntry(:key, :value) in {
+      LookParameter.key: -1,
+      LookParameter.contrast: 3,
+      LookParameter.contrastHigh: -1,
+      LookParameter.contrastLow: -2,
+    }.entries) {
+      source = source.withValue(key, value);
+    }
+    final lut = LookRerender(_renderer, source: source).lutFor(_standard);
+    final decode = _renderer.decoder(source)!;
+    final encode = _renderer.encoder(_standard)!;
+    final top = lut.size - 1;
+    final exact = Float64List(3);
+    var colours = 0;
+    var far = 0;
+    for (var r = 0; r <= 255; r += 15) {
+      for (var g = 0; g <= 255; g += 15) {
+        for (var b = 0; b <= 255; b += 15) {
+          exact[0] = r / 255;
+          exact[1] = g / 255;
+          exact[2] = b / 255;
+          decode(exact);
+          encode(exact);
+          final blended = _blend(
+            lut,
+            r / 255 * top,
+            g / 255 * top,
+            b / 255 * top,
+          );
+          colours++;
+          for (var channel = 0; channel < 3; channel++) {
+            if ((blended[channel] - exact[channel] * 255).abs() > 2) {
+              far++;
+              break;
+            }
+          }
+        }
+      }
+    }
+    expect(far / colours, lessThan(0.02));
+  });
+
   test('a photo whose look is not known is taken to be Standard, and says '
       'so', () {
     final unknown = LookRerender(_renderer, source: null, size: 5);
@@ -67,4 +114,27 @@ void main() {
     final standard = LookRerender(_renderer, source: _standard, size: 5);
     expect(standard.lutFor(unknownBase).rgba, identity);
   });
+}
+
+/// The colour at the fractional steps ([r], [g], [b]) of [lut], blended
+/// from the eight entries around it as the app's shader does.
+List<double> _blend(LookLut lut, double r, double g, double b) {
+  final lowR = r.floor().clamp(0, lut.size - 2);
+  final lowG = g.floor().clamp(0, lut.size - 2);
+  final lowB = b.floor().clamp(0, lut.size - 2);
+  final out = [0.0, 0.0, 0.0];
+  for (var corner = 0; corner < 8; corner++) {
+    final upR = corner & 1;
+    final upG = (corner >> 1) & 1;
+    final upB = corner >> 2;
+    final weight =
+        (upR == 1 ? r - lowR : 1 - (r - lowR)) *
+        (upG == 1 ? g - lowG : 1 - (g - lowG)) *
+        (upB == 1 ? b - lowB : 1 - (b - lowB));
+    final (er, eg, eb) = lut.at(lowR + upR, lowG + upG, lowB + upB);
+    out[0] += weight * er;
+    out[1] += weight * eg;
+    out[2] += weight * eb;
+  }
+  return out;
 }
