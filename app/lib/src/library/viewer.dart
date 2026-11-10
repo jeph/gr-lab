@@ -27,11 +27,12 @@ import 'package:grlab/src/widgets/skeleton.dart';
 import 'package:video_player/video_player.dart';
 
 /// Full-screen viewer (mock `b-viewer`): swipe between [shots], pinch to
-/// zoom, file details, and Download. A RAW+JPEG pair offers its JPEG and
-/// its RAW separately. A photo shown larger than its preview, or zoomed,
-/// is replaced by the full JPEG once it arrives; a mark in its corner says
-/// so until then. A tap on a photo gives it the whole screen. There, a tap
-/// shows a button that brings the bars and the details back, as Back does.
+/// zoom, file details, and Download, which asks a RAW+JPEG pair whether to
+/// download its JPEG, its RAW or both. A photo shown larger than its
+/// preview, or zoomed, is replaced by the full JPEG once it arrives; a mark
+/// in its corner says so until then. A tap on a photo gives it the whole
+/// screen. There, a tap shows a button that brings the bars and the details
+/// back, as Back does.
 ///
 /// The viewer follows the camera's listing: a shot that leaves it (deleted
 /// on the camera, or its card taken out) leaves the swipe list, a pair
@@ -1258,9 +1259,9 @@ class _ImageControlSkeleton extends StatelessWidget {
   );
 }
 
-/// Download for the shot; a RAW+JPEG pair gets one action per half. Saved
-/// files can always be downloaded again: the app cannot see whether they
-/// are still on the phone.
+/// The shot's Download (see [_DownloadAction]). Saved files can always be
+/// downloaded again: the app cannot see whether they are still on the
+/// phone.
 class _ActionBar extends StatelessWidget {
   const new({required this.serial, required this.shot, required this.engine});
 
@@ -1279,46 +1280,12 @@ class _ActionBar extends StatelessWidget {
         top: false,
         child: SizedBox(
           height: 72,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: shot.isPair
-                  ? [
-                      Flexible(
-                        child: _DownloadAction(
-                          key: const ValueKey('viewer-download:jpeg'),
-                          serial: serial,
-                          shot: shot,
-                          files: [shot.jpeg!],
-                          kind: _DownloadKind.jpeg,
-                          engine: engine,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: _DownloadAction(
-                          key: const ValueKey('viewer-download:raw'),
-                          serial: serial,
-                          shot: shot,
-                          files: [shot.raw!],
-                          kind: _DownloadKind.raw,
-                          engine: engine,
-                        ),
-                      ),
-                    ]
-                  : [
-                      Flexible(
-                        child: _DownloadAction(
-                          key: const ValueKey('viewer-download'),
-                          serial: serial,
-                          shot: shot,
-                          files: shot.files,
-                          kind: _DownloadKind.all,
-                          engine: engine,
-                        ),
-                      ),
-                    ],
+          child: Center(
+            child: _DownloadAction(
+              key: const ValueKey('viewer-download'),
+              serial: serial,
+              shot: shot,
+              engine: engine,
             ),
           ),
         ),
@@ -1327,57 +1294,58 @@ class _ActionBar extends StatelessWidget {
   }
 }
 
-/// Which files of the shot a [_DownloadAction] fetches. The names are the
-/// `kind` of the `viewerDownload` messages.
-enum _DownloadKind { jpeg, raw, all }
-
-/// Downloads [files] of the shot, or shows that they are queued or
-/// downloading, or offers a retry when their job failed.
+/// Downloads the shot: a RAW+JPEG pair first asks whether to download its
+/// JPEG, its RAW or both; any other shot starts at once. Shows that the
+/// shot's files are downloading or queued, and offers a retry when their
+/// job failed.
 class _DownloadAction extends StatelessWidget {
   const new({
     required this.serial,
     required this.shot,
-    required this.files,
-    required this.kind,
     required this.engine,
     super.key,
   });
 
   final String serial;
   final Shot shot;
-  final List<CameraFile> files;
-  final _DownloadKind kind;
   final DownloadEngine engine;
 
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
+    final files = shot.files;
     final jobs = [
       for (final j in engine.jobs)
         if (j.serial == serial && j.files.any(files.contains)) j,
     ];
-    bool any(DownloadState s) => jobs.any((j) => j.state == s);
+    final running = jobs.any((j) => j.state == DownloadState.running);
+    final queued = jobs.any((j) => j.state == DownloadState.queued);
     final failed = jobs
         .where((j) => j.state == DownloadState.failed)
         .firstOrNull;
-    final downloaded = engine.areFilesDownloaded(serial, files);
-    final (IconData icon, String text) = any(DownloadState.running)
+    final addable = [
+      for (final f in files)
+        if (!engine.isFileQueued(serial, f)) f,
+    ];
+    final (IconData icon, String text) = running
         ? (Icons.downloading_rounded, l10n.viewerDownloading)
-        : any(DownloadState.queued)
+        : queued
         ? (Icons.schedule_rounded, l10n.viewerQueued)
         : failed != null
         ? (Icons.refresh_rounded, l10n.viewerRetryDownload)
-        : downloaded
-        ? (Icons.check_rounded, l10n.viewerDownloadAgain(kind.name))
-        : (Icons.download_rounded, l10n.viewerDownload(kind.name));
+        : engine.areFilesDownloaded(serial, files)
+        ? (Icons.check_rounded, l10n.viewerDownloadAgain)
+        : (Icons.download_rounded, l10n.viewerDownload);
     final VoidCallback? onTap;
-    if (any(DownloadState.running) || any(DownloadState.queued)) {
-      onTap = null;
-    } else if (failed != null) {
+    if (failed != null && !running && !queued) {
       onTap = () => engine.retry(failed);
+    } else if (addable.isEmpty) {
+      onTap = null;
+    } else if (shot.isPair) {
+      onTap = () => unawaited(_choose(context));
     } else {
-      onTap = () => unawaited(engine.enqueueFiles(serial, shot, files));
+      onTap = () => unawaited(engine.enqueueFiles(serial, shot, addable));
     }
     return InkWell(
       borderRadius: BorderRadius.circular(GrRadii.md),
@@ -1399,7 +1367,7 @@ class _DownloadAction extends StatelessWidget {
                 color: c.t1,
               ),
             ),
-            if (any(DownloadState.running))
+            if (running)
               ValueListenableBuilder(
                 valueListenable: engine.progress,
                 builder: (context, p, _) => SizedBox(
@@ -1417,5 +1385,80 @@ class _DownloadAction extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Asks which files of the pair to download (bottom sheet) and queues
+  /// them. A choice whose files are all queued already is disabled.
+  Future<void> _choose(BuildContext context) async {
+    final model = LibraryScope.of(context).model;
+    final picked = await showModalBottomSheet<List<CameraFile>>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) {
+        final l10n = context.l10n;
+        Widget option(
+          String name,
+          IconData icon,
+          String label,
+          List<CameraFile> files,
+        ) {
+          final wanted = [
+            for (final f in files)
+              if (!engine.isFileQueued(serial, f)) f,
+          ];
+          int? bytes = 0;
+          for (final f in files) {
+            final size = model.info(f)?.size;
+            bytes = size == null || bytes == null ? null : bytes + size;
+          }
+          final detail = wanted.isEmpty
+              ? l10n.viewerQueued
+              : bytes == null
+              ? null
+              : formatBytes(context, bytes);
+          return ListTile(
+            key: Key('viewer-download-choice:$name'),
+            leading: Icon(icon),
+            title: Text(label),
+            subtitle: detail == null ? null : Text(detail),
+            enabled: wanted.isNotEmpty,
+            onTap: () => Navigator.of(context).pop(wanted),
+          );
+        }
+
+        return SafeArea(
+          child: ListView(
+            key: const Key('viewer-download-sheet'),
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                child: Text(
+                  l10n.viewerDownload,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              option('jpeg', Icons.image_outlined, l10n.libraryFormatJpeg, [
+                shot.jpeg!,
+              ]),
+              option('raw', Icons.raw_on_outlined, l10n.libraryFormatRaw, [
+                shot.raw!,
+              ]),
+              option(
+                'both',
+                Icons.collections_outlined,
+                l10n.viewerDownloadBoth,
+                shot.files,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (picked == null || picked.isEmpty) return;
+    await engine.enqueueFiles(serial, shot, picked);
   }
 }

@@ -76,8 +76,7 @@ Future<TestApp> _openViewer(
 }
 
 /// The pair `R0000001` loses [deleted]; the viewer shows the shot left,
-/// which offers one Download in place of the pair's two and downloads only
-/// [kept].
+/// whose Download no longer asks which files and downloads only [kept].
 Future<void> _pairLoses(
   WidgetTester tester, {
   required String deleted,
@@ -87,16 +86,18 @@ Future<void> _pairLoses(
     FakePhoto('100RICOH', 'R0000001.JPG', _taken(1)),
     FakePhoto('100RICOH', 'R0000001.DNG', _taken(1)),
   ], 'sd1|100RICOH/R0000001');
-  Finder action(String key) => _inViewer(find.byKey(ValueKey(key)));
-  await pumpUntilFound(tester, action('viewer-download:raw'));
-  expect(action('viewer-download:jpeg'), findsOneWidget);
+  final download = _inViewer(find.byKey(const ValueKey('viewer-download')));
+  final pairFormat = _inViewer(find.text('RAW+JPEG'));
+  await pumpUntilFound(tester, pairFormat);
+  expect(download, findsOneWidget);
 
   _delete(app, deleted);
-  final download = action('viewer-download');
-  await pumpUntilFound(tester, download);
+  await pumpUntil(
+    tester,
+    () => pairFormat.evaluate().isEmpty,
+    reason: 'the viewer shows a single file',
+  );
   expect(_showing(kept), findsOneWidget);
-  expect(action('viewer-download:jpeg'), findsNothing);
-  expect(action('viewer-download:raw'), findsNothing);
 
   await tapWhenReady(tester, download);
   await pumpUntil(
@@ -104,6 +105,7 @@ Future<void> _pairLoses(
     () => app.media.shots.isNotEmpty,
     reason: 'the shot left saved',
   );
+  expect(find.byKey(const Key('viewer-download-sheet')), findsNothing);
   expect(app.media.shots.single.names, [kept]);
 
   await app.dispose();
@@ -210,6 +212,39 @@ void main() {
     (tester) =>
         _pairLoses(tester, deleted: 'R0000001.DNG', kept: 'R0000001.JPG'),
   );
+
+  testWidgets("a pair's Download asks for its JPEG, its RAW or both and "
+      'downloads only what was chosen', (tester) async {
+    final app = await _openViewer(tester, [
+      FakePhoto('100RICOH', 'R0000001.JPG', _taken(1)),
+      FakePhoto('100RICOH', 'R0000001.DNG', _taken(1)),
+    ], 'sd1|100RICOH/R0000001');
+    final download = _inViewer(find.byKey(const ValueKey('viewer-download')));
+    Finder choice(String name) =>
+        find.byKey(Key('viewer-download-choice:$name'));
+
+    await tapWhenReady(tester, download);
+    await pumpUntilFound(tester, choice('both'));
+    expect(choice('jpeg'), findsOneWidget);
+    await tapWhenReady(tester, choice('raw'));
+    await pumpUntil(
+      tester,
+      () => app.media.shots.isNotEmpty,
+      reason: 'the RAW saved',
+    );
+    expect(app.media.shots.single.names, ['R0000001.DNG']);
+
+    await tapWhenReady(tester, download);
+    await tapWhenReady(tester, choice('both'));
+    await pumpUntil(
+      tester,
+      () => app.media.shots.length == 2,
+      reason: 'both saved',
+    );
+    expect(app.media.shots.last.names, ['R0000001.JPG', 'R0000001.DNG']);
+
+    await app.dispose();
+  });
 
   testWidgets("a photo's look that is already saved is not saved again: a "
       'dialog says so, and Save look can be used again', (tester) async {

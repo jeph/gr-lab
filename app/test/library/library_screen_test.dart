@@ -192,7 +192,7 @@ void main() {
     );
     await pumpUntilFound(tester, _downloadedBadge(jpeg));
 
-    // The viewer offers each half of the pair, again.
+    // The viewer's Download asks which half of the pair, again.
     await tester.tap(_cell(pair));
     await pumpUntilFound(tester, find.text('R0000268.JPG'));
     expect(
@@ -203,9 +203,12 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('R0000268.JPG + R0000268.DNG'), findsOneWidget);
-    await pumpUntilFound(tester, find.text('Download JPEG again'));
-    expect(find.text('Download RAW again'), findsOneWidget);
-    await tapWhenReady(tester, find.text('Download RAW again'));
+    await pumpUntilFound(tester, find.text('Download again'));
+    await tapWhenReady(tester, find.text('Download again'));
+    await tapWhenReady(
+      tester,
+      find.byKey(const Key('viewer-download-choice:raw')),
+    );
     await pumpUntil(
       tester,
       () => app.media.shots.length == 5,

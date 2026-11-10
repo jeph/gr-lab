@@ -2893,25 +2893,17 @@
       }
     }
   },
-  "viewerDownload": "{kind, select, jpeg{Download JPEG} raw{Download RAW} other{Download}}",
+  "viewerDownload": "Download",
   "@viewerDownload": {
-    "description": "Viewer action that downloads the shot, or its JPEG or RAW file.",
-    "placeholders": {
-      "kind": {
-        "type": "String",
-        "description": "'jpeg' or 'raw' for one file of a RAW+JPEG pair, 'all' for the whole shot."
-      }
-    }
+    "description": "Viewer action that downloads the shot. For a RAW+JPEG pair it opens a choice of files, which this also titles."
   },
-  "viewerDownloadAgain": "{kind, select, jpeg{Download JPEG again} raw{Download RAW again} other{Download again}}",
+  "viewerDownloadAgain": "Download again",
   "@viewerDownloadAgain": {
-    "description": "Viewer action that downloads a shot (or its JPEG or RAW file) that was saved to the phone before.",
-    "placeholders": {
-      "kind": {
-        "type": "String",
-        "description": "'jpeg' or 'raw' for one file of a RAW+JPEG pair, 'all' for the whole shot."
-      }
-    }
+    "description": "Viewer action that downloads a shot whose files were all saved to the phone before."
+  },
+  "viewerDownloadBoth": "JPEG and RAW",
+  "@viewerDownloadBoth": {
+    "description": "Choice in the viewer's download sheet of a RAW+JPEG pair that downloads both files."
   },
   "viewerDownloading": "Downloading",
   "@viewerDownloading": {
