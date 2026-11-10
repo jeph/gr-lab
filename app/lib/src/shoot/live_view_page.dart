@@ -314,9 +314,12 @@ class _LiveLayoutState extends State<_LiveLayout> {
           width: panelWidth,
           child: _Scrim(
             edge: AlignmentDirectional.centerEnd,
-            // Scrolls in a window too short even without the switch.
+            // Scrolls in a window too short even without the switch, by
+            // dragging a control: the space between the controls is left
+            // to the picture under it, for a tap there to focus.
             child: SingleChildScrollView(
               key: const Key('live-panel'),
+              hitTestBehavior: HitTestBehavior.deferToChild,
               child: SizedBox(
                 height: height,
                 child: CustomMultiChildLayout(

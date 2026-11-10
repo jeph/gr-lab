@@ -412,6 +412,36 @@ void main() {
       await app.dispose();
     });
 
+    testWidgets('where the panel beside the picture lies over its edge, a '
+        'tap between the controls there still focuses', (tester) async {
+      final app = await inLiveView(tester);
+      tester.view
+        ..physicalSize = const Size(800, 400)
+        ..devicePixelRatio = 1;
+      await pumpRounds(tester, 3);
+      await pumpUntil(
+        tester,
+        () => find.text('f/2.8').evaluate().isNotEmpty,
+        reason: 'aperture readout',
+      );
+      final picture = tester.getRect(find.byKey(const Key('live-turned-0')));
+      final panel = tester.getRect(find.byKey(const Key('live-panel')));
+      final chips = tester.getRect(find.byKey(const Key('live-chip-drive')));
+      final readouts = tester.getRect(find.byKey(const Key('live-readout-av')));
+      final gap = Offset(panel.left + 40, (chips.bottom + readouts.top) / 2);
+      expect(picture.contains(gap), isTrue);
+      expect(readouts.top - chips.bottom, greaterThan(16));
+
+      await tester.tapAt(gap);
+      await pumpUntil(
+        tester,
+        () => app.camera.focusPoints.isNotEmpty,
+        reason: 'focus sent',
+      );
+      expect(app.camera.focusPoints.single.$1, 90);
+      await app.dispose();
+    });
+
     testWidgets('quick taps run one focus at a time: the first, then the '
         'newest tap once it ends', (tester) async {
       final app = await inLiveView(tester);
