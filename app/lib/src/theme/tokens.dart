@@ -1,9 +1,12 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-/// Colours from the mock-ups (`design/mockups/index.html` in the local
-/// research workspace, `../gr`): a near-black or off-white base, three raised surfaces, hairlines,
-/// three text levels and one accent (blue by default).
+/// A near-black or white base, three raised surfaces, hairlines, three text
+/// levels and one accent. The dark colours come from the mock-ups
+/// (`design/mockups/index.html` in the local research workspace, `../gr`).
+/// The light theme is a white page: its cards are white too, set off by
+/// their hairlines, its greys lean as slightly blue as the dark surfaces do,
+/// and its accent and status colours are deep enough to read on white.
 @immutable
 final class GrColors extends ThemeExtension<GrColors> {
   const new({
@@ -55,23 +58,23 @@ final class GrColors extends ThemeExtension<GrColors> {
   );
 
   static const light = GrColors(
-    bg: Color(0xFFF6F5F2),
+    bg: Color(0xFFFFFFFF),
     s1: Color(0xFFFFFFFF),
-    s2: Color(0xFFEDECE8),
-    s3: Color(0xFFE4E3DE),
-    s4: Color(0xFFD5D4CE),
-    line: Color(0x12000000),
+    s2: Color(0xFFF3F3F5),
+    s3: Color(0xFFE9E9EC),
+    s4: Color(0xFFD6D6DB),
+    line: Color(0x14000000),
     line2: Color(0x1F000000),
     t1: Color(0xFF121214),
-    t2: Color(0xFF5F5E59),
-    t3: Color(0xFF8F8E88),
-    accent: Color(0xFF1F63E0),
+    t2: Color(0xFF5C5C63),
+    t3: Color(0xFF8B8B93),
+    accent: Color(0xFF1B50CF),
     accentInk: Color(0xFFFFFFFF),
-    ok: Color(0xFF1E9E5A),
-    danger: Color(0xFFFF5A4E),
+    ok: Color(0xFF17864A),
+    danger: Color(0xFFD7372B),
     invBg: Color(0xFF121214),
-    invFg: Color(0xFFF6F5F2),
-    invFg2: Color(0xFF9C9B96),
+    invFg: Color(0xFFFFFFFF),
+    invFg2: Color(0xFF9A9AA1),
     inv2: Color(0xFF2A2A2E),
     float: Color(0xEBFFFFFF),
     shadow: Color(0x1F000000),
