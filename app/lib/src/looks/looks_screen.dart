@@ -14,6 +14,7 @@ import 'package:grlab/src/looks/looks_model.dart';
 import 'package:grlab/src/looks/looks_store.dart';
 import 'package:grlab/src/theme/tokens.dart';
 import 'package:grlab/src/widgets/group.dart';
+import 'package:grlab/src/widgets/skeleton.dart';
 
 /// Which saved looks the list shows.
 enum LooksFilter { all, mono, colour }
@@ -272,8 +273,9 @@ class _SlotsNote extends StatelessWidget {
 }
 
 /// One Custom slot (mock `.slot`): the photo of the saved look it holds,
-/// its name and base image. A saved look dropped on it is loaded into it;
-/// a tap opens what it holds in the editor.
+/// its name and base image, or a skeleton of them until the camera's slots
+/// are read. A saved look dropped on it is loaded into it; a tap opens
+/// what it holds in the editor.
 class _SlotCard extends StatelessWidget {
   const new({required this.model, required this.number, required this.slot});
 
@@ -289,11 +291,52 @@ class _SlotCard extends StatelessWidget {
     final saved = slot == null ? null : model.savedLookIn(slot);
     final look = slot?.look;
     final loading = model.loading == number;
-    final reading = slot == null;
+    final Widget picture;
+    final Widget caption;
+    if (slot == null) {
+      picture = const Skeleton(child: SkeletonBox(radius: 0));
+      caption = const Skeleton(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SkeletonLine(width: 64, fontSize: 12.5),
+            SizedBox(height: 1),
+            SkeletonLine(width: 44, fontSize: 11),
+          ],
+        ),
+      );
+    } else {
+      picture = LookThumb(
+        photo: saved == null ? null : model.store.photoOf(saved),
+        look: look,
+      );
+      caption = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            slot.name.isEmpty ? l10n.looksSlotUnnamed : slot.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 1),
+          Text(
+            look == null ? l10n.looksUnreadable : lookBaseLabel(l10n, look),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: c.t2,
+            ),
+          ),
+        ],
+      );
+    }
     return DragTarget<SavedLook>(
       onWillAcceptWithDetails: (d) {
         final look = d.data.look;
-        return !reading && look != null && model.canLoad(look);
+        return slot != null && look != null && model.canLoad(look);
       },
       onAcceptWithDetails: (d) {
         final look = d.data.look;
@@ -349,18 +392,13 @@ class _SlotCard extends StatelessWidget {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        LookThumb(
-                          photo: saved == null
-                              ? null
-                              : model.store.photoOf(saved),
-                          look: look,
-                        ),
+                        picture,
                         Positioned(
                           left: 7,
                           top: 7,
                           child: PhotoTag(l10n.looksSlotShort(number)),
                         ),
-                        if (reading || loading)
+                        if (loading)
                           const Center(
                             child: SizedBox(
                               width: 20,
@@ -376,37 +414,7 @@ class _SlotCard extends StatelessWidget {
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(9, 8, 9, 9),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          reading
-                              ? '—'
-                              : slot.name.isEmpty
-                              ? l10n.looksSlotUnnamed
-                              : slot.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 1),
-                        Text(
-                          look == null
-                              ? (reading ? ' ' : l10n.looksUnreadable)
-                              : lookBaseLabel(l10n, look),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: c.t2,
-                          ),
-                        ),
-                      ],
-                    ),
+                    child: caption,
                   ),
                 ],
               ),

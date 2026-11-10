@@ -9,6 +9,7 @@ import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:grlab/src/camera/camera_pages.dart';
 import 'package:grlab/src/looks/look_preview.dart';
 import 'package:grlab/src/looks/looks_store.dart';
+import 'package:grlab/src/widgets/skeleton.dart';
 
 import '../support/test_app.dart';
 
@@ -91,6 +92,23 @@ void main() {
     expect(_inSlot(2, 'Daido'), findsOneWidget);
     expect(_inSlot(2, 'Hi-Contrast B&W'), findsOneWidget);
     expect(_inSlot(3, 'Soft Summer'), findsOneWidget);
+  });
+
+  testWidgets('C1-C3 are skeletons of their cards, without a spinner, until '
+      'the camera has been read', (tester) async {
+    await _inLooks(tester);
+    final card = find.byKey(const Key('looks-slot-1'));
+    Finder inCard(Type type) =>
+        find.descendant(of: card, matching: find.byType(type));
+    await pumpUntilFound(tester, card);
+    expect(inCard(Skeleton), findsWidgets);
+    expect(inCard(CircularProgressIndicator), findsNothing);
+    expect(find.byIcon(Icons.tune_rounded), findsNothing);
+    final size = tester.getSize(card);
+
+    await pumpUntilFound(tester, _inSlot(1, 'Tokyo Night'));
+    expect(inCard(Skeleton), findsNothing);
+    expect(tester.getSize(card), size);
   });
 
   testWidgets('a slot edited to a new base and toning loads back into the '
