@@ -739,15 +739,21 @@ void main() {
       await app.dispose();
     });
 
-    testWidgets('× goes back to Remote and leaves the Wi-Fi with the camera '
-        'still on', (tester) async {
+    testWidgets('× goes back to Remote and keeps the Wi-Fi up, with the '
+        'camera still on', (tester) async {
       final app = await inLiveView(tester);
       await tester.tap(find.byKey(const Key('live-close')));
       await pumpUntilFound(tester, find.byKey(const Key('shoot-remote')));
-      await pumpUntil(tester, () => !app.camera.wlanOn, reason: 'WLAN off');
-      expect(app.models.connection.status, ConnectionStatus.bluetooth);
+      await pumpRounds(tester, 30);
+      expect(app.models.connection.status, ConnectionStatus.connected);
+      expect(app.camera.wlanOn, isTrue);
       expect(app.camera.poweredOn, isTrue);
       expect(find.byKey(const Key('camera-tabs')), findsOneWidget);
+
+      // Live view again starts on the Wi-Fi that stayed.
+      await tester.tap(find.byKey(const Key('shoot-mode-liveView')));
+      await pumpUntilFound(tester, find.byKey(const Key('live-picture')));
+      expect(app.models.connection.status, ConnectionStatus.connected);
       await app.dispose();
     });
   });

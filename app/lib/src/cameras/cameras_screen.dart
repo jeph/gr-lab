@@ -582,7 +582,7 @@ class _CameraCard extends StatelessWidget {
           // ends the attempt.
           onPressed: () => unawaited(
             connection.step == ConnectStep.wifi
-                ? connection.closeCamera()
+                ? connection.disconnectWifi()
                 : connection.disconnect(),
           ),
           child: Text(context.l10n.camerasCancel),

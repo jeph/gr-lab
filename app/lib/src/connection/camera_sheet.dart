@@ -56,8 +56,9 @@ class CameraSheet extends StatelessWidget {
                   camera,
                   connection,
                 ),
-                // Only while the sheet closes: losing or leaving Wi-Fi
-                // returns to the Cameras screen.
+                // On Bluetooth alone (Shoot's Remote, Looks, or after the
+                // Wi-Fi was left for lack of use), or while the sheet
+                // closes.
                 ConnectionStatus.connecting ||
                 ConnectionStatus.bluetooth ||
                 ConnectionStatus.failed ||
@@ -195,7 +196,7 @@ class CameraSheet extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
         child: OutlinedButton(
           key: const Key('camera-sheet-disconnect'),
-          onPressed: () => unawaited(connection.closeCamera()),
+          onPressed: () => unawaited(connection.disconnectWifi()),
           child: Text(l10n.connectionSheetDisconnectWifi),
         ),
       ),

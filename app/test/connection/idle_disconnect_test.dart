@@ -39,6 +39,14 @@ Future<TestApp> _inLibrary(WidgetTester tester) async {
   return app;
 }
 
+/// Waits for the Library's listing. A request still in flight when a test
+/// skips minutes of fake time times out, which reads as a lost Wi-Fi.
+Future<void> _untilListed(WidgetTester tester, TestApp app) => pumpUntil(
+  tester,
+  () => app.models.library.model.shots != null,
+  reason: 'listing',
+);
+
 Future<void> _expectLeft(WidgetTester tester, TestApp app) async {
   await pumpUntilFound(tester, find.byKey(const Key('cameras-idle')));
   expect(app.models.connection.status, ConnectionStatus.bluetooth);
@@ -102,6 +110,54 @@ void main() {
     expect(find.byType(LibraryScreen), findsOneWidget);
     await tester.pump(const Duration(minutes: 1, seconds: 1));
     await _expectLeft(tester, app);
+
+    await app.dispose();
+  });
+
+  testWidgets('back on the Cameras screen the Wi-Fi stays until the app was '
+      'not used for 5 minutes', (tester) async {
+    final app = await _inLibrary(tester);
+    await _untilListed(tester, app);
+
+    await tapWhenReady(tester, find.byKey(const Key('camera-back')));
+    await pumpUntil(
+      tester,
+      () => find.byType(LibraryScreen).evaluate().isEmpty,
+      reason: 'camera pages closed',
+    );
+    await pumpUntilFound(
+      tester,
+      find.byKey(const Key('camera-card-link-wifi')),
+    );
+    await tester.pump(const Duration(minutes: 4));
+    expect(app.models.connection.status, ConnectionStatus.connected);
+    expect(app.camera.wlanOn, isTrue);
+    expect(find.byKey(const Key('cameras-idle')), findsNothing);
+
+    await tester.pump(const Duration(minutes: 1, seconds: 1));
+    await _expectLeft(tester, app);
+
+    await app.dispose();
+  });
+
+  testWidgets('on a page that does not need the Wi-Fi, it is left after 5 '
+      'minutes without use and the page stays', (tester) async {
+    final app = await _inLibrary(tester);
+    await _untilListed(tester, app);
+
+    await tapWhenReady(tester, find.byKey(const Key('camera-tab-shoot')));
+    await pumpUntilFound(
+      tester,
+      find.byKey(const Key('shoot-remote')).hitTestable(),
+    );
+    await tester.pump(const Duration(minutes: 4));
+    expect(app.models.connection.status, ConnectionStatus.connected);
+
+    await tester.pump(const Duration(minutes: 1, seconds: 1));
+    await pumpUntil(tester, () => !app.camera.wlanOn, reason: 'WLAN off');
+    expect(app.models.connection.status, ConnectionStatus.bluetooth);
+    expect(app.models.connection.idleClosedAfter, isNull);
+    expect(find.byKey(const Key('shoot-remote')).hitTestable(), findsOneWidget);
 
     await app.dispose();
   });

@@ -40,8 +40,9 @@ void main() {
       expect(await app.camera.wifi.currentSsid(), isNull);
     });
 
-    test('opening the Library joins Wi-Fi over the existing link; closeCamera '
-        'leaves it and keeps Bluetooth', () async {
+    test('opening the Library joins Wi-Fi over the existing link; closing '
+        'the pages keeps it, and disconnectWifi leaves it with Bluetooth '
+        'kept', () async {
       final app = await createTestApp(
         config: const FakeCameraConfig(bonded: true),
         saveCamera: true,
@@ -54,8 +55,20 @@ void main() {
       expect(connection.status, ConnectionStatus.connected);
       expect(connection.inSession, isTrue);
       expect(app.ble.connects, 1);
+      final library = connection.cameraSession!.library;
 
       await connection.closeCamera();
+      expect(connection.tab, isNull);
+      expect(connection.status, ConnectionStatus.connected);
+      expect(await app.camera.wifi.currentSsid(), app.camera.config.ssid);
+      expect(app.camera.wlanOn, isTrue);
+
+      // The Library opens again on the join it left: one library per join.
+      await connection.openCamera(CameraTab.library);
+      expect(connection.cameraSession!.library, same(library));
+
+      await connection.disconnectWifi();
+      expect(connection.tab, isNull);
       expect(connection.status, ConnectionStatus.bluetooth);
       expect(connection.inSession, isFalse);
       expect(await app.camera.wifi.currentSsid(), isNull);
@@ -64,6 +77,39 @@ void main() {
       await connection.openCamera(CameraTab.library);
       expect(connection.status, ConnectionStatus.connected);
       expect(app.ble.connects, 1);
+    });
+
+    test('a join still under way stops when the pages close, and when live '
+        'view goes back to Remote', () async {
+      final app = await createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+      );
+      addTearDown(app.dispose);
+      final connection = app.models.connection;
+      Future<void> untilJoining() =>
+          _until(() => connection.step == ConnectStep.wifi);
+      Future<void> expectLeft() async {
+        expect(connection.status, ConnectionStatus.bluetooth);
+        expect(connection.failure, isNull);
+        expect(await app.camera.wifi.currentSsid(), isNull);
+        expect(app.camera.wlanOn, isFalse);
+      }
+
+      final opening = connection.openCamera(CameraTab.library);
+      await untilJoining();
+      await connection.closeCamera();
+      await opening;
+      expect(connection.tab, isNull);
+      await expectLeft();
+
+      await connection.openCamera(CameraTab.shoot);
+      final joining = connection.joinWifi();
+      await untilJoining();
+      await connection.cancelWifiJoin();
+      await joining;
+      expect(connection.tab, CameraTab.shoot);
+      await expectLeft();
     });
 
     test('opening the Library while offline links Bluetooth first', () async {
@@ -409,7 +455,7 @@ void main() {
         );
         final connection = app.models.connection;
         expect(app.camera.poweredOn, isTrue);
-        await connection.closeCamera();
+        await connection.disconnectWifi();
         await _until(() => !app.camera.poweredOn);
         expect(connection.status, ConnectionStatus.bluetooth);
         // The drop after turning it off is expected, not a reconnect.
@@ -422,12 +468,119 @@ void main() {
       'leaving the Wi-Fi of a camera that was already on leaves it on',
       () async {
         final app = await connected(const FakeCameraConfig(bonded: true));
-        await app.models.connection.closeCamera();
+        await app.models.connection.disconnectWifi();
         expect(app.models.connection.status, ConnectionStatus.bluetooth);
         await Future<void>.delayed(const Duration(milliseconds: 200));
         expect(app.camera.poweredOn, isTrue);
       },
     );
+
+    test('closing the pages keeps a camera the app turned on on, until '
+        'the unused Wi-Fi is left from the Cameras screen', () async {
+      final app = await connected(
+        const FakeCameraConfig(bonded: true, poweredOn: false),
+      );
+      final connection = app.models.connection;
+      await connection.closeCamera();
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      expect(app.camera.poweredOn, isTrue);
+      expect(connection.status, ConnectionStatus.connected);
+
+      await connection.leaveUnusedWifi(const Duration(minutes: 5));
+      await _until(() => !app.camera.poweredOn);
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(connection.idleClosedAfter, const Duration(minutes: 5));
+      expect(await app.camera.wifi.currentSsid(), isNull);
+    });
+
+    test('leaving the unused Wi-Fi keeps a page that does not need it, '
+        'with the camera on, and closes one that does', () async {
+      final app = await connected(
+        const FakeCameraConfig(bonded: true, poweredOn: false),
+      );
+      final connection = app.models.connection..selectTab(CameraTab.shoot);
+      await connection.leaveUnusedWifi(const Duration(minutes: 5));
+      expect(connection.tab, CameraTab.shoot);
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(connection.idleClosedAfter, isNull);
+      expect(app.camera.wlanOn, isFalse);
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      expect(app.camera.poweredOn, isTrue);
+
+      // Live view needs the Wi-Fi as the Library does.
+      connection.liveViewWanted = true;
+      await connection.joinWifi();
+      expect(connection.status, ConnectionStatus.connected);
+      await connection.leaveUnusedWifi(const Duration(minutes: 1));
+      expect(connection.tab, isNull);
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(connection.idleClosedAfter, const Duration(minutes: 1));
+      await _until(() => !app.camera.poweredOn);
+    });
+
+    test('a camera switched off while its Wi-Fi was only kept stays off, '
+        'and the Wi-Fi is let go without a failure', () async {
+      final app = await connected(const FakeCameraConfig(bonded: true));
+      final connection = app.models.connection;
+      await connection.closeCamera();
+
+      app.camera.poweredOn = false;
+      await _until(() => connection.status == ConnectionStatus.bluetooth);
+      expect(connection.failure, isNull);
+      // The camera drops its link when it turns off and the session links
+      // it again in its off state: a recovery would wake it over that link.
+      await _until(() => !connection.bleLinked);
+      await _until(() => connection.bleLinked);
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      expect(app.camera.poweredOn, isFalse);
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(await app.camera.wifi.currentSsid(), isNull);
+    });
+
+    test('a network gone on a page that does not need it is not rejoined, '
+        'and the page stays', () async {
+      final app = await connected(const FakeCameraConfig(bonded: true));
+      final connection = app.models.connection..selectTab(CameraTab.shoot);
+
+      app.camera.dropWifi();
+      await _until(() => connection.status == ConnectionStatus.bluetooth);
+      expect(connection.tab, CameraTab.shoot);
+      expect(connection.failure, isNull);
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      expect(app.camera.wifiJoined, isFalse);
+      expect(app.camera.wlanOn, isFalse);
+      expect(connection.status, ConnectionStatus.bluetooth);
+    });
+
+    test('a network gone on such a page while work over the Wi-Fi runs is '
+        'got back', () async {
+      final app = await connected(const FakeCameraConfig(bonded: true));
+      final release = app.models.idle.hold();
+      addTearDown(release);
+      app.models.connection.selectTab(CameraTab.shoot);
+
+      app.camera.dropWifi();
+      await expectRecoveredInPlace(app);
+      expect(app.models.connection.tab, CameraTab.shoot);
+    });
+
+    test('Bluetooth gone for good while the Wi-Fi was only kept ends the '
+        'session, so the camera can be linked again', () async {
+      final app = await connected(const FakeCameraConfig(bonded: true));
+      final connection = app.models.connection;
+      await connection.closeCamera();
+
+      app.camera
+        ..adapterState = BleAdapterState.poweredOff
+        ..dropBluetooth();
+      await _until(
+        () => connection.status == ConnectionStatus.failed,
+        timeout: const Duration(seconds: 5),
+      );
+      expect(connection.failure?.kind, ConnectFailureKind.unreachable);
+      expect(connection.failure?.loss, ConnectLoss.bluetooth);
+      expect(await app.camera.wifi.currentSsid(), isNull);
+    });
 
     /// The camera behind [_RefusableWifi], with joins giving up after
     /// 300 ms and recovery after one attempt that fails. (A second attempt
@@ -640,7 +793,7 @@ void main() {
       connection.answerWifiConsent(join: true);
       await first;
       expect(connection.status, ConnectionStatus.connected);
-      await connection.closeCamera();
+      await connection.disconnectWifi();
       expect(connection.status, ConnectionStatus.bluetooth);
       wifi.backOutOfList = 1;
       return (app, wifi);

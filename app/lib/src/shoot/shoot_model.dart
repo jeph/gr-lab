@@ -152,10 +152,10 @@ final class ShootModel extends ChangeNotifier {
     if (settings.shootMode == value) return;
     settings.shootMode = value;
     _updateLiveView();
-    // Back to Remote turns the camera's Wi-Fi off (mock `b-shoot`); the
-    // Library joins it again when opened.
+    // Back to Remote stops a join still under way (mock `b-shoot`); Wi-Fi
+    // that is up stays up for the next page that needs it.
     if (value == ShootMode.remote && _visible) {
-      unawaited(connection.leaveWifi());
+      unawaited(connection.cancelWifiJoin());
     }
     notifyListeners();
   }

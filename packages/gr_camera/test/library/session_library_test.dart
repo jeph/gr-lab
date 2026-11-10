@@ -51,7 +51,7 @@ void main() {
     final listing = await first.listFiles();
     expect(listing.files, hasLength(camera.photos.length));
 
-    await session.stopWifi();
+    await session.stopWifi(reason: WifiStopReason.user);
     expect(session.library, isNull);
 
     await session.startWifi();

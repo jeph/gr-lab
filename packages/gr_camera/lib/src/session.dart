@@ -48,6 +48,32 @@ final class WifiConsent {
   final Future<void> Function() joined;
 }
 
+/// Why the app leaves the camera's Wi-Fi ([CameraSession.stopWifi]), for
+/// the trace: the Wi-Fi is kept up between uses, so a log has to say what
+/// ended it.
+enum WifiStopReason {
+  /// The user asked: Disconnect Wi-Fi, cancelling a join, or leaving a page
+  /// while its join or recovery was still under way.
+  user,
+
+  /// The app was not used for the auto-disconnect time.
+  idle,
+
+  /// The Wi-Fi was lost while nothing shown needed it, so it is not got
+  /// back.
+  lostUnneeded,
+
+  /// Bluetooth is gone for good and nothing shown needs the Wi-Fi: the
+  /// session ends so the camera can be linked again.
+  bluetoothLost,
+
+  /// The session gave up getting a lost Wi-Fi back.
+  recoveryGaveUp,
+
+  /// The app's power button is turning the camera off.
+  powerOff,
+}
+
 /// One connection to one paired camera, in two stages: Bluetooth
 /// ([connectBluetooth]) and the camera's Wi-Fi ([startWifi], [stopWifi]).
 /// The session reconnects Bluetooth and recovers a lost Wi-Fi link by
@@ -161,11 +187,20 @@ final class CameraSession {
   /// check [GrSessionException.wifiDeclined].
   Future<void> startWifi() => _session.startWifi();
 
-  /// Leaves the camera's Wi-Fi, or stops joining it, keeping Bluetooth.
-  /// With [powerOffIfWoken], a camera this session turned on is turned off
+  /// Leaves the camera's Wi-Fi, or stops joining it or getting it back,
+  /// keeping Bluetooth; [reason] is traced (`wifi.stop`). With
+  /// [powerOffIfWoken], a camera this session turned on is turned off
   /// again.
-  Future<void> stopWifi({bool powerOffIfWoken = false}) =>
-      _session.stopWifi(powerOffIfWoken: powerOffIfWoken);
+  Future<void> stopWifi({
+    required WifiStopReason reason,
+    bool powerOffIfWoken = false,
+  }) {
+    _environment.event('wifi.stop', {
+      'reason': reason.name,
+      'powerOffIfWoken': powerOffIfWoken,
+    });
+    return _session.stopWifi(powerOffIfWoken: powerOffIfWoken);
+  }
 
   /// Turns the camera off if this session turned it on.
   Future<void> powerOffIfWoken() => _session.powerOffIfWoken();

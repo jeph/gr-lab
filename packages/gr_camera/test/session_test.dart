@@ -99,7 +99,7 @@ void main() {
       await asked.future;
 
       // Disconnect while the question is still open; the answer comes late.
-      final stopped = session.stopWifi();
+      final stopped = session.stopWifi(reason: WifiStopReason.user);
       answer.complete(true);
       await stopped;
       await startFailed;

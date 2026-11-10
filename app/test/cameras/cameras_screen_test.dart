@@ -370,8 +370,8 @@ void main() {
     await app.dispose();
   });
 
-  testWidgets('back from the Library returns to Cameras and leaves the '
-      "camera's Wi-Fi, keeping Bluetooth", (tester) async {
+  testWidgets('back from the Library returns to Cameras with the '
+      "camera's Wi-Fi still up", (tester) async {
     final app = await _start(tester);
     await pumpUntilFound(tester, find.byKey(const Key('camera-card-library')));
     await _tap(tester, const Key('camera-card-library'));
@@ -388,11 +388,13 @@ void main() {
       () => find.byType(LibraryScreen).evaluate().isEmpty,
     );
     await pumpUntilFound(tester, find.byKey(const Key('camera-card-library')));
-    await pumpUntil(
+    await pumpUntilFound(
       tester,
-      () => app.models.connection.status == ConnectionStatus.bluetooth,
+      find.byKey(const Key('camera-card-link-wifi')),
     );
-    expect(await app.camera.wifi.currentSsid(), isNull);
+    await pumpRounds(tester, 30);
+    expect(app.models.connection.status, ConnectionStatus.connected);
+    expect(await app.camera.wifi.currentSsid(), app.camera.config.ssid);
     expect(find.byKey(const Key('cameras-lost')), findsNothing);
 
     await app.dispose();

@@ -135,21 +135,27 @@ final class WifiConsentRequest {
 /// One [CameraSession] for the current camera, in two stages. Bluetooth
 /// ([connect]) is meant to run by itself whenever a camera is current; the
 /// camera's Wi-Fi ([joinWifi]) is joined only when the user opens the
-/// Library or live view. [openCamera] opens the camera's pages ([tab]) over
-/// the Cameras screen, and [closeCamera] leaves them, and the Wi-Fi, while
-/// Bluetooth stays.
+/// Library or live view ([wifiNeeded]). Joining it is slow, so once it is
+/// up it stays up when the user moves on to a page that does not need it,
+/// or back to the Cameras screen: it is left when the app was not used for
+/// the auto-disconnect time ([leaveUnusedWifi]) or the user disconnects it
+/// ([disconnectWifi]). [openCamera] opens the camera's pages ([tab]) over
+/// the Cameras screen, and [closeCamera] leaves them while Bluetooth
+/// stays.
 ///
 /// The session's BLE reconnect runs underneath and shows as
-/// [reconnecting]. When the camera's Wi-Fi is lost, the session gets it
-/// back (turning the camera on again when it was switched off) while the
-/// pages stay, also shown as [reconnecting]. When that fails with
-/// Bluetooth still there, the pages stay and the Library says the Wi-Fi
-/// was lost; without Bluetooth the session ends, the app goes back to the
-/// Cameras screen and it says the connection was lost. Leaving the camera's
-/// pages turns a camera the app turned on back off. A join that failed,
-/// or a lost Wi-Fi that could not be got back, while the app was in the
-/// background is tried again on return ([AppServices.redialDelays]),
-/// since the OS only joins camera networks for the app in front.
+/// [reconnecting]. When the camera's Wi-Fi is lost while a page needs it,
+/// the session gets it back (turning the camera on again when it was
+/// switched off) while the pages stay, also shown as [reconnecting]. When
+/// that fails with Bluetooth still there, the pages stay and the Library
+/// says the Wi-Fi was lost; without Bluetooth the session ends, the app
+/// goes back to the Cameras screen and it says the connection was lost. A
+/// Wi-Fi lost while nothing needs it is let go without a word. Leaving the
+/// camera's pages turns a camera the app turned on back off, once its
+/// Wi-Fi is left too. A join that failed, or a lost Wi-Fi that could not
+/// be got back, while the app was in the background is tried again on
+/// return ([AppServices.redialDelays]), since the OS only joins camera
+/// networks for the app in front.
 final class ConnectionController extends ChangeNotifier {
   new({required this.services, required this.cameras}) {
     cameras.addListener(_onCamerasChanged);
@@ -239,16 +245,42 @@ final class ConnectionController extends ChangeNotifier {
   /// Wi-Fi failed.
   ConnectFailure? get failure => _failure;
 
-  /// Set when [closeCamera] left the camera's Wi-Fi because the app was
-  /// not used for this long (see `IdleDisconnect`); cleared by the next
-  /// Wi-Fi start or [disconnect]. The Cameras screen notes it while
-  /// Bluetooth stays linked.
+  /// Set when [leaveUnusedWifi] left the camera's Wi-Fi because the app
+  /// was not used for this long (see `IdleDisconnect`), with the app on
+  /// the Cameras screen or returning to it; cleared by the next Wi-Fi start
+  /// or [disconnect]. The Cameras screen notes it while Bluetooth stays
+  /// linked.
   Duration? get idleClosedAfter => _idleClosedAfter;
   Duration? _idleClosedAfter;
 
   /// Wi-Fi is up, or being got back after a loss ([reconnecting]): the
   /// Library and live view can use it.
   bool get inSession => _status == ConnectionStatus.connected;
+
+  /// Live view is wanted on the Shoot page (`LiveViewController.wanted`),
+  /// which sets this.
+  bool liveViewWanted = false;
+
+  /// Work over the camera's Wi-Fi is running, whatever page shows: a
+  /// download, a movie copy or playback (`IdleDisconnect.hold`, which sets
+  /// this).
+  bool wifiBusy = false;
+
+  /// The camera's Wi-Fi is in use: the Library or live view is showing, or
+  /// work over it is running ([wifiBusy]). Only then is a lost Wi-Fi got
+  /// back, and only then does leaving the Wi-Fi close the pages
+  /// ([leaveUnusedWifi]).
+  bool get wifiNeeded =>
+      _tab == CameraTab.library || liveViewWanted || wifiBusy;
+
+  /// The camera's Wi-Fi is up and sound, so worth keeping for the next
+  /// page that needs it: not being got back after a loss, and not without
+  /// its Bluetooth link for good (leaving the Wi-Fi is what links the
+  /// camera again then).
+  bool get _wifiWorthKeeping =>
+      _status == ConnectionStatus.connected &&
+      !(_session?.wifiRecovering ?? false) &&
+      !_bleGaveUp;
 
   /// The camera is off (BT-only), or reported turning off.
   bool get cameraOff => _session?.cameraOff ?? false;
@@ -280,7 +312,7 @@ final class ConnectionController extends ChangeNotifier {
   Future<bool> powerOff() =>
       _changePower(CameraPowerChange.off, (session) async {
         if (session.cameraOff) return true;
-        await _leaveWifi(powerOff: false);
+        await _leaveWifi(reason: WifiStopReason.powerOff, powerOff: false);
         if (!identical(session, _session)) return false;
         return await session.powerOff();
       });
@@ -457,23 +489,62 @@ final class ConnectionController extends ChangeNotifier {
     return await _startWifi(quiet: false);
   }
 
-  /// Closes the camera's pages and leaves the camera's Wi-Fi, or stops
-  /// joining it, keeping Bluetooth; the app returns to the Cameras screen.
-  /// A camera the app turned on (for the Library or Shoot) is turned back
-  /// off. A Wi-Fi failure shown in the pages is cleared. [idleFor] is set
-  /// when the app leaves because it was not used ([idleClosedAfter]).
-  Future<void> closeCamera({Duration? idleFor}) {
-    final hadTab = _tab != null;
+  /// Closes the camera's pages; the app returns to the Cameras screen with
+  /// Bluetooth linked. Wi-Fi that is up stays up for the next visit
+  /// ([leaveUnusedWifi] leaves it), and a camera the app turned on stays on
+  /// with it. Without such a Wi-Fi this is [disconnectWifi].
+  Future<void> closeCamera() {
+    if (!_wifiWorthKeeping) return disconnectWifi();
+    if (_tab == null) return Future.value();
     _tab = null;
-    return _leaveWifi(powerOff: true, idleFor: idleFor, changed: hadTab);
+    notifyListeners();
+    return Future.value();
   }
 
-  /// Leaves the camera's Wi-Fi, or stops joining it, keeping the camera's
-  /// pages open over Bluetooth (live view was switched back to Remote). The
-  /// camera stays on. A Wi-Fi failure is cleared.
-  Future<void> leaveWifi() => _leaveWifi(powerOff: false);
+  /// Closes the camera's pages and leaves the camera's Wi-Fi, or stops
+  /// joining it or getting it back, keeping Bluetooth (Disconnect Wi-Fi in
+  /// the camera sheet, and Cancel on the Cameras screen); the app returns
+  /// to the Cameras screen. A camera the app turned on (for the Library or
+  /// Shoot) is turned back off. A Wi-Fi failure shown in the pages is
+  /// cleared.
+  Future<void> disconnectWifi() {
+    final hadTab = _tab != null;
+    _tab = null;
+    return _leaveWifi(
+      reason: WifiStopReason.user,
+      powerOff: true,
+      changed: hadTab,
+    );
+  }
+
+  /// Live view was switched back to Remote: stops a join of the camera's
+  /// Wi-Fi still under way, or its recovery, and clears a Wi-Fi failure,
+  /// keeping the camera's pages open over Bluetooth and the camera on.
+  /// Wi-Fi that is up stays up ([leaveUnusedWifi] leaves it).
+  Future<void> cancelWifiJoin() => _wifiWorthKeeping
+      ? Future.value()
+      : _leaveWifi(reason: WifiStopReason.user, powerOff: false);
+
+  /// The app was not used for [idleFor] (`IdleDisconnect`): leaves the
+  /// camera's Wi-Fi, keeping Bluetooth. A page that needs the Wi-Fi
+  /// ([wifiNeeded]) closes with it; one that does not stays open, with the
+  /// camera on. On the Cameras screen, also when a page closed to it, a
+  /// camera the app turned on is turned back off and [idleClosedAfter] is
+  /// set.
+  Future<void> leaveUnusedWifi(Duration idleFor) {
+    final hadTab = _tab != null;
+    if (wifiNeeded) _tab = null;
+    final onCameras = _tab == null;
+    return _leaveWifi(
+      reason: WifiStopReason.idle,
+      powerOff: onCameras,
+      idleFor: onCameras ? idleFor : null,
+      changed: hadTab && onCameras,
+    );
+  }
 
   Future<void> _leaveWifi({
+    required WifiStopReason reason,
     required bool powerOff,
     Duration? idleFor,
     bool changed = false,
@@ -505,6 +576,7 @@ final class ConnectionController extends ChangeNotifier {
     _idleClosedAfter = idleFor;
     notifyListeners();
     final stopping = _stoppingWifi = session.stopWifi(
+      reason: reason,
       powerOffIfWoken: powerOff,
     );
     await stopping;
@@ -688,8 +760,18 @@ final class ConnectionController extends ChangeNotifier {
         }
       case 'ble.gaveUp' || 'ble.needsPairing':
         _bleGaveUp = true;
-        // With the Library open, Wi-Fi carries on without Bluetooth; the
-        // link is dealt with when the Library closes.
+        // While a page uses the Wi-Fi it carries on without Bluetooth, and
+        // the link is dealt with when the Wi-Fi is left: at once when
+        // nothing uses it.
+        if (_status == ConnectionStatus.connected && !wifiNeeded) {
+          unawaited(
+            _leaveWifi(
+              reason: WifiStopReason.bluetoothLost,
+              powerOff: _tab == null,
+            ),
+          );
+          return;
+        }
         if (_status == ConnectionStatus.bluetooth) {
           unawaited(_endSession());
           return _fail(
@@ -703,6 +785,18 @@ final class ConnectionController extends ChangeNotifier {
             ),
           );
         }
+      case 'wifi.lost'
+          when _status == ConnectionStatus.connected && !wifiNeeded:
+        // Only kept for the next page that needs it. Leaving it stops the
+        // session's recovery before its first try, which would turn a
+        // camera the user switched off back on.
+        unawaited(
+          _leaveWifi(
+            reason: WifiStopReason.lostUnneeded,
+            powerOff: _tab == null,
+          ),
+        );
+        return;
       case 'recovery.done' when _status == ConnectionStatus.connected:
         notifyListeners();
         _wifiUp.add(null);
@@ -722,10 +816,10 @@ final class ConnectionController extends ChangeNotifier {
   /// or out of range): the session ends and the Cameras screen says the
   /// connection was lost. Otherwise the camera's pages stay on Bluetooth,
   /// the Library says the Wi-Fi was lost (or declined, or that a VPN may
-  /// be blocking it: [vpnSuspected]), and the camera's Wi-Fi is left as
-  /// [closeCamera] does. A loss in the background that was not declined is
-  /// instead joined again on return, as a join that failed in the
-  /// background is: the OS only joins camera networks for the app in front.
+  /// be blocking it: [vpnSuspected]), and the phone leaves the camera's
+  /// Wi-Fi. A loss in the background that was not declined is instead
+  /// joined again on return, as a join that failed in the background is:
+  /// the OS only joins camera networks for the app in front.
   void _wifiGaveUp({
     required bool noBle,
     required bool declined,
@@ -745,9 +839,13 @@ final class ConnectionController extends ChangeNotifier {
       unawaited(_relinkLater());
       return;
     }
-    // The pages stay, so a camera the app turned on stays on for Shoot;
-    // [closeCamera] turns it off. A rejoin waits for this.
-    _stoppingWifi = session.stopWifi();
+    // Pages that stay keep a camera the app turned on on for Shoot, and
+    // [closeCamera] turns it off; with none open it is turned off now. A
+    // rejoin waits for this.
+    _stoppingWifi = session.stopWifi(
+      reason: WifiStopReason.recoveryGaveUp,
+      powerOffIfWoken: _tab == null,
+    );
     if (!declined && !_foreground && _scheduleRedial()) return;
     _status = ConnectionStatus.bluetooth;
     _failure = declined

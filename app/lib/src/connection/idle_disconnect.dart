@@ -6,16 +6,17 @@ import 'package:flutter/widgets.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/data/settings.dart';
 
-/// Leaves the camera's Wi-Fi ([ConnectionController.closeCamera]) after
-/// [SettingsController.autoDisconnect] without use, returning to the
-/// Cameras screen with Bluetooth still linked.
+/// Leaves the camera's Wi-Fi ([ConnectionController.leaveUnusedWifi])
+/// after [SettingsController.autoDisconnect] without use, keeping
+/// Bluetooth. Joining the Wi-Fi is slow, so nothing else ends it once it
+/// is up short of the user asking: it stays when the user moves on to a
+/// page that does not need it, or back to the Cameras screen. \[design\]
 ///
 /// Use is a touch, scroll or key press anywhere in the app (reported by
-/// [IdleInput]; while the Wi-Fi is up every screen sits over the Library),
-/// navigation ([observer]), and a download, movie copy or playback
-/// ([hold]), whose end counts as use too. Counting starts when the Wi-Fi
-/// comes up and measures wall-clock time ([clock]), so time in the
-/// background counts.
+/// [IdleInput]), navigation ([observer]), and a download, movie copy,
+/// playback or live view ([hold]), whose end counts as use too. Counting
+/// starts when the Wi-Fi comes up and measures wall-clock time ([clock]),
+/// so time in the background counts.
 final class IdleDisconnect {
   new({required this.connection, required this.settings})
     : _last = clock.now() {
@@ -39,15 +40,18 @@ final class IdleDisconnect {
   void touch() => _last = clock.now();
 
   /// Keeps the Wi-Fi up until the returned callback runs (more than once
-  /// is fine); that moment counts as use.
+  /// is fine); that moment counts as use. Until then the Wi-Fi counts as
+  /// busy ([ConnectionController.wifiBusy]), so a lost one is got back.
   VoidCallback hold() {
     _holds++;
+    connection.wifiBusy = true;
     _schedule();
     var released = false;
     return () {
       if (released) return;
       released = true;
       _holds--;
+      connection.wifiBusy = _holds > 0;
       touch();
       _schedule();
     };
@@ -78,7 +82,7 @@ final class IdleDisconnect {
       _schedule();
       return;
     }
-    unawaited(connection.closeCamera(idleFor: after));
+    unawaited(connection.leaveUnusedWifi(after));
   }
 
   void dispose() {

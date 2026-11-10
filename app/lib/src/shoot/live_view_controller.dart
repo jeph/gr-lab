@@ -45,8 +45,9 @@ final class SettingRefusalByCamera extends SettingRefusal {
 /// camera's Wi-Fi, and the session's [CameraLiveView] runs while the Wi-Fi
 /// is up. A focus result shows for 2 s.
 ///
-/// Not wanting it stops live view and leaves the Wi-Fi up for the Library
-/// ([ConnectionController.closeCamera] leaves it). \[design\]
+/// Not wanting it stops live view and leaves the Wi-Fi up for the next
+/// page that needs it ([ConnectionController.leaveUnusedWifi] leaves it).
+/// \[design\]
 final class LiveViewController extends ChangeNotifier {
   new({required this.connection}) {
     connection.addListener(_sync);
@@ -109,6 +110,7 @@ final class LiveViewController extends ChangeNotifier {
   set wanted(bool value) {
     if (_wanted == value) return;
     _wanted = value;
+    connection.liveViewWanted = value;
     _askedToJoin = false;
     if (!value) _live?.stop();
     _sync();
@@ -206,6 +208,7 @@ final class LiveViewController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    if (_wanted) connection.liveViewWanted = false;
     connection.removeListener(_sync);
     _focusClear?.cancel();
     final live = _live;
