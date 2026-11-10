@@ -70,10 +70,18 @@ class _LookPreviewState extends State<LookPreview> {
     unawaited(_filter());
   }
 
+  /// Listens for the widget's photo. When that is another photo than
+  /// before, the one before and the picture worked out from it go at once:
+  /// until the new one has loaded nothing is shown, and a picture still
+  /// being worked out from the old one is dropped when it arrives.
   void _resolvePhoto() {
     final stream = widget.image.resolve(createLocalImageConfiguration(context));
     if (stream.key == _stream?.key) return;
     _stream?.removeListener(_listener);
+    _photo?.dispose();
+    _photo = null;
+    _filtered?.dispose();
+    _filtered = null;
     _stream = stream..addListener(_listener);
   }
 
@@ -251,10 +259,14 @@ class _LookTableViewState extends State<LookTableView> {
     setState(() => _shader = program.fragmentShader());
   }
 
+  /// Listens for the widget's photo, and stops drawing the one before when
+  /// that is another photo: the table is the new photo's.
   void _resolvePhoto() {
     final stream = widget.image.resolve(createLocalImageConfiguration(context));
     if (stream.key == _stream?.key) return;
     _stream?.removeListener(_listener);
+    _photo?.dispose();
+    _photo = null;
     _stream = stream..addListener(_listener);
   }
 
