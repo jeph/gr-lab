@@ -84,11 +84,17 @@ final class CameraLooks extends ChangeNotifier {
   /// The Bluetooth link is up.
   bool get linked => _session.ble != null;
 
-  /// Turns the camera on, or puts a camera that is on into shooting, as
-  /// `CameraRemote.wake` does: the slots are served by the camera's main
-  /// firmware, not by the Bluetooth-only state of a camera that is off
-  /// \[inferred\] (firmware-bonding.md §6). Throws [GrSessionException].
-  Future<void> wake() => _session.wake(BleOperationMode.capture);
+  /// Turns on a camera that is off, into playback so that its lens stays
+  /// in; a camera that is on is left in the mode it is in, shooting or
+  /// playback, because which one is the user's choice on the camera
+  /// \[design\]. The slots are served by the camera's main firmware, not by
+  /// the Bluetooth-only state of a camera that is off \[inferred\]
+  /// (firmware-bonding.md §6), and no check of the camera's mode was found
+  /// in the firmware's slot handlers (image-control.md §1); a camera in
+  /// playback serving them has not been seen on hardware \[inferred\].
+  /// Throws [GrSessionException].
+  Future<void> wake() =>
+      _session.wake(BleOperationMode.playback, keepMode: true);
 
   /// Reads the name and data of C1–C3 into [slots]. Throws when a read
   /// fails; does nothing without a link.

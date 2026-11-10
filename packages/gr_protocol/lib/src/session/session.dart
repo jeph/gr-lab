@@ -617,13 +617,16 @@ final class GrSession {
   /// - With the camera on, it runs GR WORLD's ensure-mode helper
   ///   (power-on-grworld.md §1.2, 0xe4d738): it reads Operation Mode and
   ///   writes [mode] only when it differs and is not `other` (`mode.set`).
+  ///   With [keepMode] it reads Operation Mode and writes nothing
+  ///   (`mode.kept`): the camera stays in the mode the user put it in
+  ///   \[design\], for work that needs it on but in no particular mode.
   ///
   /// Ends with [cameraOff] false. While waking the phase is
   /// [GrSessionPhase.waking]; it then returns to the phase before
   /// (`wake.done`, or `wake.failed` on an error). [stopWifi],
   /// [powerOffIfWoken] and [close] cut it short as they do the Wi-Fi
   /// start's wake: it throws [GrSessionException] and writes nothing more.
-  Future<void> wake(BleOperationMode mode) {
+  Future<void> wake(BleOperationMode mode, {bool keepMode = false}) {
     if (_closing ||
         (_wifiStart == null &&
             _wakeCall == null &&
@@ -633,7 +636,7 @@ final class GrSession {
     }
     // A wake already queued keeps a stop that came for it.
     if (_wakeCall == null) _wakeStop = Completer<void>();
-    final run = _oneWake(() => _wake(mode));
+    final run = _oneWake(() => _wake(mode, keepMode: keepMode));
     final call = _wakeCall = run.then<void>((_) {}, onError: (_) {});
     unawaited(
       call.whenComplete(() {
@@ -643,7 +646,7 @@ final class GrSession {
     return run;
   }
 
-  Future<void> _wake(BleOperationMode mode) async {
+  Future<void> _wake(BleOperationMode mode, {required bool keepMode}) async {
     void check() {
       if (_closing) {
         throw const GrSessionException(GrSessionPhase.waking, 'closed');
@@ -670,10 +673,13 @@ final class GrSession {
         whenOn: ({required afterWake}) async =>
             // A camera that kept the link after the wake write is on in
             // [mode]; after a relink the mode is checked.
-            afterWake || await _ensureMode(mode, check),
+            afterWake || await _ensureMode(mode, check, keep: keepMode),
       );
       if (_phase == GrSessionPhase.waking) {
-        _set(returnTo, 'wake.done', {'mode': mode.name});
+        _set(returnTo, 'wake.done', {
+          'mode': mode.name,
+          if (keepMode) 'keepMode': true,
+        });
       }
     } catch (e) {
       if (_phase == GrSessionPhase.waking) {
@@ -692,10 +698,15 @@ final class GrSession {
   /// GR WORLD's ensure-mode helper (power-on-grworld.md §1.2, 0xe4d738,
   /// called by its Remote and Import screens): reads Operation Mode and
   /// writes [mode] only when it differs and is not `other`. A value this
-  /// client does not know is left alone like `other` \[design\]. Returns
-  /// false, with [cameraOff] set, when the read finds the camera off.
-  /// [check] throws when the wake was cut short meanwhile.
-  Future<bool> _ensureMode(BleOperationMode mode, void Function() check) async {
+  /// client does not know is left alone like `other` \[design\]. With
+  /// [keep] the camera's mode is only read, never written. Returns false,
+  /// with [cameraOff] set, when the read finds the camera off. [check]
+  /// throws when the wake was cut short meanwhile.
+  Future<bool> _ensureMode(
+    BleOperationMode mode,
+    void Function() check, {
+    required bool keep,
+  }) async {
     final client = _link(GrSessionPhase.waking);
     if (client.isPresent(GrBleCatalog.operationMode) != true) return true;
     final read = await _step(
@@ -709,6 +720,10 @@ final class GrSession {
       _cameraOff = true;
       _emit('ble.cameraOff');
       return false;
+    }
+    if (keep) {
+      _emit('mode.kept', {'mode': current?.name ?? read.value?.raw});
+      return true;
     }
     if (current == null ||
         current == mode ||

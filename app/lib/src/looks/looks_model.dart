@@ -42,9 +42,10 @@ final class LoadRefusal {
 /// camera's page, the camera's Custom slots C1–C3 for this visit, matched
 /// against them.
 ///
-/// Showing a camera's page turns the camera on, as GR WORLD's Remote does
-/// for shooting, because a camera that is off does not serve its slots
-/// \[inferred\]; then C1–C3 are read, once per visit.
+/// Showing a camera's page turns the camera on when it is off, because a
+/// camera that is off does not serve its slots \[inferred\], and leaves one
+/// that is on in the mode it is in (`CameraLooks.wake`); then C1–C3 are
+/// read, once per visit.
 final class LooksModel extends ChangeNotifier {
   /// The Looks page of [connection]'s camera, which has Custom slots
   /// ([CameraFeature.lookSlots], `ConnectionController.tabs`).

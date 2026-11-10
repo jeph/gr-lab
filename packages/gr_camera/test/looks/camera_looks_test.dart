@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
+import 'package:gr_protocol/gr_protocol.dart' show BleOperationMode;
 
 import '../shoot/rig.dart';
 
@@ -36,6 +37,40 @@ void main() {
     expect(c1.valueOf(LookParameter.grainStrength), 2);
     expect(c1.values, hasLength(12));
   });
+
+  test('the wake turns a camera that is off on in playback', () async {
+    rig = await ShootRig.start(
+      config: const FakeCameraConfig(bonded: true, poweredOn: false),
+    );
+    await rig.session.looks.wake();
+    expect(rig.camera.poweredOn, isTrue);
+    expect(rig.camera.operationMode, BleOperationMode.playback);
+  });
+
+  for (final mode in [BleOperationMode.playback, BleOperationMode.capture]) {
+    test('a camera that is on in ${mode.name} stays there while its slots '
+        'are read and a look is loaded', () async {
+      rig = await ShootRig.start();
+      if (mode == BleOperationMode.capture) await rig.remote.wake();
+      expect(rig.camera.operationMode, mode);
+      final looks = rig.session.looks;
+      final cine = Look.fromBytes(
+        Uint8List.fromList(FakeLook.presets[3].data),
+      )!;
+
+      await looks.wake();
+      await looks.readSlots();
+      await looks.load(2, name: 'Cine Teal', look: cine);
+
+      expect(rig.camera.operationMode, mode);
+      expect(looks.slots![0].name, 'Tokyo Night');
+      expect(rig.camera.lookSlot(2).name, 'Cine Teal');
+      expect(
+        rig.events('session.mode.kept').single,
+        containsPair('mode', mode.name),
+      );
+    });
+  }
 
   test('a camera that is off does not answer for its slots', () async {
     rig = await ShootRig.start(

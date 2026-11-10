@@ -1167,6 +1167,40 @@ void main() {
       });
     }
 
+    test('with keepMode, a camera that is on in playback is read and left '
+        'there when capture is asked for', () async {
+      final camera = BondedCamera();
+      final s = withSettle(camera, const Duration(milliseconds: 30));
+      final events = <GrSessionEvent>[];
+      s.events.listen(events.add);
+      await s.connectBluetooth(deviceId: 'cam');
+      final reads = camera.ops.where((o) => o == 'read mode').length;
+
+      await s.wake(BleOperationMode.capture, keepMode: true);
+      await Future<void>.delayed(Duration.zero);
+      expect(camera.ops.where((o) => o == 'read mode'), hasLength(reads + 1));
+      expect(modeWrites(camera), isEmpty);
+      expect(camera.operationMode, BleOperationMode.playback.wire);
+      final kept = events.singleWhere((e) => e.kind == 'mode.kept');
+      expect(kept.fields, containsPair('mode', 'playback'));
+      expect(events.map((e) => e.kind), isNot(contains('mode.set')));
+      expect(s.wokeCamera, isFalse);
+      await s.close();
+    });
+
+    test('with keepMode, a camera that is off is turned on into the mode '
+        'asked for', () async {
+      final camera = BondedCamera(operationMode: 2);
+      final s = withSettle(camera, const Duration(milliseconds: 30));
+      await s.connectBluetooth(deviceId: 'cam');
+
+      await s.wake(BleOperationMode.playback, keepMode: true);
+      expect(modeWrites(camera), ['write mode 1']);
+      expect(s.cameraOff, isFalse);
+      expect(s.wokeCamera, isTrue);
+      await s.close();
+    });
+
     test('powerOffIfWoken turns a camera the wake turned on back off; '
         'one that was on is left on', () async {
       final woken = BondedCamera(operationMode: 2);
