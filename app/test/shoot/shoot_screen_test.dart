@@ -201,6 +201,63 @@ void main() {
     await app.dispose();
   });
 
+  testWidgets('a phone on its side shows all of Remote at once, with the '
+      'shutter at full size beside the readouts, the self-timer and the '
+      'drive; upright it sits between them', (tester) async {
+    final app = await _inShoot(tester);
+    await _untilReady(tester);
+    Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+    Future<void> resize(Size window) async {
+      tester.view
+        ..physicalSize = window
+        ..devicePixelRatio = 1;
+      await pumpRounds(tester, 3);
+      expect(tester.takeException(), isNull, reason: '$window');
+    }
+
+    for (final window in const [Size(915, 412), Size(844, 390)]) {
+      await resize(window);
+      final scrolling = tester.stateList<ScrollableState>(
+        find.descendant(
+          of: find.byKey(const Key('shoot-remote')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      expect(scrolling.map((s) => s.position.maxScrollExtent), [
+        0,
+      ], reason: '$window');
+      final shutter = rect('shoot-shutter');
+      expect(shutter.height, 168, reason: '$window');
+      for (final key in [
+        'shoot-mode',
+        'shoot-shutter',
+        'shoot-stat-mode',
+        'shoot-timer',
+        'shoot-drive',
+      ]) {
+        expect(
+          find.byKey(Key(key)).hitTestable(),
+          findsOne,
+          reason: '$key in $window',
+        );
+      }
+      for (final key in ['shoot-stat-battery', 'shoot-timer', 'shoot-drive']) {
+        expect(
+          rect(key).right,
+          lessThan(shutter.left),
+          reason: '$key in $window',
+        );
+      }
+    }
+
+    await resize(const Size(412, 915));
+    final shutter = rect('shoot-shutter');
+    expect(shutter.height, 168);
+    expect(rect('shoot-stat-mode').bottom, lessThan(shutter.top));
+    expect(rect('shoot-timer').top, greaterThan(shutter.bottom));
+    await app.dispose();
+  });
+
   group('live view', () {
     Future<TestApp> inLiveView(
       WidgetTester tester, {

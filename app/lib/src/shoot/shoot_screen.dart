@@ -112,150 +112,249 @@ class _ShootScreenState extends State<ShootScreen> {
 }
 
 /// A remote control, not a viewfinder: the camera's mode, shots left and
-/// battery, one large shutter, the self-timer and the drive. In a window
-/// too short for all of it (landscape) the shutter shrinks and the page
-/// scrolls.
+/// battery, one large shutter, the self-timer and the drive. They are
+/// stacked ([_stack]), or in a window too short for that and wide enough
+/// (a phone on its side) the shutter goes beside the rest ([_beside]).
 class _RemoteView extends StatelessWidget {
   const new({required this.model});
 
   final ShootModel model;
 
+  /// The shutter is as large as the window allows, between these
+  /// \[design\].
+  static const _minShutterSize = 96.0;
+  static const _maxShutterSize = 168.0;
+
+  /// Height of [_stack] without its shutter, about \[design\].
+  static const _stackRestHeight = 400.0;
+
+  /// Height of the shutter's margins and the line under it, about
+  /// \[design\].
+  static const _shutterRestHeight = 72.0;
+
+  /// A window at least this wide has room for the shutter beside the rest
+  /// \[design\].
+  static const _besideWidth = 600.0;
+
   @override
-  Widget build(BuildContext context) {
-    final c = GrColors.of(context);
-    final l10n = context.l10n;
-    final locale = Localizations.localeOf(context).toString();
-    final split = model.driveAndTimer;
-    final timer = split?.$2;
-    final drive = split?.$1;
-    final ready = model.canShoot;
-    final exposure = model.exposure;
-    final shotsLeft = model.shotsLeft;
-    final battery = model.battery;
-    final top = Column(
-      children: [
-        const CameraTopBar(),
-        const SizedBox(height: 14),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: ShootModeSwitch(
-            mode: model.mode,
-            onChanged: (m) => model.mode = m,
-          ),
-        ),
-        const SizedBox(height: 20),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
+  Widget build(BuildContext context) => Scaffold(
+    key: const Key('shoot-remote'),
+    body: SafeArea(
+      child: LayoutBuilder(
+        builder: (context, box) {
+          // The stack would have to shrink the shutter, then scroll.
+          final short = box.maxHeight < _stackRestHeight + _maxShutterSize;
+          return short && box.maxWidth >= _besideWidth
+              ? _beside(context)
+              : _stack(context, box.maxHeight);
+        },
+      ),
+    ),
+  );
+
+  /// Everything in one column, which scrolls in a window of [height] too
+  /// short for it even with the smallest shutter.
+  Widget _stack(BuildContext context, double height) => SingleChildScrollView(
+    child: ConstrainedBox(
+      constraints: BoxConstraints(minHeight: height),
+      child: Column(
+        // The shutter sits in the middle of the room the rest leaves.
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
             children: [
-              Expanded(
-                child: _Stat(
-                  key: const Key('shoot-stat-mode'),
-                  label: l10n.shootStatMode,
-                  value: exposure == null ? '—' : exposureLabel(l10n, exposure),
-                  color: c.accent,
-                ),
+              const CameraTopBar(),
+              const SizedBox(height: 14),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _modeSwitch(),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _Stat(
-                  key: const Key('shoot-stat-shots'),
-                  label: l10n.shootStatShotsLeft,
-                  value: shotsLeft == null
-                      ? '—'
-                      : NumberFormat.decimalPattern(locale).format(shotsLeft),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _Stat(
-                  key: const Key('shoot-stat-battery'),
-                  label: l10n.shootStatBattery,
-                  value: battery == null
-                      ? '—'
-                      : formatBattery(context, battery),
-                ),
-              ),
+              const SizedBox(height: 20),
+              _stats(context),
             ],
           ),
-        ),
-      ],
-    );
-    final bottom = Column(
-      children: [
-        SectionLabel(l10n.shootSelfTimer),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: ShootSegmented<ShootTimer>(
-            key: const Key('shoot-timer'),
-            values: ShootTimer.values,
-            selected: timer,
-            label: (t) => t.label(l10n),
-            // Continuous drive has no self-timer.
-            enabled: ready && drive != ShootDrive.continuous,
-            onSelect: (t) => unawaited(model.setTimer(t)),
+          _shutter(context, room: height - _stackRestHeight),
+          Column(
+            children: [
+              _selfTimer(context, labelInline: false),
+              _drive(context, bottomMargin: 16),
+            ],
           ),
-        ),
-        GroupBox(
-          margin: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          children: [
-            GroupRow(
-              key: const Key('shoot-drive'),
-              icon: Icons.burst_mode_outlined,
-              title: l10n.shootDrive,
-              trailing: Text(
-                drive?.label(l10n) ??
-                    (model.drive == null ? '—' : '${model.drive}'),
-                style: TextStyle(fontSize: 15, color: c.t2),
-              ),
-              chevron: true,
-              onTap: ready
-                  ? () => unawaited(showDrivePicker(context, model))
-                  : null,
-            ),
-          ],
-        ),
-      ],
-    );
-    return Scaffold(
-      key: const Key('shoot-remote'),
-      body: SafeArea(
+        ],
+      ),
+    ),
+  );
+
+  /// Remote / Live view in the top bar, and under it the readouts, the
+  /// self-timer and the drive in one half of the window and the shutter in
+  /// the other, each centred in its half. A phone on its side leaves the
+  /// halves about 225 of height, so the self-timer's label goes on the
+  /// line of its choices. Scrolls under the bar when the taller half does
+  /// not fit.
+  Widget _beside(BuildContext context) => Column(
+    children: [
+      CameraTopBar(middle: _modeSwitch()),
+      Expanded(
         child: LayoutBuilder(
-          builder: (context, box) => SingleChildScrollView(
+          builder: (context, halves) => SingleChildScrollView(
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: box.maxHeight),
-              child: Column(
-                // The shutter sits in the middle of the room the rest
-                // leaves.
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              constraints: BoxConstraints(minHeight: halves.maxHeight),
+              child: Row(
                 children: [
-                  top,
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  Expanded(
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        ShutterButton(
-                          model: model,
-                          // The rest takes about 400 \[design\].
-                          size: (box.maxHeight - 400).clamp(96.0, 168.0),
-                          color: c.accent,
-                          ringGap: 10,
-                        ),
-                        const SizedBox(height: 18),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: ShootPowerLine(model: model),
-                        ),
+                        _stats(context),
+                        const SizedBox(height: 12),
+                        _selfTimer(context, labelInline: true),
+                        _drive(context, bottomMargin: 0),
                       ],
                     ),
                   ),
-                  bottom,
+                  Expanded(
+                    child: _shutter(
+                      context,
+                      room: halves.maxHeight - _shutterRestHeight,
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
         ),
       ),
+    ],
+  );
+
+  Widget _modeSwitch() =>
+      ShootModeSwitch(mode: model.mode, onChanged: (m) => model.mode = m);
+
+  /// The camera's mode, shots left and battery.
+  Widget _stats(BuildContext context) {
+    final l10n = context.l10n;
+    final locale = Localizations.localeOf(context).toString();
+    final exposure = model.exposure;
+    final shotsLeft = model.shotsLeft;
+    final battery = model.battery;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        spacing: 8,
+        children: [
+          Expanded(
+            child: _Stat(
+              key: const Key('shoot-stat-mode'),
+              label: l10n.shootStatMode,
+              value: exposure == null ? '—' : exposureLabel(l10n, exposure),
+              color: GrColors.of(context).accent,
+            ),
+          ),
+          Expanded(
+            child: _Stat(
+              key: const Key('shoot-stat-shots'),
+              label: l10n.shootStatShotsLeft,
+              value: shotsLeft == null
+                  ? '—'
+                  : NumberFormat.decimalPattern(locale).format(shotsLeft),
+            ),
+          ),
+          Expanded(
+            child: _Stat(
+              key: const Key('shoot-stat-battery'),
+              label: l10n.shootStatBattery,
+              value: battery == null ? '—' : formatBattery(context, battery),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The shutter, as large as [room] allows, over what to do with it.
+  Widget _shutter(BuildContext context, {required double room}) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 16),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ShutterButton(
+          model: model,
+          size: room.clamp(_minShutterSize, _maxShutterSize),
+          color: GrColors.of(context).accent,
+          ringGap: 10,
+        ),
+        const SizedBox(height: 18),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: ShootPowerLine(model: model),
+        ),
+      ],
+    ),
+  );
+
+  /// The self-timer's choices: under their label, or with [labelInline]
+  /// after it on one line.
+  Widget _selfTimer(BuildContext context, {required bool labelInline}) {
+    final l10n = context.l10n;
+    final split = model.driveAndTimer;
+    final choices = ShootSegmented<ShootTimer>(
+      key: const Key('shoot-timer'),
+      values: ShootTimer.values,
+      selected: split?.$2,
+      label: (t) => t.label(l10n),
+      // Continuous drive has no self-timer.
+      enabled: model.canShoot && split?.$1 != ShootDrive.continuous,
+      onSelect: (t) => unawaited(model.setTimer(t)),
+    );
+    if (labelInline) {
+      return Padding(
+        padding: const EdgeInsetsDirectional.only(start: 22, end: 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: SectionLabel(
+                l10n.shootSelfTimer,
+                padding: const EdgeInsetsDirectional.only(end: 12),
+              ),
+            ),
+            Expanded(flex: 3, child: choices),
+          ],
+        ),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SectionLabel(l10n.shootSelfTimer),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: choices,
+        ),
+      ],
+    );
+  }
+
+  Widget _drive(BuildContext context, {required double bottomMargin}) {
+    final l10n = context.l10n;
+    final drive = model.driveAndTimer?.$1;
+    return GroupBox(
+      margin: EdgeInsets.fromLTRB(16, 12, 16, bottomMargin),
+      children: [
+        GroupRow(
+          key: const Key('shoot-drive'),
+          icon: Icons.burst_mode_outlined,
+          title: l10n.shootDrive,
+          trailing: Text(
+            drive?.label(l10n) ??
+                (model.drive == null ? '—' : '${model.drive}'),
+            style: TextStyle(fontSize: 15, color: GrColors.of(context).t2),
+          ),
+          chevron: true,
+          onTap: model.canShoot
+              ? () => unawaited(showDrivePicker(context, model))
+              : null,
+        ),
+      ],
     );
   }
 }

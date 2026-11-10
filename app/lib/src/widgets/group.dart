@@ -5,13 +5,21 @@ import 'package:intl/intl.dart';
 
 /// Uppercase label above a [GroupBox] (mock `.seclabel`).
 class SectionLabel extends StatelessWidget {
-  const new(this.text, {super.key});
+  const new(
+    this.text, {
+    super.key,
+    this.padding = const EdgeInsets.fromLTRB(22, 22, 22, 8),
+  });
 
   final String text;
 
+  /// The space around the label; the default sets it off from the section
+  /// before it.
+  final EdgeInsetsGeometry padding;
+
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(22, 22, 22, 8),
+    padding: padding,
     child: Text(
       text.toUpperCase(),
       style: TextStyle(

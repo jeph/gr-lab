@@ -9,35 +9,68 @@ import 'package:grlab/src/theme/tokens.dart';
 /// Cameras screen, the camera pill and, on pages without a [PageTitle],
 /// Settings.
 class CameraTopBar extends StatelessWidget {
-  const new({super.key, this.showSettings = true});
+  const new({super.key, this.showSettings = true, this.middle});
 
   /// Whether the bar carries [SettingsButton]. Pages with a [PageTitle] put
   /// it in the title's row instead.
   final bool showSettings;
 
+  /// Centred in the bar, for a page in a window too short to give it a row
+  /// of its own. The camera pill then gets the room before it and no more.
+  final Widget? middle;
+
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
-    child: Row(
-      children: [
-        RoundIconButton(
-          key: const Key('camera-back'),
-          icon: Icons.arrow_back_ios_new_rounded,
-          iconSize: 16,
-          label: context.l10n.cameraBarCameras,
-          onTap: () => Navigator.of(context).maybePop(),
-        ),
-        const SizedBox(width: 8),
-        const Expanded(
-          child: Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: CameraPill(),
-          ),
-        ),
-        if (showSettings) ...[const SizedBox(width: 8), const SettingsButton()],
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final back = RoundIconButton(
+      key: const Key('camera-back'),
+      icon: Icons.arrow_back_ios_new_rounded,
+      iconSize: 16,
+      label: context.l10n.cameraBarCameras,
+      onTap: () => Navigator.of(context).maybePop(),
+    );
+    final middle = this.middle;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+      child: Row(
+        children: middle == null
+            ? [
+                back,
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: CameraPill(),
+                  ),
+                ),
+                if (showSettings) ...[
+                  const SizedBox(width: 8),
+                  const SettingsButton(),
+                ],
+              ]
+            : [
+                Expanded(
+                  child: Row(
+                    children: [
+                      back,
+                      const SizedBox(width: 8),
+                      const Flexible(child: CameraPill()),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: middle,
+                ),
+                Expanded(
+                  child: Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: showSettings ? const SettingsButton() : null,
+                  ),
+                ),
+              ],
+      ),
+    );
+  }
 }
 
 /// Opens Settings from the camera's pages.
