@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  GR Lab's app icon: a Ricoh GR seen from the front.
+
+  tool/render_app_icon.sh renders each "variant" group below, on its own,
+  into the PNGs the iOS asset catalog and the Android adaptive icon use. The
+  groups overlap, so a viewer shows the last one, the default iOS icon.
+
+  Units: the icon a launcher shows is the 1024-unit square around the origin.
+  The page is 1536 units, the 108 dp Android adaptive-icon layer whose middle
+  72 dp is that square. The camera is drawn 640 units wide and scaled where
+  it is used: larger on iOS, whose rounded square has the room, and smaller
+  on Android, where a circular mask crowds its corners.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-768 -768 1536 1536" width="1536" height="1536">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="-512" x2="0" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FDFCFA"/>
+      <stop offset="1" stop-color="#E8E6E0"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="0" y1="-512" x2="0" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#202024"/>
+      <stop offset="1" stop-color="#0A0A0B"/>
+    </linearGradient>
+    <linearGradient id="tinted-ground" x1="0" y1="-512" x2="0" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2E2E30"/>
+      <stop offset="1" stop-color="#0B0B0C"/>
+    </linearGradient>
+    <radialGradient id="glass" cx="-8.6" cy="-10.4" r="42.8" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3F68B8"/>
+      <stop offset=".5" stop-color="#0F1D40"/>
+      <stop offset="1" stop-color="#04060B"/>
+    </radialGradient>
+
+    <!-- Cut out of the body: the lens, the AF lamp, the two microphones and
+         the edge of the grip. -->
+    <mask id="body-cutouts" maskUnits="userSpaceOnUse" x="-400" y="-260" width="800" height="520">
+      <rect x="-400" y="-260" width="800" height="520" fill="#fff"/>
+      <circle cx="86" cy="14" r="158"/>
+      <circle cx="-84" cy="-124" r="13"/>
+      <circle cx="-58" cy="-99" r="5"/>
+      <circle cx="230" cy="-99" r="5"/>
+      <path d="M -109,-168 V 186" stroke="#000" stroke-width="9"/>
+    </mask>
+
+    <!-- The body takes the fill of the <use> that draws it. The grip's
+         shoulder sits below the rest of the top plate; above it are the
+         shutter button and the mode dial, and the hot shoe is further right. -->
+    <g id="body" mask="url(#body-cutouts)">
+      <path d="M -320,-130 A 34 34 0 0 1 -286,-164 L -119,-164 Q -109,-164 -109,-170 Q -109,-176 -99,-176 L 302,-176 A 18 18 0 0 1 320,-158 L 320,168 A 18 18 0 0 1 302,186 L -286,186 A 34 34 0 0 1 -320,152 Z"/>
+      <rect x="-298" y="-176" width="52" height="40" rx="7"/>
+      <rect x="-236" y="-185" width="96" height="50" rx="7"/>
+      <rect x="26" y="-183" width="120" height="30" rx="5"/>
+    </g>
+
+    <path id="engraving-arc" d="M -120,0 A 120 120 0 0 0 120,0"/>
+
+    <!-- The lens with its cover open: a blue ring cap, the engraved face,
+         the cover's window and the glass behind it. -->
+    <g id="lens" transform="translate(86,14)">
+      <circle r="157" fill="#101013"/>
+      <circle r="151" fill="none" stroke="#6EA8FF" stroke-width="10"/>
+      <circle r="126" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="3"/>
+      <circle r="100" fill="none" stroke="#fff" stroke-opacity=".16" stroke-width="3"/>
+      <text font-family="JetBrains Mono" font-weight="500" font-size="15" letter-spacing="2" fill="#fff" fill-opacity=".8" text-anchor="middle"><textPath href="#engraving-arc" startOffset="50%">GR LAB f=18.3mm 1:2.8</textPath></text>
+      <rect x="-62" y="-55" width="124" height="110" rx="28" fill="#050507" stroke="#45454D" stroke-width="4"/>
+      <circle r="32" fill="url(#glass)"/>
+      <circle r="32" fill="none" stroke="#fff" stroke-opacity=".2" stroke-width="3"/>
+      <path d="M -22.4,-8.1 A 23.8 23.8 0 0 1 -7.4,-22.6" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="4.8" stroke-linecap="round"/>
+      <circle r="10.8" fill="#020203"/>
+    </g>
+
+    <g id="camera">
+      <use href="#body"/>
+      <use href="#lens"/>
+    </g>
+
+    <!-- One colour only, for Android's themed icons and iOS's tinted ones:
+         the ring cap and the cover's window stand in for the lens. -->
+    <g id="camera-one-colour">
+      <use href="#body"/>
+      <g transform="translate(86,14)">
+        <path fill-rule="evenodd" d="M -148,0 A 148 148 0 1 0 148,0 A 148 148 0 1 0 -148,0 Z M -136,0 A 136 136 0 1 0 136,0 A 136 136 0 1 0 -136,0 Z"/>
+        <rect x="-62" y="-55" width="124" height="110" rx="28"/>
+      </g>
+    </g>
+  </defs>
+
+  <!-- The Android layers are transparent; the launcher puts
+       drawable/ic_launcher_background.xml behind the foreground and its own
+       colours behind and into the monochrome layer. -->
+  <g id="android-foreground" class="variant">
+    <use href="#camera" fill="#F3F1EC" transform="translate(0,-1) scale(1.14)"/>
+  </g>
+
+  <g id="android-monochrome" class="variant">
+    <use href="#camera-one-colour" fill="#000" transform="translate(0,-1) scale(1.14)"/>
+  </g>
+
+  <!-- iOS colours the tinted icon from its lightness, so it is greyscale. -->
+  <g id="ios-tinted" class="variant">
+    <rect x="-512" y="-512" width="1024" height="1024" fill="url(#tinted-ground)"/>
+    <use href="#camera-one-colour" fill="#F2F2F2" transform="translate(0,-1) scale(1.26)"/>
+  </g>
+
+  <g id="ios-dark" class="variant">
+    <rect x="-512" y="-512" width="1024" height="1024" fill="url(#ink)"/>
+    <use href="#camera" fill="#F3F1EC" transform="translate(0,-1) scale(1.26)"/>
+  </g>
+
+  <g id="ios-default" class="variant">
+    <rect x="-512" y="-512" width="1024" height="1024" fill="url(#paper)"/>
+    <use href="#camera" fill="#121214" transform="translate(0,-1) scale(1.26)"/>
+  </g>
+</svg>
