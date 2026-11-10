@@ -2,13 +2,14 @@
 
 How the camera renders each Image Control base image and each of its parameters, worked out from the GR IV and GR III firmware so that GR Lab's look preview can approximate it. The wire format and parameter lists are in [protocol/image-control.md](protocol/image-control.md); this file covers the image processing behind them.
 
-Researched 2026-11-09 by static analysis of the RTOS image (`rtos.bin`) of GR IV firmware 1.20 and GR III firmware 2.20. The GR IIIx 1.70 RTOS differs from the GR III 2.20 one in 27 bytes (version strings and model constants), and its tables are byte-identical, so everything said about the GR III applies to the GR IIIx. GR IV, GR IV HDF and GR IV Monochrome share one image ([camera-models.md §2](camera-models.md)). **Nothing here has been checked against photos from a camera yet**; §11 lists the tests that would.
+Researched 2026-11-09 by static analysis of the RTOS image (`rtos.bin`) of GR IV firmware 1.20 and GR III firmware 2.20. The GR IIIx 1.70 RTOS differs from the GR III 2.20 one in 27 bytes (version strings and model constants), and its tables are byte-identical, so everything said about the GR III applies to the GR IIIx. GR IV, GR IV HDF and GR IV Monochrome share one image ([camera-models.md §2](camera-models.md)). The GR IV part was then worked out a second time, independently of these notes, and the two results were compared; §12 lists what differed and how each difference was settled. **Nothing here has been checked against photos from a camera yet**, apart from one highlight check in §4.5; §11 lists the tests that would.
 
 ## How this was found
 
 - The RTOS is raw little-endian ARMv7 loaded at 0x53000000. The reset handler at 0x5300038c copies `.data` to 0x55000000 from file offset 0x13B3100 (GR IV, 0x58500 bytes) or 0x107B640 (GR III, 0x3A0C0 bytes); the pointer tables that pick per-base data live there. Strings and tables are reached through `movw`/`movt` pairs, not literal pools.
 - Ghidra 12.1.4 headless analysed both images in full with that memory map (the REA MCP call times out on a 21 MB raw image, see image-control.md §7). REA 6.8.0 `decompile-all` over the GR IV processing modules (0x53898000–0x53951000, 2461 functions, no failures) gives the evidence record `ev_7951f9b6dca0f4f634a707e9fbcd72f159bdfb0c1a0cba3799756f78b43a4dcb`, output in `work/rea-ic/gr4-pipeline/`.
 - Where reading the code left a choice, the firmware's own functions were run in an emulator (Unicorn) with ROM and `.data` mapped: the tone-curve generator (re-implemented and checked bit for bit, all 6561 slider combinations on both cameras), the gamma setup for the slider signs, the Custom-slot blob parser, and the parameter builders and GPC program printer of the DigitalFilter effects.
+- The independent pass (§12) used REA 6.8.0 with Ghidra 12.1.4 on the whole GR IV image, through a REA server of its own without the client's 30 s limit (38 798 functions decompiled, `work/ic-indep/dec-all/`). It ran the firmware's still tuning object in the emulator: `ImageTuningStill`'s `Initialize` (0x5393b9fc) and per-shot calculation (0x5393b644), for every base at neutral values and for every value of every slider (1498 runs, `work/ic-indep/emu_still.py` and `emu_sweep.py`), and read the register image they fill. It also ran the settings initialiser (0x53546c20) for the defaults in §7.1. Its notes, tables and scripts are in `work/ic-indep/` (`findings/`, `tables/`, `scratch/`).
 - Workspace files (Ricoh's data, kept in `../gr`, never in this repository): notes per topic in `work/ic/notes/` (`tone.md`, `color.md`, `mono.md`, `effects.md`, `sensor.md`, and the follow-ups `ui-followup.md`, `isp-followup.md`, `dfhw-followup.md`), the extracted tables as JSON in `work/ic/data/`, and the scripts that regenerate them from the firmware by address in `work/ic/scripts/`. The full 256-entry curves and every table cited below are there.
 
 Evidence tags: **[code]** read in the decompiled or disassembled firmware (function or table address given, GR IV unless marked); **[emulated]** reproduced exactly by running the firmware function; **[consistency]** the only reading of an undocumented hardware unit under which a constraint the firmware imposes holds (neutral settings give the identity, kernels sum to 1, a pyramid reconstructs), not run or observed; **[inferred]**; **[unknown]**. Addresses are RTOS virtual addresses.
@@ -21,7 +22,7 @@ On both cameras no code that drives the sensor, auto exposure, metering, ISO, ex
 - The ImageTuning instance that serves auto exposure (`ImageTuningAeSensor`, built at 0x5393ba6c; GR III vtable 0x53dbda38) runs the processing stages without ever receiving the Image Control parameters. The still (0x5393b64c) and live-view (0x5393bc28) instances do receive them.
 - RAW pixel data is the same for every base. The base and each slider are written to the maker note (encoders 0x53800f7c–0x53804f3c, decoder 0x537fbad0), and RAW Development runs the whole pipeline again from its own copy of the settings record. This matches the manual: Image Control "is not applied to RAW images. It can be set when [RAW Development] … is performed" (GR IV manual p.91, p.96).
 - HDR Tone is a single-frame effect on the developed image (§8.4). The camera's sensor-HDR code (`STILL_HDR`, `SHDR…`) has no Image Control reader. Grainy, Hi-Contrast B&W and Bleach Bypass add no frames and no exposure bias.
-- Live view uses the same ImageTuning stages with the same Image Control copy (0x53939128), so the live view on the camera shows the base's colour and tone. The DigitalFilter effects (§8) run only inside `DigitalFilterProcess`, which is created in the still-image module package (0x53729970) and scheduled only by the still recipe planner (0x53737504) **[code]**, so Clarity, Grain and HDR Tone very probably do not appear in live view. That is not proven: a live-view read of the effect settings through a copied structure or a 16-bit load would have been missed. Shading probably does appear, approximated by the ISP's own shading unit (§8.1) **[inferred]**. In a still capture the image for the instant review is produced before the effects run (still sequences place `DIRECT_VIEW` before `DIGITAL_FILTER`), so the review probably lacks them too **[inferred]**. In RAW Development the saved JPEG always gets the effects; the "speed" preview is made before them and the "quality" preview after them, and which one the RAW Development screen shows is **[unknown]**.
+- Live view uses the same ImageTuning stages with the same Image Control copy (0x53939128), so the live view on the camera shows the base's colour and tone. The DigitalFilter effects (§8) run only inside `DigitalFilterProcess`, which is created in the still-image module package (0x53729970) and scheduled only by the still recipe planner (0x53737504) **[code]**, so Clarity, Grain and HDR Tone very probably do not appear in live view. That is not proven: a live-view read of the effect settings through a copied structure or a 16-bit load would have been missed. Shading does appear, approximated by the ISP's own shading unit, whose tables the live-view process builds from the Shading value (§8.1) **[code]**. In a still capture the image for the instant review is produced before the effects run (still sequences place `DIRECT_VIEW` before `DIGITAL_FILTER`), so the review probably lacks them too **[inferred]**. In RAW Development the saved JPEG always gets the effects; the "speed" preview is made before them and the "quality" preview after them, and which one the RAW Development screen shows is **[unknown]**.
 
 Three side effects reach outside the colour and tone stages, all still processing:
 
@@ -31,7 +32,7 @@ Three side effects reach outside the colour and tone stages, all still processin
 | Solarized Effect (GR IV id 0x20) | Turns off the lens vignetting correction (Peripheral Illumination Correction) in still development and live view, even when the menu setting is on. | still 0x539655d8 `if (setting == off \|\| id == 0x20) return`; live view 0x5365e760 |
 | Bases with a DigitalFilter effect in use | Adds the effect stage (§8) to the still processing recipe. | 0x53739a5c |
 
-Why the manual forbids Soft Monotone and HDR Tone in B (bulb) mode (p.94–95) is narrowed but not settled. The only check that names both bases is `ImageControlModel::IsValid` (0x533de144): Soft Monotone (0x0e) and HDR Tone (0x16) are invalid while a model flag is 1. That flag is set from the callers named `InitializeStillMovieMode`, which is how both bases drop out of the movie Image Control list (the firmware has no `MovieImageControl…` keys for them). Whether B mode sets the same flag depends on two fields that were not identified (object field +0x138 read by 0x53185530, and record +0x76f). No exposure-side code tests the base, and no string gives a reason.
+The manual says Soft Monotone and HDR Tone cannot be selected in movie mode (GR IV manual p.94–95). It prints the mode as the movie-camera icon, which the PDF's text layer gives as the letter "B"; it is not bulb mode. The firmware agrees **[code]**: `ImageControlModel::IsValid` (0x533de144) makes Soft Monotone (0x0e) and HDR Tone (0x16) invalid while the model's flag at +0x1f is 1; that flag is set from the callers named `InitializeStillMovieMode`; the per-base default getters (§7.1) have no case for the two bases in that mode; and the firmware has no `MovieImageControl…` keys for them. A likely reason is that both depend on the DigitalFilter stage, which only the still recipe has: Soft Monotone for its forced Clarity (§8.2) and HDR Tone for its effect (§8.4) **[inferred]**. No exposure-side code tests the base, and no string gives a reason.
 
 ## 2. Pipeline
 
@@ -39,7 +40,7 @@ Order for a still on the GR IV **[code]** for the stage list, **[inferred]** for
 
 1. White balance gains on the camera RGB.
 2. Colour matrix block 0: `M = B_base · A`, then each row is normalised to sum to 1 so greys stay grey (`ColorMatrixTuning` 0x5393cc14). `A` is the camera matrix, shared by all bases; `B_base` is the base's look matrix (§4.1).
-3. Multi-axis hue correction for Standard, Positive Film and the two Cinema bases only (§4.5).
+3. Multi-axis colour correction for Standard, Positive Film and the two Cinema bases only (§4.5).
 4. Tone: one gamma curve per R, G, B channel, applied to linear data, from the four tone sliders (§3). Some bases then apply an extra per-channel curve (§5).
 5. Colour matrix block 1: saturation (§4.2) on colour bases, the black-and-white weights (§6.1) on Monotone, Soft Monotone and Hi-Contrast B&W. That this block comes after the tone curve is **[inferred]** from its separate register block (0x1120 onward).
 6. RGB→YCbCr with BT.601 weights, combined with the hue rotation (§4.3).
@@ -47,7 +48,7 @@ Order for a still on the GR IV **[code]** for the stage list, **[inferred]** for
 8. Edge enhancement (sharpness, §8.5) and noise reduction run inside the same hardware block.
 9. JPEG-domain effects on the finished 8-bit YCbCr image, in this order: Shading, Clarity, Grain, HDR Tone (§8; GR IV 0x538ce51c, GR III 0x53680eac). Each is skipped when its value is 0.
 
-Noise reduction depends only on capture mode, the High-ISO NR setting and ISO, never on the base or a slider **[code]** (`LumaNrTuning`, `ColorLpfTuning` table getters 0x5394e86c, 0x5394e8ec).
+No base or slider has noise-reduction tables of its own: the tables are chosen by capture mode, the High-ISO NR setting and ISO **[code]** (`LumaNrTuning`, `ColorLpfTuning` table getters 0x5394e86c, 0x5394e8ec). But High/Low Key, Contrast, Contrast (Shadow), Saturation and the base do shift the ISO index used to read those tables, by up to one stop (§8.6).
 
 The GR III has the same pipeline, with these differences: saturation is folded into the single linear colour matrix (`S · B · A`, 0x536deea4), there is no per-channel base curve stage, and the multi-axis correction is present but off for every base.
 
@@ -88,7 +89,7 @@ Each colour base is a 3×3 matrix `B` applied to linear RGB after the camera mat
 | Vivid | `[1.1218 −0.0070 −0.1149; −0.0022 1.1348 −0.1326; −0.0481 −0.0790 1.1271]` | chroma ×1.08–1.23, hue within ±5° |
 | Positive Film | `[0.9688 0.3047 −0.2734; −0.0195 1.1758 −0.1562; −0.0703 0.3945 0.6758]` | chroma ×0.84–0.95; yellows and greens brighter (Y +0.13, +0.19) |
 | Negative Film | `[1.0912 −0.2004 0.1092; 0.1522 0.7220 0.1257; 0.0070 0.2643 0.7288]` | chroma ×0.6–0.96; greens turn about 27° toward cyan and darken |
-| Bleach Bypass, toning Normal | `[0.5469 0.3445 0.1086; 0.1558 0.7135 0.1307; 0.1343 0.3202 0.5455]` | chroma ×0.38–0.42 |
+| Bleach Bypass, toning Off or Normal | `[0.5469 0.3445 0.1086; 0.1558 0.7135 0.1307; 0.1343 0.3202 0.5455]` | chroma ×0.38–0.42 |
 | Bleach Bypass, Cool | `[0.4948 0.3391 0.1661; 0.1389 0.7261 0.1350; 0.0962 0.2999 0.6039]` | |
 | Bleach Bypass, Warm | `[0.5837 0.3568 0.0595; 0.1891 0.6864 0.1245; 0.2277 0.3347 0.4376]` | |
 | Retro | `[0.6182 0.3350 0.0469; 0.1395 0.8092 0.0513; 0.0582 0.3355 0.6063]` | chroma ×0.5, hue about +5° |
@@ -111,19 +112,42 @@ A rotation of (Cb, Cr) after RGB→YCbCr, **2.46° per step**, ±9.9° at ±4 **
 
 ### 4.4 Toning on colour bases
 
-Added to Cb and Cr in the YCbCr operation stage **[code]** (registers 0x54c/0x54e, signed 10-bit for the monochrome "set" pair; 0x554/0x556, signed 11-bit, for the "add" pair). **The chroma there is 10-bit** (Y 0–1023, Cb/Cr ±512), so the values are a quarter of the size in 8-bit codes **[code]**: the gamma LUT outputs 10 bits, the RGB→YCbCr matrix applies no shift, and the same block's per-ISO chroma gain curve has breakpoints at luma 56, 768 and 856, which only exist on a 10-bit axis (chroma gain rises from 0 to 1 by Y = 56, stays at 1 to Y = 768, then falls to 0.27 at full scale). Converted with the inverse of the firmware's matrix, in 8-bit RGB codes: Retro +4 adds R +22.3, G −4.6, B −35.5; Retro −4 adds R −8.3, G −1.9, B +31.9. Whether the toning is added before or after that chroma gain curve is **[unknown]**.
+Added to Cb and Cr in the YCbCr operation stage **[code] [emulated]** (registers 0x154c/0x154e, signed 10-bit, for the monochrome "set" pair; 0x1554/0x1556, signed 11-bit, for the "add" pair; offsets in the same register image as colour matrix block 1 at 0x1120). **The chroma there is 10-bit** (Y 0–1023, Cb/Cr ±512), so the values are a quarter of the size in 8-bit codes **[code]**: the gamma LUT outputs 10 bits, the RGB→YCbCr matrix applies no shift, and the same block's chroma gain curve has breakpoints at luma 56, 768 and 856, which only exist on a 10-bit axis. That curve suppresses chroma near black and white: the gain rises from 0 to 1 by Y = 56, stays at 1 to Y = 768, then falls to 0.84 at 856 and 0.27 at full scale (this piecewise reading of its start values and slopes is **[inferred]**). It is stored once per ISO step, but all 144 records are identical (0x540a6b54), so it is the same at every ISO and for every base **[code]**. Converted with the inverse of the firmware's matrix, in 8-bit RGB codes: Retro +4 adds R +22.3, G −4.6, B −35.5; Retro −4 adds R −8.3, G −1.9, B +31.9. Whether the toning is added before or after that chroma gain curve is **[unknown]**.
 
 | Base, toning | (Cb, Cr) added |
 |---|---|
 | Retro −4 … +4 | Cb 72, 54, 36, 18, 0, −20, −40, −60, −80; Cr −24, −18, −12, −6, 0, 16, 32, 48, 64 (− cooler and bluer, + warmer and yellower) |
-| Bleach Bypass Normal / Cool / Warm | (+12, −36) / (+40, −60) / (−40, 0), each with its own matrix (§4.1) |
+| Bleach Bypass Off / Normal / Cool / Warm | none / (+12, −36) / (+40, −60) / (−40, 0). Off uses Normal's matrix; Cool and Warm each have their own (§4.1) **[emulated]** |
 | HDR Tone B&W / Sepia | chroma set to (0, 0) / (−36, +24), after a BT.601 conversion to grey |
 
 Cinema toning (Low, Medium, High) is a curve blend, not an offset (§5). GR III: same values.
 
-### 4.5 Multi-axis hue correction
+### 4.5 Multi-axis colour correction
 
-`MultiAxialTuning` holds 12 groups × 5 levels of 3×3 matrices that act only inside hue windows. On the GR IV it is active for Standard, Positive Film, Cinema (Yellow) and Cinema (Green); every other base, and every GR III base, uses a set that is off **[code]**. The windows all lie around red, skin and orange **[inferred]** from their angles, and inside them the change is within ±15° of hue and ×0.7–1.3 chroma. Its brightness-dependent strength curve is constant at 1.0 in every active set, so the correction does not vary with brightness **[inferred]** from field widths. How the hardware blends windows and levels is not decidable from the firmware: the code only copies tables to registers, and no software model, debug dump or tool string names the fields. For a preview this is a second-order skin and red correction that can be left out.
+`MultiAxialTuning` (0x5393d1a4, register writer 0x53942190) converts each pixel to Y, Cb, Cr with a BT.601 matrix of its own, divides the (Cb, Cr) plane into 12 hue areas and applies a 3×3 RGB matrix chosen by area. On the GR IV it is active for Standard, Positive Film, Cinema (Yellow) and Cinema (Green) (sets 0x54080aa0, 0x54081360, 0x540824b8, 0x5408338c); every other base, and every GR III base, uses a set whose enable field is 0 (GR IV 0x54081348) **[code]**.
+
+The areas cover the whole hue circle, not only reds and skin tones. Each quadrant of the (Cb, Cr) plane has two thresholds, and the stored values 1298 and 750, 1448 and 843, 1298 and 750, 1205 and 843 are exactly 2048/(1 + tan θ) for θ = 30° and 60°, 22.5° and 55°, 30° and 60°, 35° and 55°, measured from the start of the quadrant. That puts the area boundaries at 0, 30, 60, 90, 112.5, 145, 180, 210, 240, 270, 305 and 325° of atan2(Cr, Cb), where magenta is at 52°, red 109°, yellow 171°, green 232°, cyan 289° and blue 351°. This reading is **[consistency]**: with it, the matrices of every two neighbouring areas give the same output on their shared boundary to within 0.005, in all four sets; moved 15° away they disagree by up to 0.15. So the block is a continuous map. Each matrix leaves greys and luma unchanged (rows sum to 1; luma changes by less than 0.002 per unit of chroma) and changes chroma and hue, by amounts that vary smoothly between the boundary axes. Chroma gain and hue shift in degrees on each boundary axis:
+
+| Axis | Standard | Positive Film | Cinema (Yellow) | Cinema (Green) |
+|---|---|---|---|---|
+| 0° | 0.986, +0.4 | 0.994, +0.3 | 0.991, +3.1 | 0.948, +0.5 |
+| 30° | 0.972, −3.1 | 0.959, −4.8 | 0.976, −3.4 | 0.999, +0.1 |
+| 60° | 0.996, −5.5 | 0.802, −1.7 | 0.856, −4.6 | 0.957, −3.1 |
+| 90° | 1.017, +1.6 | 0.920, 0.0 | 0.978, +1.1 | 0.879, −6.1 |
+| 112.5° | 1.019, −0.8 | 1.037, −0.9 | 1.082, −0.4 | 0.942, −0.3 |
+| 145° | 1.095, −4.1 | 1.143, −7.1 | 1.064, −3.3 | 0.981, +3.1 |
+| 180° | 1.017, −0.5 | 1.094, −10.2 | 1.111, −9.0 | 1.028, +10.8 |
+| 210° | 0.979, −3.5 | 0.979, −4.1 | 0.986, −13.7 | 1.056, +13.6 |
+| 240° | 0.895, −3.3 | 0.980, +4.3 | 0.919, −9.8 | 1.159, +10.7 |
+| 270° | 0.887, −3.6 | 0.946, +10.3 | 0.804, −12.8 | 1.121, +5.9 |
+| 305° | 0.900, −0.9 | 0.958, +8.4 | 0.763, +1.6 | 1.115, −4.9 |
+| 325° | 0.982, +0.5 | 1.000, +2.4 | 0.800, +4.0 | 1.020, −4.5 |
+
+Standard itself therefore lowers chroma by about 10 % from green through cyan (240–305°) and raises orange (145°) by 10 %. Positive Film strengthens orange and yellow and turns them by 7–10°, and thins magenta by 20 %. Cinema (Yellow) cuts cyan and blue chroma by a fifth to a quarter and turns yellows and greens by 9–14°. Cinema (Green) strengthens greens and cyans by 12–16 % and turns yellows and greens by 11–14° the other way.
+
+Each area has five matrices. Matrix *l* is matrix 0 times (1 − *l*/16), to within one unit of the 1/1024 scale, and the block interpolates between them along a 12-bit quantity with knots at 800, 1600, 2400 and 3200; the four values beside the knots, 328, 328, 328 and 293, are 2^18 divided by the knot spacing **[code]**. The firmware does not say which quantity that is (luminance or chroma magnitude), or whether the scaled matrix replaces the whole pixel or only its chroma: the code only copies tables to registers **[unknown]**. If it were luminance acting on the whole pixel, these four bases could not exceed 75 % of full scale ahead of the tone curve and so could not reach white. A Positive Film JPEG from a GR IV HDF has small flat areas at 254–255 in all three channels (one photo, firmware 1.11, 2026-11-07) **[observed]**, which speaks against that reading but is too little to settle it. A second strength curve in the same block is constant at 1.0 in every active set.
+
+For a preview this is a second-order correction, but it is not confined to skin tones, and it matters most for the Cinema bases and when the preview starts from a Standard photo (§10).
 
 ## 5. Per-channel curves after the gamma
 
@@ -209,6 +233,34 @@ The ids of Pictorialist (0x1f) and Solarized (0x20) are settled by the camera's 
 
 The sliders each body offers are the same mechanism on every base that has them: the four tone sliders (§3), saturation (§4.2), hue (§4.3), sharpness (§8.5), and the four JPEG-domain effects (§8).
 
+### 7.1 Default values of each base
+
+A base is more than its tables: each has its own default slider values, and those are what the camera's sliders show for it. `ImageControlModel`'s `GetDefaultValue<Parameter>` functions (0x533d053c–0x533ddc54) read them from the settings' initial-value structure, which a static initialiser fills with constants (`UserData/UserDataInitValue.cpp`, 0x53546c20; one copy per project type, chosen at 0x53546b8c). The table was made by running that initialiser in the emulator and reading, for each base, the byte each getter reads **[emulated]**; the getters' offsets were read from their decompiled switch statements, so a cell is only as sure as that reading. Values are the steps the camera shows (stored value − 4 for the ±4 sliders, the stored value for the others); a dash means the base has no such parameter.
+
+| Base | Sat. | Hue | Key | Contrast | Highlight | Shadow | Sharpness | Shading | Clarity | Toning | Grain | Size | Intensity |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Standard | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | – | – | – | – |
+| Vivid | 0 | 0 | 0 | +1 | 0 | 0 | +1 | 0 | 0 | – | – | – | – |
+| Monotone | – | – | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 |
+| Soft Monotone | – | – | +1 | −2 | 0 | 0 | −1 | 0 | – | 0 | 0 | 1 | 1 |
+| Hard Monotone | – | – | −1 | +2 | 0 | −2 | +1 | 0 | 0 | 0 | 0 | 1 | 1 |
+| Hi-Contrast B&W | – | – | 0 | 0 | 0 | 0 | +1 | 0 | 0 | 0 | 1 | 1 | 2 |
+| Positive Film | 0 | 0 | −1 | +3 | −1 | −2 | 0 | 0 | 0 | – | 0 | 1 | 1 |
+| Negative Film | 0 | 0 | +1 | +1 | 0 | −1 | 0 | 0 | 0 | – | 0 | 1 | 1 |
+| Cinema (Yellow) | 0 | 0 | −1 | +3 | 0 | −2 | −3 | 0 | 0 | 1 | 0 | 1 | 1 |
+| Cinema (Green) | −2 | 0 | 0 | +1 | 0 | −3 | −3 | 0 | 0 | 1 | 0 | 1 | 1 |
+| Bleach Bypass | 0 | 0 | +4 | +4 | +4 | 0 | 0 | 0 | 0 | 1 | – | – | – |
+| Retro | 0 | 0 | +2 | −3 | 0 | 0 | −3 | −3 | 0 | +1 | – | – | – |
+| HDR Tone | +2 | 0 | – | – | – | – | – | – | – | 0 | – | – | – |
+| Cross Processing | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | – | – | – |
+
+- Toning is each base's own toning parameter: Cinema 1 is Medium, Bleach Bypass 1 is Normal, Retro is a step, Cross Processing 0 is the Basic colour tone. Grain size 1 and intensity 1 are Medium; Hi-Contrast B&W has grain on at High.
+- HDR Tone Level defaults to 2 (Medium), and Filter Effect to Off on the three bases that have it.
+- The GR IV Monochrome bases repeat the colour bodies' monochrome bases: Standard as Monotone, Soft as Soft Monotone (key +1, contrast −2, sharpness −1), High Contrast as Hi-Contrast B&W (sharpness +1, grain on at High), Grainy and Solid all at 0, with Grainy's grain on only in the Monochrome body's copy of the structure (project type 4).
+- The same values hold in still and movie mode, for the bases movie mode has (§1).
+
+So Positive Film as the camera ships it is the Positive Film tables rendered at Key −1, Contrast +3, Highlight −1 and Shadow −2, and Bleach Bypass at Key, Contrast and Highlight all +4. A base previewed with every slider at 0 is not what that base looks like on a camera at its defaults. Not established: that the camera applies these values when a base is first chosen in the menu, rather than only when the settings are reset **[unknown]**.
+
 ## 8. Detail effects
 
 Shading, Clarity, Grain and HDR Tone run in the DigitalFilter module on the developed 8-bit YCbCr image (outputs clip to 0–255, chroma offset 128), in that order, each skipped at 0 **[code]**. They are computed by the IIP image-processing hardware (mapped around 0x2888xxxx; units for loading, a small programmable ALU called GPC, colour-space matrix, blend, spatial filter, LUT, store and resize), which the firmware programs with parameter blocks; nothing on the ARM side repeats the arithmetic. The formulas below come from running the firmware's own parameter builders in an emulator, from its printer for GPC programs (0x538c23f8, which renders them as expressions), and from the one reading of each unit under which a neutral setting is the identity. Sharpness is an ISP stage.
@@ -224,7 +276,7 @@ A radial gain about the centre of the final crop (GR IV 0x538c8c3c, GR III 0x536
 
 - Radius: ρ² = r² / (half-diagonal · f)², with f = 1.0 for 3:2, 0.9245 for 4:3, 0.9547 for 16:9 and 0.7845 for 1:1, divided by the digital zoom factor, so ρ = 1 at the corner of the saved frame **[code]**.
 - Transfer: the GPC program forms dx² + dy² and the colour matrix produces `min(255, c·Y)` and an alpha of `255·min(ρ², 1)` **[emulated]** (the firmware's own builders and GPC printer, run in the emulator; the hardware arithmetic itself was not run). The blend unit's operation is undocumented; the only reading under which step 0 is the identity and the radial alpha is used is an alpha blend, `Y' = (α·min(255, c·Y) + (255 − α)·Y)/255 ≈ Y · (1 + (c − 1)·min(ρ², 1))` **[consistency]**, with the operand order fixed by the live-view tables below. So the gain rises linearly with ρ² from 1 at the centre to c at the corner (there is no lookup table in the chain, so an exponential falloff is impossible), brightened pixels clip at 255, and **chroma is not changed** **[code]**. Whether the blend divides by 255 or 256 is not decidable from the firmware (at most 1/255).
-- Negative steps darken the corners. Besides the constants, the live-view shading tables (`XoyShadingCoordinator` 0x5394ed38, plain C) give corner-to-centre ratios of 0.250, 0.363, 0.516, 0.721, 1.24, 1.53, 1.90 and 2.36 for the eight steps, close to the still values; matching that table to the Shading slider is by its nine-step layout and values, not by a traced settings read **[inferred]**. This suggests the camera shows Shading in live view through the ISP's own shading unit, as an approximation.
+- Negative steps darken the corners. Live view has no DigitalFilter stage and shows the slider through the ISP's own shading unit instead **[code]**: the live-view process (0x536596d4, called from `LiveViewProcess` 0x53661920) reads the Shading value from its copy of the settings and passes it as the step to `XoyShadingCoordinator` (0x5394ed38, plain C), which fills separate X and Y gain tables, parabolic along each axis, from nine per-step constants (0x54211614) and the aspect ratio. The tables give corner-to-centre ratios of 0.250, 0.363, 0.516, 0.721, 1.24, 1.53, 1.90 and 2.36 for the eight steps, close to the still values, so live view approximates the still result.
 - This is separate from the lens vignetting correction (§1).
 
 ### 8.2 Clarity
@@ -260,6 +312,17 @@ A single-frame multi-scale local tone map on half-resolution Y (GR IV 0x538cd7e8
 
 Scales the ISP's edge-enhancement curves by a gain of `(step + 4)/4` (table 0, 32, …, 256 at GR IV 0x54091b0c, identical on the GR III) **[code]**: −4 turns edge enhancement off, +4 doubles it. There are three enhancers for high, middle and low frequencies; the first two use zero-sum high-pass kernels (centre 896 with taps −128 and −96, and centre 960 with taps −48 and −32), the same on the GR III. The curves themselves depend on ISO: at base ISO the enhancement ignores the smallest edges (coring), peaks at bin 12 and falls to zero at bin 79, so large edges get none (halo control); at high ISO the coring and the peak move to larger edges. How edge size maps to bins is not decidable from the firmware: it is set by two register fields (0x1223 = 4 and 0x1260 = 16) that are the same in every mode and that no code interprets; a similar curve in the same unit suggests bin = |edge| >> 3 on a 10-bit scale **[inferred]**. A preview therefore has to set the unsharp-mask amount by eye. A JPEG already carries the neutral sharpening, so a preview made from one should apply only the difference from neutral.
 
+In the normal still record only the high and low enhancers are switched on. The middle one is enabled for Mono Solid alone, whose record turns on all three **[code]** (enable bytes of the records at 0x54091798 and 0x54091858). Every other base uses the same record, so bases differ in sharpening only through their default Sharpness value (§7.1).
+
+### 8.6 Side effects on noise reduction
+
+No base and no detail slider changes noise reduction, but three tone sliders, Saturation and the base shift the index with which the per-ISO tables are read **[code] [emulated]**. The index has 8 steps per ISO stop. The function that turns the shot's exposure data into table indices (0x5393a730, arithmetic at 0x5393a84c–0x5393a8b0) adds two terms to it, from the stored values 0..8:
+
+- `2·key + trunc((shadow − 2·contrast + 4)/4) − 8`, used by luma noise reduction (`LumaNrTuning` 0x539421f0), the colour low-pass filter (0x53942b64) and the two filter units that follow the RGB-to-YCbCr block (0x53948fd8, 0x53948cb0; `m_SuppreFilterTuning` and `m_ReduceFilterTuning`, what they filter is **[unknown]**). Each High/Low Key step up reads the tables a quarter stop higher, so key +4 gets the noise reduction of one stop more ISO and key −4 of one stop less; Contrast +4 lowers the index by two steps and Contrast (Shadow) +4 raises it by one.
+- `saturation − 4` plus a per-base offset (table 0x5407a560: +1 for Vivid and Positive Film, −1 for Cinema (Green) and Retro, −2 for Bleach Bypass, 0 for the other colour and monochrome bases **[emulated]**), used by the colour low-pass filter and the two filter units only.
+
+Running the tuning code confirms it: at one ISO, key −4 and key +4 produce the filter units' values of the neighbouring ISO stops, and Saturation +4 moves them one stop up; at high ISO key also changes the luma noise-reduction registers. The colour low-pass filter's 144 records are identical, so its index has no effect in this firmware. The reason is presumably that a brighter or more saturated rendering shows more noise **[inferred]**. For a preview the effect is negligible.
+
 ## 9. GR III and GR IIIx
 
 Same code structure, and mostly the same data. The differences:
@@ -278,9 +341,9 @@ Same code structure, and mostly the same data. The differences:
 
 ## 10. Approximating a look in GR Lab's preview
 
-GR Lab previews a look on a photo the camera already developed, normally a Standard JPEG with every slider at 0. A faithful preview therefore undoes the photo's own rendering and applies the target look's. The camera's tone curve already produces sRGB-encoded values (§3), so the JPEG is undone with the inverse of that curve, not with the sRGB decoding. In order, per pixel of the encoded R, G, B:
+GR Lab previews a look on a photo the camera already developed, normally a Standard JPEG with every slider at 0. A faithful preview therefore undoes the photo's own rendering and applies the target look's. A photo taken with another base at its defaults was not rendered with every slider at 0 (§7.1), so the values to undo are the ones the photo records, not zeros. The camera's tone curve already produces sRGB-encoded values (§3), so the JPEG is undone with the inverse of that curve, not with the sRGB decoding. In order, per pixel of the encoded R, G, B:
 
-1. Back to the camera's linear values: `lin = G_neutral⁻¹(encoded)` per channel, where `G_neutral` is the neutral tone curve (§3). This ignores the Standard multi-axis correction (§4.5) and the neutral saturation and hue, which are identity.
+1. Back to the camera's linear values: `lin = G_neutral⁻¹(encoded)` per channel, where `G_neutral` is the neutral tone curve (§3). This ignores the neutral saturation and hue, which are identity, and the Standard multi-axis correction (§4.5), which is not: it changed chroma by up to 11 % and hue by up to 5.5° in the photo, and a target base without the correction (Vivid, Negative Film, Bleach Bypass, Retro and the rest) strictly needs it undone.
 2. Colour, in that linear domain: `lin' = B_target · B_Standard⁻¹ · lin` (§4.1). On the GR III the saturation matrix belongs here too (§4.2).
 3. Tone: `enc = G_target(lin')` per channel, the curve for the look's key, contrast, highlight and shadow (§3). With a Standard target and all four at 0, steps 1–3 give back the photo.
 4. Per-channel curve for the bases in §5, with the cinema blend.
@@ -291,7 +354,7 @@ Steps 1–4 are a per-pixel colour transform: one 3D lookup table per look repro
 
 ## 11. Open questions
 
-Settled from the firmware since the first version of these notes: the sign of Contrast (Shadow) (§3), the toning scale (§4.4), the grain kernels (§8.3) and Cross Processing's random mode (unreachable, §5). The Shading falloff and sign (§8.1), the grain blend (§8.3) and the HDR Tone plane roles (§8.4) are settled only as far as **[consistency]** goes: no hardware run or photo confirms them, and the tests below would. What remains, and what would settle it:
+Settled from the firmware since the first version of these notes: the sign of Contrast (Shadow) (§3), the toning scale (§4.4), the grain kernels (§8.3), Cross Processing's random mode (unreachable, §5), why Soft Monotone and HDR Tone are missing in movie mode (§1), the hue areas of the multi-axis correction (§4.5), the live-view Shading path (§8.1) and the defaults of each base (§7.1). The Shading falloff and sign (§8.1), the grain blend (§8.3) and the HDR Tone plane roles (§8.4) are settled only as far as **[consistency]** goes: no hardware run or photo confirms them, and the tests below would. What remains, and what would settle it:
 
 | Question | Why the firmware cannot settle it | Test |
 |---|---|---|
@@ -299,8 +362,45 @@ Settled from the firmware since the first version of these notes: the sign of Co
 | HDR Tone strength scale (§8.4) | the scale of the correction map is set by a hardware field no code interprets | JPEGs at each HDR Tone Level against Standard |
 | Which components Retro's four ToneControl values act on (§3) | written to hardware registers that nothing reads back | Retro against Standard on a grey ramp |
 | Sharpening bin scale (§8.5) | set by hardware fields no code interprets | Sharpness −4 against +4 on a known edge |
-| How the multi-axis windows blend (§4.5) | the code only copies tables to registers | a skin-tone and red patch chart in Standard |
+| Which quantity selects the five multi-axis levels, and whether they scale the whole pixel (§4.5) | the code only copies tables to registers | a grey ramp and a saturated colour chart in Standard against Vivid |
 | Whether Clarity, Grain and HDR Tone appear in live view (§1) | probably not, but a hidden read could have been missed | look at the camera's screen |
-| Why Soft Monotone and HDR Tone are unavailable in B mode (§1) | two fields that gate the movie-mode check were not identified | further firmware tracing, or the camera menu |
+| Whether the camera applies a base's default values when the base is chosen (§7.1) | read from the settings initialiser, not from the menu code | choose each base after a reset and read its sliders |
 | Whether toning is added before or after the chroma gain curve (§4.4) | register order in hardware | a toned look on a dark-to-bright ramp |
 | How the GR IVx Monochrome renders Pictorialist Effect (§6.3) | not in firmware 1.20, and no GR IVx firmware is published yet | that body's firmware |
+
+## 12. The independent check
+
+On 2026-11-09 the GR IV part of these notes was worked out a second time from firmware 1.20 without reading them (method in "How this was found"), and the two results were compared section by section. Most of it agreed, including every number the two passes both give: the tone-curve generator and the four tone sliders with their signs, the base matrices and camera matrix, saturation 1.1 per step, hue 2.46° per step, the toning tables, the per-channel curves and the Cinema blend, Cross Processing's presets and unreachable random mode, the Shading constants and aspect factors, the Clarity gain table, the grain amplitudes and kernels, the HDR Tone weights 4, 8 and 16, the Sharpness gain, and the main finding that Image Control changes processing only. Where they differed, the question was settled from the firmware with REA (Ghidra decompilation of the functions named, evidence records below) and the emulator:
+
+| Point | First version | Independent pass | Settled as |
+|---|---|---|---|
+| Noise reduction (§2, §8.6) | never depends on the base or a slider | Key, Contrast, Shadow, Saturation and the base shift the ISO index | the index is shifted: read in 0x5393a730, 0x539421f0, 0x53948fd8 and 0x53948cb0, and seen in the emulated registers |
+| Multi-axis hue areas (§4.5) | windows around red, skin and orange | 12 areas round the whole circle | whole circle: the thresholds are exact tangents of round angles, and only that reading makes neighbouring matrices meet at their boundaries |
+| Multi-axis levels (§4.5) | a strength curve constant at 1.0, so no variation | five matrices per area scaled by 1 − *l*/16 along an unnamed 12-bit quantity | both hold: the scaling is in the tables; what selects the level stays unknown |
+| "B mode" (§1) | bulb mode, reason for the restriction open | movie mode | movie mode: the manual's glyph is the movie icon, and `IsValid` and the default getters carry the same restriction |
+| Live-view Shading (§8.1) | inferred from the table's layout | traced | traced: 0x536596d4 passes the Shading value of the live-view settings to 0x5394ed38 |
+| Bleach Bypass toning 0 (§4.4) | what it renders unknown | Normal's matrix without the tint | confirmed in the emulator |
+| Chroma gain curve (§4.4) | per ISO | the same at every ISO | stored per ISO step, all 144 records identical |
+| Toning registers (§4.4) | 0x54c/0x54e and 0x554/0x556 | 0x154c/0x154e and 0x1554/0x1556 | the second: the emulated toning values appear there, in the numbering in which colour matrix block 1 is at 0x1120 |
+| Default values of each base (§7.1) | not covered | table from the settings initialiser | added |
+| Middle edge enhancer (§8.5) | three enhancers | middle one off except for Mono Solid | added |
+| High/Low Key and the white point (§3) | the clip point moves from 0.99 to 0.86 of full scale | white stays fixed | the first version is right: the independent model gives clip points 0.988 at −4 and 0.859 at +4 |
+| What computes the DigitalFilter effects (§8) | the IIP hardware, programmed by the firmware | a software pass | hardware: the independent pass's own unit programs (loader, LUT, blend, store) show it |
+| Chroma grain (§8.3) | its own noise plane | not stated | consistent: the grain builder, run in the emulator, allocates two full-size noise buffers |
+| Solarized Effect and vignetting (§1) | off in still development and live view | still path not traced | both: 0x539655d4 is called from the still develop path (0x5374f464) and from the live-view gain map (0x53965f94) |
+| GR IV Monochrome toning and the Grainy and Solid curves (§5, §6.2) | half-strength table; matte and mild curves | not covered | confirmed in the emulator with the Monochrome project type |
+
+REA evidence records for the functions that settled these (Ghidra 12.1.4 pseudocode of GR IV 1.20 `rtos.bin`, SHA-256 `cf51224e…61a9`):
+
+| Function | Role | Record |
+|---|---|---|
+| 0x5393a730 | exposure data to table indices | `ev_8fbb72357023d25aed44595197c61f5d2ccc194e0dc0d34c74afe29b480633a6` |
+| 0x539421f0 | luma noise-reduction record lookup | `ev_453b79ba2ac7bd1308fec7c9ed1bc14c98d9a13add461138ed2bff4be337c960` |
+| 0x53948fd8, 0x53948cb0 | filter-unit record lookups | `ev_c2648cad8b3b201a74d055cec9f6dc98fbc79b23e4a71d0b16d477016616c3d3`, `ev_6e3a50e22d40750675b47f5e1f4031ce308d4794b3bc21ab9e97d4dbcee56341` |
+| 0x53942190 (selected by its inner address 0x5393d284) | multi-axis register writer | `ev_2786e5a9ca1615590b94800b0475bc0bceba025964f952da0214f5d31e4de11f` |
+| 0x533de144 | `ImageControlModel::IsValid` | `ev_77ca570e6c5419e9dbd00e14d10742597cd29ed8ce646921f687f3a8d672050d` |
+| 0x536596d4, 0x5394ed38 | live-view Shading tables | `ev_e243689d88ccba3590356f5233fc5215823d1c6a97df00f6ee15c1f82f9e3416`, `ev_9384ffe31a4ef2a83bab2d4915a27850b6d3dbff7f2ac08534ba192cacfaec68` |
+| 0x539655d4, 0x5374f464 | lens vignetting gain map and its still caller | `ev_8a8f31402e95c52ca6997186d2a57d97532ce32145d3643df0b266841fe3c11e`, `ev_7258c14e097fe69690cfac59664adcf41a362dd1691024b21309330564eb36eb` |
+| 0x53939128 | settings to tuning values (forced values per base) | `ev_16f4358d478be94b9d0c90962b65f215f233b5d2ea075b473a85a6ad542c29a8` |
+
+The GR III part of these notes was not re-derived.
