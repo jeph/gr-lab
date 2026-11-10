@@ -23,13 +23,15 @@ render() {
 }
 
 # iOS: one 1024 px image per appearance, the square in the middle of the
-# page at one pixel per unit. App Store Connect rejects an icon that has an
-# alpha channel, so drop the one resvg always writes.
-for appearance in default:AppIcon dark:AppIcon-Dark tinted:AppIcon-Tinted; do
+# page at one pixel per unit. The dark appearance gets the default picture,
+# so the icon looks the same in both. App Store Connect rejects an icon that
+# has an alpha channel, so drop the one resvg always writes; leaving out the
+# time chunks keeps an unchanged icon byte for byte the same.
+for appearance in default:AppIcon default:AppIcon-Dark tinted:AppIcon-Tinted; do
   output="$ios/${appearance#*:}.png"
   render "ios-${appearance%%:*}" 1536 "$output"
   magick "$output" -gravity center -crop 1024x1024+0+0 +repage \
-    -alpha off "PNG24:$output"
+    -alpha off -define png:exclude-chunks=date,time "PNG24:$output"
 done
 
 # Android: the adaptive icon's layers, the whole page, which is 108 dp at

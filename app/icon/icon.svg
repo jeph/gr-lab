@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  GR Lab's app icon: a Ricoh GR seen from the front.
+  GR Lab's app icon: a Ricoh GR seen from the front. The camera is black on
+  a light ground on both platforms and in light and dark appearance alike,
+  because the cameras are black.
 
   tool/render_app_icon.sh renders each "variant" group below, on its own,
   into the PNGs the iOS asset catalog and the Android adaptive icon use. The
@@ -17,10 +19,6 @@
     <linearGradient id="paper" x1="0" y1="-512" x2="0" y2="512" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#FDFCFA"/>
       <stop offset="1" stop-color="#E8E6E0"/>
-    </linearGradient>
-    <linearGradient id="ink" x1="0" y1="-512" x2="0" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#202024"/>
-      <stop offset="1" stop-color="#0A0A0B"/>
     </linearGradient>
     <linearGradient id="tinted-ground" x1="0" y1="-512" x2="0" y2="512" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#2E2E30"/>
@@ -58,7 +56,8 @@
     <!-- The lens with its cover open: a blue ring cap, the engraved face,
          the cover's window and the glass behind it. -->
     <g id="lens" transform="translate(86,14)">
-      <circle r="157" fill="#101013"/>
+      <!-- A unit wider than the body's cutout, so no ground shows between. -->
+      <circle r="159" fill="#101013"/>
       <circle r="151" fill="none" stroke="#6EA8FF" stroke-width="10"/>
       <circle r="126" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="3"/>
       <circle r="100" fill="none" stroke="#fff" stroke-opacity=".16" stroke-width="3"/>
@@ -90,7 +89,7 @@
        drawable/ic_launcher_background.xml behind the foreground and its own
        colours behind and into the monochrome layer. -->
   <g id="android-foreground" class="variant">
-    <use href="#camera" fill="#F3F1EC" transform="translate(0,-1) scale(1.14)"/>
+    <use href="#camera" fill="#121214" transform="translate(0,-1) scale(1.14)"/>
   </g>
 
   <g id="android-monochrome" class="variant">
@@ -101,11 +100,6 @@
   <g id="ios-tinted" class="variant">
     <rect x="-512" y="-512" width="1024" height="1024" fill="url(#tinted-ground)"/>
     <use href="#camera-one-colour" fill="#F2F2F2" transform="translate(0,-1) scale(1.26)"/>
-  </g>
-
-  <g id="ios-dark" class="variant">
-    <rect x="-512" y="-512" width="1024" height="1024" fill="url(#ink)"/>
-    <use href="#camera" fill="#F3F1EC" transform="translate(0,-1) scale(1.26)"/>
   </g>
 
   <g id="ios-default" class="variant">
