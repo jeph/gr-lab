@@ -585,16 +585,20 @@ final class GrSession {
     _set(GrSessionPhase.bluetooth, 'wifi.stopped');
   }
 
-  /// Whether the camera's Wi-Fi is in use: the phone holds a join, a start
-  /// or recovery is running, or the session is past
-  /// [GrSessionPhase.bluetooth] (seen through a [wake] that set
-  /// [GrSessionPhase.waking]).
-  bool get _wifiInUse {
+  /// Whether the camera's Wi-Fi is in use: a start is running, or the
+  /// Wi-Fi is under way ([_wifiUnderWay]).
+  bool get _wifiInUse => _wifiStart != null || _wifiUnderWay;
+
+  /// Whether the phone holds a join, a recovery is running, or the session
+  /// is past [GrSessionPhase.bluetooth] (seen through a [wake] that set
+  /// [GrSessionPhase.waking]). Unlike [_wifiInUse], false while a start
+  /// has not got that far: it still waits for the Bluetooth link, or wakes
+  /// the camera over it.
+  bool get _wifiUnderWay {
     final phase = _phase == GrSessionPhase.waking
         ? _wakeReturnTo ?? _phase
         : _phase;
     return _wifiJoined ||
-        _wifiStart != null ||
         _wifiRecovery != null ||
         phase.index > GrSessionPhase.bluetooth.index;
   }
@@ -1334,9 +1338,10 @@ final class GrSession {
   Future<bool> _reconnectBle() async {
     final lostAt = DateTime.now();
     final goneAt = lostAt.add(options.bleLostAfter);
-    // With its Wi-Fi in use the camera is still reached, and a Wi-Fi that
-    // goes too has its own wait for this link ([_recoverWifi]).
-    DateTime? deadline() => _wifiInUse ? null : goneAt;
+    // With its Wi-Fi under way the camera is still reached, and a Wi-Fi
+    // that goes too has its own wait for this link ([_recoverWifi]). A
+    // start that only waits for this link reaches nothing.
+    DateTime? deadline() => _wifiUnderWay ? null : goneAt;
     var attempts = 0;
     while (attempts < options.maxBleReconnectAttempts) {
       await _until(

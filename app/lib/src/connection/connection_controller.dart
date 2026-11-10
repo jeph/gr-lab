@@ -786,7 +786,15 @@ final class ConnectionController extends ChangeNotifier {
           );
           return;
         }
-        if (_status == ConnectionStatus.bluetooth) {
+        // On Bluetooth alone nothing reaches the camera now, nor while a
+        // Wi-Fi start (or a rejoin still to come) waits for the link: both
+        // end with the session.
+        final awaitingLink =
+            _status == ConnectionStatus.connecting &&
+            _session?.phase == GrSessionPhase.bluetooth;
+        if (_status == ConnectionStatus.bluetooth || awaitingLink) {
+          _wifiRun++;
+          _cancelRedial();
           unawaited(_endSession());
           return _fail(
             generation,

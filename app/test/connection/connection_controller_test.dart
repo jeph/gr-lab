@@ -40,6 +40,39 @@ void main() {
       expect(await app.camera.wifi.currentSsid(), isNull);
     });
 
+    test('a camera gone while the Library waits for its Bluetooth link to '
+        'come back ends the session with a lost connection', () async {
+      final app = await createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+        // Only the time a camera counts as gone after ends the reconnect.
+        sessionOptions: const GrSessionOptions(
+          bleReconnectDelays: [Duration(milliseconds: 50)],
+          maxBleReconnectAttempts: 1000,
+          bleLostAfter: Duration(milliseconds: 500),
+        ),
+      );
+      addTearDown(app.dispose);
+      final connection = app.models.connection;
+      await connection.connect();
+
+      app.camera.powerOffFully();
+      await _until(() => connection.reconnecting);
+      unawaited(connection.openCamera(CameraTab.library));
+      await _until(
+        () => connection.status == ConnectionStatus.failed,
+        timeout: const Duration(seconds: 5),
+      );
+      expect(connection.tab, isNull);
+      expect(connection.failure?.kind, ConnectFailureKind.unreachable);
+      expect(connection.failure?.loss, ConnectLoss.bluetooth);
+      // The start that was waiting does not bring the failure back as a
+      // Wi-Fi one once it ends.
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      expect(connection.status, ConnectionStatus.failed);
+      expect(connection.failure?.kind, ConnectFailureKind.unreachable);
+    });
+
     test('opening the Library joins Wi-Fi over the existing link; closing '
         'the pages keeps it, and disconnectWifi leaves it with Bluetooth '
         'kept', () async {

@@ -1606,6 +1606,39 @@ void main() {
       );
       await s.close();
     }, timeout: const Timeout(Duration(seconds: 10)));
+
+    test('of a camera that does not come back is given up after '
+        'bleLostAfter all the same while a Wi-Fi start waits for the link, '
+        'and the start fails', () async {
+      final camera = BondedCamera();
+      final s = GrSession(
+        transport: camera,
+        wifi: FailingWifi(),
+        // Only the time ends the reconnect.
+        options: const GrSessionOptions(
+          bleConnectTimeout: Duration(milliseconds: 200),
+          bleReconnectDelays: [Duration.zero],
+          maxBleReconnectAttempts: 1000,
+          bleLostAfter: Duration(milliseconds: 300),
+        ),
+      );
+      await s.connectBluetooth(deviceId: 'cam');
+      final reconnecting = next(s, 'ble.reconnect');
+      final gaveUp = next(s, 'ble.gaveUp');
+      camera
+        ..outOfRange = true
+        ..dropAll();
+      await reconnecting;
+      final started = expectLater(
+        s.startWifi(),
+        throwsA(isA<GrSessionException>()),
+      );
+
+      await gaveUp;
+      await started;
+      expect(s.phase, GrSessionPhase.bluetooth);
+      await s.close();
+    }, timeout: const Timeout(Duration(seconds: 10)));
   });
 
   group('close is final', () {
