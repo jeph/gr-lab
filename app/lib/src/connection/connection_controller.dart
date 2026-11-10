@@ -240,6 +240,16 @@ final class ConnectionController extends ChangeNotifier {
           _status == ConnectionStatus.connected) &&
       (_session?.bleLinked ?? false);
 
+  /// Bluetooth is being linked: for a new connection, or by the session
+  /// after the camera dropped the link (as it does when it is turned off)
+  /// and until its reconnect gives up.
+  bool get bleLinking => switch (_status) {
+    ConnectionStatus.connecting => _step == ConnectStep.bluetooth,
+    ConnectionStatus.bluetooth || ConnectionStatus.connected =>
+      !_bleGaveUp && !(_session?.bleLinked ?? false),
+    ConnectionStatus.offline || ConnectionStatus.failed => false,
+  };
+
   /// Why the last attempt failed. Set with [ConnectionStatus.failed] for
   /// Bluetooth, and next to [ConnectionStatus.bluetooth] when only the
   /// Wi-Fi failed.
@@ -503,10 +513,9 @@ final class ConnectionController extends ChangeNotifier {
 
   /// Closes the camera's pages and leaves the camera's Wi-Fi, or stops
   /// joining it or getting it back, keeping Bluetooth (Disconnect Wi-Fi in
-  /// the camera sheet, and Cancel on the Cameras screen); the app returns
-  /// to the Cameras screen. A camera the app turned on (for the Library or
-  /// Shoot) is turned back off. A Wi-Fi failure shown in the pages is
-  /// cleared.
+  /// the camera sheet); the app returns to the Cameras screen. A camera
+  /// the app turned on (for the Library or Shoot) is turned back off. A
+  /// Wi-Fi failure shown in the pages is cleared.
   Future<void> disconnectWifi() {
     final hadTab = _tab != null;
     _tab = null;

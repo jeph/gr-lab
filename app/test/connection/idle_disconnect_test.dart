@@ -127,7 +127,7 @@ void main() {
     );
     await pumpUntilFound(
       tester,
-      find.byKey(const Key('camera-card-link-wifi')),
+      find.byKey(const Key('camera-card-wifi-connected')),
     );
     await tester.pump(const Duration(minutes: 4));
     expect(app.models.connection.status, ConnectionStatus.connected);

@@ -255,13 +255,23 @@ Future<void> pumpUntilFound(
 );
 
 /// Taps [finder] once it can receive the tap: route and sheet transitions
-/// leave a freshly built widget off-screen for a few frames, so this
-/// scrolls it into view and waits until a hit test at its centre reaches
-/// it.
+/// leave a freshly built widget off-screen for a few frames, and what
+/// holds it may still be growing to fit it, so this scrolls it into view
+/// on every round until a hit test at its centre reaches it.
 Future<void> tapWhenReady(WidgetTester tester, Finder finder) async {
   await pumpUntilFound(tester, finder);
-  await tester.ensureVisible(finder);
-  await pumpUntilFound(tester, finder.hitTestable());
+  final reachable = finder.hitTestable();
+  final watch = Stopwatch()..start();
+  while (true) {
+    // A route on its way out may still hold another one.
+    if (finder.evaluate().length == 1) await tester.ensureVisible(finder);
+    await tester.pump();
+    if (reachable.evaluate().isNotEmpty) break;
+    if (watch.elapsed > const Duration(seconds: 30)) {
+      fail('Timed out waiting for $reachable');
+    }
+    await pumpRounds(tester, 1);
+  }
   await tester.tap(finder);
   await tester.pump();
 }

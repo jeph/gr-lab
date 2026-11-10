@@ -3,7 +3,8 @@ import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart';
 
-/// Bluetooth, then Wi-Fi (mock `b-home-connecting`), on the Cameras card.
+/// Bluetooth, then Wi-Fi (mock `b-home-connecting`), where the Library and
+/// live view wait for the camera's Wi-Fi.
 class ConnectSteps extends StatelessWidget {
   const new({required this.connection, super.key});
 
