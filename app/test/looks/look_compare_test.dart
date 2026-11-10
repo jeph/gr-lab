@@ -67,7 +67,7 @@ void main() {
   }) async {
     await tester.pumpWidget(
       MaterialApp(
-        theme: grTheme(Brightness.dark),
+        theme: grTheme(GrColors.dark),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Center(
@@ -256,7 +256,7 @@ void main() {
     for (final mode in LookCompareMode.values) {
       await tester.pumpWidget(
         MaterialApp(
-          theme: grTheme(Brightness.dark),
+          theme: grTheme(GrColors.dark),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Center(
@@ -363,7 +363,7 @@ void main() {
     final tapped = <LookCompareMode>[];
     await tester.pumpWidget(
       MaterialApp(
-        theme: grTheme(Brightness.light),
+        theme: grTheme(GrColors.light),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Center(
@@ -398,7 +398,7 @@ void main() {
     ];
     await tester.pumpWidget(
       MaterialApp(
-        theme: grTheme(Brightness.light),
+        theme: grTheme(GrColors.light),
         home: Center(
           child: PreviewPhotoSwitch(
             photos: photos,

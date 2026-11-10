@@ -18,7 +18,6 @@ Future<TestApp> _start(
   WidgetTester tester, {
   FakeCameraConfig config = _bonded,
   GrSessionOptions sessionOptions = const GrSessionOptions(),
-  Brightness brightness = Brightness.light,
 }) async {
   tester.view
     ..physicalSize = const Size(1170, 2532)
@@ -38,7 +37,6 @@ Future<TestApp> _start(
         child: Align(alignment: Alignment.topLeft, child: CameraPill()),
       ),
     ),
-    brightness: brightness,
   );
   return app;
 }

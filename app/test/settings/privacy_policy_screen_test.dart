@@ -17,8 +17,7 @@ void main() {
     await app.pumpWithin(tester, const SettingsScreen());
 
     final row = find.byKey(const Key('setting-privacy-policy'));
-    await tester.ensureVisible(row);
-    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(row, 200);
     expect(find.text('Privacy policy'), findsOneWidget);
     await tester.tap(row);
     await pumpUntilFound(tester, find.text('GR Lab privacy policy'));

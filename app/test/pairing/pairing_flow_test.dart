@@ -10,6 +10,7 @@ import 'package:gr_protocol/gr_protocol.dart'
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/library/library_screen.dart';
 import 'package:grlab/src/pairing/pairing_flow.dart';
+import 'package:grlab/src/theme/tokens.dart';
 
 import '../support/test_app.dart';
 
@@ -171,7 +172,7 @@ Future<void> _pushFlow(WidgetTester tester, TestApp app) async {
         ),
       ),
     ),
-    brightness: Brightness.dark,
+    colors: GrColors.dark,
   );
   await tapWhenReady(tester, find.text('open'));
   await pumpUntilFound(tester, find.byKey(_find));

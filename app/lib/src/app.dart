@@ -21,19 +21,23 @@ class GrLabApp extends StatelessWidget {
     models: models,
     child: ListenableBuilder(
       listenable: models.settings,
-      builder: (context, _) => MaterialApp(
-        onGenerateTitle: (context) => context.l10n.appTitle,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        debugShowCheckedModeBanner: false,
-        theme: grTheme(Brightness.light),
-        darkTheme: grTheme(Brightness.dark),
-        themeMode: models.settings.themeMode,
-        navigatorObservers: [models.routes, models.idle.observer],
-        builder: (context, child) =>
-            IdleInput(idle: models.idle, child: child!),
-        home: const RootScreen(),
-      ),
+      builder: (context, _) {
+        final chosen = models.settings.theme.colors;
+        return MaterialApp(
+          onGenerateTitle: (context) => context.l10n.appTitle,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          debugShowCheckedModeBanner: false,
+          // Without a dark theme, the app keeps the chosen one when the
+          // phone is in dark mode.
+          theme: grTheme(chosen ?? GrColors.light),
+          darkTheme: chosen == null ? grTheme(GrColors.dark) : null,
+          navigatorObservers: [models.routes, models.idle.observer],
+          builder: (context, child) =>
+              IdleInput(idle: models.idle, child: child!),
+          home: const RootScreen(),
+        );
+      },
     ),
   );
 }

@@ -10,6 +10,7 @@ import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/library/library_screen.dart';
 import 'package:grlab/src/shoot/live_view_controller.dart';
 import 'package:grlab/src/shoot/shoot_screen.dart';
+import 'package:grlab/src/theme/tokens.dart';
 
 import '../support/test_app.dart';
 
@@ -241,6 +242,29 @@ void main() {
       final picture = find.byKey(const Key('live-picture'));
       await tester.tapAt(tester.getTopLeft(picture) + const Offset(20, 20));
       await pumpUntilFound(tester, find.byKey(const Key('live-focus-focused')));
+      await app.dispose();
+    });
+
+    testWidgets('is in the Dark theme while the chosen theme is light, and '
+        'in the chosen theme while that is dark', (tester) async {
+      final app = await inLiveView(tester);
+      final settings = app.models.settings;
+      for (final (chosen, shown) in [
+        (AppTheme.system, GrColors.dark),
+        (AppTheme.paper, GrColors.dark),
+        (AppTheme.cyanotype, GrColors.cyanotype),
+        (AppTheme.darkroom, GrColors.darkroom),
+      ]) {
+        settings.theme = chosen;
+        // The app's change of theme is animated.
+        await tester.pump();
+        await tester.pump(kThemeAnimationDuration);
+        expect(
+          GrColors.of(tester.element(find.byKey(const Key('live-picture')))),
+          shown,
+          reason: chosen.name,
+        );
+      }
       await app.dispose();
     });
 

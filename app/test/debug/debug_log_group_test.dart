@@ -32,7 +32,7 @@ void main() {
   Future<void> pumpGroup(WidgetTester tester, DebugLog log) =>
       tester.pumpWidget(
         MaterialApp(
-          theme: grTheme(Brightness.light),
+          theme: grTheme(GrColors.light),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(

@@ -67,14 +67,14 @@ final class TestApp {
   Future<void> pumpWithin(
     WidgetTester tester,
     Widget home, {
-    Brightness brightness = Brightness.light,
+    GrColors colors = GrColors.light,
   }) async {
     _tester = tester;
     await tester.pumpWidget(
       AppScope(
         models: models,
         child: MaterialApp(
-          theme: grTheme(brightness),
+          theme: grTheme(colors),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: home,

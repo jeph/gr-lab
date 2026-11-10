@@ -2565,23 +2565,23 @@
   "@settingsTheme": {
     "description": "Settings: heading of the theme choices."
   },
-  "settingsThemeName": "{mode, select, light{Light} dark{Dark} other{Auto}}",
+  "settingsThemeName": "{theme, select, light{Light} dark{Dark} darkroom{Darkroom} paper{Paper} cyanotype{Cyanotype} other{Auto}}",
   "@settingsThemeName": {
-    "description": "Settings: name of a theme choice. Auto follows the phone's setting.",
+    "description": "Settings: name of a theme choice. Auto follows the phone's setting. Darkroom (a photographic darkroom under its red safelight), Paper (warm photographic paper) and Cyanotype (the blue photographic print) are colour themes named after what they look like.",
     "placeholders": {
-      "mode": {
+      "theme": {
         "type": "String",
-        "description": "Which theme: light, dark or system (Auto). Not shown."
+        "description": "Which theme: light, dark, darkroom, paper, cyanotype or system (Auto). Not shown."
       }
     }
   },
-  "settingsThemeSemantics": "{mode, select, light{Light theme} dark{Dark theme} other{Auto theme}}",
+  "settingsThemeSemantics": "{theme, select, light{Light theme} dark{Dark theme} darkroom{Darkroom theme} paper{Paper theme} cyanotype{Cyanotype theme} other{Auto theme}}",
   "@settingsThemeSemantics": {
-    "description": "Accessibility label of a theme choice. Auto follows the phone's setting.",
+    "description": "Accessibility label of a theme choice. Auto follows the phone's setting; Darkroom, Paper and Cyanotype are the colour themes named in settingsThemeName.",
     "placeholders": {
-      "mode": {
+      "theme": {
         "type": "String",
-        "description": "Which theme: light, dark or system (Auto). Not shown."
+        "description": "Which theme: light, dark, darkroom, paper, cyanotype or system (Auto). Not shown."
       }
     }
   },

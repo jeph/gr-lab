@@ -6,40 +6,38 @@ import 'package:grlab/src/theme/tokens.dart';
 
 void main() {
   for (final scale in [1.0, 1.3, 2.0, 3.0]) {
-    for (final brightness in Brightness.values) {
-      testWidgets(
-        'camera screen drawings fit at text scale $scale (${brightness.name})',
-        (tester) async {
-          await tester.pumpWidget(
-            MaterialApp(
-              theme: grTheme(brightness),
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: MediaQuery(
-                data: MediaQueryData(textScaler: TextScaler.linear(scale)),
-                child: const Scaffold(
-                  body: Column(
-                    children: [
-                      CameraScreenHero.pairingMenu(),
-                      CameraScreenHero.authenticationCode(),
-                    ],
-                  ),
+    for (final colors in [GrColors.light, GrColors.dark]) {
+      testWidgets('camera screen drawings fit at text scale $scale '
+          '(${colors.brightness.name})', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: grTheme(colors),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: MediaQuery(
+              data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+              child: const Scaffold(
+                body: Column(
+                  children: [
+                    CameraScreenHero.pairingMenu(),
+                    CameraScreenHero.authenticationCode(),
+                  ],
                 ),
               ),
             ),
-          );
-          expect(tester.takeException(), isNull);
-          expect(find.text('Execute Pairing'), findsOneWidget);
-          expect(find.text('OK'), findsOneWidget);
-        },
-      );
+          ),
+        );
+        expect(tester.takeException(), isNull);
+        expect(find.text('Execute Pairing'), findsOneWidget);
+        expect(find.text('OK'), findsOneWidget);
+      });
     }
   }
 
   testWidgets('headline draws <b> parts of the body bold', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        theme: grTheme(Brightness.dark),
+        theme: grTheme(GrColors.dark),
         home: const Scaffold(
           body: PairingHeadline(
             title: 'Title',

@@ -1,8 +1,9 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grlab/src/data/settings.dart';
+import 'package:grlab/src/theme/tokens.dart';
 
 void main() {
   late Directory temp;
@@ -24,7 +25,7 @@ void main() {
     // A folder where settings.json goes: the write cannot replace it.
     final blocker = await Directory('${temp.path}/settings.json').create();
     settings
-      ..themeMode = ThemeMode.dark
+      ..theme = AppTheme.dark
       ..shootMode = ShootMode.liveView;
     await expectLater(settings.flush(), throwsA(isA<FileSystemException>()));
     expect(printed, contains(startsWith('Saving settings.json failed')));
@@ -34,7 +35,7 @@ void main() {
     await settings.flush();
 
     final reloaded = await SettingsController.load(temp);
-    expect(reloaded.themeMode, ThemeMode.dark);
+    expect(reloaded.theme, AppTheme.dark);
     expect(reloaded.shootMode, ShootMode.liveView);
     expect(reloaded.autoDisconnect, AutoDisconnect.never);
     // Failed writes leave no temporary files behind.

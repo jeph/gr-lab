@@ -32,8 +32,8 @@ class SettingsScreen extends StatelessWidget {
           children: [
             SectionLabel(l10n.settingsAppearance),
             _ThemeGroup(
-              mode: settings.themeMode,
-              onChanged: (m) => settings.themeMode = m,
+              theme: settings.theme,
+              onChanged: (theme) => settings.theme = theme,
             ),
             SectionLabel(l10n.settingsCamera),
             GroupBox(
@@ -129,10 +129,16 @@ Future<void> _chooseAutoDisconnect(BuildContext context) {
 }
 
 class _ThemeGroup extends StatelessWidget {
-  const new({required this.mode, required this.onChanged});
+  const new({required this.theme, required this.onChanged});
 
-  final ThemeMode mode;
-  final ValueChanged<ThemeMode> onChanged;
+  final AppTheme theme;
+  final ValueChanged<AppTheme> onChanged;
+
+  /// Auto with the two themes it follows, then the tinted themes.
+  static const List<List<AppTheme>> _rows = [
+    [AppTheme.system, AppTheme.light, AppTheme.dark],
+    [AppTheme.darkroom, AppTheme.paper, AppTheme.cyanotype],
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -148,31 +154,27 @@ class _ThemeGroup extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: 12,
         children: [
           Text(
             l10n.settingsTheme,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              for (final m in const [
-                ThemeMode.system,
-                ThemeMode.light,
-                ThemeMode.dark,
-              ]) ...[
-                if (m != ThemeMode.system) const SizedBox(width: 8),
-                Expanded(
-                  child: _ThemeTile(
-                    key: ValueKey('theme:${m.name}'),
-                    mode: m,
-                    selected: mode == m,
-                    onTap: () => onChanged(m),
+          for (final row in _rows)
+            Row(
+              spacing: 8,
+              children: [
+                for (final choice in row)
+                  Expanded(
+                    child: _ThemeTile(
+                      key: ValueKey('theme:${choice.name}'),
+                      theme: choice,
+                      selected: theme == choice,
+                      onTap: () => onChanged(choice),
+                    ),
                   ),
-                ),
               ],
-            ],
-          ),
+            ),
         ],
       ),
     );
@@ -183,13 +185,13 @@ class _ThemeGroup extends StatelessWidget {
 /// dark (mock `.tpick`).
 class _ThemeTile extends StatelessWidget {
   const new({
-    required this.mode,
+    required this.theme,
     required this.selected,
     required this.onTap,
     super.key,
   });
 
-  final ThemeMode mode;
+  final AppTheme theme;
   final bool selected;
   final VoidCallback onTap;
 
@@ -197,20 +199,19 @@ class _ThemeTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
-    final preview = switch (mode) {
-      ThemeMode.light => const _MiniLibrary(GrColors.light),
-      ThemeMode.dark => const _MiniLibrary(GrColors.dark),
-      ThemeMode.system => const Row(
-        children: [
-          Expanded(child: _MiniLibrary(GrColors.light, clipRight: true)),
-          Expanded(child: _MiniLibrary(GrColors.dark, clipLeft: true)),
-        ],
-      ),
-    };
+    final colors = theme.colors;
+    final preview = colors == null
+        ? const Row(
+            children: [
+              Expanded(child: _MiniLibrary(GrColors.light, clipRight: true)),
+              Expanded(child: _MiniLibrary(GrColors.dark, clipLeft: true)),
+            ],
+          )
+        : _MiniLibrary(colors);
     return Semantics(
       button: true,
       selected: selected,
-      label: l10n.settingsThemeSemantics(mode.name),
+      label: l10n.settingsThemeSemantics(theme.name),
       child: GestureDetector(
         onTap: onTap,
         child: Column(
@@ -232,7 +233,7 @@ class _ThemeTile extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              l10n.settingsThemeName(mode.name),
+              l10n.settingsThemeName(theme.name),
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,

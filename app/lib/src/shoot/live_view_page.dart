@@ -17,7 +17,8 @@ import 'package:grlab/src/shoot/shoot_screen.dart';
 import 'package:grlab/src/shoot/shoot_widgets.dart';
 import 'package:grlab/src/theme/tokens.dart';
 
-/// Live view (mock `b-shoot`): a viewfinder, always dark. The picture is
+/// Live view (mock `b-shoot`): a viewfinder, always dark, in the chosen
+/// theme when that is dark and in the Dark theme otherwise. The picture is
 /// shown whole and as large as the window allows. The controls take the
 /// room it leaves, above and below it or beside it; where that room is too
 /// little they lie over the picture's edges, on a shade that keeps them
@@ -29,19 +30,24 @@ class LiveViewPage extends StatelessWidget {
   final ShootModel model;
 
   @override
-  Widget build(BuildContext context) => Theme(
-    data: grTheme(Brightness.dark),
-    child: Builder(
-      builder: (context) => Scaffold(
-        key: const Key('shoot-live'),
-        backgroundColor: Colors.black,
-        body: ListenableBuilder(
-          listenable: model.liveView,
-          builder: (context, _) => _LiveLayout(model: model),
+  Widget build(BuildContext context) {
+    final chosen = GrColors.of(context);
+    return Theme(
+      data: grTheme(
+        chosen.brightness == Brightness.dark ? chosen : GrColors.dark,
+      ),
+      child: Builder(
+        builder: (context) => Scaffold(
+          key: const Key('shoot-live'),
+          backgroundColor: Colors.black,
+          body: ListenableBuilder(
+            listenable: model.liveView,
+            builder: (context, _) => _LiveLayout(model: model),
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _LiveLayout extends StatefulWidget {

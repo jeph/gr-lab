@@ -1,15 +1,20 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-/// A near-black or white base, three raised surfaces, hairlines, three text
-/// levels and one accent. The dark colours come from the mock-ups
-/// (`design/mockups/index.html` in the local research workspace, `../gr`).
-/// The light theme is a white page: its cards are white too, set off by
-/// their hairlines, its greys lean as slightly blue as the dark surfaces do,
-/// and its accent and status colours are deep enough to read on white.
+/// A base, three raised surfaces, hairlines, three text levels and one
+/// accent, for a dark or a light interface ([brightness]). The dark colours
+/// come from the mock-ups (`design/mockups/index.html` in the local research
+/// workspace, `../gr`). The light theme is a white page: its cards are white
+/// too, set off by their hairlines, its greys lean as slightly blue as the
+/// dark surfaces do, and its accent and status colours are deep enough to
+/// read on white. [darkroom], [paper] and [cyanotype] tint every level
+/// (`design/mockups/themes.html`); their text, accent and status colours
+/// contrast with their surfaces about as much as those of [dark] and
+/// [light] do.
 @immutable
 final class GrColors extends ThemeExtension<GrColors> {
   const new({
+    required this.brightness,
     required this.bg,
     required this.s1,
     required this.s2,
@@ -34,6 +39,7 @@ final class GrColors extends ThemeExtension<GrColors> {
   });
 
   static const dark = GrColors(
+    brightness: Brightness.dark,
     bg: Color(0xFF0A0A0B),
     s1: Color(0xFF121214),
     s2: Color(0xFF1A1A1D),
@@ -58,6 +64,7 @@ final class GrColors extends ThemeExtension<GrColors> {
   );
 
   static const light = GrColors(
+    brightness: Brightness.light,
     bg: Color(0xFFFFFFFF),
     s1: Color(0xFFFFFFFF),
     s2: Color(0xFFF3F3F5),
@@ -81,10 +88,93 @@ final class GrColors extends ThemeExtension<GrColors> {
     dim: Color(0x4D000000),
   );
 
+  /// A darkroom under its safelight: warm black with a red accent. Danger
+  /// is a rose red, so it differs from the accent.
+  static const darkroom = GrColors(
+    brightness: Brightness.dark,
+    bg: Color(0xFF0E0908),
+    s1: Color(0xFF170F0D),
+    s2: Color(0xFF201613),
+    s3: Color(0xFF2B1E1A),
+    s4: Color(0xFF372722),
+    line: Color(0x12FFFFFF),
+    line2: Color(0x1FFFFFFF),
+    t1: Color(0xFFF5E8E0),
+    t2: Color(0xFFB39A8F),
+    t3: Color(0xFF786259),
+    accent: Color(0xFFFF6038),
+    accentInk: Color(0xFF2C0700),
+    ok: Color(0xFF6FD08F),
+    danger: Color(0xFFFF4F86),
+    invBg: Color(0xFFF5E8E0),
+    invFg: Color(0xFF140C0A),
+    invFg2: Color(0xFF5E4C44),
+    inv2: Color(0xFFE3D3C9),
+    float: Color(0xEB2B1E1A),
+    shadow: Color(0x73000000),
+    dim: Color(0x8C000000),
+  );
+
+  /// Warm fibre paper with a burnt sienna accent. Danger is a crimson, so
+  /// it differs from the accent.
+  static const paper = GrColors(
+    brightness: Brightness.light,
+    bg: Color(0xFFF7F2E8),
+    s1: Color(0xFFFCF9F2),
+    s2: Color(0xFFEFE8DA),
+    s3: Color(0xFFE6DDCC),
+    s4: Color(0xFFD3C8B3),
+    line: Color(0x14000000),
+    line2: Color(0x1F000000),
+    t1: Color(0xFF1E1912),
+    t2: Color(0xFF5F5646),
+    t3: Color(0xFF8C826F),
+    accent: Color(0xFFA8481A),
+    accentInk: Color(0xFFFFFFFF),
+    ok: Color(0xFF2A7A45),
+    danger: Color(0xFFC2263A),
+    invBg: Color(0xFF1E1912),
+    invFg: Color(0xFFFCF9F2),
+    invFg2: Color(0xFFA39A88),
+    inv2: Color(0xFF352D22),
+    float: Color(0xEBFCF9F2),
+    shadow: Color(0x1F000000),
+    dim: Color(0x4D000000),
+  );
+
+  /// A cyanotype print: Prussian blue surfaces with a pale cyan accent.
+  static const cyanotype = GrColors(
+    brightness: Brightness.dark,
+    bg: Color(0xFF071626),
+    s1: Color(0xFF0C1E33),
+    s2: Color(0xFF12273F),
+    s3: Color(0xFF1A324E),
+    s4: Color(0xFF233E5E),
+    line: Color(0x12FFFFFF),
+    line2: Color(0x1FFFFFFF),
+    t1: Color(0xFFEAF1F7),
+    t2: Color(0xFF9BB1C8),
+    t3: Color(0xFF607A96),
+    accent: Color(0xFF7FD6F7),
+    accentInk: Color(0xFF032436),
+    ok: Color(0xFF5FD9A0),
+    danger: Color(0xFFFF6B5E),
+    invBg: Color(0xFFEAF1F7),
+    invFg: Color(0xFF071626),
+    invFg2: Color(0xFF4A6079),
+    inv2: Color(0xFFD5E0EA),
+    float: Color(0xEB1A324E),
+    shadow: Color(0x73000000),
+    dim: Color(0x8C000000),
+  );
+
   /// Badges drawn over photos keep the dark-theme colours on a 72 % black
-  /// scrim in both themes, so they stay legible on bright images.
+  /// scrim in every theme, so they stay legible on bright images.
   static const photoBadgeScrim = Color(0xB8000000);
   static const photoBadgeOk = Color(0xFF5BD08B);
+
+  /// Whether the colours make a dark or a light interface.
+  final Brightness brightness;
 
   final Color bg;
   final Color s1;
@@ -147,12 +237,28 @@ abstract final class GrFonts {
   );
 }
 
-ThemeData grTheme(Brightness brightness) {
-  final c = brightness == Brightness.dark ? GrColors.dark : GrColors.light;
+/// The themes Settings offers. [system] follows the phone between [light]
+/// and [dark]; every other theme keeps its colours whatever the phone's
+/// setting.
+enum AppTheme {
+  system(null),
+  light(GrColors.light),
+  dark(GrColors.dark),
+  darkroom(GrColors.darkroom),
+  paper(GrColors.paper),
+  cyanotype(GrColors.cyanotype);
+
+  new(this.colors);
+
+  /// Null for [system].
+  final GrColors? colors;
+}
+
+ThemeData grTheme(GrColors c) {
   final scheme =
       ColorScheme.fromSeed(
         seedColor: c.accent,
-        brightness: brightness,
+        brightness: c.brightness,
       ).copyWith(
         primary: c.accent,
         onPrimary: c.accentInk,
@@ -170,7 +276,7 @@ ThemeData grTheme(Brightness brightness) {
       );
   final base = ThemeData(
     useMaterial3: true,
-    brightness: brightness,
+    brightness: c.brightness,
     colorScheme: scheme,
     fontFamily: GrFonts.ui,
     scaffoldBackgroundColor: c.bg,

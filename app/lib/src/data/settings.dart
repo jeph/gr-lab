@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:grlab/src/data/json_file.dart';
+import 'package:grlab/src/theme/tokens.dart';
 
 /// How long the camera's Wi-Fi stays connected without use before the app
 /// leaves it.
@@ -39,8 +40,7 @@ final class SettingsController extends ChangeNotifier {
     );
     final json = await c._file.read();
     if (json != null) {
-      c._themeMode =
-          ThemeMode.values.asNameMap()[json['themeMode']] ?? c._themeMode;
+      c._theme = AppTheme.values.asNameMap()[json[_themeKey]] ?? c._theme;
       c._autoDisconnect =
           AutoDisconnect.values.asNameMap()[json['autoDisconnect']] ??
           c._autoDisconnect;
@@ -54,12 +54,16 @@ final class SettingsController extends ChangeNotifier {
 
   final JsonFile _file;
 
-  ThemeMode _themeMode = ThemeMode.system;
+  /// Named from when the choices were Flutter's `ThemeMode`; its values are
+  /// the [AppTheme] names, so a choice saved then still loads.
+  static const _themeKey = 'themeMode';
+
+  AppTheme _theme = AppTheme.system;
   AutoDisconnect _autoDisconnect = AutoDisconnect.fiveMinutes;
   ShootMode _shootMode = ShootMode.remote;
   bool? _debugLogging;
 
-  ThemeMode get themeMode => _themeMode;
+  AppTheme get theme => _theme;
 
   /// Leave the camera's Wi-Fi after this long without use.
   AutoDisconnect get autoDisconnect => _autoDisconnect;
@@ -73,7 +77,7 @@ final class SettingsController extends ChangeNotifier {
   /// prod) applies.
   bool? get debugLogging => _debugLogging;
 
-  set themeMode(ThemeMode v) => _update(() => _themeMode = v);
+  set theme(AppTheme v) => _update(() => _theme = v);
   set autoDisconnect(AutoDisconnect v) => _update(() => _autoDisconnect = v);
   set shootMode(ShootMode v) => _update(() => _shootMode = v);
   set debugLogging(bool? v) => _update(() => _debugLogging = v);
@@ -84,7 +88,7 @@ final class SettingsController extends ChangeNotifier {
     change();
     notifyListeners();
     final snapshot = {
-      'themeMode': _themeMode.name,
+      _themeKey: _theme.name,
       'autoDisconnect': _autoDisconnect.name,
       'shootMode': _shootMode.name,
       'debugLogging': ?_debugLogging,

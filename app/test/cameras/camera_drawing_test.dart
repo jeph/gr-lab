@@ -5,19 +5,19 @@ import 'package:grlab/src/cameras/camera_drawing.dart';
 import 'package:grlab/src/theme/tokens.dart';
 
 /// What the drawing of [model] puts on a canvas [width] wide, in the
-/// theme of [brightness].
+/// theme of [colors].
 Future<List<Invocation>> _drawn(
   WidgetTester tester,
   GrModel? model, {
-  Brightness brightness = Brightness.dark,
+  GrColors colors = GrColors.dark,
   double width = 300,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
       // A new app for each theme: a change of theme within one is animated
       // and lands on blended colours.
-      key: ValueKey(brightness),
-      theme: grTheme(brightness),
+      key: ValueKey(colors),
+      theme: grTheme(colors),
       home: Center(
         child: CameraDrawing(body: CameraBody(model: model, firmware: null)),
       ),
@@ -93,20 +93,20 @@ void main() {
   });
 
   testWidgets('the Monochrome is black in both themes', (tester) async {
-    Future<Set<Color>> colors(GrModel model, Brightness brightness) async =>
-        _colors(await _drawn(tester, model, brightness: brightness));
+    Future<Set<Color>> colors(GrModel model, GrColors theme) async =>
+        _colors(await _drawn(tester, model, colors: theme));
 
     // A `Paint` keeps its colour in 32-bit floats, so a theme colour read
     // back from one is compared with a tolerance.
     final lightBody = isSameColorAs(GrColors.light.s2);
-    final dark = await colors(GrModel.gr4Monochrome, Brightness.dark);
-    final light = await colors(GrModel.gr4Monochrome, Brightness.light);
+    final dark = await colors(GrModel.gr4Monochrome, GrColors.dark);
+    final light = await colors(GrModel.gr4Monochrome, GrColors.light);
     expect(light, dark);
     expect(light, isNot(contains(lightBody)));
 
     // Every other body follows the theme.
-    final standard = await colors(GrModel.gr4, Brightness.light);
-    expect(standard, isNot(await colors(GrModel.gr4, Brightness.dark)));
+    final standard = await colors(GrModel.gr4, GrColors.light);
+    expect(standard, isNot(await colors(GrModel.gr4, GrColors.dark)));
     expect(standard, contains(lightBody));
   });
 
