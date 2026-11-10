@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:grlab/src/library/library_screen.dart';
 import 'package:grlab/src/library/viewer.dart';
+import 'package:grlab/src/widgets/group.dart';
 
 import '../support/test_app.dart';
 
@@ -245,6 +247,163 @@ void main() {
     );
     expect(looks.looks.single.id, saved.id);
     expect(tester.widget<OutlinedButton>(save).onPressed, isNotNull);
+
+    await app.dispose();
+  });
+
+  testWidgets('the Image Control row is a skeleton of its own height while '
+      'the camera is asked, and goes for a photo without one', (tester) async {
+    // A phone, widened until the row's title fits one line in the test
+    // font, whose letters are as wide as they are tall.
+    tester.view
+      ..physicalSize = const Size(1500, 2532)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    // Newest first: R0000003 (a summary of two lines), R0000002 (one
+    // line), R0000001 (no Image Control).
+    final app = await _openViewer(tester, [
+      FakePhoto('100RICOH', 'R0000001.JPG', _taken(1)),
+      FakePhoto(
+        '100RICOH',
+        'R0000002.JPG',
+        _taken(2),
+        imageControl: FakeLook.presets[4].data,
+      ),
+      FakePhoto(
+        '100RICOH',
+        'R0000003.JPG',
+        _taken(3),
+        imageControl: FakeLook.presets[0].data,
+      ),
+    ], 'sd1|100RICOH/R0000003');
+    final skeleton = _inViewer(
+      find.byKey(const Key('viewer-image-control-loading')),
+    );
+    final save = _inViewer(find.byKey(const Key('viewer-save-look')));
+    final details = _inViewer(find.byType(GroupBox));
+    Future<void> next(String name) async {
+      await tester.fling(
+        _inViewer(find.byType(PageView)),
+        const Offset(-300, 0),
+        1000,
+      );
+      await pumpUntilFound(tester, _showing(name));
+    }
+
+    expect(skeleton, findsOneWidget);
+    expect(save, findsNothing);
+    final height = tester.getSize(details).height;
+    await pumpUntilFound(tester, save);
+    expect(skeleton, findsNothing);
+    expect(find.textContaining('Grain'), findsOneWidget);
+    expect(tester.getSize(details).height, height);
+    // The route has finished sliding in.
+    await pumpUntilFound(tester, save.hitTestable());
+    await pumpRounds(tester, 30);
+
+    await next('R0000002.JPG');
+    expect(skeleton, findsOneWidget);
+    expect(tester.getSize(details).height, height);
+    await pumpUntilFound(tester, save);
+    expect(_inViewer(find.text('Standard')), findsOneWidget);
+    expect(tester.getSize(details).height, height);
+
+    await next('R0000001.JPG');
+    expect(skeleton, findsOneWidget);
+    await pumpUntil(
+      tester,
+      () => skeleton.evaluate().isEmpty,
+      reason: 'the skeleton gone',
+    );
+    expect(save, findsNothing);
+
+    await app.dispose();
+  });
+
+  testWidgets('a tap gives a photo the whole screen, where a pinch zooms it '
+      'in and back out; a tap or Back brings the bars and details back', (
+    tester,
+  ) async {
+    final modes = <Object?>[];
+    final messenger = tester.binding.defaultBinaryMessenger
+      ..setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'SystemChrome.setEnabledSystemUIMode') {
+          modes.add(call.arguments);
+        }
+        return null;
+      });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+    final app = await _openViewer(tester, [
+      for (var n = 1; n <= 2; n++)
+        FakePhoto('100RICOH', 'R000000$n.JPG', _taken(n)),
+    ], 'sd1|100RICOH/R0000002');
+    final pages = _inViewer(find.byType(PageView));
+    final bar = _inViewer(find.byType(AppBar));
+    final download = _inViewer(find.byKey(const ValueKey('viewer-download')));
+    double zoom() => tester
+        .widget<InteractiveViewer>(
+          _inViewer(find.byType(InteractiveViewer)).first,
+        )
+        .transformationController!
+        .value
+        .getMaxScaleOnAxis();
+    // Two fingers on a horizontal line, each moved by [step] ten times:
+    // the direction the pages swipe in.
+    Future<void> pinch(double step) async {
+      final centre = tester.getCenter(pages);
+      final spread = step > 0 ? 20.0 : 20 + 10 * step.abs();
+      final left = await tester.startGesture(
+        centre - Offset(spread, 0),
+        pointer: 1,
+      );
+      final right = await tester.startGesture(
+        centre + Offset(spread, 0),
+        pointer: 2,
+      );
+      for (var i = 0; i < 10; i++) {
+        await left.moveBy(Offset(-step, 0));
+        await right.moveBy(Offset(step, 0));
+        await tester.pump();
+      }
+      await left.up();
+      await right.up();
+      await pumpRounds(tester, 30);
+    }
+
+    // The route has finished sliding in.
+    await pumpUntilFound(tester, download.hitTestable());
+    await pumpRounds(tester, 30);
+    final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+    expect(tester.getSize(pages).height, lessThan(screen.height));
+
+    await tester.tap(pages);
+    await tester.pump();
+    expect(bar, findsNothing);
+    expect(download.hitTestable(), findsNothing);
+    expect(tester.getSize(pages), screen);
+    expect(modes, ['SystemUiMode.immersiveSticky']);
+
+    await pinch(10);
+    expect(zoom(), greaterThan(2));
+    expect(tester.widget<PageView>(pages).controller!.page, 0);
+    await pinch(-10);
+    expect(zoom(), 1);
+
+    await tester.tap(pages);
+    await tester.pump();
+    expect(bar, findsOneWidget);
+    expect(download.hitTestable(), findsOneWidget);
+    expect(modes.last, 'SystemUiMode.edgeToEdge');
+
+    await tester.tap(pages);
+    await tester.pump();
+    expect(bar, findsNothing);
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(_showing('R0000002.JPG'), findsOneWidget);
+    expect(modes.last, 'SystemUiMode.edgeToEdge');
 
     await app.dispose();
   });

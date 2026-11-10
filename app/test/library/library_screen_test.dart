@@ -435,7 +435,25 @@ void main() {
     expect(tester.getSize(raw), Size(box.height, box.width));
 
     // The preview is smaller than the screen, so the full JPEG follows. It
-    // carries its own Orientation tag, which the decoder applies.
+    // carries its own Orientation tag, which the decoder applies. Until it
+    // shows, a mark in the top corner of the photo (16×24 upright, fitted
+    // to its page) says so.
+    final sharpening = _inViewer('viewer-sharpening');
+    await pumpUntilFound(tester, sharpening);
+    final page = tester.getRect(
+      find.descendant(
+        of: find.byType(ShotViewer),
+        matching: find.byType(PageView),
+      ),
+    );
+    final photo = Alignment.center.inscribe(
+      applyBoxFit(BoxFit.contain, const Size(16, 24), page.size).destination,
+      page,
+    );
+    expect(photo.size, isNot(page.size), reason: 'bands beside the photo');
+    final mark = tester.getRect(sharpening);
+    expect(mark.right, closeTo(photo.right - 12, .01));
+    expect(mark.top, closeTo(photo.top + 12, .01));
     final full = _inViewer('image:full:sd1|100RICOH/R0000002.JPG');
     await pumpUntilFound(tester, full);
     final fullRaw = find.descendant(of: full, matching: find.byType(RawImage));
@@ -447,6 +465,11 @@ void main() {
     expect(_shownAs(tester, full), (0, false));
     final decoded = tester.widget<RawImage>(fullRaw).image!;
     expect((decoded.width, decoded.height), (16, 24));
+    await pumpUntil(
+      tester,
+      () => sharpening.evaluate().isEmpty,
+      reason: 'the mark gone once the full photo shows',
+    );
 
     await app.dispose();
   });

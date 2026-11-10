@@ -13,6 +13,17 @@ import 'package:grlab/src/theme/tokens.dart';
 /// Badge in a cell's top-right corner.
 enum CellMark { none, downloaded, queued, selected, unselected }
 
+/// Builds what a [CameraImage] shows around its [image]. [aspectRatio] is
+/// the picture's width over its height as shown, null until known.
+/// [sharpening] is true while the image is a stand-in for
+/// [CameraImage.sharper], which is on its way.
+typedef CameraImageBuilder = Widget Function(
+  BuildContext context,
+  Widget image, {
+  required double? aspectRatio,
+  required bool sharpening,
+});
+
 /// A camera image that loads through [CameraImages] while it is on screen
 /// and drops its pending requests when it goes away.
 ///
@@ -38,6 +49,7 @@ class CameraImage extends StatefulWidget {
     this.zoomHeadroom = 1,
     this.placeholder,
     this.showProgress = false,
+    this.builder,
   });
 
   final String serial;
@@ -55,6 +67,9 @@ class CameraImage extends StatefulWidget {
   /// Shows a spinner over [placeholder] while loading.
   final bool showProgress;
 
+  /// Wraps the image, e.g. to say that a sharper copy is coming.
+  final CameraImageBuilder? builder;
+
   @override
   State<CameraImage> createState() => _CameraImageState();
 }
@@ -65,6 +80,9 @@ final class _Loaded {
   final Uint8List bytes;
   final GrImageSize size;
   final JpegLayout? layout;
+
+  /// A frame of it was decoded and shown.
+  bool drawn = false;
 }
 
 class _CameraImageState extends State<CameraImage> {
@@ -182,6 +200,13 @@ class _CameraImageState extends State<CameraImage> {
         (_infoKnown || !_infoAvailable || shown.layout?.decoderOrients == true);
   }
 
+  /// The image shown is a stand-in for the sharper copy, which is waited
+  /// for, being read, or read and not drawn yet.
+  bool get _sharpening =>
+      _sharpTimer != null ||
+      _sharpRequest != null ||
+      (_sharp != null && !_sharp!.drawn);
+
   /// Reads the file's info from the library; true when it changed.
   bool _readInfo() {
     final model = _library.model;
@@ -280,6 +305,13 @@ class _CameraImageState extends State<CameraImage> {
 
   void _decoded(_Loaded loaded) {
     if (identical(loaded, _base)) _failures = 0;
+    if (loaded.drawn) return;
+    loaded.drawn = true;
+    if (!identical(loaded, _sharp)) return;
+    // Called while building; [_sharpening] ended.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   void _failure() {
@@ -360,14 +392,16 @@ class _CameraImageState extends State<CameraImage> {
         enlargement(base.layout, orientation, _box, widget.fit) > _blurry;
     if (!soft && !widget.wantSharper) return;
     if (_library.images.isLocal(widget.serial, widget.file, sharper)) {
-      _loadSharper();
+      setState(_loadSharper);
       return;
     }
     final link = _library.link.value;
     if (link == null || link.serial != widget.serial) return;
-    _sharpTimer = Timer(_sharperDelay, () {
-      _sharpTimer = null;
-      if (mounted) _loadSharper();
+    setState(() {
+      _sharpTimer = Timer(_sharperDelay, () {
+        _sharpTimer = null;
+        if (mounted) _loadSharper();
+      });
     });
   }
 
@@ -386,18 +420,20 @@ class _CameraImageState extends State<CameraImage> {
       request.future.then(
         (bytes) {
           if (!mounted || !identical(_sharpRequest, request)) return;
-          _sharpRequest = null;
-          if (bytes == null) {
-            // Not connected; tried again when the camera is back.
-            _sharpTried = false;
-            return;
-          }
-          setState(() => _sharp = _Loaded(bytes, sharper));
+          setState(() {
+            _sharpRequest = null;
+            if (bytes == null) {
+              // Not connected; tried again when the camera is back.
+              _sharpTried = false;
+            } else {
+              _sharp = _Loaded(bytes, sharper);
+            }
+          });
         },
         // The image already shown stays; the next visit tries again.
         onError: (Object _) {
           if (mounted && identical(_sharpRequest, request)) {
-            _sharpRequest = null;
+            setState(() => _sharpRequest = null);
           }
         },
       ),
@@ -432,15 +468,31 @@ class _CameraImageState extends State<CameraImage> {
           _box = box;
           _scheduleSharperCheck();
         }
-        if (!_ready) return _placeholder(context);
-        // The sharper copy covers the first once decoded; until then the
-        // first one shows through.
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            if (_base case final base?) _picture(base),
-            if (_sharp case final sharp?) _picture(sharp),
-          ],
+        final ready = _ready;
+        final image = ready
+            // The sharper copy covers the first once decoded; until then
+            // the first one shows through.
+            ? Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (_base case final base?) _picture(base),
+                  if (_sharp case final sharp?) _picture(sharp),
+                ],
+              )
+            : _placeholder(context);
+        final builder = widget.builder;
+        if (builder == null) return image;
+        final shown = _sharp ?? _base;
+        return builder(
+          context,
+          image,
+          aspectRatio: shown == null
+              ? null
+              : shownAspectRatio(
+                  shown.layout,
+                  orientationToApply(shown.layout, _orientation),
+                ),
+          sharpening: ready && _sharpening,
         );
       },
     );

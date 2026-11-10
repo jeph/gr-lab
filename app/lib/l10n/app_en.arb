@@ -2913,6 +2913,10 @@
   "@viewerSaveLook": {
     "description": "Button in the viewer details that saves the photo's Image Control as a look."
   },
+  "viewerSharpening": "Loading the full photo",
+  "@viewerSharpening": {
+    "description": "Screen-reader label of the spinner in a corner of a photo in the viewer while the soft preview is shown and the full photo is still loading."
+  },
   "viewerSize": "Size",
   "@viewerSize": {
     "description": "Label of the shot's file size in the viewer details."

@@ -145,6 +145,14 @@ double enlargement(JpegLayout? layout, int orientation, Size box, BoxFit fit) {
   return fit == BoxFit.cover ? math.max(sx, sy) : math.min(sx, sy);
 }
 
+/// Width over height of an image with header [layout] as it shows once
+/// turned by [orientation] (from [orientationToApply]); null when unknown.
+double? shownAspectRatio(JpegLayout? layout, int orientation) {
+  if (layout == null || layout.width == 0 || layout.height == 0) return null;
+  final (w, h) = _decoded(layout);
+  return orientationSwapsAxes(orientation) ? h / w : w / h;
+}
+
 /// `cacheWidth` for the image [enlargement] describes: the decoded width
 /// that still backs every shown pixel. Null when the image has no more
 /// pixels than that, so it decodes as it is.

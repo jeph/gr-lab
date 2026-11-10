@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
@@ -19,12 +20,15 @@ import 'package:grlab/src/looks/look_widgets.dart';
 import 'package:grlab/src/looks/looks_store.dart';
 import 'package:grlab/src/theme/tokens.dart';
 import 'package:grlab/src/widgets/group.dart';
+import 'package:grlab/src/widgets/skeleton.dart';
 import 'package:video_player/video_player.dart';
 
 /// Full-screen viewer (mock `b-viewer`): swipe between [shots], pinch to
 /// zoom, file details, and Download. A RAW+JPEG pair offers its JPEG and
 /// its RAW separately. A photo shown larger than its preview, or zoomed,
-/// is replaced by the full JPEG once it arrives.
+/// is replaced by the full JPEG once it arrives; a mark in its corner says
+/// so until then. A tap on a photo gives it the whole screen, and another
+/// tap or Back brings the bars and the details back.
 ///
 /// The viewer follows the camera's listing: a shot that leaves it (deleted
 /// on the camera, or its card taken out) leaves the swipe list, a pair
@@ -57,6 +61,11 @@ class _ShotViewerState extends State<ShotViewer> {
   late int _index = widget.initialIndex;
   bool _zoomed = false;
 
+  /// The photo shown has the whole screen: the viewer's bars and details
+  /// and the system's bars are hidden. Only photos: a movie's page takes
+  /// taps for playback, and would leave no way back out on iOS.
+  bool _fullscreen = false;
+
   /// Set once nothing is left to show: the route is on its way out and
   /// shows none of [_shots] any more.
   bool _closing = false;
@@ -72,8 +81,31 @@ class _ShotViewerState extends State<ShotViewer> {
   void dispose() {
     _library.model.removeListener(_followListing);
     _pages.dispose();
+    if (_fullscreen) _showSystemBars();
     super.dispose();
   }
+
+  void _toggleFullscreen() =>
+      _fullscreen ? _leaveFullscreen() : _enterFullscreen();
+
+  void _enterFullscreen() {
+    if (_fullscreen) return;
+    setState(() => _fullscreen = true);
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
+    );
+  }
+
+  void _leaveFullscreen() {
+    if (!_fullscreen) return;
+    setState(() => _fullscreen = false);
+    _showSystemBars();
+  }
+
+  /// Brings back the status and navigation bars, as the rest of the app
+  /// has them (Flutter's default, edge to edge).
+  void _showSystemBars() =>
+      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
 
   /// Takes each shot as [_serial]'s listing has it now and drops those it
   /// no longer has. A dropped shown shot gives way to the next one kept,
@@ -113,11 +145,13 @@ class _ShotViewerState extends State<ShotViewer> {
       if (kept[index] != shown) _zoomed = false;
     });
     if (dropped && _pages.hasClients) _pages.jumpToPage(index);
+    if (kept[index].isVideo) _leaveFullscreen();
   }
 
   /// Closes the viewer's route, also when another route covers it.
   void _close() {
     setState(() => _closing = true);
+    _leaveFullscreen();
     final route = ModalRoute.of(context);
     if (route == null) return;
     final navigator = Navigator.of(context);
@@ -135,6 +169,7 @@ class _ShotViewerState extends State<ShotViewer> {
       _index = index;
       _zoomed = false;
     });
+    if (_shots[index].isVideo) _leaveFullscreen();
   }
 
   @override
@@ -145,85 +180,109 @@ class _ShotViewerState extends State<ShotViewer> {
     final library = _library;
     final serial = _serial;
     final shot = _shots[_index];
-    return ListenableBuilder(
-      listenable: Listenable.merge([library.model, library.engine]),
-      builder: (context, _) {
-        for (final f in shot.files) {
-          unawaited(library.model.ensureInfo(f));
-        }
-        final taken = library.model.info(shot.primary)?.taken;
-        return Scaffold(
-          appBar: AppBar(
-            leading: const BackButton(),
-            title: Column(
-              children: [
-                Text(
-                  shot.primary.name,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+    final fullscreen = _fullscreen;
+    return PopScope(
+      canPop: !fullscreen,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _leaveFullscreen();
+      },
+      child: ListenableBuilder(
+        listenable: Listenable.merge([library.model, library.engine]),
+        builder: (context, _) {
+          for (final f in shot.files) {
+            unawaited(library.model.ensureInfo(f));
+          }
+          final taken = library.model.info(shot.primary)?.taken;
+          return Scaffold(
+            backgroundColor: fullscreen ? Colors.black : null,
+            appBar: fullscreen
+                ? null
+                : AppBar(
+                    leading: const BackButton(),
+                    title: Column(
+                      children: [
+                        Text(
+                          shot.primary.name,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          [
+                            if (taken != null)
+                              formatDayTime(context, taken, DateTime.now()),
+                            ?storageLabel(context, shot.storage),
+                          ].join(' · '),
+                          style: GrFonts.monoStyle(context, size: 11),
+                        ),
+                      ],
+                    ),
                   ),
+            body: Column(
+              children: [
+                Expanded(
+                  child: serial == null
+                      ? const SizedBox.shrink()
+                      : PageView.builder(
+                          controller: _pages,
+                          physics: _zoomed
+                              ? const NeverScrollableScrollPhysics()
+                              : const PageScrollPhysics(),
+                          itemCount: _shots.length,
+                          onPageChanged: _onPageChanged,
+                          // A page whose shot stays keeps its state (zoom,
+                          // playback) when shots before it are dropped.
+                          findChildIndexCallback: (key) {
+                            final i = _shots.indexWhere(
+                              (s) => ValueKey(s) == key,
+                            );
+                            return i < 0 ? null : i;
+                          },
+                          itemBuilder: (context, i) {
+                            final s = _shots[i];
+                            return s.isVideo
+                                ? _VideoPage(
+                                    key: ValueKey(s),
+                                    serial: serial,
+                                    shot: s,
+                                    active: i == _index,
+                                  )
+                                : _PhotoPage(
+                                    key: ValueKey(s),
+                                    serial: serial,
+                                    shot: s,
+                                    onZoom: (zoomed) {
+                                      if (zoomed != _zoomed) {
+                                        setState(() => _zoomed = zoomed);
+                                      }
+                                    },
+                                    onTap: _toggleFullscreen,
+                                  );
+                          },
+                        ),
                 ),
-                Text(
-                  [
-                    if (taken != null)
-                      formatDayTime(context, taken, DateTime.now()),
-                    ?storageLabel(context, shot.storage),
-                  ].join(' · '),
-                  style: GrFonts.monoStyle(context, size: 11),
+                // Hidden, not dropped, while the photo has the screen: the
+                // details keep what they read from the camera.
+                Offstage(
+                  offstage: fullscreen,
+                  child: Column(
+                    children: [
+                      _Details(shot: shot, model: library.model),
+                      if (serial != null)
+                        _ActionBar(
+                          serial: serial,
+                          shot: shot,
+                          engine: library.engine,
+                        ),
+                    ],
+                  ),
                 ),
               ],
             ),
-          ),
-          body: Column(
-            children: [
-              Expanded(
-                child: serial == null
-                    ? const SizedBox.shrink()
-                    : PageView.builder(
-                        controller: _pages,
-                        physics: _zoomed
-                            ? const NeverScrollableScrollPhysics()
-                            : const PageScrollPhysics(),
-                        itemCount: _shots.length,
-                        onPageChanged: _onPageChanged,
-                        // A page whose shot stays keeps its state (zoom,
-                        // playback) when shots before it are dropped.
-                        findChildIndexCallback: (key) {
-                          final i = _shots.indexWhere(
-                            (s) => ValueKey(s) == key,
-                          );
-                          return i < 0 ? null : i;
-                        },
-                        itemBuilder: (context, i) {
-                          final s = _shots[i];
-                          return s.isVideo
-                              ? _VideoPage(
-                                  key: ValueKey(s),
-                                  serial: serial,
-                                  shot: s,
-                                  active: i == _index,
-                                )
-                              : _PhotoPage(
-                                  key: ValueKey(s),
-                                  serial: serial,
-                                  shot: s,
-                                  onZoom: (zoomed) {
-                                    if (zoomed != _zoomed) {
-                                      setState(() => _zoomed = zoomed);
-                                    }
-                                  },
-                                );
-                        },
-                      ),
-              ),
-              _Details(shot: shot, model: library.model),
-              if (serial != null)
-                _ActionBar(serial: serial, shot: shot, engine: library.engine),
-            ],
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
@@ -233,12 +292,16 @@ class _PhotoPage extends StatefulWidget {
     required this.serial,
     required this.shot,
     required this.onZoom,
+    required this.onTap,
     super.key,
   });
 
   final String serial;
   final Shot shot;
   final ValueChanged<bool> onZoom;
+
+  /// The photo was tapped, not pinched or dragged.
+  final VoidCallback onTap;
 
   @override
   State<_PhotoPage> createState() => _PhotoPageState();
@@ -267,27 +330,97 @@ class _PhotoPageState extends State<_PhotoPage> {
   @override
   Widget build(BuildContext context) {
     final shot = widget.shot;
-    return InteractiveViewer(
-      transformationController: _transform,
-      maxScale: 6,
-      child: SizedBox.expand(
-        child: CameraImage(
-          serial: widget.serial,
-          file: shot.primary,
-          size: GrImageSize.view,
-          fit: BoxFit.contain,
-          // Only a JPEG's full file decodes; a DNG stays at its preview.
-          sharper: shot.jpeg != null ? GrImageSize.full : null,
-          wantSharper: _zoomed,
-          // Detail for zooming in, without decoding all 26 megapixels.
-          zoomHeadroom: 3,
-          // The grid already loaded this `view`; no smaller stand-in that
-          // would be swapped out.
-          showProgress: true,
-        ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onTap,
+      child: CameraImage(
+        serial: widget.serial,
+        file: shot.primary,
+        size: GrImageSize.view,
+        fit: BoxFit.contain,
+        // Only a JPEG's full file decodes; a DNG stays at its preview.
+        sharper: shot.jpeg != null ? GrImageSize.full : null,
+        wantSharper: _zoomed,
+        // Detail for zooming in, without decoding all 26 megapixels.
+        zoomHeadroom: 3,
+        // The grid already loaded this `view`; no smaller stand-in that
+        // would be swapped out.
+        showProgress: true,
+        // The mark is outside the zoomed picture, so it keeps its corner.
+        builder:
+            (context, image, {required aspectRatio, required sharpening}) =>
+                Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    InteractiveViewer(
+                      transformationController: _transform,
+                      // Pinching out ends at the photo fitted to its page.
+                      minScale: 1,
+                      maxScale: 6,
+                      child: SizedBox.expand(child: image),
+                    ),
+                    if (sharpening) _Sharpening(aspectRatio: aspectRatio),
+                  ],
+                ),
       ),
     );
   }
+}
+
+/// Says that the picture shown is a soft stand-in for the sharper copy on
+/// its way, from the top corner of the photo as it lies fitted to its
+/// page ([aspectRatio] is its width over its height; null takes the
+/// page's corner).
+class _Sharpening extends StatelessWidget {
+  const new({required this.aspectRatio});
+
+  final double? aspectRatio;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final page = constraints.biggest;
+      final ratio = aspectRatio;
+      final photo = ratio == null
+          ? page
+          : applyBoxFit(BoxFit.contain, Size(ratio, 1), page).destination;
+      // Clear of the status bar and the camera cut-out when the photo has
+      // the whole screen.
+      final safe = MediaQuery.paddingOf(context);
+      return Stack(
+        children: [
+          PositionedDirectional(
+            top: max((page.height - photo.height) / 2, safe.top) + 12,
+            end:
+                max(
+                  (page.width - photo.width) / 2,
+                  max(safe.left, safe.right),
+                ) +
+                12,
+            child: IgnorePointer(
+              child: Semantics(
+                label: context.l10n.viewerSharpening,
+                child: Container(
+                  key: const Key('viewer-sharpening'),
+                  width: 30,
+                  height: 30,
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: GrColors.photoBadgeScrim,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
 }
 
 class _VideoPage extends StatefulWidget {
@@ -671,8 +804,8 @@ class _Details extends StatelessWidget {
 
 /// The Image Control the photo was shot with, read from the camera, and
 /// Save look (mock `b-viewer`; GR WORLD's "save image control from
-/// images"). Hidden while the camera is not connected or has none for the
-/// photo.
+/// images"). A skeleton of the row while the camera is asked; hidden while
+/// the camera is not connected or has none for the photo.
 class _ImageControlRow extends StatefulWidget {
   const new({required this.shot, super.key});
 
@@ -685,6 +818,9 @@ class _ImageControlRow extends StatefulWidget {
 class _ImageControlRowState extends State<_ImageControlRow> {
   late final LibraryContext _library = LibraryScope.of(context);
   Look? _look;
+
+  /// The camera is being asked for the photo's Image Control.
+  bool _reading = false;
   bool _saving = false;
   bool _started = false;
 
@@ -693,19 +829,25 @@ class _ImageControlRowState extends State<_ImageControlRow> {
     super.didChangeDependencies();
     if (_started) return;
     _started = true;
-    unawaited(_read());
-  }
-
-  Future<void> _read() async {
     final link = _library.link.value;
     if (link == null) return;
+    _reading = true;
+    unawaited(_read(link));
+  }
+
+  Future<void> _read(CameraLibrary link) async {
+    Look? look;
     try {
-      final look = await link.imageControl(widget.shot.primary);
-      if (mounted) setState(() => _look = look);
+      look = await link.imageControl(widget.shot.primary);
     } on Object {
       // No Image Control for this file, or the camera did not answer: the
-      // row stays hidden; the camera layer traced the exchange.
+      // row hides; the camera layer traced the exchange.
     }
+    if (!mounted) return;
+    setState(() {
+      _look = look;
+      _reading = false;
+    });
   }
 
   Future<void> _save(Look look) async {
@@ -742,13 +884,16 @@ class _ImageControlRowState extends State<_ImageControlRow> {
   @override
   Widget build(BuildContext context) {
     final look = _look;
-    if (look == null) return const SizedBox.shrink();
+    if (look == null) {
+      return _reading ? const _ImageControlSkeleton() : const SizedBox.shrink();
+    }
     final c = GrColors.of(context);
     final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
       child: Row(
         children: [
+          const _ImageControlRowHeight(),
           Container(
             width: 34,
             height: 34,
@@ -765,13 +910,16 @@ class _ImageControlRowState extends State<_ImageControlRow> {
               children: [
                 Text(
                   l10n.viewerImageControl,
-                  style: const TextStyle(fontSize: 14.5),
+                  style: const TextStyle(fontSize: _imageControlTitleSize),
                 ),
                 Text(
                   lookSummary(l10n, look),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: c.t2),
+                  style: TextStyle(
+                    fontSize: _imageControlSummarySize,
+                    color: c.t2,
+                  ),
                 ),
               ],
             ),
@@ -795,6 +943,66 @@ class _ImageControlRowState extends State<_ImageControlRow> {
       ),
     );
   }
+}
+
+/// Text sizes of [_ImageControlRow], shared with its skeleton and
+/// [_ImageControlRowHeight].
+const _imageControlTitleSize = 14.5;
+const _imageControlSummarySize = 12.0;
+
+/// As tall as [_ImageControlRow]'s title over a summary of two lines, and
+/// of no width: in the row and in its skeleton, it keeps both at that
+/// height whatever the summary's length, so the row replaces the skeleton
+/// without moving the photo above.
+class _ImageControlRowHeight extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) => const ExcludeSemantics(
+    child: SizedBox(
+      width: 0,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Spaces: a line without a glyph is laid out a little lower.
+          Text(' ', style: TextStyle(fontSize: _imageControlTitleSize)),
+          Text(' \n ', style: TextStyle(fontSize: _imageControlSummarySize)),
+        ],
+      ),
+    ),
+  );
+}
+
+/// [_ImageControlRow] while the camera is asked: its icon, its title, its
+/// summary and Save look as blocks.
+class _ImageControlSkeleton extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) => const Padding(
+    key: Key('viewer-image-control-loading'),
+    padding: EdgeInsets.fromLTRB(12, 10, 12, 12),
+    child: Skeleton(
+      child: Row(
+        children: [
+          _ImageControlRowHeight(),
+          SkeletonBox(width: 34, height: 34, radius: 10),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SkeletonLine(width: 96, fontSize: _imageControlTitleSize),
+                SkeletonLine(width: 168, fontSize: _imageControlSummarySize),
+              ],
+            ),
+          ),
+          SizedBox(width: 8),
+          SkeletonBox(width: 92, height: 36, radius: 18),
+        ],
+      ),
+    ),
+  );
 }
 
 /// Download for the shot; a RAW+JPEG pair gets one action per half. Saved
