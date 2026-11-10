@@ -7,6 +7,8 @@ import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 
 import 'package:grlab/src/camera/camera_pages.dart';
+import 'package:grlab/src/looks/look_preview.dart';
+import 'package:grlab/src/looks/looks_store.dart';
 
 import '../support/test_app.dart';
 
@@ -341,6 +343,100 @@ void main() {
     final saved = app.models.looks.looks.single;
     expect(saved.look!.base, LookBase.standard);
     expect(saved.data.take(2), [1, 0], reason: "GR WORLD's fallback header");
+    await app.dispose();
+  });
+
+  testWidgets('the editor previews a look on the photo it was saved from, '
+      "says when that photo's own look makes the preview rough or is not "
+      'known, and shows the sample photo when the photo has nothing to '
+      'offer the look', (tester) async {
+    final app = await _start(tester, saveCamera: false);
+    final looks = app.models.looks;
+    final jpeg = File('assets/welcome.jpg').readAsBytesSync();
+    final (plain, grey, older) = (await tester.runAsync(() async {
+      final plain = await looks.add(
+        name: 'Plain',
+        data: Look.onBase(LookBase.standard).toBytes(),
+        photo: jpeg,
+      );
+      final grey = await looks.add(
+        name: 'Grey',
+        data: Uint8List.fromList(app.camera.lookSlot(2).data),
+        photo: jpeg,
+      );
+      final added = await looks.add(
+        name: 'Older',
+        data: Uint8List.fromList(app.camera.lookSlot(3).data),
+        photo: jpeg,
+      );
+      // As a look saved before GR Lab kept the photo's own look.
+      final older = SavedLook(
+        id: added.id,
+        name: added.name,
+        data: added.data,
+        created: added.created,
+      );
+      await looks.update(older);
+      return (plain, grey, older);
+    }))!;
+    expect(grey.look!.base, LookBase.highContrast);
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+
+    final note = find.byKey(const Key('look-preview-note'));
+    Finder noteSaying(String text) =>
+        find.descendant(of: note, matching: find.text(text));
+    ImageProvider previewed() =>
+        tester.widget<LookPreview>(find.byType(LookPreview)).image;
+    Future<void> open(SavedLook look) async {
+      await tapWhenReady(tester, find.byKey(ValueKey('look:${look.id}')));
+      await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
+    }
+
+    Future<void> close() async {
+      await tester.pageBack();
+      await pumpUntil(
+        tester,
+        () => find.byKey(const Key('look-editor')).evaluate().isEmpty,
+        reason: 'editor closed',
+      );
+    }
+
+    await open(plain);
+    expect(note, findsNothing);
+    expect(previewed(), isNot(isA<AssetImage>()));
+    await tapWhenReady(tester, find.byKey(const ValueKey('look-base:vivid')));
+    expect(note, findsNothing, reason: 'a Standard photo suits every look');
+    await close();
+
+    await open(grey);
+    expect(
+      noteSaying(
+        "This photo's own look can't be undone exactly, so the preview is "
+        'rougher than usual.',
+      ),
+      findsOneWidget,
+    );
+    expect(previewed(), isNot(isA<AssetImage>()));
+    await tapWhenReady(tester, find.byKey(const ValueKey('look-base:vivid')));
+    await pumpUntilFound(
+      tester,
+      noteSaying(
+        "This photo's own look can't be undone for this look, so the "
+        'preview shows a sample photo instead.',
+      ),
+    );
+    expect(previewed(), isA<AssetImage>());
+    await close();
+
+    await open(older);
+    expect(
+      noteSaying(
+        "GR Lab doesn't know which look this photo was taken with, so the "
+        'preview treats it as Standard.',
+      ),
+      findsOneWidget,
+    );
+    expect(previewed(), isNot(isA<AssetImage>()));
     await app.dispose();
   });
 

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -148,6 +149,40 @@ void main() {
     final added = await store.add(name: 'Daido', data: data);
     expect(await namesOnDisk(), ['Daido']);
     expect(store.looks.single.id, added.id);
+  });
+
+  test("a look saved from a photo keeps the photo's own look through edits "
+      'and restarts; a look without a photo, or saved before GR Lab kept '
+      'it, has none', () async {
+    final store = await LooksStore.load(dataDir);
+    final fromPhoto = await store.add(
+      name: 'Street',
+      data: data,
+      photo: Uint8List(4),
+    );
+    final made = await store.add(name: 'Made here', data: otherData);
+    expect(fromPhoto.photoLook!.settings, fromPhoto.settings);
+    expect(made.photoLook, isNull);
+
+    final edited = Uint8List.fromList(FakeLook.presets[2].data);
+    await store.update(fromPhoto.copyWith(data: edited));
+    final reloaded = await LooksStore.load(dataDir);
+    final street = reloaded.looks.singleWhere((l) => l.name == 'Street');
+    expect(street.data, edited);
+    expect(street.photoData, data, reason: 'the photo did not change');
+    expect(
+      reloaded.looks.singleWhere((l) => l.name == 'Made here').photoData,
+      isNull,
+    );
+
+    final file = File('${dataDir.path}/looks.json');
+    final json = jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
+    for (final look in json['looks']! as List<Object?>) {
+      (look! as Map<String, Object?>).remove('photoData');
+    }
+    file.writeAsStringSync(jsonEncode(json));
+    final older = await LooksStore.load(dataDir);
+    expect(older.looks.map((l) => l.photoLook), [null, null]);
   });
 
   test('a delete that could not be written brings the look and its photo '

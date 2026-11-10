@@ -106,6 +106,14 @@ export 'src/looks/image_control.dart'
         lookParameters,
         lookRange;
 export 'src/looks/look.dart' show Look, LookBase, LookParameter, LookSettings;
+export 'src/looks/render/look_renderer.dart'
+    show
+        LookLut,
+        LookRenderer,
+        LookRerender,
+        LookSourceFit,
+        LookTransform,
+        lookRendererFor;
 export 'src/nearby.dart' show NearbyCamera, NearbyScanner;
 export 'src/pairing.dart' show PairingRun, pairedDeviceName;
 export 'src/presence.dart' show CameraSighting, PresenceScanner;

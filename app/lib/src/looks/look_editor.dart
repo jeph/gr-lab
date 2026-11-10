@@ -108,9 +108,44 @@ class _LookEditorState extends State<LookEditor> {
         saved.settings != _look.settings;
   }
 
-  File? get _photo {
-    final saved = _saved;
-    return saved == null ? null : _model.store.photoOf(saved);
+  late final LookRenderer _renderer = lookRendererFor(_model.body);
+
+  /// The photo the look was saved from, with the look it was developed
+  /// with; null for a look without a photo.
+  late final _PreviewPhoto? _ownPhoto = _findOwnPhoto();
+
+  /// The sample photo, for a look without a photo of its own, or whose
+  /// photo cannot be shown under the look. GR Lab takes it for a Standard
+  /// photo with every adjustment at 0 \[design\].
+  late final _PreviewPhoto _samplePhoto = _PreviewPhoto(
+    const AssetImage('assets/welcome.jpg'),
+    LookRerender(_renderer, source: Look.onBase(LookBase.standard)),
+  );
+
+  /// The colour table drawn last, with the photo and the look it is for:
+  /// working one out takes long enough not to repeat it on every build.
+  (_PreviewPhoto, LookSettings, LookLut)? _drawn;
+
+  _PreviewPhoto? _findOwnPhoto() {
+    final saved = widget.saved;
+    final file = saved == null ? null : _model.store.photoOf(saved);
+    if (saved == null || file == null) return null;
+    return _PreviewPhoto(
+      ResizeImage.resizeIfNeeded(900, null, FileImage(file)),
+      LookRerender(_renderer, source: saved.photoLook),
+    );
+  }
+
+  /// The table that shows [photo] under the look being edited.
+  LookLut _lutFor(_PreviewPhoto photo) {
+    final settings = _look.settings;
+    if (_drawn case (final drawnPhoto, final drawnSettings, final lut)
+        when identical(drawnPhoto, photo) && drawnSettings == settings) {
+      return lut;
+    }
+    final lut = photo.rerender.lutFor(_look);
+    _drawn = (photo, settings, lut);
+    return lut;
   }
 
   /// Stores the look, asking for a name when it is new, and says in a snack
@@ -204,6 +239,19 @@ class _LookEditorState extends State<LookEditor> {
       final group = groups.contains(_group) ? _group! : groups.firstOrNull;
       final canLoad = _model.canLoad(_look);
       final save = _unsaved ? () => unawaited(_save()) : null;
+      // The look's own photo, unless its rendering cannot be undone for
+      // this look: then the sample stands in, and a note says so.
+      final ownPhoto = _ownPhoto;
+      final fit = ownPhoto?.rerender.fitFor(_look);
+      final photo = ownPhoto == null || fit == LookSourceFit.unusable
+          ? _samplePhoto
+          : ownPhoto;
+      final previewNote = switch (fit) {
+        LookSourceFit.rough => l10n.looksPreviewRough,
+        LookSourceFit.unknown => l10n.looksPreviewUnknownLook,
+        LookSourceFit.unusable => l10n.looksPreviewSample,
+        LookSourceFit.good || null => null,
+      };
       return Scaffold(
         key: const Key('look-editor'),
         appBar: AppBar(
@@ -252,21 +300,30 @@ class _LookEditorState extends State<LookEditor> {
                   Expanded(
                     child: _PreviewPane(
                       label: l10n.looksBefore,
-                      photo: _photo,
-                      look: null,
+                      image: photo.image,
+                      lut: null,
                     ),
                   ),
                   const SizedBox(width: 2),
                   Expanded(
                     child: _PreviewPane(
                       label: l10n.looksPreview,
-                      photo: _photo,
-                      look: _look,
+                      image: photo.image,
+                      lut: _lutFor(photo),
                     ),
                   ),
                 ],
               ),
             ),
+            if (previewNote != null)
+              Padding(
+                key: const Key('look-preview-note'),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                child: Text(
+                  previewNote,
+                  style: TextStyle(fontSize: 12.5, color: c.t2),
+                ),
+              ),
             SingleChildScrollView(
               key: const Key('look-bases'),
               scrollDirection: Axis.horizontal,
@@ -389,27 +446,35 @@ class _LookEditorState extends State<LookEditor> {
   );
 }
 
+/// A photo looks are previewed on, with what undoes its own rendering.
+final class _PreviewPhoto {
+  const new(this.image, this.rerender);
+
+  final ImageProvider image;
+  final LookRerender rerender;
+}
+
 /// One half of the before/preview pair, with its tag.
 class _PreviewPane extends StatelessWidget {
-  const new({required this.label, required this.photo, required this.look});
+  const new({required this.label, required this.image, required this.lut});
 
   final String label;
-  final File? photo;
+  final ImageProvider image;
 
-  /// The look to approximate; null shows the photo as it is.
-  final Look? look;
+  /// The colour table of the look to approximate; null shows the photo as
+  /// it is.
+  final LookLut? lut;
 
   @override
   Widget build(BuildContext context) {
-    final photo = this.photo;
-    final image = photo == null
-        ? Image.asset('assets/welcome.jpg', fit: BoxFit.cover)
-        : Image.file(photo, fit: BoxFit.cover, cacheWidth: 900);
-    final look = this.look;
+    final lut = this.lut;
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (look == null) image else LookPreview(look: look, child: image),
+        if (lut == null)
+          Image(image: image, fit: BoxFit.cover)
+        else
+          LookPreview(image: image, lut: lut),
         Positioned(left: 8, bottom: 8, child: PhotoTag(label.toUpperCase())),
       ],
     );

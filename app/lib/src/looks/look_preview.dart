@@ -1,187 +1,178 @@
-import 'dart:math' as math;
+import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 import 'package:gr_camera/gr_camera.dart';
 
-/// [child] tinted to suggest how [look] renders. It is an approximation
-/// \[design\]: a colour matrix per base image and adjustment, not the
-/// camera's processing, so the editor labels it as one.
-class LookPreview extends StatelessWidget {
-  const new({required this.look, required this.child, super.key});
+/// [image] drawn through [lut], filling its box as `BoxFit.cover` does: the
+/// photo as another look would render it.
+///
+/// The camera layer works the look out into the colour table
+/// (`LookRerender`); this only draws, with a fragment shader that knows
+/// nothing about cameras \[design\]. Nothing is drawn until the photo, the
+/// table and the shader have loaded, and a new table replaces the old one
+/// when it is ready, so the picture never shows without a look.
+class LookPreview extends StatefulWidget {
+  const new({required this.image, required this.lut, super.key});
 
-  final Look look;
-  final Widget child;
+  final ImageProvider image;
+  final LookLut lut;
 
   @override
-  Widget build(BuildContext context) => ColorFiltered(
-    colorFilter: ColorFilter.matrix(lookMatrix(look)),
-    child: child,
+  State<LookPreview> createState() => _LookPreviewState();
+}
+
+class _LookPreviewState extends State<LookPreview> {
+  ui.FragmentShader? _shader;
+  ImageStream? _stream;
+  late final ImageStreamListener _listener = ImageStreamListener(
+    _onPhoto,
+    onError: (_, _) {},
   );
-}
+  ImageInfo? _photo;
 
-/// The 4×5 colour matrix [LookPreview] applies for [look].
-List<double> lookMatrix(Look look) {
-  int v(LookParameter p) => look.valueOf(p) ?? 0;
-  final base = look.base ?? LookBase.standard;
-  var m = _identity;
-  m = _mul(_baseMatrix(base), m);
-  m = _mul(_saturation(1 + v(LookParameter.saturation) * .1), m);
-  m = _mul(_hue(v(LookParameter.hue) * 6), m);
-  m = _mul(_contrast(1 + v(LookParameter.contrast) * .07), m);
-  m = _mul(_brightness(v(LookParameter.key) * 7), m);
-  final toning = _toning(look);
-  if (toning != null) m = _mul(toning, m);
-  return m;
-}
+  /// The table as a picture the shader samples, and the table it shows.
+  ui.Image? _table;
+  LookLut? _tableOf;
 
-const _identity = <double>[
-  1, 0, 0, 0, 0, //
-  0, 1, 0, 0, 0, //
-  0, 0, 1, 0, 0, //
-  0, 0, 0, 1, 0, //
-];
+  /// The latest table asked for; an older one that finishes decoding later
+  /// is dropped.
+  LookLut? _wanted;
 
-// Rec. 709 luma weights.
-const _lr = .2126;
-const _lg = .7152;
-const _lb = .0722;
-
-List<double> _baseMatrix(LookBase base) => switch (base) {
-  LookBase.standard => _identity,
-  LookBase.vivid => _mul(_contrast(1.08), _saturation(1.4)),
-  LookBase.positiveFilm => _mul(
-    _tint(1.04, 1, .94),
-    _mul(_contrast(1.12), _saturation(1.2)),
-  ),
-  LookBase.negativeFilm => _mul(
-    _tint(1.03, 1.01, .95),
-    _mul(_contrast(.88), _saturation(.85)),
-  ),
-  LookBase.bleachBypass => _mul(_contrast(1.25), _saturation(.45)),
-  LookBase.retro => _mul(
-    _tint(1.08, 1, .82),
-    _mul(_contrast(.92), _saturation(.7)),
-  ),
-  LookBase.hdrTone => _mul(_contrast(.85), _saturation(1.15)),
-  LookBase.cineYellow => _mul(_tint(1.06, 1.03, .86), _saturation(.85)),
-  LookBase.cineGreen => _mul(_tint(.94, 1.04, .98), _saturation(.8)),
-  LookBase.crossProcess => _mul(
-    _tint(1.05, 1.06, .8),
-    _mul(_contrast(1.15), _saturation(1.25)),
-  ),
-  LookBase.softMonotone ||
-  LookBase.softMono => _mul(_contrast(.85), _saturation(0)),
-  LookBase.hardMonotone ||
-  LookBase.highContrastMono ||
-  LookBase.solid => _mul(_contrast(1.3), _saturation(0)),
-  LookBase.highContrast => _mul(_contrast(1.6), _saturation(0)),
-  LookBase.solarization => _mul(_contrast(1.4), _saturation(0)),
-  LookBase.monotone ||
-  LookBase.standardMono ||
-  LookBase.grainy ||
-  LookBase.hdrMono ||
-  LookBase.pictorialist => _saturation(0),
-  LookBase.palette => _identity,
-};
-
-/// A toning tint over the result, when the look has one set.
-List<double>? _toning(Look look) {
-  final mono = look.valueOf(LookParameter.toningMonotone) ?? 0;
-  final tint = switch (mono) {
-    1 => _tint(1.1, 1, .82),
-    2 => _tint(1.12, .95, .95),
-    3 => _tint(.95, 1.08, .95),
-    4 => _tint(.92, .98, 1.12),
-    5 => _tint(1.06, .92, 1.08),
-    _ => null,
-  };
-  if (tint != null) return tint;
-  final hdr = look.valueOf(LookParameter.toningHdr) ?? 0;
-  if (hdr == 1) return _saturation(0);
-  if (hdr == 2) return _mul(_tint(1.1, 1, .82), _saturation(0));
-  return switch (look.valueOf(LookParameter.crossProcess)) {
-    1 => _tint(1.06, .94, 1.04),
-    2 => _tint(1.04, 1.04, .88),
-    _ => null,
-  };
-}
-
-List<double> _saturation(double s) {
-  final r = (1 - s) * _lr;
-  final g = (1 - s) * _lg;
-  final b = (1 - s) * _lb;
-  return [
-    r + s, g, b, 0, 0, //
-    r, g + s, b, 0, 0, //
-    r, g, b + s, 0, 0, //
-    0, 0, 0, 1, 0, //
-  ];
-}
-
-List<double> _contrast(double c) {
-  final t = 128 * (1 - c);
-  return [
-    c, 0, 0, 0, t, //
-    0, c, 0, 0, t, //
-    0, 0, c, 0, t, //
-    0, 0, 0, 1, 0, //
-  ];
-}
-
-List<double> _brightness(double d) => [
-  1, 0, 0, 0, d, //
-  0, 1, 0, 0, d, //
-  0, 0, 1, 0, d, //
-  0, 0, 0, 1, 0, //
-];
-
-List<double> _tint(double r, double g, double b) => [
-  r, 0, 0, 0, 0, //
-  0, g, 0, 0, 0, //
-  0, 0, b, 0, 0, //
-  0, 0, 0, 1, 0, //
-];
-
-/// Rotation of hue by [degrees] around the luma axis.
-List<double> _hue(double degrees) {
-  final a = degrees * math.pi / 180;
-  final c = math.cos(a);
-  final s = math.sin(a);
-  return [
-    _lr + c * (1 - _lr) - s * _lr,
-    _lg - c * _lg - s * _lg,
-    _lb - c * _lb + s * (1 - _lb),
-    0,
-    0,
-    _lr - c * _lr + s * .143,
-    _lg + c * (1 - _lg) + s * .14,
-    _lb - c * _lb - s * .283,
-    0,
-    0,
-    _lr - c * _lr - s * (1 - _lr),
-    _lg - c * _lg + s * _lg,
-    _lb + c * (1 - _lb) + s * _lb,
-    0,
-    0,
-    0,
-    0,
-    0,
-    1,
-    0,
-  ];
-}
-
-/// [a] applied after [b].
-List<double> _mul(List<double> a, List<double> b) {
-  final out = List<double>.filled(20, 0);
-  for (var row = 0; row < 4; row++) {
-    for (var col = 0; col < 5; col++) {
-      var sum = col == 4 ? a[row * 5 + 4] : 0.0;
-      for (var k = 0; k < 4; k++) {
-        sum += a[row * 5 + k] * b[k * 5 + col];
-      }
-      out[row * 5 + col] = sum;
-    }
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadShader());
+    _decodeTable();
   }
-  return out;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _resolvePhoto();
+  }
+
+  @override
+  void didUpdateWidget(LookPreview old) {
+    super.didUpdateWidget(old);
+    if (widget.image != old.image) _resolvePhoto();
+    if (!identical(widget.lut, old.lut)) _decodeTable();
+  }
+
+  Future<void> _loadShader() async {
+    // The engine compiles the shader once and hands the same program to
+    // every later call.
+    final program = await ui.FragmentProgram.fromAsset('shaders/look_lut.frag');
+    if (!mounted) return;
+    setState(() => _shader = program.fragmentShader());
+  }
+
+  void _resolvePhoto() {
+    final stream = widget.image.resolve(createLocalImageConfiguration(context));
+    if (stream.key == _stream?.key) return;
+    _stream?.removeListener(_listener);
+    _stream = stream..addListener(_listener);
+  }
+
+  void _onPhoto(ImageInfo photo, bool synchronous) {
+    setState(() {
+      _photo?.dispose();
+      _photo = photo;
+    });
+  }
+
+  void _decodeTable() {
+    final lut = widget.lut;
+    _wanted = lut;
+    ui.decodeImageFromPixels(
+      lut.rgba,
+      lut.size * lut.size,
+      lut.size,
+      ui.PixelFormat.rgba8888,
+      (table) {
+        if (!mounted || !identical(_wanted, lut)) {
+          table.dispose();
+          return;
+        }
+        setState(() {
+          _table?.dispose();
+          _table = table;
+          _tableOf = lut;
+        });
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _stream?.removeListener(_listener);
+    _photo?.dispose();
+    _table?.dispose();
+    _shader?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shader = _shader;
+    final photo = _photo?.image;
+    final table = _table;
+    final lut = _tableOf;
+    if (shader == null || photo == null || table == null || lut == null) {
+      return const SizedBox.expand();
+    }
+    return CustomPaint(
+      size: Size.infinite,
+      painter: _LookPainter(
+        shader: shader,
+        photo: photo,
+        table: table,
+        steps: lut.size,
+      ),
+    );
+  }
+}
+
+class _LookPainter extends CustomPainter {
+  new({
+    required this.shader,
+    required this.photo,
+    required this.table,
+    required this.steps,
+  });
+
+  final ui.FragmentShader shader;
+  final ui.Image photo;
+  final ui.Image table;
+  final int steps;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    // The part of the photo a box of this shape shows when the photo covers
+    // it: the whole of one side, the middle of the other.
+    final photoShape = photo.width / photo.height;
+    final boxShape = size.width / size.height;
+    final shownWidth = boxShape < photoShape ? boxShape / photoShape : 1.0;
+    final shownHeight = boxShape < photoShape ? 1.0 : photoShape / boxShape;
+    shader
+      ..setFloat(0, size.width)
+      ..setFloat(1, size.height)
+      ..setFloat(2, (1 - shownWidth) / 2)
+      ..setFloat(3, (1 - shownHeight) / 2)
+      ..setFloat(4, shownWidth)
+      ..setFloat(5, shownHeight)
+      ..setFloat(6, steps.toDouble())
+      ..setImageSampler(0, photo, filterQuality: FilterQuality.medium)
+      // The shader blends the table's entries itself.
+      ..setImageSampler(1, table);
+    canvas.drawRect(Offset.zero & size, Paint()..shader = shader);
+  }
+
+  @override
+  bool shouldRepaint(_LookPainter old) =>
+      old.shader != shader ||
+      old.photo != photo ||
+      old.table != table ||
+      old.steps != steps;
 }

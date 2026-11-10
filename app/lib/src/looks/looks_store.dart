@@ -16,6 +16,7 @@ final class SavedLook {
     required this.data,
     required this.created,
     this.source,
+    this.photoData,
   });
 
   factory fromJson(Map<String, Object?> json) => SavedLook(
@@ -24,6 +25,10 @@ final class SavedLook {
     data: base64Decode(json['data']! as String),
     created: DateTime.parse(json['created']! as String),
     source: json['source'] as String?,
+    photoData: switch (json['photoData']) {
+      final String data => base64Decode(data),
+      _ => null,
+    },
   );
 
   final String id;
@@ -38,8 +43,20 @@ final class SavedLook {
   /// read from; null for a look made in the app.
   final String? source;
 
+  /// The Image Control blob the look's photo was developed with, which
+  /// stays as it was when the look is edited; null for a look without a
+  /// photo, and for one saved before GR Lab kept this.
+  final Uint8List? photoData;
+
   /// [data] read as a look; null when it is not one.
   Look? get look => Look.fromBytes(data);
+
+  /// The look the photo was developed with ([photoData]), for showing the
+  /// photo under other looks; null when it is not known.
+  Look? get photoLook => switch (photoData) {
+    final data? => Look.fromBytes(data),
+    null => null,
+  };
 
   /// What the look does to a picture, for telling whether two looks are
   /// the same ([LookSettings]); null when [data] is not a look.
@@ -51,6 +68,7 @@ final class SavedLook {
     data: data ?? this.data,
     created: created,
     source: source,
+    photoData: photoData,
   );
 
   Map<String, Object?> toJson() => {
@@ -59,6 +77,10 @@ final class SavedLook {
     'data': base64Encode(data),
     'created': created.toIso8601String(),
     'source': ?source,
+    'photoData': ?switch (photoData) {
+      final data? => base64Encode(data),
+      null => null,
+    },
   };
 }
 
@@ -137,10 +159,11 @@ final class LooksStore extends ChangeNotifier {
 
   /// Adds a look named [name] holding [data], from [source] (see
   /// [SavedLook.source]), with [photo] (a JPEG) of the camera photo it was
-  /// saved from. Throws [LookConflict], storing nothing, when a saved look
-  /// has its name or its settings. Completes once the look is on disk; when
-  /// it cannot be written, the look is taken out again and the
-  /// [FileSystemException] is rethrown, so saving again stores it once.
+  /// saved from, which [data] is therefore the look of
+  /// ([SavedLook.photoData]). Throws [LookConflict], storing nothing, when
+  /// a saved look has its name or its settings. Completes once the look is
+  /// on disk; when it cannot be written, the look is taken out again and
+  /// the [FileSystemException] is rethrown, so saving again stores it once.
   Future<SavedLook> add({
     required String name,
     required Uint8List data,
@@ -154,6 +177,7 @@ final class LooksStore extends ChangeNotifier {
       data: data,
       created: now,
       source: source,
+      photoData: photo == null ? null : data,
     );
     final conflict = _conflictOf(look);
     if (conflict != null) throw conflict;

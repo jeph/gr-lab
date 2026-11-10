@@ -1823,6 +1823,18 @@
   "@looksPreview": {
     "description": "Tag on the look editor's preview: GR Lab only approximates how the camera renders the look."
   },
+  "looksPreviewRough": "This photo's own look can't be undone exactly, so the preview is rougher than usual.",
+  "@looksPreviewRough": {
+    "description": "Note under the look editor's preview. The preview shows the look's photo as the edited look would render it, which means first undoing the look the photo was taken with; that look lost detail the preview cannot bring back."
+  },
+  "looksPreviewSample": "This photo's own look can't be undone for this look, so the preview shows a sample photo instead.",
+  "@looksPreviewSample": {
+    "description": "Note under the look editor's preview when the look's own photo cannot be shown under the edited look (a black-and-white photo under a colour look, for example) and a sample photo stands in."
+  },
+  "looksPreviewUnknownLook": "GR Lab doesn't know which look this photo was taken with, so the preview treats it as Standard.",
+  "@looksPreviewUnknownLook": {
+    "description": "Note under the look editor's preview when the look the photo was taken with was not kept. Standard is the camera's name for its default look."
+  },
   "looksRename": "Rename",
   "@looksRename": {
     "description": "Menu item that renames a look."
