@@ -100,6 +100,10 @@ void main() {
         lessThan(0.1),
       );
       expect(
+        _worst(_applied(const Gr4Effects(clarity: 4), 4), clarityQuarter),
+        lessThan(0.1),
+      );
+      expect(
         _worst(_applied(const Gr4Effects(clarity: -3), 8), clarityEighth),
         lessThan(0.1),
       );
@@ -121,6 +125,10 @@ void main() {
     test("HDR Tone follows within half a code with curves of GR Lab's "
         'own', () {
       expect(
+        _worst(_applied(const Gr4Effects(hdr: 3), 4), hdrQuarterHigh),
+        lessThan(0.5),
+      );
+      expect(
         _worst(_applied(const Gr4Effects(hdr: 3), 8), hdrEighthHigh),
         lessThan(0.5),
       );
@@ -140,20 +148,22 @@ void main() {
     test("grain is as strong as the camera's is once the frame is "
         'averaged down to the picture', () {
       for (var size = 0; size < 3; size++) {
-        for (final (kind, reference) in [
-          (Gr4GrainKind.colour, grainDeviationAtEighth[size]),
+        for (final (scale, kind, reference) in [
+          (4.0, Gr4GrainKind.colour, grainDeviationAtQuarter[size]),
+          (4.0, Gr4GrainKind.rough, roughDeviationAtQuarter[size]),
+          (8.0, Gr4GrainKind.colour, grainDeviationAtEighth[size]),
           // The black-and-white bases get twice the colour ones' limit.
-          (Gr4GrainKind.grey, 2 * grainDeviationAtEighth[size]),
-          (Gr4GrainKind.rough, roughDeviationAtEighth[size]),
+          (8.0, Gr4GrainKind.grey, 2 * grainDeviationAtEighth[size]),
+          (8.0, Gr4GrainKind.rough, roughDeviationAtEighth[size]),
         ]) {
           final picture = _picture((x, y) => 128, width: 256, height: 256);
           Gr4Effects(
             grain: Gr4Grain(strength: 2, size: size, kind: kind),
-          ).apply(picture, scale: 8);
+          ).apply(picture, scale: scale);
           expect(
             _deviation(picture.luma.values, about: 128) / reference,
             closeTo(1, 0.03),
-            reason: '$kind size $size',
+            reason: '$kind size $size at 1/$scale',
           );
         }
       }

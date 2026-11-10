@@ -307,7 +307,7 @@ void main() {
     expect(_renderer.filter(grained, source: grained), isNull);
     expect(_renderer.filter(grained, source: _standard), isNotNull);
     expect(_renderer.filter(hdr, source: _standard), isNotNull);
-    expect(_renderer.pictureLongSide, 774);
+    expect(_renderer.pictureLongSide, 1548);
   });
 
   test("a look's grain is put into a picture as the picture's share of "

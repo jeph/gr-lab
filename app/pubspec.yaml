@@ -21,6 +21,7 @@ dependencies:
     path: ../packages/gr_fake_camera
   gr_protocol:
     path: ../packages/gr_protocol
+  image: ^4.12.0
   intl: any
   path_provider: ^2.1.6
   share_plus: ^13.3.1

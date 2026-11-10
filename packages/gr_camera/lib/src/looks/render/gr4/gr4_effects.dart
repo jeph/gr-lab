@@ -23,8 +23,8 @@ const int gr4FrameLongSide = 6192;
 /// the frame's pixels lie across one of the picture's.
 ///
 /// Sharpness is left out \[design\]: the camera sharpens edges one to a few
-/// pixels wide, which a picture an eighth of the frame's size no longer
-/// holds (under a hundredth of a code on average in a simulation, §10.1).
+/// pixels wide, which a picture a quarter of the frame's size or smaller
+/// barely holds (§10.2).
 /// Nothing here has been compared with a camera's photos yet (§11).
 @immutable
 final class Gr4Effects {

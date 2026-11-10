@@ -160,6 +160,7 @@ Future<TestApp> createTestApp({
   Stream<void> wifiApprovalShown = const Stream.empty(),
   List<Duration> redialDelays = const [Duration(milliseconds: 20)],
   bool debugLogBlocked = false,
+  FakeMediaSource? media,
 }) async {
   // flutter_test answers every dart:io HttpClient request with 400; the
   // fake camera serves real HTTP on loopback.
@@ -169,7 +170,7 @@ Future<TestApp> createTestApp({
   final cache = await Directory('${root.path}/cache').create();
   final debugLogDir = Directory('${data.path}/debug-log');
   if (debugLogBlocked) await File(debugLogDir.path).writeAsString('');
-  final camera = FakeGrCamera(config: config, media: syntheticMedia());
+  final camera = FakeGrCamera(config: config, media: media ?? syntheticMedia());
   await camera.startHttp();
   if (saveCamera) {
     final paired = GrPairedCamera(
@@ -192,7 +193,7 @@ Future<TestApp> createTestApp({
   final ble = CountingTransport(
     transport == null ? camera.transport : transport(camera.transport),
   );
-  final media = RecordingMediaSaver();
+  final saver = RecordingMediaSaver();
   final trace = TraceRelay();
   final services = AppServices(
     camera: GrCameraEnvironment(
@@ -205,7 +206,7 @@ Future<TestApp> createTestApp({
       ensureBluetoothPermission: () async => permission.granted,
     ),
     trace: trace,
-    media: media,
+    media: saver,
     clientName: 'GR Lab',
     dataDir: data,
     cacheDir: cache,
@@ -217,7 +218,7 @@ Future<TestApp> createTestApp({
     models: await AppModels.load(services),
     camera: camera,
     ble: ble,
-    media: media,
+    media: saver,
     permission: permission,
     root: root,
   );

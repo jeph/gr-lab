@@ -17,6 +17,7 @@ import 'package:grlab/src/library/library_model.dart';
 import 'package:grlab/src/library/library_scope.dart';
 import 'package:grlab/src/library/shot.dart';
 import 'package:grlab/src/library/shot_cell.dart';
+import 'package:grlab/src/looks/look_photo.dart';
 import 'package:grlab/src/looks/look_spec.dart';
 import 'package:grlab/src/looks/look_widgets.dart';
 import 'package:grlab/src/looks/looks_store.dart';
@@ -1073,23 +1074,44 @@ class _ImageControlRowState extends State<_ImageControlRow> {
     });
   }
 
+  /// The picture of the shot to keep with a look saved from it, no more
+  /// than [longSide] pixels on its long side, and the layout of the JPEG
+  /// it shows as: the shot's full JPEG made smaller, when it has one and
+  /// the camera sends it, and else the camera's own preview of the shot,
+  /// which is small and in the sensor's layout. Nothing away from a
+  /// camera that has neither.
+  Future<(Uint8List?, JpegLayout?)> _photoToKeep(int longSide) async {
+    final serial = _library.model.serial;
+    if (serial == null) return (null, null);
+    Future<Uint8List?> load(CameraFile file, GrImageSize size) => _library
+        .images
+        .load(serial, file, size)
+        .future
+        .then<Uint8List?>((b) => b, onError: (Object _) => null);
+
+    final jpeg = widget.shot.jpeg;
+    final full = jpeg == null ? null : await load(jpeg, GrImageSize.full);
+    final smaller = full == null
+        ? null
+        : await lookPhotoOf(full, longSide: longSide);
+    if (smaller != null) return (smaller, readJpegLayout(full!));
+    final view = await load(widget.shot.primary, GrImageSize.view);
+    return (view, view == null ? null : readJpegLayout(view));
+  }
+
   Future<void> _save(Look look) async {
     final l10n = context.l10n;
-    final store = AppScope.of(context).looks;
+    final models = AppScope.of(context);
+    final store = models.looks;
     final messenger = ScaffoldMessenger.of(context);
     final name = await askLookName(context, initial: lookBaseLabel(l10n, look));
     if (name == null || !mounted) return;
     setState(() => _saving = true);
-    final serial = _library.model.serial;
     final file = widget.shot.primary;
-    final photo = serial == null
-        ? null
-        : await _library.images
-              .load(serial, file, GrImageSize.view)
-              .future
-              .then<Uint8List?>((b) => b, onError: (Object _) => null);
-    // The preview is in the sensor's layout; how the camera was held is in
-    // the shot's info.
+    final (photo, layout) = await _photoToKeep(
+      lookRendererFor(models.connection.body).pictureLongSide,
+    );
+    // How the camera was held is in the shot's info.
     final info = photo == null
         ? null
         : _library.model.info(file) ?? await _library.model.ensureInfo(file);
@@ -1101,7 +1123,7 @@ class _ImageControlRowState extends State<_ImageControlRow> {
         photo: photo,
         photoOrientation: photo == null
             ? null
-            : orientationToApply(readJpegLayout(photo), info?.orientation),
+            : orientationToApply(layout, info?.orientation),
       );
       showLooksMessage(messenger, l10n.looksSaved(name));
     } on LookConflict catch (conflict) {

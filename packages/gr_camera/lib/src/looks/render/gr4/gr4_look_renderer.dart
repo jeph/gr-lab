@@ -59,11 +59,13 @@ final class Gr4LookRenderer implements LookRenderer {
         effects.apply(picture, scale: _scaleOf(picture), over: over);
   }
 
-  /// An eighth of the frame: the size of the fourth level of the camera's
+  /// A quarter of the frame: the size of the third level of the camera's
   /// pyramids, so the effects start on a level of their own and not
-  /// between two \[design\].
+  /// between two, and about as many pixels as a phone's screen shows
+  /// \[design\]. Half the frame would take four times as long to work
+  /// out.
   @override
-  int get pictureLongSide => gr4FrameLongSide >> 3;
+  int get pictureLongSide => gr4FrameLongSide >> 2;
 
   /// How many of the frame's pixels lie across one of [picture]'s.
   static double _scaleOf(LookPicture picture) =>

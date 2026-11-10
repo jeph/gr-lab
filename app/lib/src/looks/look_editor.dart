@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gr_camera/gr_camera.dart';
 
 import 'package:grlab/l10n/l10n.dart';
@@ -58,7 +59,9 @@ Future<void> openNewLook(BuildContext context, LooksModel model) async {
 /// Detail and Effects, then Save and, on a camera's Looks page, Load into
 /// the slot. The preview sits above the controls, beside them where the
 /// screen is wider than it is tall, and scrolls with them where it is too
-/// short for both \[design\].
+/// short for both \[design\]. A tap on it, or its button, gives it the
+/// whole screen, with the choice of photo and of comparison and nothing
+/// else.
 class LookEditor extends StatefulWidget {
   const new({
     required this.model,
@@ -108,6 +111,31 @@ class _LookEditorState extends State<LookEditor> {
     });
   }
 
+  @override
+  void dispose() {
+    if (_fullscreen) _showSystemBars();
+    super.dispose();
+  }
+
+  void _enterFullscreen() {
+    if (_fullscreen) return;
+    setState(() => _fullscreen = true);
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
+    );
+  }
+
+  void _leaveFullscreen() {
+    if (!_fullscreen) return;
+    setState(() => _fullscreen = false);
+    _showSystemBars();
+  }
+
+  /// Brings back the status and navigation bars, as the rest of the app
+  /// has them (Flutter's default, edge to edge).
+  void _showSystemBars() =>
+      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
+
   LooksModel get _model => widget.model;
 
   /// The look differs from its saved version, or has none.
@@ -139,6 +167,10 @@ class _LookEditorState extends State<LookEditor> {
   int? _picked;
 
   LookCompareMode _mode = LookCompareMode.slide;
+
+  /// The preview has the whole screen: the editor's bar and controls and
+  /// the system's bars are hidden.
+  bool _fullscreen = false;
 
   /// The preview and the controls keep their state when the screen turns
   /// and they change places.
@@ -244,113 +276,171 @@ class _LookEditorState extends State<LookEditor> {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: _model,
     builder: (context, _) {
-      final c = GrColors.of(context);
-      final l10n = context.l10n;
       final canLoad = _model.canLoad(_look);
-      return Scaffold(
-        key: const Key('look-editor'),
-        appBar: AppBar(
-          leading: const BackButton(),
-          title: Text(_name, overflow: TextOverflow.ellipsis),
-          actions: [
-            PopupMenuButton<_EditorAction>(
-              key: const Key('look-editor-menu'),
-              icon: const Icon(Icons.more_horiz_rounded),
-              tooltip: l10n.looksMore,
-              onSelected: (a) => unawaited(_act(a)),
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: _EditorAction.rename,
-                  child: Text(l10n.looksRename),
-                ),
-                if (_model.onCamera)
-                  for (final (n, a) in const [
-                    (1, _EditorAction.load1),
-                    (2, _EditorAction.load2),
-                    (3, _EditorAction.load3),
-                  ])
-                    PopupMenuItem(
-                      value: a,
-                      enabled: canLoad,
-                      child: Text(l10n.looksLoadInto(n)),
-                    ),
-                if (_saved != null)
-                  PopupMenuItem(
-                    value: _EditorAction.delete,
-                    child: Text(
-                      l10n.looksDelete,
-                      style: TextStyle(color: c.danger),
-                    ),
-                  ),
-              ],
-            ),
-          ],
+      final chosen = GrColors.of(context);
+      // The same under either parent, so that it keeps its state when it
+      // moves between them.
+      final preview = KeyedSubtree(
+        key: _previewKey,
+        child: Builder(builder: _preview),
+      );
+      final editor = SafeArea(
+        top: false,
+        bottom: false,
+        child: LayoutBuilder(
+          builder: (context, box) => _layout(
+            context,
+            box,
+            // Away while it has the whole screen.
+            preview: _fullscreen ? const SizedBox.shrink() : preview,
+            canLoad: canLoad,
+          ),
         ),
-        body: SafeArea(
-          top: false,
-          bottom: false,
-          child: LayoutBuilder(
-            builder: (context, box) {
-              final preview = KeyedSubtree(
-                key: _previewKey,
-                child: _preview(context),
-              );
-              final wide =
-                  box.maxWidth > box.maxHeight && box.maxWidth >= _wideFrom;
-              // Too short to keep a picture worth looking at in place above
-              // a parameter: the preview scrolls with the controls.
-              final scrolls = !wide && box.maxHeight < _inPlaceFrom;
-              final controls = KeyedSubtree(
-                key: _controlsKey,
-                child: _controls(
-                  context,
-                  canLoad: canLoad,
-                  leading: scrolls
-                      ? SizedBox(height: _scrollingPreview, child: preview)
-                      : null,
-                ),
-              );
-              if (scrolls) return controls;
-              if (wide) {
-                return Row(
-                  children: [
-                    Expanded(
-                      // The switches under the picture keep clear of the
-                      // system's bar along the bottom edge.
-                      child: SafeArea(
-                        top: false,
-                        left: false,
-                        right: false,
-                        minimum: const EdgeInsets.only(bottom: 12),
-                        child: preview,
-                      ),
-                    ),
-                    VerticalDivider(width: 1, thickness: 1, color: c.line),
-                    SizedBox(
-                      width: (box.maxWidth * .42).clamp(
-                        _narrowestControls,
-                        _widestControls,
-                      ),
-                      child: controls,
-                    ),
-                  ],
-                );
-              }
-              return Column(
-                children: [
-                  SizedBox(
-                    height: math.min(box.maxHeight * .45, _tallestPreview),
+      );
+      return PopScope(
+        canPop: !_fullscreen,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _leaveFullscreen();
+        },
+        child: Scaffold(
+          key: const Key('look-editor'),
+          backgroundColor: _fullscreen ? Colors.black : null,
+          appBar: _fullscreen ? null : _bar(context, canLoad: canLoad),
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Out of sight under a preview that has the whole screen,
+              // the controls keep their state: where they were scrolled
+              // to, above all.
+              Offstage(offstage: _fullscreen, child: editor),
+              if (_fullscreen)
+                Theme(
+                  // Dark around the pictures: the app's theme when it is
+                  // a dark one, as the live view page does.
+                  data: grTheme(
+                    chosen.brightness == Brightness.dark
+                        ? chosen
+                        : GrColors.dark,
+                  ),
+                  child: SafeArea(
+                    minimum: const EdgeInsets.only(bottom: 12),
                     child: preview,
                   ),
-                  Expanded(child: controls),
-                ],
-              );
-            },
+                ),
+            ],
           ),
         ),
       );
     },
   );
+
+  /// The look's name, the way back and the menu of what else to do with
+  /// the look.
+  PreferredSizeWidget _bar(BuildContext context, {required bool canLoad}) {
+    final c = GrColors.of(context);
+    final l10n = context.l10n;
+    return AppBar(
+      leading: const BackButton(),
+      title: Text(_name, overflow: TextOverflow.ellipsis),
+      actions: [
+        PopupMenuButton<_EditorAction>(
+          key: const Key('look-editor-menu'),
+          icon: const Icon(Icons.more_horiz_rounded),
+          tooltip: l10n.looksMore,
+          onSelected: (a) => unawaited(_act(a)),
+          itemBuilder: (context) => [
+            PopupMenuItem(
+              value: _EditorAction.rename,
+              child: Text(l10n.looksRename),
+            ),
+            if (_model.onCamera)
+              for (final (n, a) in const [
+                (1, _EditorAction.load1),
+                (2, _EditorAction.load2),
+                (3, _EditorAction.load3),
+              ])
+                PopupMenuItem(
+                  value: a,
+                  enabled: canLoad,
+                  child: Text(l10n.looksLoadInto(n)),
+                ),
+            if (_saved != null)
+              PopupMenuItem(
+                value: _EditorAction.delete,
+                child: Text(
+                  l10n.looksDelete,
+                  style: TextStyle(color: c.danger),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// [preview] and the controls in a [box]: the preview above the
+  /// controls, beside them where the box is wider than it is tall, and
+  /// scrolling with them where it is too short for both.
+  Widget _layout(
+    BuildContext context,
+    BoxConstraints box, {
+    required Widget preview,
+    required bool canLoad,
+  }) {
+    final wide = box.maxWidth > box.maxHeight && box.maxWidth >= _wideFrom;
+    // Too short to keep a picture worth looking at in place above a
+    // parameter: the preview scrolls with the controls.
+    final scrolls = !wide && box.maxHeight < _inPlaceFrom;
+    final controls = KeyedSubtree(
+      key: _controlsKey,
+      child: _controls(
+        context,
+        canLoad: canLoad,
+        leading: scrolls
+            ? SizedBox(height: _scrollingPreview, child: preview)
+            : null,
+      ),
+    );
+    if (scrolls) return controls;
+    if (wide) {
+      return Row(
+        children: [
+          Expanded(
+            // The switches under the picture keep clear of the system's
+            // bar along the bottom edge.
+            child: SafeArea(
+              top: false,
+              left: false,
+              right: false,
+              minimum: const EdgeInsets.only(bottom: 12),
+              child: preview,
+            ),
+          ),
+          VerticalDivider(
+            width: 1,
+            thickness: 1,
+            color: GrColors.of(context).line,
+          ),
+          SizedBox(
+            width: (box.maxWidth * .42).clamp(
+              _narrowestControls,
+              _widestControls,
+            ),
+            child: controls,
+          ),
+        ],
+      );
+    }
+    return Column(
+      children: [
+        SizedBox(
+          height: math.min(box.maxHeight * .45, _tallestPreview),
+          child: preview,
+        ),
+        Expanded(child: controls),
+      ],
+    );
+  }
 
   /// The least width at which the preview goes beside the controls, and
   /// the widths the controls then keep between.
@@ -402,6 +492,8 @@ class _LookEditorState extends State<LookEditor> {
             // preview: it is shown as it was taken.
             look: fit == LookSourceFit.unusable ? null : _look,
             mode: _mode,
+            onTap: _fullscreen ? null : _enterFullscreen,
+            onTapHint: l10n.looksPreviewFullScreen,
           ),
         ),
         // Above the switches, so they stay where they are when the note
@@ -430,6 +522,18 @@ class _LookEditorState extends State<LookEditor> {
               LookCompareModeSwitch(
                 selected: _mode,
                 onSelect: (m) => setState(() => _mode = m),
+              ),
+              IconButton(
+                key: const Key('look-preview-fullscreen'),
+                tooltip: _fullscreen
+                    ? l10n.looksPreviewExitFullScreen
+                    : l10n.looksPreviewFullScreen,
+                onPressed: _fullscreen ? _leaveFullscreen : _enterFullscreen,
+                icon: Icon(
+                  _fullscreen
+                      ? Icons.fullscreen_exit_rounded
+                      : Icons.fullscreen_rounded,
+                ),
               ),
             ],
           ),

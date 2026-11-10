@@ -294,8 +294,8 @@ void main() {
       );
     });
 
-    test("is worked on at an eighth of the GR IV's frame", () {
-      expect(LookRerender(_renderer, source: null).pictureLongSide, 774);
+    test("is worked on at a quarter of the GR IV's frame", () {
+      expect(LookRerender(_renderer, source: null).pictureLongSide, 1548);
     });
 
     test('is rendered the same after the shared work is done ahead', () {

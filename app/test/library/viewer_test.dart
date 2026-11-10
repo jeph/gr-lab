@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
+import 'package:grlab/src/library/image_orientation.dart';
 import 'package:grlab/src/library/library_screen.dart';
 import 'package:grlab/src/library/viewer.dart';
 import 'package:grlab/src/looks/looks_store.dart';
 import 'package:grlab/src/widgets/group.dart';
+import 'package:image/image.dart' as img;
 
 import '../support/test_app.dart';
 
@@ -55,12 +58,14 @@ void _delete(TestApp app, String file) {
 Future<TestApp> _openViewer(
   WidgetTester tester,
   List<FakePhoto> photos,
-  String shot,
-) async {
+  String shot, {
+  FakeMediaSource? media,
+}) async {
   final app = (await tester.runAsync(
     () => createTestApp(
       config: FakeCameraConfig(bonded: true, photos: photos),
       saveCamera: true,
+      media: media,
     ),
   ))!;
   await app.pumpApp(tester);
@@ -252,27 +257,65 @@ void main() {
     await app.dispose();
   });
 
-  testWidgets("a look saved from a photo keeps how the photo's preview is "
-      'turned upright: as the camera held it, since the preview is stored '
-      "in the sensor's layout", (tester) async {
-    final app = await _openViewer(tester, [
-      FakePhoto(
-        '100RICOH',
-        'R0000001.JPG',
-        _taken(1),
-        imageControl: FakeLook.presets[0].data,
-      ),
-      FakePhoto(
-        '100RICOH',
-        'R0000002.JPG',
-        _taken(2),
-        orientation: 8,
-        imageControl: FakeLook.presets[4].data,
-      ),
-    ], 'sd1|100RICOH/R0000002');
+  testWidgets("a look saved from a photo keeps the photo's JPEG, made as "
+      "small as a look's preview is worked out on and upright; a RAW file "
+      "alone, or a JPEG too small to shrink, is kept as the camera's "
+      'preview or as it is, with how to turn it upright', (tester) async {
+    // 3000 by 2000 as stored, left half red; held upside down, so the
+    // left is the right once upright.
+    final large = img.Image(width: 3000, height: 2000);
+    for (final pixel in large) {
+      if (pixel.x < 1500) {
+        pixel.setRgb(200, 40, 40);
+      } else {
+        pixel.setRgb(40, 40, 200);
+      }
+    }
+    final largeJpeg = withExifOrientation(img.encodeJpg(large), 3);
+    final rest = syntheticMedia();
+    // Each photo has a look of its own: a look already saved is not saved
+    // again.
+    final app = await _openViewer(
+      tester,
+      [
+        FakePhoto(
+          '100RICOH',
+          'R0000001.JPG',
+          _taken(1),
+          imageControl: FakeLook.presets[1].data,
+        ),
+        FakePhoto(
+          '100RICOH',
+          'R0000002.DNG',
+          _taken(2),
+          orientation: 6,
+          imageControl: FakeLook.presets[2].data,
+        ),
+        FakePhoto(
+          '100RICOH',
+          'R0000003.JPG',
+          _taken(3),
+          orientation: 6,
+          imageControl: FakeLook.presets[0].data,
+        ),
+        FakePhoto(
+          '100RICOH',
+          'R0000004.JPG',
+          _taken(4),
+          orientation: 3,
+          imageControl: FakeLook.presets[4].data,
+        ),
+      ],
+      'sd1|100RICOH/R0000004',
+      media: (photo, size) async =>
+          size == GrImageSize.full && photo.file == 'R0000004.JPG'
+          ? largeJpeg
+          : await rest(photo, size),
+    );
     final looks = app.models.looks;
     final save = _inViewer(find.byKey(const Key('viewer-save-look')));
-    Future<SavedLook> saveLook() async {
+    Future<(SavedLook, Uint8List)> saveLook(String from) async {
+      await pumpUntilFound(tester, _showing(from));
       final before = looks.looks.length;
       await tapWhenReady(tester, save);
       await tapWhenReady(tester, find.byKey(const Key('looks-name-ok')));
@@ -283,22 +326,45 @@ void main() {
       );
       final saved = looks.looks.first;
       await pumpUntilFound(tester, find.text('Saved ${saved.name}'));
-      return saved;
+      expect(saved.source, from);
+      return (saved, looks.photoOf(saved)!.readAsBytesSync());
     }
 
-    final onItsSide = await saveLook();
-    expect(onItsSide.source, 'R0000002.JPG');
-    expect(looks.photoOf(onItsSide), isNotNull);
-    expect(onItsSide.photoOrientation, 8);
+    Future<void> next() async {
+      await tester.fling(
+        _inViewer(find.byType(PageView)),
+        const Offset(-300, 0),
+        1000,
+      );
+    }
 
-    await tester.fling(
-      _inViewer(find.byType(PageView)),
-      const Offset(-300, 0),
-      1000,
-    );
-    await pumpUntilFound(tester, _showing('R0000001.JPG'));
-    final level = await saveLook();
-    expect(level.source, 'R0000001.JPG');
+    final (shrunk, shrunkPhoto) = await saveLook('R0000004.JPG');
+    final picture = img.decodeJpg(shrunkPhoto)!;
+    expect((picture.width, picture.height), (1548, 1032));
+    expect(readJpegLayout(shrunkPhoto)!.exifOrientation, isNull);
+    expect(shrunk.photoOrientation, 1);
+    expect(picture.getPixel(1200, 500).r, greaterThan(150), reason: 'red');
+    expect(picture.getPixel(300, 500).b, greaterThan(150), reason: 'blue');
+    expect(shrunkPhoto.length, lessThan(largeJpeg.length));
+
+    // The fake camera's own full JPEG is 24 by 16: kept whole, with the
+    // tag that turns it.
+    await next();
+    final (small, smallPhoto) = await saveLook('R0000003.JPG');
+    expect(readJpegLayout(smallPhoto)!.exifOrientation, 6);
+    expect(small.photoOrientation, 1);
+
+    // The preview is in the sensor's layout; how the camera was held is
+    // in the shot's info.
+    await next();
+    final (raw, rawPhoto) = await saveLook('R0000002.DNG');
+    final preview = readJpegLayout(rawPhoto)!;
+    expect((preview.width, preview.height), (24, 16));
+    expect(preview.exifOrientation, isNull);
+    expect(raw.photoOrientation, 6);
+
+    await next();
+    final (level, _) = await saveLook('R0000001.JPG');
     expect(level.photoOrientation, 1);
 
     await app.dispose();

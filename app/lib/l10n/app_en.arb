@@ -1855,6 +1855,14 @@
   "@looksPreviewAsTaken": {
     "description": "Note under the look editor's preview when the user picked the look's own photo and it cannot be shown under the edited look (a black-and-white photo under a colour look, for example): the photo is shown unchanged, with no preview of the look."
   },
+  "looksPreviewExitFullScreen": "Exit full screen",
+  "@looksPreviewExitFullScreen": {
+    "description": "Tooltip of the button under the look editor's preview while the preview has the whole screen; it brings back the editor's controls."
+  },
+  "looksPreviewFullScreen": "Full screen",
+  "@looksPreviewFullScreen": {
+    "description": "Tooltip of the button under the look editor's preview that gives the preview the whole screen, and accessibility hint of the preview itself, which a tap does the same for."
+  },
   "looksPreviewRough": "This photo's own look can't be undone exactly, so the preview is rougher than usual.",
   "@looksPreviewRough": {
     "description": "Note under the look editor's preview. The preview shows the look's photo as the edited look would render it, which means first undoing the look the photo was taken with; that look lost detail the preview cannot bring back."

@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
@@ -677,6 +677,157 @@ void main() {
       await app.dispose();
     });
   }
+
+  for (final (name, size) in const [
+    ('a small phone', Size(320, 568)),
+    ('half a phone, as in split screen', Size(360, 330)),
+    ('a phone held on its side', Size(844, 390)),
+  ]) {
+    testWidgets('on $name a tap on the preview, or its button, gives it the '
+        'whole screen with the choice of photo and of comparison and '
+        'nothing else; its button or Back brings the editor back as it was', (
+      tester,
+    ) async {
+      final modes = <Object?>[];
+      final messenger = tester.binding.defaultBinaryMessenger
+        ..setMockMethodCallHandler(SystemChannels.platform, (call) async {
+          if (call.method == 'SystemChrome.setEnabledSystemUIMode') {
+            modes.add(call.arguments);
+          }
+          return null;
+        });
+      addTearDown(
+        () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+      );
+      final app = await _start(tester, saveCamera: false);
+      tester.view
+        ..physicalSize = size
+        ..devicePixelRatio = 1;
+      final jpeg = File('assets/welcome.jpg').readAsBytesSync();
+      final saved = (await tester.runAsync(
+        () => app.models.looks.add(
+          name: 'Plain',
+          data: Look.onBase(LookBase.standard).toBytes(),
+          photo: jpeg,
+        ),
+      ))!;
+      await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+      await tapWhenReady(tester, find.byKey(ValueKey('look:${saved.id}')));
+      await _editorOpen(tester);
+
+      final editor = find.byKey(const Key('look-editor'));
+      final compare = find.byType(LookCompare);
+      final save = find.byKey(const Key('look-save'));
+      final button = find.byKey(const Key('look-preview-fullscreen'));
+      final list = find.byType(ListView);
+      ScrollPosition scroll() => tester
+          .state<ScrollableState>(
+            find.descendant(of: list, matching: find.byType(Scrollable)).first,
+          )
+          .position;
+      LookCompare shown() => tester.widget<LookCompare>(compare);
+
+      await tester.drag(list, const Offset(0, -60));
+      await tester.pump();
+      final scrolled = scroll().pixels;
+      expect(scrolled, greaterThan(0));
+      final state = tester.state(compare);
+      final inEditor = tester.getRect(compare);
+      expect(find.byTooltip('Full screen'), findsOneWidget);
+      expect(modes, isEmpty);
+
+      // Where the picture is: half the preview is scrolled away on the
+      // shortest screen.
+      await tester.tapAt(inEditor.bottomCenter - const Offset(40, 40));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(modes, ['SystemUiMode.immersiveSticky']);
+      expect(find.byType(AppBar), findsNothing);
+      expect(save.hitTestable(), findsNothing);
+      expect(tester.state(compare), same(state), reason: 'its picture kept');
+      expect(tester.getSize(compare).width, size.width);
+      expect(tester.getSize(compare).height, greaterThan(size.height - 100));
+      expect(find.byTooltip('Exit full screen'), findsOneWidget);
+      expect(find.byTooltip('Full screen'), findsNothing);
+      expect(find.byType(PreviewPhotoSwitch).hitTestable(), findsOneWidget);
+      expect(find.byType(LookCompareModeSwitch).hitTestable(), findsOneWidget);
+
+      // There a tap on the picture is the comparison's own again.
+      await tester.tap(find.byKey(const ValueKey('look-compare:single')));
+      await tester.pump();
+      expect(find.text('APPROXIMATE'), findsOneWidget);
+      await tester.tap(compare);
+      await tester.pump();
+      expect(find.text('BEFORE'), findsOneWidget);
+      expect(modes, hasLength(1));
+      await tester.tap(find.byKey(const ValueKey('look-photo:1')));
+      await tester.pump();
+      expect(shown().photo.image, isA<ResizeImage>());
+      final sample = shown().photo;
+
+      await tester.tap(button);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(modes, [
+        'SystemUiMode.immersiveSticky',
+        'SystemUiMode.edgeToEdge',
+      ]);
+      expect(find.byType(AppBar), findsOneWidget);
+      expect(tester.state(compare), same(state));
+      expect(tester.getRect(compare), inEditor);
+      expect(shown().mode, LookCompareMode.single);
+      expect(shown().photo, same(sample));
+      expect(scroll().pixels, scrolled, reason: 'the controls where they were');
+      expect(find.byTooltip('Full screen'), findsOneWidget);
+
+      await tester.tap(button);
+      await tester.pump();
+      expect(find.byType(AppBar), findsNothing);
+      expect(modes.last, 'SystemUiMode.immersiveSticky');
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(editor, findsOneWidget, reason: 'Back leaves full screen first');
+      expect(find.byType(AppBar), findsOneWidget);
+      expect(modes, hasLength(4));
+      expect(modes.last, 'SystemUiMode.edgeToEdge');
+
+      await tester.binding.handlePopRoute();
+      await pumpUntil(
+        tester,
+        () => editor.evaluate().isEmpty,
+        reason: 'editor closed',
+      );
+      expect(modes, hasLength(4));
+      await app.dispose();
+    });
+  }
+
+  testWidgets('an editor that goes away while its preview has the whole '
+      "screen brings the system's bars back", (tester) async {
+    final modes = <Object?>[];
+    final messenger = tester.binding.defaultBinaryMessenger
+      ..setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'SystemChrome.setEnabledSystemUIMode') {
+          modes.add(call.arguments);
+        }
+        return null;
+      });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+    final app = await _start(tester, saveCamera: false);
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+    await tapWhenReady(tester, find.byKey(const Key('looks-new')));
+    await _editorOpen(tester);
+    await tester.tap(find.byKey(const Key('look-preview-fullscreen')));
+    await tester.pump();
+    expect(modes, ['SystemUiMode.immersiveSticky']);
+    // A look without a photo of its own has nothing to pick between.
+    expect(find.byType(PreviewPhotoSwitch), findsNothing);
+    expect(find.byType(LookCompareModeSwitch).hitTestable(), findsOneWidget);
+    await app.dispose();
+    expect(modes, ['SystemUiMode.immersiveSticky', 'SystemUiMode.edgeToEdge']);
+  });
 
   // The second is as tall as a screen can be before the preview stays in
   // place.
