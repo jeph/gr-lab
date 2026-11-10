@@ -1294,10 +1294,11 @@ class _ActionBar extends StatelessWidget {
   }
 }
 
-/// Downloads the shot: a RAW+JPEG pair first asks whether to download its
-/// JPEG, its RAW or both; any other shot starts at once. Shows that the
-/// shot's files are downloading or queued, and offers a retry when their
-/// job failed.
+/// Downloads the shot: a RAW+JPEG pair asks whether to download its JPEG,
+/// its RAW or both, also after a failed download, so a failed JPEG never
+/// keeps its RAW from being chosen; any other shot starts at once, or
+/// retries its failed job. Shows that the shot's files are downloading or
+/// queued, or that their job failed.
 class _DownloadAction extends StatelessWidget {
   const new({
     required this.serial,
@@ -1338,12 +1339,12 @@ class _DownloadAction extends StatelessWidget {
         ? (Icons.check_rounded, l10n.viewerDownloadAgain)
         : (Icons.download_rounded, l10n.viewerDownload);
     final VoidCallback? onTap;
-    if (failed != null && !running && !queued) {
-      onTap = () => engine.retry(failed);
-    } else if (addable.isEmpty) {
+    if (addable.isEmpty) {
       onTap = null;
     } else if (shot.isPair) {
       onTap = () => unawaited(_choose(context));
+    } else if (failed != null) {
+      onTap = () => engine.retry(failed);
     } else {
       onTap = () => unawaited(engine.enqueueFiles(serial, shot, addable));
     }

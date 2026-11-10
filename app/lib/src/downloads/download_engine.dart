@@ -452,7 +452,8 @@ final class DownloadEngine extends ChangeNotifier {
   /// Queues the files of [kinds] (every file by default) of [shots] of
   /// [serial]'s camera, skipping files already queued. Files downloaded
   /// before are downloaded again: the user may have deleted them from the
-  /// phone. Returns the number of files added.
+  /// phone. A shot whose job failed downloads only what is asked now (see
+  /// [enqueueFiles]). Returns the number of files added.
   Future<int> enqueue(
     String serial,
     Iterable<Shot> shots, {
@@ -470,8 +471,10 @@ final class DownloadEngine extends ChangeNotifier {
     return added;
   }
 
-  /// Queues specific files of one shot (the viewer's JPEG or RAW of a
-  /// pair). Returns the number of files added.
+  /// Queues specific files of one shot (the viewer's choice for a pair).
+  /// A job of the shot still waiting takes them as well; a failed one is
+  /// asked again for exactly these, so choosing the RAW after the JPEG
+  /// failed does not retry the JPEG. Returns the number of files added.
   Future<int> enqueueFiles(
     String serial,
     Shot shot,
@@ -493,13 +496,16 @@ final class DownloadEngine extends ChangeNotifier {
     ];
     if (files.isEmpty) return 0;
     // A waiting or failed job for the same shot takes the files, so one
-    // shot stays one queue entry and one save.
+    // shot stays one queue entry and one save. A failed job is asked again
+    // for these files only: the new request replaces the one that failed.
     for (final j in _jobs) {
       if (j.serial == serial &&
           j.shot.key == shot.key &&
           j.state != DownloadState.running) {
         j
-          .._files = {...j._files, ...files}.toList()
+          .._files = j.state == DownloadState.failed
+              ? files
+              : {...j._files, ...files}.toList()
           ..state = DownloadState.queued
           ..failure = null;
         return files.length;

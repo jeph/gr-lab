@@ -7,6 +7,7 @@ import 'package:grlab/src/library/image_orientation.dart';
 import 'package:grlab/src/library/library_screen.dart';
 import 'package:grlab/src/library/viewer.dart';
 import 'package:grlab/src/looks/looks_store.dart';
+import 'package:grlab/src/services.dart';
 import 'package:grlab/src/widgets/group.dart';
 import 'package:image/image.dart' as img;
 
@@ -242,6 +243,47 @@ void main() {
       reason: 'both saved',
     );
     expect(app.media.shots.last.names, ['R0000001.JPG', 'R0000001.DNG']);
+
+    await app.dispose();
+  });
+
+  testWidgets("after a pair's JPEG fails, Download still asks and choosing "
+      'the RAW downloads the RAW only', (tester) async {
+    final app = await _openViewer(tester, [
+      FakePhoto('100RICOH', 'R0000001.JPG', _taken(1)),
+      FakePhoto('100RICOH', 'R0000001.DNG', _taken(1)),
+    ], 'sd1|100RICOH/R0000001');
+    final download = _inViewer(find.byKey(const ValueKey('viewer-download')));
+    Finder choice(String name) =>
+        find.byKey(Key('viewer-download-choice:$name'));
+    app.media.failWith = const MediaSaveException(
+      MediaSaveFailure.failed,
+      'disk full',
+    );
+
+    await tapWhenReady(tester, download);
+    await tapWhenReady(tester, choice('jpeg'));
+    await pumpUntilFound(tester, _inViewer(find.text('Retry download')));
+
+    app.media.failWith = null;
+    await tapWhenReady(tester, download);
+    await tapWhenReady(tester, choice('raw'));
+    await pumpUntil(
+      tester,
+      () => app.media.shots.isNotEmpty,
+      reason: 'the RAW saved',
+    );
+    await pumpUntil(
+      tester,
+      () => app.models.library.engine.jobs.isEmpty,
+      reason: 'the job done',
+    );
+    expect(
+      [for (final s in app.media.shots) s.names],
+      [
+        ['R0000001.DNG'],
+      ],
+    );
 
     await app.dispose();
   });
