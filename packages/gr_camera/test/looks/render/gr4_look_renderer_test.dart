@@ -1,10 +1,13 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_camera/src/looks/render/gr4/gr4_look_renderer.dart';
 import 'package:gr_camera/src/looks/render/gr4/gr4_tone.dart';
+import 'package:gr_camera/src/looks/render/render_planes.dart';
 
+import 'gr4_effects_reference.dart';
 import 'gr4_reference.dart';
 
 const _renderer = Gr4LookRenderer();
@@ -250,6 +253,9 @@ void main() {
         LookParameter.contrast: 4,
         LookParameter.contrastHigh: 4,
       }),
+      // Darkening Shading and Clarity are taken out of the picture again.
+      _look(LookBase.standard, {LookParameter.shading: -4}),
+      _look(LookBase.standard, {LookParameter.clarity: 2}),
     ]) {
       expect(
         _renderer.sourceFit(source, _standard),
@@ -259,8 +265,8 @@ void main() {
     }
   });
 
-  test('a photo whose look threw information away, or added what is not '
-      'per pixel, can only be undone roughly', () {
+  test('a photo whose look threw information away, or added grain, can '
+      'only be undone roughly', () {
     for (final source in [
       _look(LookBase.bleachBypass),
       _look(LookBase.crossProcess),
@@ -276,8 +282,8 @@ void main() {
         LookParameter.key: 3,
         LookParameter.contrastHigh: 4,
       }),
-      _look(LookBase.standard, {LookParameter.shading: -1}),
-      _look(LookBase.standard, {LookParameter.clarity: 2}),
+      // Shading that brightens the corners may have clipped them.
+      _look(LookBase.standard, {LookParameter.shading: 1}),
       _look(LookBase.positiveFilm, {LookParameter.grain: 1}),
     ]) {
       expect(
@@ -286,6 +292,52 @@ void main() {
         reason: '${source.base} ${source.values}',
       );
     }
+  });
+
+  test('what a look does to the picture as a whole is taken out of a '
+      'photo and put into one only when there is something to do', () {
+    final shaded = _look(LookBase.standard, {LookParameter.shading: -2});
+    final grained = _look(LookBase.vivid, {LookParameter.grain: 1});
+    final hdr = _look(LookBase.hdrTone, {LookParameter.hdrStrength: 2});
+    expect(_renderer.unfilter(_standard), isNull);
+    expect(_renderer.unfilter(grained), isNull, reason: 'grain stays in');
+    expect(_renderer.unfilter(shaded), isNotNull);
+    expect(_renderer.filter(_standard, source: shaded), isNull);
+    expect(_renderer.filter(shaded, source: _standard), isNotNull);
+    expect(_renderer.filter(grained, source: grained), isNull);
+    expect(_renderer.filter(grained, source: _standard), isNotNull);
+    expect(_renderer.filter(hdr, source: _standard), isNotNull);
+    expect(_renderer.pictureLongSide, 774);
+  });
+
+  test("a look's grain is put into a picture as the picture's share of "
+      'the frame shows it, less the grain its photo already has', () {
+    Look grained(int strength) => _look(LookBase.standard, {
+      LookParameter.grain: 1,
+      LookParameter.grainStrength: strength,
+      LookParameter.grainSize: 1,
+    });
+    // The deviation of the luma of a mid-grey picture afterwards.
+    double added(Look source, {int width = 774, int height = 516}) {
+      final picture = LookPicture(width, height);
+      for (final plane in [picture.luma, picture.blue, picture.red]) {
+        plane.values.fillRange(0, width * height, 128);
+      }
+      _renderer.filter(grained(2), source: source)!(picture);
+      var sum = 0.0;
+      for (final v in picture.luma.values) {
+        sum += (v - 128) * (v - 128);
+      }
+      return math.sqrt(sum / (width * height));
+    }
+
+    // 774 pixels are an eighth of the frame.
+    final whole = added(_standard);
+    expect(whole / grainDeviationAtEighth[1], closeTo(1, 0.03));
+    expect(added(_standard, width: 387, height: 258), lessThan(0.7 * whole));
+    // Intensity Medium's grain is half High's, and deviations add as
+    // squares: three quarters of High's square are still to come.
+    expect(added(grained(1)) / whole, closeTo(math.sqrt(3) / 2, 0.03));
   });
 
   test("a photo's brightest pixels are taken as the point where its look "

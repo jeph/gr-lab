@@ -114,6 +114,197 @@ void main() {
     final standard = LookRerender(_renderer, source: _standard, size: 5);
     expect(standard.lutFor(unknownBase).rgba, identity);
   });
+
+  group('a whole picture', () {
+    const width = 48;
+    const height = 32;
+
+    // Soft colours that no look here drives to black or white, nor
+    // Shading out of the range of R, G and B.
+    Uint8List photo() {
+      final rgba = Uint8List(width * height * 4);
+      for (var y = 0; y < height; y++) {
+        for (var x = 0; x < width; x++) {
+          final i = (y * width + x) * 4;
+          rgba[i] = 110 + x;
+          rgba[i + 1] = 120 + y;
+          rgba[i + 2] = 130 - (x + y) ~/ 4;
+          rgba[i + 3] = 7;
+        }
+      }
+      return rgba;
+    }
+
+    Look look(LookBase base, Map<LookParameter, int> values) {
+      var look = Look.onBase(base);
+      for (final MapEntry(:key, :value) in values.entries) {
+        look = look.withValue(key, value);
+      }
+      return look;
+    }
+
+    List<int> pixel(Uint8List rgba, int x, int y) =>
+        rgba.sublist((y * width + x) * 4, (y * width + x) * 4 + 4);
+
+    int worst(Uint8List a, Uint8List b) {
+      var worst = 0;
+      for (var i = 0; i < a.length; i++) {
+        final d = (a[i] - b[i]).abs();
+        if (i % 4 != 3 && d > worst) worst = d;
+      }
+      return worst;
+    }
+
+    test('under a look of colour and tone alone is each pixel put '
+        'through the table, opaque', () {
+      final rerender = LookRerender(_renderer, source: _standard);
+      expect(rerender.filters(_vivid), isFalse);
+      final before = photo();
+      final out = rerender.render(
+        before,
+        width: width,
+        height: height,
+        target: _vivid,
+      );
+      expect(before, photo(), reason: 'the photo itself is left alone');
+      final lut = rerender.lutFor(_vivid);
+      final top = lut.size - 1;
+      for (final (x, y) in [(0, 0), (47, 31), (13, 20)]) {
+        final was = pixel(before, x, y);
+        final blended = _blend(
+          lut,
+          was[0] / 255 * top,
+          was[1] / 255 * top,
+          was[2] / 255 * top,
+        );
+        expect(pixel(out, x, y), [
+          for (final c in blended) c.round(),
+          255,
+        ], reason: '$x, $y');
+      }
+    });
+
+    test("under a look with Shading has the look's colour at the centre "
+        'and its corners darkened', () {
+      final rerender = LookRerender(_renderer, source: _standard);
+      final shaded = look(LookBase.vivid, {LookParameter.shading: -4});
+      expect(rerender.filters(shaded), isTrue);
+      final plain = rerender.render(
+        photo(),
+        width: width,
+        height: height,
+        target: _vivid,
+      );
+      final out = rerender.render(
+        photo(),
+        width: width,
+        height: height,
+        target: shaded,
+      );
+      for (var c = 0; c < 3; c++) {
+        // A quarter of the luma at the corner, and under 1 % off at the
+        // two pixels either side of the centre.
+        expect(pixel(out, 0, 0)[c], lessThan(pixel(plain, 0, 0)[c] * 0.5));
+        expect(
+          pixel(out, 24, 16)[c],
+          closeTo(pixel(plain, 24, 16)[c], 3),
+          reason: 'centre',
+        );
+      }
+    });
+
+    test('developed with Shading and Clarity comes back as it was under '
+        'its own look, and as the photo without them under that look', () {
+      final settings = {LookParameter.shading: -2, LookParameter.clarity: 3};
+      final source = look(LookBase.standard, settings);
+      final developed = LookRerender(
+        _renderer,
+        source: _standard,
+      ).render(photo(), width: width, height: height, target: source);
+      // Shading −2 halves the luma at the corner, about 134 there, and
+      // leaves the chroma.
+      expect(
+        pixel(developed, 0, 31)[1],
+        closeTo(pixel(photo(), 0, 31)[1] - 67, 8),
+      );
+      final rerender = LookRerender(_renderer, source: source);
+      expect(rerender.fitFor(_standard), LookSourceFit.good);
+      expect(rerender.filters(source), isTrue);
+      expect(rerender.filters(_standard), isTrue);
+      final same = rerender.render(
+        developed,
+        width: width,
+        height: height,
+        target: source,
+      );
+      expect(worst(same, developed), lessThan(3));
+      final without = rerender.render(
+        developed,
+        width: width,
+        height: height,
+        target: _standard,
+      );
+      expect(worst(without, photo()), lessThan(6));
+    });
+
+    test("gets a look's grain once: none when the photo has it "
+        'already', () {
+      final grainy = look(LookBase.standard, {
+        LookParameter.grain: 1,
+        LookParameter.grainStrength: 2,
+        LookParameter.grainSize: 1,
+      });
+      final plain = LookRerender(_renderer, source: _standard);
+      expect(plain.filters(grainy), isTrue);
+      final once = plain.render(
+        photo(),
+        width: width,
+        height: height,
+        target: grainy,
+      );
+      expect(worst(once, photo()), greaterThan(0));
+      expect(
+        once,
+        plain.render(photo(), width: width, height: height, target: grainy),
+        reason: 'the same grain each time',
+      );
+      final already = LookRerender(_renderer, source: grainy);
+      expect(already.fitFor(grainy), LookSourceFit.rough);
+      expect(already.filters(grainy), isFalse);
+      expect(
+        worst(
+          already.render(photo(), width: width, height: height, target: grainy),
+          photo(),
+        ),
+        lessThan(2),
+      );
+    });
+
+    test('that cannot be shown under the target look comes back as it '
+        'is', () {
+      final monotone = LookRerender(
+        _renderer,
+        source: Look.onBase(LookBase.monotone),
+      );
+      final shaded = look(LookBase.vivid, {LookParameter.shading: -4});
+      expect(monotone.filters(shaded), isFalse);
+      expect(
+        monotone.render(photo(), width: width, height: height, target: shaded),
+        photo(),
+      );
+    });
+
+    test("is worked on at an eighth of the GR IV's frame", () {
+      expect(LookRerender(_renderer, source: null).pictureLongSide, 774);
+    });
+
+    test('is rendered the same after the shared work is done ahead', () {
+      final ahead = LookRerender(_renderer, source: _standard)..prepare();
+      final late = LookRerender(_renderer, source: _standard);
+      expect(ahead.lutFor(_vivid).rgba, late.lutFor(_vivid).rgba);
+      LookRerender(_renderer, source: Look.onBase(LookBase.hdrTone)).prepare();
+    });
+  });
 }
 
 /// The colour at the fractional steps ([r], [g], [b]) of [lut], blended

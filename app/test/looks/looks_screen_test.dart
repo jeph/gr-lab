@@ -385,8 +385,13 @@ void main() {
     final note = find.byKey(const Key('look-preview-note'));
     Finder noteSaying(String text) =>
         find.descendant(of: note, matching: find.text(text));
-    ImageProvider previewed() =>
-        tester.widget<LookPreview>(find.byType(LookPreview)).image;
+    LookPreview preview() =>
+        tester.widget<LookPreview>(find.byType(LookPreview));
+    // The photo itself, under the size the preview asks for it in.
+    ImageProvider previewed() => switch (preview().image) {
+      ResizeImage(:final imageProvider) => imageProvider,
+      final other => other,
+    };
     Future<void> open(SavedLook look) async {
       await tapWhenReady(tester, find.byKey(ValueKey('look:${look.id}')));
       await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
@@ -406,6 +411,11 @@ void main() {
     expect(previewed(), isNot(isA<AssetImage>()));
     await tapWhenReady(tester, find.byKey(const ValueKey('look-base:vivid')));
     expect(note, findsNothing, reason: 'a Standard photo suits every look');
+    expect(preview().look.base, LookBase.vivid);
+    expect(
+      preview().rerender.source?.settings,
+      Look.onBase(LookBase.standard).settings,
+    );
     await close();
 
     await open(grey);

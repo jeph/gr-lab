@@ -46,8 +46,63 @@ LookLut _table(
   return LookLut(size, rgba);
 }
 
+final LookRenderer _renderer = lookRendererFor(CameraBody.unknown);
+final Look _standard = Look.onBase(LookBase.standard);
+
 void main() {
   const boundary = Key('boundary');
+
+  /// A [width] by [height] photo of [pixel] all over.
+  Future<ImageProvider> photoOf(
+    WidgetTester tester,
+    List<int> pixel, {
+    int width = 12,
+    int height = 8,
+  }) async => MemoryImage(
+    (await tester.runAsync(() async {
+      final picture = await _filled(width, height, pixel);
+      final png = await picture.toByteData(format: ui.ImageByteFormat.png);
+      return png!.buffer.asUint8List();
+    }))!,
+  );
+
+  /// Shows [child] in a box of [width] by [height].
+  Future<void> show(
+    WidgetTester tester,
+    Widget child, {
+    double width = 40,
+    double height = 60,
+  }) => tester.pumpWidget(
+    Center(
+      child: RepaintBoundary(
+        key: boundary,
+        child: SizedBox(
+          width: width,
+          height: height,
+          child: Directionality(textDirection: TextDirection.ltr, child: child),
+        ),
+      ),
+    ),
+  );
+
+  /// The colour drawn [across] and [down] the box, each 0..1.
+  Future<List<int>> colourAt(
+    WidgetTester tester, {
+    double across = 0.5,
+    double down = 0.5,
+  }) async {
+    final render = tester.renderObject<RenderRepaintBoundary>(
+      find.byKey(boundary),
+    );
+    return (await tester.runAsync(() async {
+      final shot = await render.toImage();
+      final bytes = await shot.toByteData();
+      final x = (across * (shot.width - 1)).round();
+      final y = (down * (shot.height - 1)).round();
+      final at = (y * shot.width + x) * 4;
+      return bytes!.buffer.asUint8List().sublist(at, at + 4);
+    }))!;
+  }
 
   /// The colour [photo] is drawn in through [lut], at the middle of a box.
   Future<List<int>> drawn(
@@ -55,45 +110,16 @@ void main() {
     List<int> photo,
     LookLut lut,
   ) async {
-    final image = MemoryImage(
-      (await tester.runAsync(() async {
-        final picture = await _filled(12, 8, photo);
-        final png = await picture.toByteData(format: ui.ImageByteFormat.png);
-        return png!.buffer.asUint8List();
-      }))!,
-    );
-    await tester.pumpWidget(
-      Center(
-        child: RepaintBoundary(
-          key: boundary,
-          child: SizedBox(
-            width: 40,
-            height: 60,
-            child: Directionality(
-              textDirection: TextDirection.ltr,
-              child: LookPreview(image: image, lut: lut),
-            ),
-          ),
-        ),
-      ),
-    );
+    final image = await photoOf(tester, photo);
+    await show(tester, LookTableView(image: image, lut: lut));
     await pumpUntilFound(tester, find.byType(CustomPaint));
-    final render = tester.renderObject<RenderRepaintBoundary>(
-      find.byKey(boundary),
-    );
-    final pixels = (await tester.runAsync(() async {
-      final shot = await render.toImage();
-      final bytes = await shot.toByteData();
-      final at = (shot.height ~/ 2 * shot.width + shot.width ~/ 2) * 4;
-      return bytes!.buffer.asUint8List().sublist(at, at + 4);
-    }))!;
-    return pixels;
+    return await colourAt(tester);
   }
 
-  Matcher near(List<int> colour) => pairwiseCompare<int, int>(
+  Matcher near(List<int> colour, {int within = 2}) => pairwiseCompare<int, int>(
     colour,
-    (wanted, actual) => (wanted - actual).abs() <= 2,
-    'within 2 of',
+    (wanted, actual) => (wanted - actual).abs() <= within,
+    'within $within of',
   );
 
   testWidgets('a table that changes nothing draws the photo as it is', (
@@ -123,5 +149,148 @@ void main() {
       await drawn(tester, [160, 0, 255, 255], squared),
       near([104, 255, 255, 255]),
     );
+  });
+
+  group('a look', () {
+    Look shaded(int step) => _standard.withValue(LookParameter.shading, step);
+
+    testWidgets('of colour and tone alone is drawn through its table', (
+      tester,
+    ) async {
+      final image = await photoOf(tester, [200, 100, 50, 255]);
+      final rerender = LookRerender(_renderer, source: _standard);
+      final vivid = Look.onBase(LookBase.vivid);
+      await show(
+        tester,
+        LookPreview(image: image, rerender: rerender, look: vivid),
+      );
+      await pumpUntilFound(tester, find.byType(CustomPaint));
+      expect(find.byType(RawImage), findsNothing);
+      expect(
+        tester.widget<LookTableView>(find.byType(LookTableView)).lut.rgba,
+        rerender.lutFor(vivid).rgba,
+      );
+      final table = rerender.lutFor(vivid);
+      // 200, 100, 50 lies on no entry of a 49-step table, but near these.
+      final (r, g, b) = table.at(38, 19, 10);
+      expect(await colourAt(tester), near([r, g, b, 255], within: 6));
+      expect(await colourAt(tester), isNot(near([200, 100, 50, 255])));
+    });
+
+    testWidgets('that shades the picture is worked out as a whole and '
+        'takes the place of the table, which comes back when the shading '
+        'goes', (tester) async {
+      final image = await photoOf(
+        tester,
+        [200, 100, 50, 255],
+        width: 48,
+        height: 32,
+      );
+      final rerender = LookRerender(_renderer, source: _standard);
+      Future<void> showUnder(Look look) => show(
+        tester,
+        LookPreview(image: image, rerender: rerender, look: look),
+        width: 60,
+        height: 40,
+      );
+
+      await showUnder(shaded(-4));
+      await pumpUntilFound(tester, find.byType(RawImage));
+      expect(find.byType(LookTableView), findsNothing);
+      expect(await colourAt(tester), near([200, 100, 50, 255], within: 4));
+      // A quarter of the luma (124) at the corner, with the chroma kept.
+      expect(
+        await colourAt(tester, across: 0, down: 0),
+        near([107, 7, 0, 255], within: 8),
+      );
+
+      await showUnder(shaded(3));
+      await pumpUntil(
+        tester,
+        () => tester.widget<RawImage>(find.byType(RawImage)).image != null,
+      );
+      Future<int> cornerRed() async =>
+          (await colourAt(tester, across: 0, down: 0))[0];
+      for (var i = 0; i < 200 && await cornerRed() < 200; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+        await tester.pump();
+      }
+      expect(await cornerRed(), greaterThan(250), reason: 'twice the luma');
+
+      await showUnder(_standard);
+      await tester.pump();
+      expect(find.byType(RawImage), findsNothing);
+      expect(find.byType(LookTableView), findsOneWidget);
+    });
+
+    testWidgets('whose shading goes while a picture is still being worked '
+        'out is drawn through its table at once, not as the picture of a '
+        'look before', (tester) async {
+      final image = await photoOf(
+        tester,
+        [200, 100, 50, 255],
+        width: 48,
+        height: 32,
+      );
+      final rerender = LookRerender(_renderer, source: _standard);
+      Future<void> showUnder(Look look) => show(
+        tester,
+        LookPreview(image: image, rerender: rerender, look: look),
+        width: 60,
+        height: 40,
+      );
+
+      await showUnder(shaded(-4));
+      await pumpUntilFound(tester, find.byType(RawImage));
+      // Shading +3 starts being worked out, and is not wanted any more
+      // before it is done.
+      await showUnder(shaded(3));
+      await showUnder(_standard);
+      expect(find.byType(RawImage), findsNothing);
+      expect(find.byType(LookTableView), findsOneWidget);
+      for (var i = 0; i < 20; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 10)),
+        );
+        await tester.pump();
+      }
+      expect(find.byType(RawImage), findsNothing);
+    });
+
+    testWidgets("is shown on another photo with that photo's own look "
+        'undone', (tester) async {
+      final first = await photoOf(tester, [200, 100, 50, 255]);
+      final second = await photoOf(
+        tester,
+        [60, 60, 60, 255],
+        width: 48,
+        height: 32,
+      );
+      final plain = LookRerender(_renderer, source: _standard);
+      // A photo developed with Shading −4: under Standard its corners
+      // come back up, by four times.
+      final dark = LookRerender(_renderer, source: shaded(-4));
+      await show(
+        tester,
+        LookPreview(image: first, rerender: plain, look: _standard),
+        width: 60,
+        height: 40,
+      );
+      await pumpUntilFound(tester, find.byType(CustomPaint));
+      await show(
+        tester,
+        LookPreview(image: second, rerender: dark, look: _standard),
+        width: 60,
+        height: 40,
+      );
+      await pumpUntilFound(tester, find.byType(RawImage));
+      expect(await colourAt(tester), near([60, 60, 60, 255], within: 4));
+      expect(
+        await colourAt(tester, across: 0, down: 0),
+        near([240, 240, 240, 255], within: 10),
+      );
+    });
   });
 }

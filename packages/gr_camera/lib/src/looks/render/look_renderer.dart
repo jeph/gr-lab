@@ -2,10 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:gr_camera/src/camera_features.dart';
 import 'package:gr_camera/src/looks/look.dart';
 import 'package:gr_camera/src/looks/render/gr4/gr4_look_renderer.dart';
+import 'package:gr_camera/src/looks/render/render_planes.dart';
 
 /// A colour transform of one pixel: replaces the R, G, B in the list's
 /// first three places.
 typedef LookTransform = void Function(Float64List rgb);
+
+/// A change to a whole picture, in place: what a look does that depends
+/// on where a pixel is or on the pixels around it.
+typedef LookFilter = void Function(LookPicture picture);
 
 /// How well a photo's own rendering can be undone before another look is
 /// applied to it (research/image-control-processing.md §10).
@@ -28,10 +33,12 @@ enum LookSourceFit {
   unusable,
 }
 
-/// How one camera generation renders looks, per pixel and as far as colour
-/// and tone go (research/image-control-processing.md §10): in two halves
-/// that meet in scene-linear RGB, so a photo developed with one look can be
-/// shown under another.
+/// How one camera generation renders looks
+/// (research/image-control-processing.md §10). Colour and tone are per
+/// pixel and come in two halves that meet in scene-linear RGB, so a photo
+/// developed with one look can be shown under another; what a look does
+/// to the picture as a whole (shading, clarity, grain) comes as filters
+/// to run before and after them.
 ///
 /// Each generation has its own implementation, which shares no camera
 /// knowledge with the others \[design\]: a new generation is added beside
@@ -51,6 +58,21 @@ abstract interface class LookRenderer {
   /// developed with [target]; null when the renderer does not know
   /// [target]'s base image.
   LookTransform? encoder(Look target);
+
+  /// Takes out of a photo developed with [source] what the look did to the
+  /// picture as a whole, as far as that can be taken out, leaving a
+  /// picture [decoder] applies to; null when there is nothing to take out.
+  LookFilter? unfilter(Look source);
+
+  /// What [target] does to the picture as a whole, after [encoder], for a
+  /// photo developed with [source]: what [unfilter] could not take out of
+  /// the photo is still in it. Null when it does nothing.
+  LookFilter? filter(Look target, {required Look source});
+
+  /// The long side, in pixels, of the picture the filters come out best
+  /// on. They work on a small copy of the photo, and how closely they
+  /// follow the camera depends on that copy's size.
+  int get pictureLongSide;
 }
 
 /// The renderer for [camera]'s looks. Only the GR IV family's processing
@@ -60,8 +82,7 @@ abstract interface class LookRenderer {
 LookRenderer lookRendererFor(CameraBody camera) => const Gr4LookRenderer();
 
 /// A table of the colour a renderer gives for each colour of a photo: the
-/// whole per-pixel effect of showing the photo under another look, for
-/// drawing with any model-agnostic sampler.
+/// whole per-pixel effect of showing the photo under another look.
 @immutable
 final class LookLut {
   /// A table of [size] steps per channel holding [rgba].
@@ -99,6 +120,41 @@ final class LookLut {
     final i = ((g * size + b) * size + r) * 4;
     return (rgba[i], rgba[i + 1], rgba[i + 2]);
   }
+
+  /// Replaces the R, G, B (0 to 255) in [rgb] with the table's colour for
+  /// them, blended from the eight entries around them.
+  void recolour(Float64List rgb) {
+    final perCode = (size - 1) / 255;
+    final r = rgb[0] * perCode;
+    final g = rgb[1] * perCode;
+    final b = rgb[2] * perCode;
+    final lowR = r.floor().clamp(0, size - 2);
+    final lowG = g.floor().clamp(0, size - 2);
+    final lowB = b.floor().clamp(0, size - 2);
+    final partR = r - lowR;
+    final partG = g - lowG;
+    final partB = b - lowB;
+    final nextB = size * 4;
+    final nextG = size * nextB;
+    final first = ((lowG * size + lowB) * size + lowR) * 4;
+    for (var channel = 0; channel < 3; channel++) {
+      final i = first + channel;
+      final near = _between(
+        _between(rgba[i], rgba[i + 4], partR),
+        _between(rgba[i + nextB], rgba[i + nextB + 4], partR),
+        partB,
+      );
+      final far = _between(
+        _between(rgba[i + nextG], rgba[i + nextG + 4], partR),
+        _between(rgba[i + nextG + nextB], rgba[i + nextG + nextB + 4], partR),
+        partB,
+      );
+      rgb[channel] = _between(near, far, partG);
+    }
+  }
+
+  static double _between(num low, num high, double part) =>
+      low + (high - low) * part;
 }
 
 /// A photo developed with one look, shown under others: undoes the photo's
@@ -111,8 +167,7 @@ final class LookRerender {
   /// bends most where a channel clips. In the worst pair of looks measured
   /// the worst hundredth of the colours is 2.3 codes or more from the
   /// renderer's own answer with 49 steps and 4.3 with 33
-  /// (research/image-control-processing.md §10.1), and the table's image
-  /// stays under the 4096 pixels some phones' graphics stop at.
+  /// (research/image-control-processing.md §10.1).
   new(this.renderer, {required this.source, this.size = 49})
     : _decoder = renderer.decoder(source ?? Look.onBase(LookBase.standard));
 
@@ -129,7 +184,20 @@ final class LookRerender {
 
   /// The scene-linear R, G, B of every table entry, in the table's order:
   /// the same for every target look, so worked out once.
-  late final Float64List _scene = _decodeGrid();
+  Float64List? _scene;
+
+  /// The look the photo is taken to be developed with.
+  Look get _source => source ?? Look.onBase(LookBase.standard);
+
+  /// The long side, in pixels, of the copy of the photo to give [render].
+  int get pictureLongSide => renderer.pictureLongSide;
+
+  /// Works out now what every target look shares, which is otherwise
+  /// left until the first one is asked for: a copy of this object, such
+  /// as another isolate gets, would work it out again.
+  void prepare() {
+    if (_decoder != null) _scene ??= _decodeGrid();
+  }
 
   /// How well the photo can be shown under [target].
   LookSourceFit fitFor(Look target) {
@@ -139,17 +207,68 @@ final class LookRerender {
         : renderer.sourceFit(source, target);
   }
 
+  /// Whether the photo can be shown under [target]: not when its own look
+  /// cannot be undone for it ([LookSourceFit.unusable]) or the renderer
+  /// does not know [target]'s base image.
+  bool _shows(Look target) =>
+      _decoder != null &&
+      renderer.encoder(target) != null &&
+      fitFor(target) != LookSourceFit.unusable;
+
+  /// Whether showing the photo under [target] takes more than
+  /// [lutFor]'s table: [target], or the photo's own look, does something
+  /// to the picture as a whole, which only [render] shows.
+  bool filters(Look target) =>
+      _shows(target) &&
+      (renderer.unfilter(_source) != null ||
+          renderer.filter(target, source: _source) != null);
+
+  /// The photo in [rgba], [width] by [height] pixels of 8-bit R, G, B and
+  /// alpha row by row, as it would look developed with [target]: the
+  /// photo's own look taken out, [target]'s colour and tone put in and
+  /// then what [target] does to the picture as a whole. A photo that
+  /// cannot be shown under [target] comes back as it is.
+  Uint8List render(
+    Uint8List rgba, {
+    required int width,
+    required int height,
+    required Look target,
+  }) {
+    if (!_shows(target)) return rgba;
+    final lut = lutFor(target);
+    final before = renderer.unfilter(_source);
+    final after = renderer.filter(target, source: _source);
+    if (before == null && after == null) {
+      final out = Uint8List(rgba.length);
+      final pixel = Float64List(3);
+      for (var i = 0; i < rgba.length; i += 4) {
+        pixel[0] = rgba[i].toDouble();
+        pixel[1] = rgba[i + 1].toDouble();
+        pixel[2] = rgba[i + 2].toDouble();
+        lut.recolour(pixel);
+        out[i] = pixel[0].round();
+        out[i + 1] = pixel[1].round();
+        out[i + 2] = pixel[2].round();
+        out[i + 3] = 255;
+      }
+      return out;
+    }
+    final picture = LookPicture.fromRgba(rgba, width, height);
+    before?.call(picture);
+    picture.recolourEach(lut.recolour);
+    after?.call(picture);
+    return picture.toRgba();
+  }
+
   /// The table that shows the photo under [target]. It changes nothing
   /// when the photo cannot be shown under it ([LookSourceFit.unusable]) or
   /// the renderer does not know [target]'s base image.
   LookLut lutFor(Look target) {
     final encoder = renderer.encoder(target);
-    if (encoder == null ||
-        _decoder == null ||
-        fitFor(target) == LookSourceFit.unusable) {
+    if (encoder == null || !_shows(target)) {
       return LookLut.identity(size: size);
     }
-    final scene = _scene;
+    final scene = _scene ??= _decodeGrid();
     final count = size * size * size;
     final rgba = Uint8List(count * 4);
     final pixel = Float64List(3);

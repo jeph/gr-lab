@@ -118,34 +118,27 @@ class _LookEditorState extends State<LookEditor> {
   /// photo cannot be shown under the look. GR Lab takes it for a Standard
   /// photo with every adjustment at 0 \[design\].
   late final _PreviewPhoto _samplePhoto = _PreviewPhoto(
-    const AssetImage('assets/welcome.jpg'),
+    _previewSized(const AssetImage('assets/welcome.jpg')),
     LookRerender(_renderer, source: Look.onBase(LookBase.standard)),
   );
 
-  /// The colour table drawn last, with the photo and the look it is for:
-  /// working one out takes long enough not to repeat it on every build.
-  (_PreviewPhoto, LookSettings, LookLut)? _drawn;
+  /// [photo] no larger than the picture the renderer's effects come out
+  /// best on.
+  ImageProvider _previewSized(ImageProvider photo) => ResizeImage(
+    photo,
+    width: _renderer.pictureLongSide,
+    height: _renderer.pictureLongSide,
+    policy: ResizeImagePolicy.fit,
+  );
 
   _PreviewPhoto? _findOwnPhoto() {
     final saved = widget.saved;
     final file = saved == null ? null : _model.store.photoOf(saved);
     if (saved == null || file == null) return null;
     return _PreviewPhoto(
-      ResizeImage.resizeIfNeeded(900, null, FileImage(file)),
+      _previewSized(FileImage(file)),
       LookRerender(_renderer, source: saved.photoLook),
     );
-  }
-
-  /// The table that shows [photo] under the look being edited.
-  LookLut _lutFor(_PreviewPhoto photo) {
-    final settings = _look.settings;
-    if (_drawn case (final drawnPhoto, final drawnSettings, final lut)
-        when identical(drawnPhoto, photo) && drawnSettings == settings) {
-      return lut;
-    }
-    final lut = photo.rerender.lutFor(_look);
-    _drawn = (photo, settings, lut);
-    return lut;
   }
 
   /// Stores the look, asking for a name when it is new, and says in a snack
@@ -300,16 +293,16 @@ class _LookEditorState extends State<LookEditor> {
                   Expanded(
                     child: _PreviewPane(
                       label: l10n.looksBefore,
-                      image: photo.image,
-                      lut: null,
+                      photo: photo,
+                      look: null,
                     ),
                   ),
                   const SizedBox(width: 2),
                   Expanded(
                     child: _PreviewPane(
                       label: l10n.looksPreview,
-                      image: photo.image,
-                      lut: _lutFor(photo),
+                      photo: photo,
+                      look: _look,
                     ),
                   ),
                 ],
@@ -456,25 +449,24 @@ final class _PreviewPhoto {
 
 /// One half of the before/preview pair, with its tag.
 class _PreviewPane extends StatelessWidget {
-  const new({required this.label, required this.image, required this.lut});
+  const new({required this.label, required this.photo, required this.look});
 
   final String label;
-  final ImageProvider image;
+  final _PreviewPhoto photo;
 
-  /// The colour table of the look to approximate; null shows the photo as
-  /// it is.
-  final LookLut? lut;
+  /// The look to show the photo under; null shows the photo as it is.
+  final Look? look;
 
   @override
   Widget build(BuildContext context) {
-    final lut = this.lut;
+    final look = this.look;
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (lut == null)
-          Image(image: image, fit: BoxFit.cover)
+        if (look == null)
+          Image(image: photo.image, fit: BoxFit.cover)
         else
-          LookPreview(image: image, lut: lut),
+          LookPreview(image: photo.image, rerender: photo.rerender, look: look),
         Positioned(left: 8, bottom: 8, child: PhotoTag(label.toUpperCase())),
       ],
     );

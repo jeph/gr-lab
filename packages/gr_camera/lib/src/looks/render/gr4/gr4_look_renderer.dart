@@ -3,28 +3,32 @@ import 'dart:typed_data';
 
 import 'package:gr_camera/src/looks/look.dart';
 import 'package:gr_camera/src/looks/render/gr4/gr4_curves.dart';
+import 'package:gr_camera/src/looks/render/gr4/gr4_effects.dart';
 import 'package:gr_camera/src/looks/render/gr4/gr4_tone.dart';
 import 'package:gr_camera/src/looks/render/look_renderer.dart';
 import 'package:gr_camera/src/looks/render/render_maths.dart';
+import 'package:gr_camera/src/looks/render/render_planes.dart';
 
-/// How the GR IV family (GR IV, GR IV HDF, GR IV Monochrome) renders the
-/// colour and tone of a look, after firmware 1.20
-/// (research/image-control-processing.md §2–§7, recipe in §10).
+/// How the GR IV family (GR IV, GR IV HDF, GR IV Monochrome) renders a
+/// look, after firmware 1.20 (research/image-control-processing.md §2–§8,
+/// recipe in §10).
 ///
-/// In the camera's order: the base's colour matrix on linear RGB, the
-/// multi-axis hue correction of the four bases that have one, the tone
-/// curve of the four tone sliders, the base's own curve per channel, then
-/// on the encoded values saturation or the black-and-white mix, the hue
-/// rotation and the toning. Scene-linear RGB here is the camera's
-/// white-balanced RGB after its camera matrix.
+/// Colour and tone, in the camera's order: the base's colour matrix on
+/// linear RGB, the multi-axis hue correction of the four bases that have
+/// one, the tone curve of the four tone sliders, the base's own curve per
+/// channel, then on the encoded values saturation or the black-and-white
+/// mix, the hue rotation and the toning. Scene-linear RGB here is the
+/// camera's white-balanced RGB after its camera matrix. Shading, Clarity,
+/// Grain and HDR Tone's tone mapping follow on the developed picture
+/// ([Gr4Effects]).
 ///
-/// Left out \[design\]: the effects that are not per pixel (Shading,
-/// Clarity, Grain, HDR Tone's tone mapping, Sharpness); the gain curve
-/// that fades chroma near black and white (§4.4), which every base shares
-/// and the photo already carries; Cross Processing's change to the white
-/// balance (§1); and Retro's ToneControl values (§3) and the multi-axis
-/// block's level scaling (§4.5), whose workings are \[unknown\]. Nothing
-/// here has been compared with a camera's photos yet.
+/// Left out \[design\]: Sharpness, which a picture of preview size does
+/// not show; the gain curve that fades chroma near black and white (§4.4),
+/// which every base shares and the photo already carries; Cross
+/// Processing's change to the white balance (§1); and Retro's ToneControl
+/// values (§3) and the multi-axis block's level scaling (§4.5), whose
+/// workings are \[unknown\]. Nothing here has been compared with a
+/// camera's photos yet (§11).
 final class Gr4LookRenderer implements LookRenderer {
   /// The GR IV family's rendering.
   const new();
@@ -38,6 +42,32 @@ final class Gr4LookRenderer implements LookRenderer {
     if (stages == null) return null;
     return stages.setsChroma ? stages.decodeGrey : stages.decode;
   }
+
+  @override
+  LookFilter? unfilter(Look source) {
+    final effects = Gr4Effects.of(source);
+    if (!effects.canUndo) return null;
+    return (picture) => effects.undo(picture, scale: _scaleOf(picture));
+  }
+
+  @override
+  LookFilter? filter(Look target, {required Look source}) {
+    final effects = Gr4Effects.of(target);
+    final over = Gr4Effects.of(source);
+    if (!effects.changes(over: over)) return null;
+    return (picture) =>
+        effects.apply(picture, scale: _scaleOf(picture), over: over);
+  }
+
+  /// An eighth of the frame: the size of the fourth level of the camera's
+  /// pyramids, so the effects start on a level of their own and not
+  /// between two \[design\].
+  @override
+  int get pictureLongSide => gr4FrameLongSide >> 3;
+
+  /// How many of the frame's pixels lie across one of [picture]'s.
+  static double _scaleOf(LookPicture picture) =>
+      gr4FrameLongSide / picture.longSide;
 
   @override
   LookSourceFit sourceFit(Look source, Look target) {
@@ -96,16 +126,16 @@ final class Gr4LookRenderer implements LookRenderer {
 
   /// Whether a colour photo developed with [look] lost what undoing its
   /// rendering needs, apart from what its curves clipped
-  /// ([_Stages.clipsHighlights]). Where the line falls is \[design\]: an
-  /// effect that is not per pixel in the photo, a base that keeps under
-  /// half the colour (Bleach Bypass, §4.1) or bends the channels apart
-  /// (Cross Processing, §5), or saturation under 0.8.
+  /// ([_Stages.clipsHighlights]). Where the line falls is \[design\]: grain,
+  /// which cannot be taken out again, Shading that brightened the corners
+  /// and may have clipped them, a base that keeps under half the colour
+  /// (Bleach Bypass, §4.1) or bends the channels apart (Cross Processing,
+  /// §5), or saturation under 0.8.
   static bool _isLossy(Look look) =>
       look.base == LookBase.bleachBypass ||
       look.base == LookBase.crossProcess ||
       _step(look, LookParameter.grain) != 0 ||
-      _step(look, LookParameter.shading) != 0 ||
-      _step(look, LookParameter.clarity) != 0 ||
+      _step(look, LookParameter.shading) > 0 ||
       _step(look, LookParameter.saturation) <= -3;
 }
 
