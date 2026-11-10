@@ -7,6 +7,8 @@ import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 
 import 'package:grlab/src/camera/camera_pages.dart';
+import 'package:grlab/src/library/image_orientation.dart';
+import 'package:grlab/src/looks/look_compare.dart';
 import 'package:grlab/src/looks/look_preview.dart';
 import 'package:grlab/src/looks/looks_store.dart';
 import 'package:grlab/src/widgets/skeleton.dart';
@@ -77,6 +79,16 @@ Finder _inSlot(int number, String text) => find.descendant(
   of: find.byKey(Key('looks-slot-$number')),
   matching: find.text(text),
 );
+
+/// The look editor has slid in and shows its photo under the look.
+Future<void> _editorOpen(WidgetTester tester) async {
+  await pumpUntilFound(tester, find.byType(LookPreview));
+  await pumpUntilFound(
+    tester,
+    find.byKey(const Key('look-save')).hitTestable(),
+  );
+  await pumpRounds(tester, 30);
+}
 
 Look _slotLook(TestApp app, int number) =>
     Look.fromBytes(Uint8List.fromList(app.camera.lookSlot(number).data))!;
@@ -364,10 +376,11 @@ void main() {
     await app.dispose();
   });
 
-  testWidgets('the editor previews a look on the photo it was saved from, '
-      "says when that photo's own look makes the preview rough or is not "
-      'known, and shows the sample photo when the photo has nothing to '
-      'offer the look', (tester) async {
+  testWidgets('the editor previews a look on the photo it was saved from '
+      "when that photo's own look can be undone or is not known, and "
+      'starts on the sample photo when it can only be undone roughly or '
+      'not at all; either photo can be picked, and a photo with nothing to '
+      'offer the look is shown as it was taken', (tester) async {
     final app = await _start(tester, saveCamera: false);
     final looks = app.models.looks;
     final jpeg = File('assets/welcome.jpg').readAsBytesSync();
@@ -405,14 +418,19 @@ void main() {
         find.descendant(of: note, matching: find.text(text));
     LookPreview preview() =>
         tester.widget<LookPreview>(find.byType(LookPreview));
-    // The photo itself, under the size the preview asks for it in.
-    ImageProvider previewed() => switch (preview().image) {
+    // The photo itself, under the size the preview asks for it in; null
+    // while a photo just picked is still loading.
+    ImageProvider? previewed() => switch (tester
+        .widgetList<LookPreview>(find.byType(LookPreview))
+        .firstOrNull
+        ?.image) {
       ResizeImage(:final imageProvider) => imageProvider,
       final other => other,
     };
     Future<void> open(SavedLook look) async {
       await tapWhenReady(tester, find.byKey(ValueKey('look:${look.id}')));
       await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
+      await pumpUntilFound(tester, find.byType(LookPreview));
     }
 
     Future<void> close() async {
@@ -424,6 +442,9 @@ void main() {
       );
     }
 
+    final ownPhoto = find.byKey(const ValueKey('look-photo:0'));
+    final samplePhoto = find.byKey(const ValueKey('look-photo:1'));
+
     await open(plain);
     expect(note, findsNothing);
     expect(previewed(), isNot(isA<AssetImage>()));
@@ -434,25 +455,80 @@ void main() {
       preview().rerender.source?.settings,
       Look.onBase(LookBase.standard).settings,
     );
+    // The sample photo can be picked in its place, and the look's own
+    // photo again.
+    await tapWhenReady(tester, samplePhoto);
+    await pumpUntil(
+      tester,
+      () => preview().image is ResizeImage && previewed() is AssetImage,
+      reason: 'the preview on the sample photo',
+    );
+    expect(preview().look.base, LookBase.vivid);
+    expect(note, findsNothing);
+    await tapWhenReady(tester, ownPhoto);
+    await pumpUntil(
+      tester,
+      () => previewed() is! AssetImage,
+      reason: "the preview on the look's own photo",
+    );
     await close();
 
+    // A photo whose own look undoes only roughly: the editor starts on
+    // the sample photo and says why.
+    const startsOnSample =
+        "The look your photo was taken with can't be undone exactly, so the "
+        'preview starts on a sample photo. You can still switch to your '
+        'photo.';
+    final asTaken = find.byKey(const Key('look-compare-as-taken'));
     await open(grey);
-    expect(
+    expect(noteSaying(startsOnSample), findsOneWidget);
+    expect(previewed(), isA<AssetImage>());
+    // The user's own photo can still be picked, with what to know of it.
+    await tapWhenReady(tester, ownPhoto);
+    await pumpUntilFound(
+      tester,
       noteSaying(
         "This photo's own look can't be undone exactly, so the preview is "
         'rougher than usual.',
       ),
-      findsOneWidget,
     );
-    expect(previewed(), isNot(isA<AssetImage>()));
+    await pumpUntil(
+      tester,
+      () => previewed() is FileImage,
+      reason: "the preview on the look's own photo",
+    );
+    expect(asTaken, findsNothing);
+    // Under a look it has nothing to offer, it is shown as it was taken.
     await tapWhenReady(tester, find.byKey(const ValueKey('look-base:vivid')));
     await pumpUntilFound(
       tester,
       noteSaying(
-        "This photo's own look can't be undone for this look, so the "
-        'preview shows a sample photo instead.',
+        "This photo's own look can't be undone for this look, so the photo "
+        'is shown as it was taken.',
       ),
     );
+    expect(asTaken, findsOneWidget);
+    expect(find.byType(LookPreview), findsNothing);
+    final shown = tester.widget<Image>(
+      find.descendant(of: asTaken, matching: find.byType(Image)),
+    );
+    expect(switch (shown.image) {
+      ResizeImage(:final imageProvider) => imageProvider,
+      final other => other,
+    }, isNot(isA<AssetImage>()));
+    // On the sample the user picked, nothing needs saying.
+    await tapWhenReady(tester, samplePhoto);
+    await pumpUntilFound(tester, find.byType(LookPreview));
+    expect(previewed(), isA<AssetImage>());
+    expect(preview().look.base, LookBase.vivid);
+    expect(note, findsNothing);
+    await close();
+
+    // The same photo under a colour look from the start: the sample too.
+    await open(grey);
+    await tapWhenReady(tester, find.byKey(const ValueKey('look-base:vivid')));
+    await pumpRounds(tester, 3);
+    expect(noteSaying(startsOnSample), findsOneWidget);
     expect(previewed(), isA<AssetImage>());
     await close();
 
@@ -467,6 +543,232 @@ void main() {
     expect(previewed(), isNot(isA<AssetImage>()));
     await app.dispose();
   });
+
+  testWidgets('a look with no photo of its own is previewed on the sample '
+      'photo, with no photos to pick from', (tester) async {
+    final app = await _start(tester, saveCamera: false);
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+    await tapWhenReady(tester, find.byKey(const Key('looks-new')));
+    await pumpUntilFound(tester, find.byType(LookPreview));
+    expect(
+      tester.widget<LookPreview>(find.byType(LookPreview)).image,
+      isA<ResizeImage>().having(
+        (i) => i.imageProvider,
+        'photo',
+        isA<AssetImage>(),
+      ),
+    );
+    expect(find.byType(PreviewPhotoSwitch), findsNothing);
+    expect(find.byKey(const Key('look-preview-note')), findsNothing);
+    await app.dispose();
+  });
+
+  testWidgets('a look saved from a photo held on its side shows that photo '
+      'upright, in the list and in the editor', (tester) async {
+    final app = await _start(tester, saveCamera: false);
+    final looks = app.models.looks;
+    // The sample is 600 by 900 as stored; orientation 6 lays it on its
+    // side, so upright it is wider than tall.
+    final jpeg = File('assets/welcome.jpg').readAsBytesSync();
+    final (turned, asStored) = (await tester.runAsync(() async {
+      final turned = await looks.add(
+        name: 'Turned',
+        data: Look.onBase(LookBase.standard).toBytes(),
+        photo: jpeg,
+        photoOrientation: 6,
+      );
+      final asStored = await looks.add(
+        name: 'As stored',
+        data: Look.onBase(LookBase.vivid).toBytes(),
+        photo: jpeg,
+      );
+      return (turned, asStored);
+    }))!;
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+
+    int orientationIn(Finder finder) => tester
+        .widget<ExifOrientation>(
+          find.descendant(of: finder, matching: find.byType(ExifOrientation)),
+        )
+        .orientation;
+    final turnedRow = find.byKey(ValueKey('look:${turned.id}'));
+    final storedRow = find.byKey(ValueKey('look:${asStored.id}'));
+    await pumpUntilFound(tester, turnedRow);
+    expect(orientationIn(turnedRow), 6);
+    expect(orientationIn(storedRow), 1);
+
+    await tapWhenReady(tester, turnedRow);
+    await pumpUntilFound(tester, find.byType(LookPreview));
+    final picture = find.ancestor(
+      of: find.byType(LookPreview),
+      matching: find.byType(ExifOrientation),
+    );
+    expect(tester.widget<ExifOrientation>(picture).orientation, 6);
+    expect(tester.getSize(picture).aspectRatio, closeTo(900 / 600, .01));
+    expect(orientationIn(find.byKey(const ValueKey('look-photo:0'))), 6);
+    await tester.pageBack();
+    await pumpUntil(
+      tester,
+      () => find.byKey(const Key('look-editor')).evaluate().isEmpty,
+      reason: 'editor closed',
+    );
+
+    await tapWhenReady(tester, storedRow);
+    await pumpUntilFound(tester, find.byType(LookPreview));
+    expect(tester.getSize(picture).aspectRatio, closeTo(600 / 900, .01));
+    await app.dispose();
+  });
+
+  testWidgets("a camera's slot that holds a saved look shows that look's "
+      'photo upright', (tester) async {
+    final app = await _inLooks(tester);
+    final saved = (await tester.runAsync(
+      () => app.models.looks.add(
+        name: 'Turned',
+        data: Uint8List.fromList(app.camera.lookSlot(2).data),
+        photo: File('assets/welcome.jpg').readAsBytesSync(),
+        photoOrientation: 6,
+      ),
+    ))!;
+    final slot = find.byKey(const Key('looks-slot-2'));
+    final picture = find.descendant(
+      of: slot,
+      matching: find.byType(ExifOrientation),
+    );
+    await pumpUntilFound(tester, picture);
+    expect(tester.widget<ExifOrientation>(picture).orientation, 6);
+    expect(saved.photoOrientation, 6);
+    await app.dispose();
+  });
+
+  for (final (name, size) in const [
+    ('a phone held upright', Size(390, 844)),
+    ('a small phone', Size(320, 568)),
+    ('a tablet held upright', Size(820, 1180)),
+  ]) {
+    testWidgets('on $name the editor puts the preview above the controls, '
+        'all of it on screen', (tester) async {
+      final app = await _start(tester, saveCamera: false);
+      tester.view
+        ..physicalSize = size
+        ..devicePixelRatio = 1;
+      await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+      await tapWhenReady(tester, find.byKey(const Key('looks-new')));
+      await _editorOpen(tester);
+      final screen = Offset.zero & size;
+      final preview = tester.getRect(find.byType(LookCompare));
+      final save = tester.getRect(find.byKey(const Key('look-save')));
+      final list = tester.getRect(find.byType(ListView));
+      expect(preview.width, closeTo(size.width, .01));
+      expect(preview.height, greaterThan(60));
+      expect(preview.bottom, lessThanOrEqualTo(list.top));
+      expect(list.height, greaterThan(60), reason: 'room for a parameter');
+      expect(screen.contains(save.topLeft), isTrue);
+      expect(screen.contains(save.bottomRight - const Offset(1, 1)), isTrue);
+      for (final mode in LookCompareMode.values) {
+        await tapWhenReady(
+          tester,
+          find.byKey(ValueKey('look-compare:${mode.name}')),
+        );
+        final picture = tester.getRect(find.byType(LookPreview));
+        expect(picture.size.aspectRatio, closeTo(600 / 900, .02));
+        expect(preview.expandToInclude(picture), preview, reason: mode.name);
+      }
+      await app.dispose();
+    });
+  }
+
+  // The second is as tall as a screen can be before the preview stays in
+  // place.
+  for (final size in const [Size(360, 330), Size(360, 450)]) {
+    testWidgets('on half a phone, as in split screen (${size.height} high), '
+        'the preview is large enough to judge and scrolls away with the '
+        'controls, which follow it and stay in reach', (tester) async {
+      final app = await _start(tester, saveCamera: false);
+      tester.view
+        ..physicalSize = size
+        ..devicePixelRatio = 1;
+      await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+      await tapWhenReady(tester, find.byKey(const Key('looks-new')));
+      await _editorOpen(tester);
+      final screen = Offset.zero & size;
+      final list = find.byType(ListView);
+      final compare = find.byType(LookCompare);
+      expect(find.descendant(of: list, matching: compare), findsOneWidget);
+      expect(tester.getSize(compare).height, greaterThan(150));
+      expect(tester.getSize(compare).width, closeTo(size.width, .01));
+      expect(
+        tester.getRect(find.byKey(const Key('look-bases'))).top,
+        greaterThanOrEqualTo(tester.getRect(compare).bottom),
+      );
+      final save = tester.getRect(find.byKey(const Key('look-save')));
+      expect(screen.contains(save.topLeft), isTrue);
+      expect(screen.contains(save.bottomRight - const Offset(1, 1)), isTrue);
+
+      final contrast = find.byKey(const ValueKey('look-param:contrast'));
+      await tester.dragUntilVisible(contrast, list, const Offset(0, -80));
+      await tester.pump();
+      expect(contrast.hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await app.dispose();
+    });
+  }
+
+  for (final (name, size) in const [
+    ('a phone held on its side', Size(844, 390)),
+    ('a tablet held on its side', Size(1180, 820)),
+  ]) {
+    testWidgets('on $name the editor puts the preview beside the controls, '
+        'and turning the screen keeps what the editor holds', (tester) async {
+      final app = await _start(tester, saveCamera: false);
+      // The system's bar along the bottom edge.
+      const bar = 24.0;
+      tester.view
+        ..physicalSize = size
+        ..devicePixelRatio = 1
+        ..padding = const FakeViewPadding(bottom: bar)
+        ..viewPadding = const FakeViewPadding(bottom: bar);
+      await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+      await tapWhenReady(tester, find.byKey(const Key('looks-new')));
+      await _editorOpen(tester);
+      final compare = find.byType(LookCompare);
+      final bases = find.byKey(const Key('look-bases'));
+      final save = find.byKey(const Key('look-save'));
+      expect(
+        tester.getRect(find.byType(LookCompareModeSwitch)).bottom,
+        lessThanOrEqualTo(size.height - bar),
+        reason: "the switches keep clear of the system's bar",
+      );
+      expect(
+        tester.getRect(compare).right,
+        lessThanOrEqualTo(tester.getRect(bases).left),
+      );
+      expect(tester.getRect(compare).width, greaterThan(size.width * .4));
+      expect(tester.getRect(save).left, tester.getRect(bases).left + 16);
+      expect((Offset.zero & size).contains(tester.getRect(save).center), true);
+
+      await tapWhenReady(
+        tester,
+        find.byKey(const ValueKey('look-compare:sideBySide')),
+      );
+      await tapWhenReady(tester, find.byKey(const ValueKey('look-base:vivid')));
+      final state = tester.state(compare);
+      tester.view.physicalSize = size.flipped;
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.getRect(compare).bottom,
+        lessThanOrEqualTo(tester.getRect(bases).top),
+      );
+      expect(tester.state(compare), same(state));
+      expect(
+        tester.widget<LookCompare>(compare).mode,
+        LookCompareMode.sideBySide,
+      );
+      expect(tester.widget<LookCompare>(compare).look?.base, LookBase.vivid);
+      await app.dispose();
+    });
+  }
 
   testWidgets('a slot saved from the editor joins the library, from C2 and '
       'tagged as in C2', (tester) async {

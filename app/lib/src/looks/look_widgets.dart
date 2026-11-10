@@ -5,28 +5,39 @@ import 'package:flutter/services.dart';
 import 'package:gr_camera/gr_camera.dart';
 
 import 'package:grlab/l10n/l10n.dart';
+import 'package:grlab/src/library/image_orientation.dart';
 import 'package:grlab/src/looks/look_spec.dart';
 import 'package:grlab/src/looks/looks_model.dart';
 import 'package:grlab/src/looks/looks_store.dart';
 import 'package:grlab/src/theme/tokens.dart';
 
-/// The picture standing for a look: the photo it was saved from, or a
-/// swatch in the colours of its base image.
+/// The picture standing for a look: the photo it was saved from, turned
+/// upright by [orientation] ([SavedLook.photoOrientation]), or a swatch in
+/// the colours of its base image.
 class LookThumb extends StatelessWidget {
-  const new({required this.photo, required this.look, super.key});
+  const new({
+    required this.photo,
+    required this.look,
+    super.key,
+    this.orientation,
+  });
 
   final File? photo;
   final Look? look;
+  final int? orientation;
 
   @override
   Widget build(BuildContext context) {
     final photo = this.photo;
     if (photo != null) {
-      return Image.file(
-        photo,
-        fit: BoxFit.cover,
-        cacheWidth: 400,
-        errorBuilder: (_, _, _) => _Swatch(look: look),
+      return ExifOrientation(
+        orientation: orientation ?? 1,
+        child: Image.file(
+          photo,
+          fit: BoxFit.cover,
+          cacheWidth: 400,
+          errorBuilder: (_, _, _) => _Swatch(look: look),
+        ),
       );
     }
     return _Swatch(look: look);
@@ -64,18 +75,17 @@ class _Swatch extends StatelessWidget {
 
 /// A small label on a photo (mock `.slot .c`, `.tag`).
 class PhotoTag extends StatelessWidget {
-  const new(this.text, {super.key});
+  const new(this.text, {super.key, this.icon});
 
   final String text;
 
+  /// A sign before the text, for a tag that does something when tapped.
+  final IconData? icon;
+
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-    decoration: BoxDecoration(
-      color: GrColors.photoBadgeScrim,
-      borderRadius: BorderRadius.circular(6),
-    ),
-    child: Text(
+  Widget build(BuildContext context) {
+    final icon = this.icon;
+    final label = Text(
       text,
       style: const TextStyle(
         fontFamily: GrFonts.mono,
@@ -83,8 +93,25 @@ class PhotoTag extends StatelessWidget {
         fontWeight: FontWeight.w600,
         color: Colors.white,
       ),
-    ),
-  );
+    );
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: GrColors.photoBadgeScrim,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: icon == null
+          ? label
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 12, color: Colors.white),
+                const SizedBox(width: 4),
+                label,
+              ],
+            ),
+    );
+  }
 }
 
 /// A tag under a look's name (mock `.minitag`): accent for "In C1".

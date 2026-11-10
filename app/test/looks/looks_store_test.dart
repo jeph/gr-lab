@@ -159,10 +159,17 @@ void main() {
       name: 'Street',
       data: data,
       photo: Uint8List(4),
+      photoOrientation: 8,
     );
-    final made = await store.add(name: 'Made here', data: otherData);
+    // Without a photo there is nothing for an orientation to turn.
+    final made = await store.add(
+      name: 'Made here',
+      data: otherData,
+      photoOrientation: 6,
+    );
     expect(fromPhoto.photoLook!.settings, fromPhoto.settings);
     expect(made.photoLook, isNull);
+    expect(made.photoOrientation, isNull);
 
     final edited = Uint8List.fromList(FakeLook.presets[2].data);
     await store.update(fromPhoto.copyWith(data: edited));
@@ -170,6 +177,7 @@ void main() {
     final street = reloaded.looks.singleWhere((l) => l.name == 'Street');
     expect(street.data, edited);
     expect(street.photoData, data, reason: 'the photo did not change');
+    expect(street.photoOrientation, 8);
     expect(
       reloaded.looks.singleWhere((l) => l.name == 'Made here').photoData,
       isNull,
@@ -178,11 +186,14 @@ void main() {
     final file = File('${dataDir.path}/looks.json');
     final json = jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
     for (final look in json['looks']! as List<Object?>) {
-      (look! as Map<String, Object?>).remove('photoData');
+      (look! as Map<String, Object?>)
+        ..remove('photoData')
+        ..remove('photoOrientation');
     }
     file.writeAsStringSync(jsonEncode(json));
     final older = await LooksStore.load(dataDir);
     expect(older.looks.map((l) => l.photoLook), [null, null]);
+    expect(older.looks.map((l) => l.photoOrientation), [null, null]);
   });
 
   test('a delete that could not be written brings the look and its photo '

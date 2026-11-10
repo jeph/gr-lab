@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:grlab/src/library/library_screen.dart';
 import 'package:grlab/src/library/viewer.dart';
+import 'package:grlab/src/looks/looks_store.dart';
 import 'package:grlab/src/widgets/group.dart';
 
 import '../support/test_app.dart';
@@ -247,6 +248,58 @@ void main() {
     );
     expect(looks.looks.single.id, saved.id);
     expect(tester.widget<OutlinedButton>(save).onPressed, isNotNull);
+
+    await app.dispose();
+  });
+
+  testWidgets("a look saved from a photo keeps how the photo's preview is "
+      'turned upright: as the camera held it, since the preview is stored '
+      "in the sensor's layout", (tester) async {
+    final app = await _openViewer(tester, [
+      FakePhoto(
+        '100RICOH',
+        'R0000001.JPG',
+        _taken(1),
+        imageControl: FakeLook.presets[0].data,
+      ),
+      FakePhoto(
+        '100RICOH',
+        'R0000002.JPG',
+        _taken(2),
+        orientation: 8,
+        imageControl: FakeLook.presets[4].data,
+      ),
+    ], 'sd1|100RICOH/R0000002');
+    final looks = app.models.looks;
+    final save = _inViewer(find.byKey(const Key('viewer-save-look')));
+    Future<SavedLook> saveLook() async {
+      final before = looks.looks.length;
+      await tapWhenReady(tester, save);
+      await tapWhenReady(tester, find.byKey(const Key('looks-name-ok')));
+      await pumpUntil(
+        tester,
+        () => looks.looks.length > before,
+        reason: 'the look saved',
+      );
+      final saved = looks.looks.first;
+      await pumpUntilFound(tester, find.text('Saved ${saved.name}'));
+      return saved;
+    }
+
+    final onItsSide = await saveLook();
+    expect(onItsSide.source, 'R0000002.JPG');
+    expect(looks.photoOf(onItsSide), isNotNull);
+    expect(onItsSide.photoOrientation, 8);
+
+    await tester.fling(
+      _inViewer(find.byType(PageView)),
+      const Offset(-300, 0),
+      1000,
+    );
+    await pumpUntilFound(tester, _showing('R0000001.JPG'));
+    final level = await saveLook();
+    expect(level.source, 'R0000001.JPG');
+    expect(level.photoOrientation, 1);
 
     await app.dispose();
   });

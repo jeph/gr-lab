@@ -308,6 +308,7 @@ class _SlotCard extends StatelessWidget {
     } else {
       picture = LookThumb(
         photo: saved == null ? null : model.store.photoOf(saved),
+        orientation: saved?.photoOrientation,
         look: look,
       );
       caption = Column(
@@ -478,7 +479,11 @@ class _LookRow extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [BoxShadow(color: c.shadow, blurRadius: 18)],
           ),
-          child: LookThumb(photo: photo, look: look),
+          child: LookThumb(
+            photo: photo,
+            orientation: saved.photoOrientation,
+            look: look,
+          ),
         ),
       ),
       childWhenDragging: Opacity(opacity: .4, child: row),
@@ -520,7 +525,11 @@ class _LookRowBody extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             child: SizedBox.square(
               dimension: 58,
-              child: LookThumb(photo: photo, look: look),
+              child: LookThumb(
+                photo: photo,
+                orientation: saved.photoOrientation,
+                look: look,
+              ),
             ),
           ),
           const SizedBox(width: 12),

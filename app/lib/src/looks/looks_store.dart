@@ -17,6 +17,7 @@ final class SavedLook {
     required this.created,
     this.source,
     this.photoData,
+    this.photoOrientation,
   });
 
   factory fromJson(Map<String, Object?> json) => SavedLook(
@@ -29,6 +30,7 @@ final class SavedLook {
       final String data => base64Decode(data),
       _ => null,
     },
+    photoOrientation: (json['photoOrientation'] as num?)?.toInt(),
   );
 
   final String id;
@@ -47,6 +49,12 @@ final class SavedLook {
   /// stays as it was when the look is edited; null for a look without a
   /// photo, and for one saved before GR Lab kept this.
   final Uint8List? photoData;
+
+  /// The EXIF orientation (1–8) that shows the look's photo upright: a
+  /// camera stores its previews in the sensor's layout however it was
+  /// held (`orientationToApply`). Null shows the photo as stored: a look
+  /// without a photo, or one saved before GR Lab kept this.
+  final int? photoOrientation;
 
   /// [data] read as a look; null when it is not one.
   Look? get look => Look.fromBytes(data);
@@ -69,6 +77,7 @@ final class SavedLook {
     created: created,
     source: source,
     photoData: photoData,
+    photoOrientation: photoOrientation,
   );
 
   Map<String, Object?> toJson() => {
@@ -81,6 +90,7 @@ final class SavedLook {
       final data? => base64Encode(data),
       null => null,
     },
+    'photoOrientation': ?photoOrientation,
   };
 }
 
@@ -160,15 +170,18 @@ final class LooksStore extends ChangeNotifier {
   /// Adds a look named [name] holding [data], from [source] (see
   /// [SavedLook.source]), with [photo] (a JPEG) of the camera photo it was
   /// saved from, which [data] is therefore the look of
-  /// ([SavedLook.photoData]). Throws [LookConflict], storing nothing, when
-  /// a saved look has its name or its settings. Completes once the look is
-  /// on disk; when it cannot be written, the look is taken out again and
-  /// the [FileSystemException] is rethrown, so saving again stores it once.
+  /// ([SavedLook.photoData]) and which [photoOrientation] shows upright
+  /// ([SavedLook.photoOrientation]). Throws [LookConflict], storing
+  /// nothing, when a saved look has its name or its settings. Completes
+  /// once the look is on disk; when it cannot be written, the look is
+  /// taken out again and the [FileSystemException] is rethrown, so saving
+  /// again stores it once.
   Future<SavedLook> add({
     required String name,
     required Uint8List data,
     String? source,
     Uint8List? photo,
+    int? photoOrientation,
   }) => _serial(() async {
     final now = DateTime.now();
     final look = SavedLook(
@@ -178,6 +191,7 @@ final class LooksStore extends ChangeNotifier {
       created: now,
       source: source,
       photoData: photo == null ? null : data,
+      photoOrientation: photo == null ? null : photoOrientation,
     );
     final conflict = _conflictOf(look);
     if (conflict != null) throw conflict;

@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
 
 import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/looks/look_preview.dart';
+import 'package:grlab/src/looks/look_compare.dart';
 import 'package:grlab/src/looks/look_spec.dart';
 import 'package:grlab/src/looks/look_widgets.dart';
 import 'package:grlab/src/looks/looks_model.dart';
@@ -52,9 +53,12 @@ Future<void> openNewLook(BuildContext context, LooksModel model) async {
   );
 }
 
-/// The look editor (mock `b-look-edit`): before and an approximate preview,
-/// the base image, its parameters grouped as Tone, Colour, Detail and
-/// Effects, then Save and, on a camera's Looks page, Load into the slot.
+/// The look editor (mock `b-look-edit`): a photo before and under the look
+/// ([LookCompare]), the base image, its parameters grouped as Tone, Colour,
+/// Detail and Effects, then Save and, on a camera's Looks page, Load into
+/// the slot. The preview sits above the controls, beside them where the
+/// screen is wider than it is tall, and scrolls with them where it is too
+/// short for both \[design\].
 class LookEditor extends StatefulWidget {
   const new({
     required this.model,
@@ -110,17 +114,30 @@ class _LookEditorState extends State<LookEditor> {
 
   late final LookRenderer _renderer = lookRendererFor(_model.body);
 
-  /// The photo the look was saved from, with the look it was developed
-  /// with; null for a look without a photo.
-  late final _PreviewPhoto? _ownPhoto = _findOwnPhoto();
+  /// The photos the look can be previewed on: the one it was saved from,
+  /// when it has one, then the sample photo.
+  late final List<PreviewPhoto> _photos = [?_findOwnPhoto(), _samplePhoto];
 
-  /// The sample photo, for a look without a photo of its own, or whose
-  /// photo cannot be shown under the look. GR Lab takes it for a Standard
-  /// photo with every adjustment at 0 \[design\].
-  late final _PreviewPhoto _samplePhoto = _PreviewPhoto(
-    _previewSized(const AssetImage('assets/welcome.jpg')),
-    LookRerender(_renderer, source: Look.onBase(LookBase.standard)),
+  /// Whether the first of [_photos] is the look's own.
+  late final bool _hasOwnPhoto = _photos.length > 1;
+
+  /// The sample photo, which GR Lab takes for a Standard photo with every
+  /// adjustment at 0 \[design\].
+  late final PreviewPhoto _samplePhoto = PreviewPhoto(
+    image: _previewSized(const AssetImage('assets/welcome.jpg')),
+    rerender: LookRerender(_renderer, source: Look.onBase(LookBase.standard)),
   );
+
+  /// Which of [_photos] the user picked for the preview; null until they
+  /// pick one, and the editor chooses ([_preview]).
+  int? _picked;
+
+  LookCompareMode _mode = LookCompareMode.slide;
+
+  /// The preview and the controls keep their state when the screen turns
+  /// and they change places.
+  final GlobalKey _previewKey = GlobalKey();
+  final GlobalKey _controlsKey = GlobalKey();
 
   /// [photo] no larger than the picture the renderer's effects come out
   /// best on.
@@ -131,13 +148,16 @@ class _LookEditorState extends State<LookEditor> {
     policy: ResizeImagePolicy.fit,
   );
 
-  _PreviewPhoto? _findOwnPhoto() {
+  /// The photo the look was saved from, with the look it was developed
+  /// with; null for a look without a photo.
+  PreviewPhoto? _findOwnPhoto() {
     final saved = widget.saved;
     final file = saved == null ? null : _model.store.photoOf(saved);
     if (saved == null || file == null) return null;
-    return _PreviewPhoto(
-      _previewSized(FileImage(file)),
-      LookRerender(_renderer, source: saved.photoLook),
+    return PreviewPhoto(
+      image: _previewSized(FileImage(file)),
+      rerender: LookRerender(_renderer, source: saved.photoLook),
+      orientation: saved.photoOrientation,
     );
   }
 
@@ -220,31 +240,7 @@ class _LookEditorState extends State<LookEditor> {
     builder: (context, _) {
       final c = GrColors.of(context);
       final l10n = context.l10n;
-      final base = _look.base;
-      final params = [
-        for (final p in _look.values.keys)
-          if (shownIn(_look, p)) p,
-      ];
-      final groups = [
-        for (final g in LookGroup.values)
-          if (params.any((p) => groupOf(p) == g)) g,
-      ];
-      final group = groups.contains(_group) ? _group! : groups.firstOrNull;
       final canLoad = _model.canLoad(_look);
-      final save = _unsaved ? () => unawaited(_save()) : null;
-      // The look's own photo, unless its rendering cannot be undone for
-      // this look: then the sample stands in, and a note says so.
-      final ownPhoto = _ownPhoto;
-      final fit = ownPhoto?.rerender.fitFor(_look);
-      final photo = ownPhoto == null || fit == LookSourceFit.unusable
-          ? _samplePhoto
-          : ownPhoto;
-      final previewNote = switch (fit) {
-        LookSourceFit.rough => l10n.looksPreviewRough,
-        LookSourceFit.unknown => l10n.looksPreviewUnknownLook,
-        LookSourceFit.unusable => l10n.looksPreviewSample,
-        LookSourceFit.good || null => null,
-      };
       return Scaffold(
         key: const Key('look-editor'),
         appBar: AppBar(
@@ -284,78 +280,226 @@ class _LookEditorState extends State<LookEditor> {
             ),
           ],
         ),
-        body: Column(
-          children: [
-            SizedBox(
-              height: 208,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _PreviewPane(
-                      label: l10n.looksBefore,
-                      photo: photo,
-                      look: null,
-                    ),
-                  ),
-                  const SizedBox(width: 2),
-                  Expanded(
-                    child: _PreviewPane(
-                      label: l10n.looksPreview,
-                      photo: photo,
-                      look: _look,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (previewNote != null)
-              Padding(
-                key: const Key('look-preview-note'),
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                child: Text(
-                  previewNote,
-                  style: TextStyle(fontSize: 12.5, color: c.t2),
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final preview = KeyedSubtree(
+                key: _previewKey,
+                child: _preview(context),
+              );
+              final wide =
+                  box.maxWidth > box.maxHeight && box.maxWidth >= _wideFrom;
+              // Too short to keep a picture worth looking at in place above
+              // a parameter: the preview scrolls with the controls.
+              final scrolls = !wide && box.maxHeight < _inPlaceFrom;
+              final controls = KeyedSubtree(
+                key: _controlsKey,
+                child: _controls(
+                  context,
+                  canLoad: canLoad,
+                  leading: scrolls
+                      ? SizedBox(height: _scrollingPreview, child: preview)
+                      : null,
                 ),
-              ),
-            SingleChildScrollView(
-              key: const Key('look-bases'),
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-              child: SizedBox(
-                height: 40,
-                child: Row(
+              );
+              if (scrolls) return controls;
+              if (wide) {
+                return Row(
                   children: [
-                    for (final b in _model.basesFor(_look))
-                      Padding(
-                        key: b == widget.look.base ? _openedBase : null,
-                        padding: const EdgeInsets.only(right: 8),
-                        child: _BaseChip(
-                          key: ValueKey('look-base:${b.name}'),
-                          label: baseLabel(l10n, b),
-                          selected: base == b,
-                          onTap: () =>
-                              setState(() => _look = _look.withBase(b)),
-                        ),
+                    Expanded(
+                      // The switches under the picture keep clear of the
+                      // system's bar along the bottom edge.
+                      child: SafeArea(
+                        top: false,
+                        left: false,
+                        right: false,
+                        minimum: const EdgeInsets.only(bottom: 12),
+                        child: preview,
                       ),
+                    ),
+                    VerticalDivider(width: 1, thickness: 1, color: c.line),
+                    SizedBox(
+                      width: (box.maxWidth * .42).clamp(
+                        _narrowestControls,
+                        _widestControls,
+                      ),
+                      child: controls,
+                    ),
                   ],
-                ),
-              ),
+                );
+              }
+              return Column(
+                children: [
+                  SizedBox(
+                    height: math.min(box.maxHeight * .45, _tallestPreview),
+                    child: preview,
+                  ),
+                  Expanded(child: controls),
+                ],
+              );
+            },
+          ),
+        ),
+      );
+    },
+  );
+
+  /// The least width at which the preview goes beside the controls, and
+  /// the widths the controls then keep between.
+  static const double _wideFrom = 560;
+  static const double _narrowestControls = 300;
+  static const double _widestControls = 440;
+
+  /// The least height at which the preview stays in place above the
+  /// controls, the most it then gets, and the height it has when it
+  /// scrolls with them instead.
+  static const double _inPlaceFrom = 400;
+  static const double _tallestPreview = 600;
+  static const double _scrollingPreview = 260;
+
+  /// The least height of the controls at which the base images and the
+  /// groups stay in place above the parameters instead of scrolling with
+  /// them.
+  static const double _pinnedFrom = 380;
+
+  /// The photo before and under the look, then the choice of photo and of
+  /// how the two are set against each other, then what to know about the
+  /// preview.
+  Widget _preview(BuildContext context) {
+    final c = GrColors.of(context);
+    final l10n = context.l10n;
+    final sample = _photos.length - 1;
+    // Until the user picks, the look's own photo when the look it was
+    // taken with can be undone without a rougher result, and the sample
+    // photo otherwise \[design\]. Either can always be picked.
+    final ownFit = _hasOwnPhoto ? _photos.first.rerender.fitFor(_look) : null;
+    final startsOnOwn =
+        ownFit == LookSourceFit.good || ownFit == LookSourceFit.unknown;
+    final shown = _picked ?? (startsOnOwn ? 0 : sample);
+    final fit = _photos[shown].rerender.fitFor(_look);
+    final note = switch (fit) {
+      _ when shown == sample =>
+        _hasOwnPhoto && _picked == null ? l10n.looksPreviewSample : null,
+      LookSourceFit.rough => l10n.looksPreviewRough,
+      LookSourceFit.unknown => l10n.looksPreviewUnknownLook,
+      LookSourceFit.unusable => l10n.looksPreviewAsTaken,
+      LookSourceFit.good => null,
+    };
+    return Column(
+      children: [
+        Expanded(
+          child: LookCompare(
+            photo: _photos[shown],
+            // A photo whose own look cannot be undone for this look has no
+            // preview: it is shown as it was taken.
+            look: fit == LookSourceFit.unusable ? null : _look,
+            mode: _mode,
+          ),
+        ),
+        // Above the switches, so they stay where they are when the note
+        // comes, goes or changes length.
+        if (note != null)
+          Padding(
+            key: const Key('look-preview-note'),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(note, style: TextStyle(fontSize: 12.5, color: c.t2)),
             ),
-            if (group != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-                child: ShootSegmented<LookGroup>(
-                  key: const Key('look-groups'),
-                  values: groups,
-                  selected: group,
-                  label: (g) => groupLabel(l10n, g),
-                  onSelect: (g) => setState(() => _group = g),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: Row(
+            children: [
+              if (_hasOwnPhoto)
+                PreviewPhotoSwitch(
+                  photos: _photos,
+                  labels: [l10n.looksPhotoOwn, l10n.looksPhotoSample],
+                  selected: shown,
+                  onSelect: (i) => setState(() => _picked = i),
                 ),
+              const Spacer(),
+              LookCompareModeSwitch(
+                selected: _mode,
+                onSelect: (m) => setState(() => _mode = m),
               ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// The base images, the groups and the group's parameters, then Save
+  /// and Load. [leading] scrolls with them, ahead of the base images.
+  Widget _controls(
+    BuildContext context, {
+    required bool canLoad,
+    Widget? leading,
+  }) {
+    final c = GrColors.of(context);
+    final l10n = context.l10n;
+    final base = _look.base;
+    final params = [
+      for (final p in _look.values.keys)
+        if (shownIn(_look, p)) p,
+    ];
+    final groups = [
+      for (final g in LookGroup.values)
+        if (params.any((p) => groupOf(p) == g)) g,
+    ];
+    final group = groups.contains(_group) ? _group! : groups.firstOrNull;
+    final save = _unsaved ? () => unawaited(_save()) : null;
+    final header = [
+      SingleChildScrollView(
+        key: const Key('look-bases'),
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+        child: SizedBox(
+          height: 40,
+          child: Row(
+            children: [
+              for (final b in _model.basesFor(_look))
+                Padding(
+                  key: b == widget.look.base ? _openedBase : null,
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _BaseChip(
+                    key: ValueKey('look-base:${b.name}'),
+                    label: baseLabel(l10n, b),
+                    selected: base == b,
+                    onTap: () => setState(() => _look = _look.withBase(b)),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+      if (group != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          child: ShootSegmented<LookGroup>(
+            key: const Key('look-groups'),
+            values: groups,
+            selected: group,
+            label: (g) => groupLabel(l10n, g),
+            onSelect: (g) => setState(() => _group = g),
+          ),
+        ),
+    ];
+    return LayoutBuilder(
+      builder: (context, box) {
+        final pinned = leading == null && box.maxHeight >= _pinnedFrom;
+        return Column(
+          children: [
+            if (pinned) ...header,
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.only(top: 6, bottom: 12),
                 children: [
+                  ?leading,
+                  if (!pinned) ...header,
                   if (base == null)
                     Padding(
                       padding: const EdgeInsets.all(20),
@@ -387,6 +531,8 @@ class _LookEditorState extends State<LookEditor> {
               ),
             SafeArea(
               top: false,
+              left: false,
+              right: false,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                 child: _model.onCamera
@@ -433,42 +579,8 @@ class _LookEditorState extends State<LookEditor> {
               ),
             ),
           ],
-        ),
-      );
-    },
-  );
-}
-
-/// A photo looks are previewed on, with what undoes its own rendering.
-final class _PreviewPhoto {
-  const new(this.image, this.rerender);
-
-  final ImageProvider image;
-  final LookRerender rerender;
-}
-
-/// One half of the before/preview pair, with its tag.
-class _PreviewPane extends StatelessWidget {
-  const new({required this.label, required this.photo, required this.look});
-
-  final String label;
-  final _PreviewPhoto photo;
-
-  /// The look to show the photo under; null shows the photo as it is.
-  final Look? look;
-
-  @override
-  Widget build(BuildContext context) {
-    final look = this.look;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (look == null)
-          Image(image: photo.image, fit: BoxFit.cover)
-        else
-          LookPreview(image: photo.image, rerender: photo.rerender, look: look),
-        Positioned(left: 8, bottom: 8, child: PhotoTag(label.toUpperCase())),
-      ],
+        );
+      },
     );
   }
 }

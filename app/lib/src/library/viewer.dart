@@ -11,6 +11,7 @@ import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/connection/idle_disconnect.dart';
 import 'package:grlab/src/downloads/download_engine.dart';
 import 'package:grlab/src/library/format.dart';
+import 'package:grlab/src/library/image_orientation.dart';
 import 'package:grlab/src/library/library_model.dart';
 import 'package:grlab/src/library/library_scope.dart';
 import 'package:grlab/src/library/shot.dart';
@@ -865,12 +866,20 @@ class _ImageControlRowState extends State<_ImageControlRow> {
               .load(serial, file, GrImageSize.view)
               .future
               .then<Uint8List?>((b) => b, onError: (Object _) => null);
+    // The preview is in the sensor's layout; how the camera was held is in
+    // the shot's info.
+    final info = photo == null
+        ? null
+        : _library.model.info(file) ?? await _library.model.ensureInfo(file);
     try {
       await store.add(
         name: name,
         data: look.toBytes(),
         source: file.name,
         photo: photo,
+        photoOrientation: photo == null
+            ? null
+            : orientationToApply(readJpegLayout(photo), info?.orientation),
       );
       showLooksMessage(messenger, l10n.looksSaved(name));
     } on LookConflict catch (conflict) {

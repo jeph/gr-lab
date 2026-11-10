@@ -1463,6 +1463,26 @@
   "@looksBefore": {
     "description": "Tag on the unaltered photo in the look editor."
   },
+  "looksCompareDivider": "Divider between before and the look",
+  "@looksCompareDivider": {
+    "description": "Accessibility label of the line the user slides across the look editor's preview: the photo as it is shows left of it, the photo under the look right of it."
+  },
+  "looksCompareSideBySide": "Side by side",
+  "@looksCompareSideBySide": {
+    "description": "Tooltip of the look editor's preview choice that shows the photo as it is and under the look next to each other."
+  },
+  "looksCompareSingle": "One at a time",
+  "@looksCompareSingle": {
+    "description": "Tooltip of the look editor's preview choice that shows one picture, which a tap swaps between the photo as it is and under the look."
+  },
+  "looksCompareSlide": "Slide to compare",
+  "@looksCompareSlide": {
+    "description": "Tooltip of the look editor's preview choice that shows the photo as it is over the photo under the look, with a divider the user slides."
+  },
+  "looksCompareSwapHint": "Swaps between before and the look",
+  "@looksCompareSwapHint": {
+    "description": "Accessibility hint of the look editor's preview when it shows one picture at a time: what a tap on it does."
+  },
   "looksConflictExistsBody": "{name} is already saved with the same settings.",
   "@looksConflictExistsBody": {
     "description": "Body of the dialog shown when a look is not saved because a saved look has both the same name and the same settings.",
@@ -1819,17 +1839,29 @@
   "@looksParamWhitePoint": {
     "description": "Name of an Image Control adjustment, as Ricoh names it."
   },
+  "looksPhotoOwn": "This look's photo",
+  "@looksPhotoOwn": {
+    "description": "Tooltip and accessibility label of the small picture in the look editor that puts the preview on the photo the look was saved from."
+  },
+  "looksPhotoSample": "Sample photo",
+  "@looksPhotoSample": {
+    "description": "Tooltip and accessibility label of the small picture in the look editor that puts the preview on GR Lab's own sample photo."
+  },
   "looksPreview": "Approximate",
   "@looksPreview": {
     "description": "Tag on the look editor's preview: GR Lab only approximates how the camera renders the look."
+  },
+  "looksPreviewAsTaken": "This photo's own look can't be undone for this look, so the photo is shown as it was taken.",
+  "@looksPreviewAsTaken": {
+    "description": "Note under the look editor's preview when the user picked the look's own photo and it cannot be shown under the edited look (a black-and-white photo under a colour look, for example): the photo is shown unchanged, with no preview of the look."
   },
   "looksPreviewRough": "This photo's own look can't be undone exactly, so the preview is rougher than usual.",
   "@looksPreviewRough": {
     "description": "Note under the look editor's preview. The preview shows the look's photo as the edited look would render it, which means first undoing the look the photo was taken with; that look lost detail the preview cannot bring back."
   },
-  "looksPreviewSample": "This photo's own look can't be undone for this look, so the preview shows a sample photo instead.",
+  "looksPreviewSample": "The look your photo was taken with can't be undone exactly, so the preview starts on a sample photo. You can still switch to your photo.",
   "@looksPreviewSample": {
-    "description": "Note under the look editor's preview when the look's own photo cannot be shown under the edited look (a black-and-white photo under a colour look, for example) and a sample photo stands in."
+    "description": "Note under the look editor's preview when the editor opens on a sample photo instead of the photo the look was saved from, because undoing that photo's own look would give a rougher preview or none (a black-and-white or heavily processed photo, for example). The user can pick their own photo from the small pictures next to the note."
   },
   "looksPreviewUnknownLook": "GR Lab doesn't know which look this photo was taken with, so the preview treats it as Standard.",
   "@looksPreviewUnknownLook": {
