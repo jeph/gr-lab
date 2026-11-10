@@ -241,11 +241,13 @@ final class ConnectionController extends ChangeNotifier {
       (_session?.bleLinked ?? false);
 
   /// Bluetooth is being linked: for a new connection, or by the session
-  /// after the camera dropped the link (as it does when it is turned off)
-  /// and until its reconnect gives up.
+  /// after the camera dropped the link (as it does when it is turned off,
+  /// and when it is woken for its Wi-Fi) and until its reconnect gives up.
   bool get bleLinking => switch (_status) {
-    ConnectionStatus.connecting => _step == ConnectStep.bluetooth,
-    ConnectionStatus.bluetooth || ConnectionStatus.connected =>
+    ConnectionStatus.connecting when _step == ConnectStep.bluetooth => true,
+    ConnectionStatus.connecting ||
+    ConnectionStatus.bluetooth ||
+    ConnectionStatus.connected =>
       !_bleGaveUp && !(_session?.bleLinked ?? false),
     ConnectionStatus.offline || ConnectionStatus.failed => false,
   };

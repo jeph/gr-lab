@@ -696,4 +696,46 @@ void main() {
 
     await app.dispose();
   });
+
+  testWidgets('a camera woken for its Wi-Fi drops the Bluetooth link, and '
+      "the card's Bluetooth icon pulses beside the Wi-Fi one until it is "
+      'back', (tester) async {
+    final app = await _start(
+      tester,
+      config: const FakeCameraConfig(bonded: true, poweredOn: false),
+    );
+    final connection = app.models.connection;
+    await pumpUntilFound(
+      tester,
+      find.byKey(const Key('camera-card-bluetooth-connected')),
+    );
+
+    // With the camera's pages closed, as for work that goes on without
+    // them.
+    unawaited(connection.joinWifi());
+    final joining = find.byKey(const Key('camera-card-wifi-connecting'));
+    await pumpUntilFound(tester, joining);
+    await pumpUntil(
+      tester,
+      () => connection.cameraSession?.bleLinked == false,
+      reason: 'the wake dropped the link',
+    );
+    expect(connection.status, ConnectionStatus.connecting);
+    expect(joining, findsOneWidget);
+    expect(
+      find.byKey(const Key('camera-card-bluetooth-connecting')),
+      findsOneWidget,
+    );
+
+    await pumpUntilFound(
+      tester,
+      find.byKey(const Key('camera-card-wifi-connected')),
+    );
+    expect(
+      find.byKey(const Key('camera-card-bluetooth-connected')),
+      findsOneWidget,
+    );
+
+    await app.dispose();
+  });
 }

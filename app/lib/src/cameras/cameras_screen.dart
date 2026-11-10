@@ -694,9 +694,9 @@ enum _BluetoothLink {
 
   static _BluetoothLink of(ConnectionController connection, Presence seen) {
     if (connection.bleLinking) return connecting;
-    // The Wi-Fi is joined over the Bluetooth link.
-    final joiningWifi = connection.status == ConnectionStatus.connecting;
-    if (joiningWifi || connection.bleLinked) return connected;
+    // The session's own link, which a camera woken for its Wi-Fi drops
+    // while the join carries on.
+    if (connection.cameraSession?.bleLinked ?? false) return connected;
     return seen == Presence.away ? away : nearby;
   }
 
