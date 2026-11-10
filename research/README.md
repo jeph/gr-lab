@@ -27,8 +27,10 @@ Paths such as `apk/…`, `work/…`, `firmware/…`, `captures/…` and `tools/b
 | [firmware-network-config.md](firmware-network-config.md) | Camera boot/AP startup, hostapd generation, DHCP, radio power settings and timeout distinctions |
 | [hardware-validation.md](hardware-validation.md) | Phone/Mac traffic-capture setup (iPhone PacketLogger + `rvictl`, Android HCI snoop), capture sessions, safe direct probes and a results log |
 | [burst-grouping.md](burst-grouping.md) | Idea: grouping continuous shots in the library. What the camera exposes per photo, what is unknown (GR IV drive-mode values, thumbnail EXIF, range requests) and the test to settle it |
+| [camera-menu-languages.md](camera-menu-languages.md) | The 21 languages of the camera's menus (GR Lab's languages), where the firmware keeps the menu text of each, how GR Lab's translations use it, and what a camera still has to settle |
 | [notes/](notes) | Working notes behind the documents above: per-service BLE analysis of GR WORLD (`notes/ble/`), HTTP notes, and public-source history of the extra HTTP routes. Superseded where a document says otherwise |
 | [tools/dartdis.py](tools/dartdis.py) | Linear disassembler for GR WORLD's Dart AOT snapshot (see "Reproducing the analysis") |
+| [tools/menu_strings.py](tools/menu_strings.py) | Prints an entry of the camera's menu text in every language from a firmware RTOS image (see [camera-menu-languages.md](camera-menu-languages.md)) |
 
 ## Protocol in one paragraph
 

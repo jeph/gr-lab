@@ -46,6 +46,7 @@ step "analyze tool" dart analyze --fatal-infos tool
 
 step "camera layer boundary" "$root/tool/check_boundary.sh"
 step "translated text" dart run tool/check_strings.dart app/lib
+step "translations" dart run tool/check_translations.dart app/lib/l10n
 
 if [[ "$static_only" == false ]]; then
   for p in "${dart_packages[@]}"; do

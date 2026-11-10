@@ -11,9 +11,9 @@ import 'package:grlab/src/theme/tokens.dart';
 import 'package:grlab/src/widgets/group.dart';
 import 'package:grlab/src/widgets/pressable.dart';
 
-/// App settings (subset of mock `b-settings`): appearance, leaving the
-/// camera's Wi-Fi when the app is not used, the debug log, licenses and the
-/// privacy policy.
+/// App settings (subset of mock `b-settings`): appearance and language,
+/// leaving the camera's Wi-Fi when the app is not used, the debug log,
+/// licenses and the privacy policy.
 class SettingsScreen extends StatelessWidget {
   const new({super.key});
 
@@ -35,6 +35,22 @@ class SettingsScreen extends StatelessWidget {
             _ThemeGroup(
               theme: settings.theme,
               onChanged: (theme) => settings.theme = theme,
+            ),
+            const SizedBox(height: 12),
+            GroupBox(
+              children: [
+                GroupRow(
+                  key: const Key('setting-language'),
+                  icon: Icons.language_rounded,
+                  title: l10n.settingsLanguage,
+                  trailing: TrailingFit.value(
+                    context,
+                    _languageLabel(l10n, settings.language),
+                  ),
+                  chevron: true,
+                  onTap: () => unawaited(_chooseLanguage(context)),
+                ),
+              ],
             ),
             SectionLabel(l10n.settingsCamera),
             GroupBox(
@@ -92,42 +108,82 @@ String _autoDisconnectLabel(AppLocalizations l10n, AutoDisconnect choice) =>
 
 Future<void> _chooseAutoDisconnect(BuildContext context) {
   final settings = AppScope.of(context).settings;
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    builder: (context) => SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SectionLabel(context.l10n.settingsAutoDisconnectSheetTitle),
-            GroupBox(
-              children: [
-                for (final choice in AutoDisconnect.values)
-                  GroupRow(
-                    key: ValueKey('auto-disconnect:${choice.name}'),
-                    title: _autoDisconnectLabel(context.l10n, choice),
-                    trailing: choice == settings.autoDisconnect
-                        ? Icon(
-                            Icons.check_rounded,
-                            color: GrColors.of(context).accent,
-                          )
-                        : null,
-                    onTap: () {
-                      settings.autoDisconnect = choice;
-                      Navigator.of(context).pop();
-                    },
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    ),
+  return _showChoices(
+    context,
+    title: context.l10n.settingsAutoDisconnectSheetTitle,
+    choices: AutoDisconnect.values,
+    selected: settings.autoDisconnect,
+    keyOf: (choice) => 'auto-disconnect:${choice.name}',
+    labelOf: _autoDisconnectLabel,
+    onChosen: (choice) => settings.autoDisconnect = choice,
   );
 }
+
+/// The language under its own name; `System default` for null, which
+/// follows the phone's language.
+String _languageLabel(AppLocalizations l10n, Locale? language) =>
+    language == null ? l10n.settingsLanguageSystem : languageName(language);
+
+Future<void> _chooseLanguage(BuildContext context) {
+  final settings = AppScope.of(context).settings;
+  return _showChoices(
+    context,
+    title: context.l10n.settingsLanguage,
+    choices: [null, ...AppLocalizations.supportedLocales],
+    selected: settings.language,
+    keyOf: (choice) => 'language:${choice?.toLanguageTag() ?? 'system'}',
+    labelOf: _languageLabel,
+    onChosen: (choice) => settings.language = choice,
+  );
+}
+
+/// A sheet listing [choices] under [title], with a check mark on
+/// [selected]. Tapping one passes it to [onChosen] and closes the sheet.
+Future<void> _showChoices<T>(
+  BuildContext context, {
+  required String title,
+  required List<T> choices,
+  required T selected,
+  required String Function(T choice) keyOf,
+  required String Function(AppLocalizations l10n, T choice) labelOf,
+  required ValueChanged<T> onChosen,
+}) => showModalBottomSheet<void>(
+  context: context,
+  isScrollControlled: true,
+  // A list taller than the screen scrolls below the status bar.
+  useSafeArea: true,
+  builder: (context) => SafeArea(
+    child: SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SectionLabel(title),
+          GroupBox(
+            children: [
+              for (final choice in choices)
+                GroupRow(
+                  key: ValueKey(keyOf(choice)),
+                  title: labelOf(context.l10n, choice),
+                  trailing: choice == selected
+                      ? Icon(
+                          Icons.check_rounded,
+                          color: GrColors.of(context).accent,
+                        )
+                      : null,
+                  onTap: () {
+                    onChosen(choice);
+                    Navigator.of(context).pop();
+                  },
+                ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  ),
+);
 
 class _ThemeGroup extends StatelessWidget {
   const new({required this.theme, required this.onChanged});

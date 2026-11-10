@@ -84,7 +84,7 @@ GR Lab ships on iOS and Android, and every change has to work on both. A fix or 
 
 ## Checks
 
-Run `tool/check.sh` before considering any change done. It runs the formatter, the analyzer with `very_good_analysis` on every package and on `tool/` (infos are fatal), the camera layer boundary check, the translated-text check and every test suite. The Android and iOS builds run `tool/check.sh --static` and refuse to build when it fails.
+Run `tool/check.sh` before considering any change done. It runs the formatter, the analyzer with `very_good_analysis` on every package and on `tool/` (infos are fatal), the camera layer boundary check, the translated-text and translations checks and every test suite. The Android and iOS builds run `tool/check.sh --static` and refuse to build when it fails.
 
 - Every check must pass, whether or not a finding looks important, including failures in code you didn't change: fix them rather than leaving them for later. Fix the code, not the check.
 - Do not disable a lint, add `// ignore`, relax `analysis_options.yaml`, add a baseline, skip a test or bypass the build gate to get past a finding. Needing an escape hatch usually means you are taking a shortcut, and avoiding that shortcut is the point of this rule. An escape hatch is a last resort, only when a finding truly cannot be fixed (for example a false positive or a third-party API you cannot change). It must be as narrow as possible (one line, one rule, never a whole file) and carry a comment saying why the rule doesn't fit there.
@@ -115,6 +115,14 @@ The user's phone is sometimes reachable over `adb`, and it's the only way to tes
 GR Lab is set up for translation, so every text the app itself shows comes from the localized messages in `app/lib/l10n/app_en.arb`: labels, buttons, errors, notices, dialogs and snackbars alike. Read them through `context.l10n` (the generated `AppLocalizations`). Text from the camera, such as its name, file names and setting values, is shown as the camera sends it. The camera layer reports failures as typed values, never as English sentences; the app turns each into a message. Give every message an `@` description, and describe each placeholder. Format numbers, sizes, times and dates with the locale (`intl`'s `NumberFormat` and `DateFormat`), not fixed patterns or English suffixes.
 
 `tool/check_strings.dart` fails when a string literal with words in it goes straight to a widget that shows text (`Text('…')`, `title: '…'`, `tooltip: '…'` and similar) in `app/lib`. It matches common shapes, so passing it doesn't prove a screen is translated. A literal that truly must not be translated, such as the GR Lab brand name, carries `// not-translated: <why>` on the same line; like any escape hatch, it is a last resort.
+
+GR Lab is translated into the 21 languages of the camera's own menus (`research/camera-menu-languages.md`), one `app/lib/l10n/app_<locale>.arb` each, listed in `app/l10n.yaml`. It follows the phone's language, falls back to English when the phone's is none of them, and lets the user choose one in Settings.
+
+- A new or changed message is translated into every language in the same change; `tool/check_translations.dart` fails when a translation lacks a message or doesn't keep its placeholders, plural and select cases, `<b>` tags and line breaks. Translations hold the texts only: descriptions stay in `app_en.arb`. After editing an ARB file, run `flutter pub get` in `app` to regenerate `AppLocalizations`.
+- Word camera things as the camera does in each language: menu entries, Image Control names and their values come from the camera's firmware, which `research/tools/menu_strings.py` prints for every language. Write everything else the way the phone's own system text reads in that language, and build sentences so a name the user typed (`{cameraName}`) needs no case ending.
+- Texts that iOS shows on GR Lab's behalf, the permission explanations in `app/ios/Runner/Info.plist`, are translated in `app/ios/Runner/InfoPlist.xcstrings`.
+- Capitals for a label go through `AppLocalizations.upperCase`, not `toUpperCase`, which is wrong for Turkish and Greek.
+- The privacy policy (`app/assets/privacy.md`) is in English only.
 
 ## Privacy policy
 

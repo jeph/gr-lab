@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show Locale;
 
 import 'package:flutter/foundation.dart';
 
+import 'package:grlab/l10n/app_localizations.dart';
 import 'package:grlab/src/data/json_file.dart';
 import 'package:grlab/src/theme/tokens.dart';
 
@@ -47,7 +49,12 @@ final class SettingsController extends ChangeNotifier {
       c._shootMode =
           ShootMode.values.asNameMap()[json['shootMode']] ?? c._shootMode;
       final debugLogging = json['debugLogging'];
-      c._debugLogging = debugLogging is bool ? debugLogging : null;
+      c
+        .._debugLogging = debugLogging is bool ? debugLogging : null
+        // A language GR Lab is no longer translated into follows the phone.
+        .._language = AppLocalizations.supportedLocales
+            .where((locale) => locale.toLanguageTag() == json[_languageKey])
+            .firstOrNull;
     }
     return c;
   }
@@ -58,10 +65,14 @@ final class SettingsController extends ChangeNotifier {
   /// the [AppTheme] names, so a choice saved then still loads.
   static const _themeKey = 'themeMode';
 
+  /// Holds the language's BCP 47 tag (`de`, `zh-Hant`).
+  static const _languageKey = 'language';
+
   AppTheme _theme = AppTheme.system;
   AutoDisconnect _autoDisconnect = AutoDisconnect.fiveMinutes;
   ShootMode _shootMode = ShootMode.remote;
   bool? _debugLogging;
+  Locale? _language;
 
   AppTheme get theme => _theme;
 
@@ -77,10 +88,16 @@ final class SettingsController extends ChangeNotifier {
   /// prod) applies.
   bool? get debugLogging => _debugLogging;
 
+  /// The language the user chose in Settings, one of
+  /// [AppLocalizations.supportedLocales]; null follows the phone's
+  /// languages.
+  Locale? get language => _language;
+
   set theme(AppTheme v) => _update(() => _theme = v);
   set autoDisconnect(AutoDisconnect v) => _update(() => _autoDisconnect = v);
   set shootMode(ShootMode v) => _update(() => _shootMode = v);
   set debugLogging(bool? v) => _update(() => _debugLogging = v);
+  set language(Locale? v) => _update(() => _language = v);
 
   /// Applies [change] at once and saves every setting; a failed write goes
   /// to the debug log, and the next change writes every setting again.
@@ -92,6 +109,7 @@ final class SettingsController extends ChangeNotifier {
       'autoDisconnect': _autoDisconnect.name,
       'shootMode': _shootMode.name,
       'debugLogging': ?_debugLogging,
+      _languageKey: ?_language?.toLanguageTag(),
     };
     unawaited(_file.save(() => snapshot));
   }

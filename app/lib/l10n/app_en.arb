@@ -2569,6 +2569,18 @@
   "@settingsDebugLog": {
     "description": "Settings section heading: debug logging."
   },
+  "settingsLanguage": "Language",
+  "@settingsLanguage": {
+    "description": "Settings: title of the row that chooses the language GR Lab is shown in, and heading of the list of languages it opens."
+  },
+  "settingsLanguageName": "English",
+  "@settingsLanguageName": {
+    "description": "The name of the language this file is written in, in that language itself (Deutsch in the German file, 日本語 in the Japanese one). Settings lists every language by this name, whatever language GR Lab is shown in. Use the name the GR shows in its Language menu."
+  },
+  "settingsLanguageSystem": "System default",
+  "@settingsLanguageSystem": {
+    "description": "Settings: the language choice that follows the phone's language. Shown as the value of the Language row and as the first entry in the list of languages."
+  },
   "settingsTheme": "Theme",
   "@settingsTheme": {
     "description": "Settings: heading of the theme choices."

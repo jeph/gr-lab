@@ -321,13 +321,13 @@ class _Tile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            label.toUpperCase(),
+            context.l10n.upperCase(label),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              letterSpacing: .5,
+              letterSpacing: context.l10n.capitalSpacing(.5),
               color: c.t2,
             ),
           ),

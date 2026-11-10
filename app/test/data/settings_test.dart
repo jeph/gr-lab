@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show Locale;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,5 +43,21 @@ void main() {
     expect(temp.listSync().map((e) => e.uri.pathSegments.last), [
       'settings.json',
     ]);
+  });
+
+  test('the language is saved with its script, and a saved language GR Lab '
+      'is not translated into follows the phone', () async {
+    const traditionalChinese = Locale.fromSubtags(
+      languageCode: 'zh',
+      scriptCode: 'Hant',
+    );
+    final settings = await SettingsController.load(temp);
+    expect(settings.language, isNull);
+    settings.language = traditionalChinese;
+    await settings.flush();
+    expect((await SettingsController.load(temp)).language, traditionalChinese);
+
+    await File('${temp.path}/settings.json').writeAsString('{"language":"nb"}');
+    expect((await SettingsController.load(temp)).language, isNull);
   });
 }

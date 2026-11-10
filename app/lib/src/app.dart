@@ -27,6 +27,9 @@ class GrLabApp extends StatelessWidget {
           onGenerateTitle: (context) => context.l10n.appTitle,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          // The language chosen in Settings, or else the phone's.
+          locale: models.settings.language,
+          localeListResolutionCallback: resolveAppLocale,
           debugShowCheckedModeBanner: false,
           // Without a dark theme, the app keeps the chosen one when the
           // phone is in dark mode.

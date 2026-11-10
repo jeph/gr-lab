@@ -1,0 +1,399 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "NSBluetoothAlwaysUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab používá Bluetooth ke spárování s vaším fotoaparátem Ricoh GR, k jeho vyhledání poblíž, probuzení, zapnutí jeho Wi-Fi a k funkci dálkové spouště."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab bruger Bluetooth til at parre med dit Ricoh GR, finde det i nærheden, vække det, slå dets Wi-Fi til og fungere som fjernudløser."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab verwendet Bluetooth, um sich mit deiner Ricoh GR zu koppeln, sie in der Nähe zu finden, sie aufzuwecken, ihr WLAN einzuschalten und als ihr Fernauslöser zu dienen."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το GR Lab χρησιμοποιεί το Bluetooth για αντιστοίχιση με τη Ricoh GR σας, για να τη βρίσκει όταν είναι κοντά, να την ενεργοποιεί, να ανοίγει το Wi-Fi της και να λειτουργεί ως τηλεχειριστήριο κλείστρου."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab uses Bluetooth to pair with your Ricoh GR, find it nearby, wake it, turn on its Wi-Fi and act as its remote shutter."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab usa Bluetooth para emparejarse con tu Ricoh GR, encontrarla cerca, activarla, encender su Wi-Fi y hacer de disparador remoto."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab käyttää Bluetoothia muodostaakseen parin Ricoh GR ‑kamerasi kanssa, löytääkseen sen lähistöltä, herättääkseen sen, kytkeäkseen sen Wi-Fin päälle ja toimiakseen sen kaukolaukaisimena."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab utilise le Bluetooth pour se jumeler avec votre Ricoh GR, le détecter à proximité, le réveiller, activer son Wi-Fi et lui servir de télécommande."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A GR Lab Bluetooth-kapcsolaton párosítja a Ricoh GR kamerát, megkeresi a közelben, felébreszti, bekapcsolja a Wi-Fi-hálózatát, és távkioldóként működik hozzá."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab usa il Bluetooth per accoppiarsi con la tua Ricoh GR, trovarla nelle vicinanze, riattivarla, accenderne il Wi-Fi e farle da telecomando di scatto."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR LabはBluetoothを使用して、Ricoh GRとのペアリング、近くにあるカメラの検出、カメラの起動、カメラのWi-Fiの有効化、リモートシャッター操作を行います。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab은 Bluetooth를 사용하여 Ricoh GR과 페어링하고, 근처에서 카메라를 찾고, 카메라를 깨우고, 카메라의 Wi-Fi를 켜고, 리모트 셔터로 작동합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab gebruikt Bluetooth om met je Ricoh GR te koppelen, de camera in de buurt te vinden en te wekken, de Wi-Fi ervan in te schakelen en de camera op afstand te ontspannen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab używa Bluetooth, aby sparować się z aparatem Ricoh GR, znajdować go w pobliżu, wybudzać go, włączać jego Wi-Fi i działać jako pilot migawki."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O GR Lab utiliza o Bluetooth para emparelhar com a sua Ricoh GR, encontrá-la por perto, ativá-la, ligar o Wi-Fi dela e servir de disparador remoto."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab использует Bluetooth, чтобы создать пару с камерой Ricoh GR, находить ее поблизости, выводить из режима ожидания, включать ее Wi-Fi и работать как пульт спуска затвора."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab använder Bluetooth för att parkoppla med din Ricoh GR, hitta den i närheten, väcka den, slå på dess Wi-Fi och fungera som fjärrutlösare."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab ใช้บลูทูธเพื่อจับคู่กับ Ricoh GR ของคุณ ค้นหากล้องที่อยู่ใกล้เคียง ปลุกกล้อง เปิด Wi-Fi ของกล้อง และทำหน้าที่เป็นรีโมตชัตเตอร์"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab, Ricoh GR kameranızla eşleşmek, onu yakınlarda bulmak, uyandırmak, Wi-Fi ağını açmak ve uzaktan deklanşör olarak çalışmak için Bluetooth’u kullanır."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab 使用蓝牙与你的 Ricoh GR 配对、在附近查找它、唤醒它、开启它的 Wi-Fi，并充当它的遥控快门。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab 會使用 Bluetooth 與你的 Ricoh GR 配對、尋找附近的相機、喚醒相機、開啟相機的 Wi-Fi，並作為遙控快門。"
+          }
+        }
+      }
+    },
+    "NSLocalNetworkUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab se k fotoaparátu připojuje přes jeho vlastní Wi-Fi síť, aby mohl procházet a stahovat fotky a videa a zobrazovat živý náhled."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab opretter forbindelse til dit kamera via kameraets eget Wi-Fi-netværk for at gennemse og downloade billeder og videoer og vise live view."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab verbindet sich über das eigene WLAN-Netzwerk der Kamera mit ihr, um Fotos und Videos anzusehen und herunterzuladen und ihren Live-View anzuzeigen."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το GR Lab συνδέεται στην κάμερά σας μέσω του δικού της δικτύου Wi-Fi, για να βλέπετε και να κατεβάζετε φωτογραφίες και βίντεο και για τη ζωντανή προβολή της."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab connects to your camera over its own Wi-Fi network to browse and download photos and videos and to show its live view."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab se conecta a tu cámara por su propia red Wi-Fi para explorar y descargar fotos y vídeos y mostrar su vista en directo."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab yhdistää kameraasi sen oman Wi-Fi-verkon kautta, jotta voit selata ja ladata kuvia ja videoita ja nähdä kameran live-kuvan."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab se connecte à votre appareil photo via son propre réseau Wi-Fi pour parcourir et télécharger les photos et vidéos, et pour afficher sa visée directe."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A GR Lab a kamera saját Wi-Fi-hálózatán csatlakozik a kamerához, hogy böngészhesse és letölthesse a fotókat és videókat, és megjeleníthesse az élőképet."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab si connette alla fotocamera tramite la sua rete Wi-Fi per sfogliare e scaricare foto e video e per mostrare il live view."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Labはカメラ自身のWi-Fiネットワークでカメラに接続し、写真や動画の閲覧とダウンロード、ライブビューの表示を行います。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab은 카메라의 자체 Wi-Fi 네트워크로 카메라에 연결하여 사진과 동영상을 둘러보고 다운로드하며 라이브 뷰를 표시합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab maakt via het eigen Wi-Fi-netwerk van je camera verbinding om foto's en video's te bekijken en te downloaden en om de live view te tonen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab łączy się z aparatem przez jego własną sieć Wi-Fi, aby przeglądać i pobierać zdjęcia i filmy oraz wyświetlać podgląd na żywo."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O GR Lab liga-se à câmara através da rede Wi-Fi da própria câmara para ver e transferir fotos e vídeos e para mostrar a vista ao vivo."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab подключается к камере по ее собственной сети Wi-Fi, чтобы просматривать и загружать фото и видео и показывать Live View."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab ansluter till kameran via dess eget Wi-Fi-nätverk för att bläddra bland och hämta bilder och videor och för att visa kamerans livevisning."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab เชื่อมต่อกับกล้องผ่านเครือข่าย Wi-Fi ของกล้องเอง เพื่อเรียกดูและดาวน์โหลดภาพและวิดีโอ และแสดงไลฟ์วิว"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab, fotoğraflara ve videolara göz atıp onları indirmek ve canlı görüntüyü göstermek için kameranıza kendi Wi-Fi ağı üzerinden bağlanır."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab 通过相机自身的 Wi-Fi 网络与其连接，以便浏览和下载照片与影片，并显示实时取景。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab 會透過相機自己的 Wi-Fi 網路連接相機，以瀏覽和下載照片與影片，並顯示即時取景畫面。"
+          }
+        }
+      }
+    },
+    "NSPhotoLibraryAddUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab ukládá fotky a videa stažené z fotoaparátu do vaší knihovny fotek."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab gemmer de billeder og videoer, du downloader fra dit kamera, i dit fotobibliotek."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab speichert die Fotos und Videos, die du von deiner Kamera herunterlädst, in deiner Fotomediathek."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το GR Lab αποθηκεύει στη βιβλιοθήκη σας τις φωτογραφίες και τα βίντεο που κατεβάζετε από την κάμερα."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab saves the photos and videos you download from your camera to your library."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab guarda en tu fototeca las fotos y los vídeos que descargas de la cámara."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab tallentaa kamerasta lataamasi kuvat ja videot kuvakirjastoosi."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab enregistre dans votre photothèque les photos et vidéos que vous téléchargez depuis votre appareil photo."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A GR Lab a fotókönyvtárba menti a kameráról letöltött fotókat és videókat."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab salva nella tua libreria le foto e i video che scarichi dalla fotocamera."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Labは、カメラからダウンロードした写真や動画を写真ライブラリに保存します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab은 카메라에서 다운로드한 사진과 동영상을 사진 보관함에 저장합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab bewaart de foto's en video's die je van je camera downloadt in je fotobibliotheek."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab zapisuje w bibliotece zdjęć zdjęcia i filmy pobrane z aparatu."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O GR Lab guarda na sua biblioteca de fotografias as fotos e os vídeos que transfere da câmara."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab сохраняет в медиатеку фото и видео, загруженные с камеры."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab sparar de bilder och videor du hämtar från kameran i ditt bildbibliotek."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab บันทึกภาพและวิดีโอที่คุณดาวน์โหลดจากกล้องลงในคลังรูปภาพของคุณ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab, kameranızdan indirdiğiniz fotoğrafları ve videoları fotoğraf arşivinize kaydeder."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab 会把你从相机下载的照片和影片存入你的照片图库。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab 會將你從相機下載的照片和影片儲存到照片圖庫。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

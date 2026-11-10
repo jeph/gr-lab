@@ -208,8 +208,8 @@ class _LookCompareState extends State<LookCompare> {
         child: AspectRatio(aspectRatio: shape, child: _tappable(_picture())),
       );
     }
-    final beforeTag = l10n.looksBefore.toUpperCase();
-    final lookTag = l10n.looksPreview.toUpperCase();
+    final beforeTag = l10n.upperCase(l10n.looksBefore);
+    final lookTag = l10n.upperCase(l10n.looksPreview);
     switch (widget.mode) {
       case LookCompareMode.slide:
         final percent = NumberFormat.percentPattern(

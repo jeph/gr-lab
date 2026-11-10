@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/theme/tokens.dart';
 import 'package:intl/intl.dart';
 
@@ -21,11 +22,11 @@ class SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: padding,
     child: Text(
-      text.toUpperCase(),
+      context.l10n.upperCase(text),
       style: TextStyle(
         fontSize: 11.5,
         fontWeight: FontWeight.w600,
-        letterSpacing: .8,
+        letterSpacing: context.l10n.capitalSpacing(.8),
         color: GrColors.of(context).t3,
       ),
     ),

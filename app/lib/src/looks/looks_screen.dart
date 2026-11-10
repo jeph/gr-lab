@@ -219,11 +219,11 @@ class _SlotsSection extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  l10n.looksOnCamera.toUpperCase(),
+                  l10n.upperCase(l10n.looksOnCamera),
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
-                    letterSpacing: .8,
+                    letterSpacing: l10n.capitalSpacing(.8),
                     color: c.t3,
                   ),
                 ),

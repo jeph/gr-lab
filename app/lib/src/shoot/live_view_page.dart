@@ -930,11 +930,11 @@ class _Readouts extends StatelessWidget {
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          _readoutLabel(l10n, key).toUpperCase(),
+                          l10n.upperCase(_readoutLabel(l10n, key)),
                           style: TextStyle(
                             fontSize: 10.5,
                             fontWeight: FontWeight.w600,
-                            letterSpacing: .6,
+                            letterSpacing: l10n.capitalSpacing(.6),
                             color: c.t2,
                           ),
                         ),

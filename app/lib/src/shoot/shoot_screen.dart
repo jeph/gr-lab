@@ -10,6 +10,7 @@ import 'package:grlab/src/connection/camera_pill.dart' show formatBattery;
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/connection/idle_disconnect.dart' show IdleDisconnect;
 import 'package:grlab/src/data/settings.dart';
+import 'package:grlab/src/pairing/pairing_widgets.dart' show TrailingFit;
 import 'package:grlab/src/shoot/live_view_controller.dart';
 import 'package:grlab/src/shoot/live_view_page.dart';
 import 'package:grlab/src/shoot/shoot_format.dart';
@@ -348,10 +349,15 @@ class _RemoteView extends StatelessWidget {
           key: const Key('shoot-drive'),
           icon: Icons.burst_mode_outlined,
           title: l10n.shootDrive,
-          trailing: Text(
-            drive?.label(l10n) ??
-                (model.drive == null ? '—' : '${model.drive}'),
-            style: TextStyle(fontSize: 15, color: GrColors.of(context).t2),
+          // A drive mode's name is long in some languages (`Fotogramma
+          // singolo`): it shrinks rather than push the row off the card.
+          trailing: TrailingFit(
+            maxWidth: 160,
+            child: Text(
+              drive?.label(l10n) ??
+                  (model.drive == null ? '—' : '${model.drive}'),
+              style: TextStyle(fontSize: 15, color: GrColors.of(context).t2),
+            ),
           ),
           chevron: true,
           onTap: model.canShoot
@@ -385,11 +391,11 @@ class _Stat extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            label.toUpperCase(),
+            context.l10n.upperCase(label),
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              letterSpacing: .6,
+              letterSpacing: context.l10n.capitalSpacing(.6),
               color: c.t3,
             ),
           ),
