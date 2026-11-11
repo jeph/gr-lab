@@ -19,6 +19,10 @@ Do not disclose suspected vulnerabilities in a public issue, discussion, pull re
 media post. Submit a
 [private vulnerability report](https://github.com/jeph/gr-lab/security/advisories/new) instead.
 
+If that page is not available to you, [open an issue](https://github.com/jeph/gr-lab/issues) that
+asks the maintainer for a private way to reach them. Say only that you have a security report: leave
+out the details, logs and screenshots until you have that private channel.
+
 Include enough information to investigate without exposing private data:
 
 - The GR Lab commit, the build (`dev` or `prod`), your phone model and its Android or iOS version.
