@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
+import 'package:grlab/src/cameras/camera_drawing.dart';
 import 'package:grlab/src/cameras/camera_identity.dart';
 import 'package:grlab/src/connection/camera_pill.dart';
 import 'package:grlab/src/connection/connect_failure_view.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/connection/storage_counts.dart';
+import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/pairing/pairing_flow.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart';
 import 'package:grlab/src/theme/tokens.dart';
@@ -56,7 +58,7 @@ class CameraSheet extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _Header(title: camera.name, subtitle: camera.identityLine(l10n)),
+              _Header(camera: camera),
               if (failure != null)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -295,11 +297,12 @@ class _StatusTiles extends StatelessWidget {
   }
 }
 
+/// The camera's name and identity beside a small drawing of its model, as
+/// the rows of the Cameras screen's other cameras have it.
 class _Header extends StatelessWidget {
-  const new({required this.title, required this.subtitle});
+  const new({required this.camera});
 
-  final String title;
-  final String subtitle;
+  final SavedCamera camera;
 
   @override
   Widget build(BuildContext context) {
@@ -308,14 +311,15 @@ class _Header extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 6, 20, 6),
       child: Row(
         children: [
-          Container(
+          SizedBox(
             width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: c.s3,
-              borderRadius: BorderRadius.circular(18),
+            child: ExcludeSemantics(
+              child: CameraDrawing(
+                key: const Key('camera-sheet-drawing'),
+                body: camera.body,
+                strokeWidth: 1.1,
+              ),
             ),
-            child: Icon(Icons.photo_camera_outlined, size: 28, color: c.t1),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -323,7 +327,7 @@ class _Header extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  camera.name,
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
@@ -332,7 +336,10 @@ class _Header extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-                Text(subtitle, style: GrFonts.monoStyle(context)),
+                Text(
+                  camera.identityLine(context.l10n),
+                  style: GrFonts.monoStyle(context),
+                ),
               ],
             ),
           ),

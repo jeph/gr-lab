@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
+import 'package:grlab/src/cameras/camera_drawing.dart';
 import 'package:grlab/src/connection/camera_pill.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/connection/link_state.dart';
@@ -113,6 +114,13 @@ void main() {
     expect(internal, findsOneWidget);
     expect(tester.getTopLeft(sd).dy, lessThan(tester.getTopLeft(internal).dy));
     expect(find.text('No. 1234567 · fw 1.20'), findsOneWidget);
+    expect(
+      tester
+          .widget<CameraDrawing>(find.byKey(const Key('camera-sheet-drawing')))
+          .body
+          .model,
+      GrModel.gr4,
+    );
 
     await _tap(tester, const Key('camera-sheet-wifi-disconnect'));
     await pumpUntil(
