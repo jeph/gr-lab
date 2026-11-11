@@ -586,6 +586,29 @@ void main() {
     expect(s.phase, GrSessionPhase.connected);
   });
 
+  test('a battery change after a Wi-Fi recovery is read, though a /v1/props '
+      'read from before the loss is still unanswered', () async {
+    camera = await startCamera(fastConfig(bonded: true));
+    final s = await connect();
+    final reads = <GrProps>[];
+    s.propsUpdates.listen(reads.add);
+
+    // The camera goes quiet on the read for this change, then its Wi-Fi
+    // drops.
+    final unanswered = camera.propsGate = Completer<void>();
+    camera.battery = 40;
+    await Future<void>.delayed(ms(100));
+    camera.propsGate = null;
+    final recovered = s.events.firstWhere((e) => e.kind == 'recovery.done');
+    camera.dropWifi();
+    await recovered.timeout(const Duration(seconds: 5));
+    expect(reads.map((p) => p.battery), isNot(contains(55)));
+
+    camera.battery = 55;
+    await until(() => reads.any((p) => p.battery == 55));
+    unanswered.complete();
+  });
+
   test('change WebSocket delivers storage and battery changes', () async {
     camera = await startCamera(fastConfig(bonded: true));
     final s = await connect();

@@ -103,6 +103,11 @@ final class FakeGrCamera {
   /// completes: a camera slow to describe a file.
   Completer<void>? infoGate;
 
+  /// While set, `/v1/props` answers only once it completes: a camera that
+  /// has gone quiet on a request. A request already waiting keeps waiting
+  /// after this is cleared.
+  Completer<void>? propsGate;
+
   bool _poweredOn;
 
   /// Off, and no link has been opened since: the next one wakes the

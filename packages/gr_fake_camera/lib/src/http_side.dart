@@ -57,6 +57,7 @@ extension on FakeGrCamera {
       }
       switch (route) {
         case ['props']:
+          if (propsGate case final gate?) await gate.future;
           return await _send(request, _props());
         case ['ping'] when config.answersPing:
           return await _send(request, {

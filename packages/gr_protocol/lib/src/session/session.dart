@@ -388,9 +388,11 @@ final class GrSession {
   StreamSubscription<void>? _lostSub;
   StreamSubscription<GrChangeEvent>? _changesSub;
 
-  /// A `/v1/props` read for a change the camera announced is running, and
-  /// another change came since it started.
-  bool _propsRefreshing = false;
+  /// The change socket a `/v1/props` read is running for, and whether
+  /// another change came since that read started. A read for a socket the
+  /// session has let go of (a Wi-Fi loss) does not count: it may stay
+  /// unanswered long after the next socket is open.
+  GrChangesSocket? _propsRefreshingFor;
   bool _propsStale = false;
   StreamSubscription<Object?>? _powerSub;
   bool _closing = false;
@@ -1747,12 +1749,13 @@ final class GrSession {
 
   /// Reads `/v1/props` over [http] after the camera announced on [changes]
   /// that its battery or storages changed, which is what the session's
-  /// readers take from it over Wi-Fi. One read runs at a time; changes
-  /// announced during it are covered by one more read after it.
+  /// readers take from it over Wi-Fi. One read runs at a time for
+  /// [changes]; changes it announces during the read are covered by one
+  /// more read after it.
   Future<void> _refreshProps(GrChangesSocket changes, GrHttpClient http) async {
     _propsStale = true;
-    if (_propsRefreshing) return;
-    _propsRefreshing = true;
+    if (identical(_propsRefreshingFor, changes)) return;
+    _propsRefreshingFor = changes;
     try {
       while (_propsStale && identical(_changes, changes)) {
         _propsStale = false;
@@ -1765,7 +1768,8 @@ final class GrSession {
         }
       }
     } finally {
-      _propsRefreshing = false;
+      // A later socket's reads may have taken over meanwhile.
+      if (identical(_propsRefreshingFor, changes)) _propsRefreshingFor = null;
     }
   }
 
