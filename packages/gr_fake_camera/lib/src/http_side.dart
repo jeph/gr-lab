@@ -58,7 +58,7 @@ extension on FakeGrCamera {
       switch (route) {
         case ['props']:
           return await _send(request, _props());
-        case ['ping']:
+        case ['ping'] when config.answersPing:
           return await _send(request, {
             'errCode': 200,
             'errMsg': 'OK',

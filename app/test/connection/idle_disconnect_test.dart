@@ -8,7 +8,7 @@ import 'package:grlab/src/library/library_screen.dart';
 
 import '../support/test_app.dart';
 
-/// Liveness probes would otherwise run every 500 ms of the minutes these
+/// Liveness probes would otherwise run every 5 s of the minutes these
 /// tests skip in fake time, against a camera answering in real time.
 const _quietLiveness = GrSessionOptions(
   livenessInterval: Duration(hours: 1),

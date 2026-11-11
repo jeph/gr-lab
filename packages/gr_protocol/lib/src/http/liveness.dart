@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:gr_protocol/src/http/client.dart';
+import 'package:gr_protocol/src/http/errors.dart';
 import 'package:gr_protocol/src/http/models.dart';
 import 'package:gr_protocol/src/trace.dart';
 
@@ -81,13 +82,15 @@ final class LivenessPoll {
   /// When the probe finished.
   final DateTime at;
 
-  /// Whether the camera answered with the expected identity.
+  /// Whether the camera answered, and as the expected camera when the
+  /// probe read `/v1/props`.
   final bool ok;
 
   /// Time the probe took.
   final Duration latency;
 
-  /// This probe's `/v1/props`, when the camera answered.
+  /// This probe's `/v1/props`, when it read them and the camera answered;
+  /// null for a `/v1/ping` probe.
   final GrProps? props;
 
   /// Identity from [props].
@@ -122,17 +125,31 @@ final class LivenessPoll {
   };
 }
 
-/// Polls `GET /v1/props` with a fixed delay between probes and applies the
-/// [LivenessTracker] rule. Defaults follow Image Sync: 500 ms delay, 1 s
-/// connect, 10 s read (connection-imagesync.md §2.2). This is a liveness
-/// probe, not a proven keep-awake mechanism (connection-lifecycle.md §9).
+/// Probes the camera with a fixed delay between probes and applies the
+/// [LivenessTracker] rule. The rule and the timeouts (1 s connect, 10 s
+/// read) are Image Sync's, which polls `GET /v1/props` every 500 ms
+/// (connection-imagesync.md §2.2). Its poll also refreshes its settings;
+/// this one only asks whether the camera still answers, so it probes
+/// `GET /v1/ping` every 5 s \[design\]: GR III/IV firmware answers a ping
+/// from the camera clock alone, where `/v1/props` gathers its status,
+/// parameters, device, lens and supported-value lists
+/// (firmware-protocol-inventory.md "Additional-route verification",
+/// remote-shooting.md §4.2). This is a liveness probe, not a proven
+/// keep-awake mechanism (connection-lifecycle.md §9).
+///
+/// With 5 s between probes the rule finds a loss 40 to 45 s after the
+/// last answer (45 s when each probe runs into the read timeout), against
+/// 40 to 42 s at 500 ms.
 final class LivenessMonitor {
-  /// Monitor probing [client]'s `/v1/props` with [connectTimeout] and
-  /// [readTimeout]; the first identity seen is enforced unless
-  /// [expectedIdentity] is given.
+  /// Monitor probing [client]'s `/v1/ping` with [connectTimeout] and
+  /// [readTimeout]. No GR III/IV has been seen answering `/v1/ping`
+  /// \[unknown\], so a camera that answers it with an error, or with
+  /// anything but a JSON object, is probed with `/v1/props` from then on
+  /// (`livenessPingRefused`), where the first identity seen is enforced
+  /// unless [expectedIdentity] is given.
   new(
     GrHttpClient client, {
-    Duration interval = const Duration(milliseconds: 500),
+    Duration interval = const Duration(seconds: 5),
     Duration connectTimeout = const Duration(seconds: 1),
     Duration readTimeout = const Duration(seconds: 10),
     int failureThreshold = 3,
@@ -141,8 +158,7 @@ final class LivenessMonitor {
     DateTime Function()? clock,
     TraceSink? trace,
   }) : this.withProbe(
-         () =>
-             client.props(connectTimeout: connectTimeout, timeout: readTimeout),
+         _pingOrProps(client, connectTimeout, readTimeout, trace),
          interval: interval,
          failureThreshold: failureThreshold,
          lossAfter: lossAfter,
@@ -151,10 +167,12 @@ final class LivenessMonitor {
          trace: trace,
        );
 
-  /// Uses `probe` instead of `/v1/props` (e.g. a network-bound client).
+  /// Uses `probe` instead (e.g. a network-bound client). One that returns
+  /// `/v1/props` has its identity enforced; one that returns null only has
+  /// to complete.
   new withProbe(
     this._probe, {
-    this.interval = const Duration(milliseconds: 500),
+    this.interval = const Duration(seconds: 5),
     this.failureThreshold = 3,
     this.lossAfter = const Duration(seconds: 40),
     GrCameraIdentity? expectedIdentity,
@@ -163,7 +181,45 @@ final class LivenessMonitor {
   }) : _identity = expectedIdentity,
        _now = clock ?? DateTime.now;
 
-  final Future<GrProps> Function() _probe;
+  /// A probe of `/v1/ping` until the camera answers one with an error or
+  /// with no JSON object (any [GrHttpException]: it is reachable, but
+  /// does not answer pings as its other routes answer), and of `/v1/props`
+  /// from then on, starting with that same probe.
+  static Future<GrProps?> Function() _pingOrProps(
+    GrHttpClient client,
+    Duration connectTimeout,
+    Duration readTimeout,
+    TraceSink? trace,
+  ) {
+    var pingRefused = false;
+    return () async {
+      if (!pingRefused) {
+        try {
+          await client.ping(
+            connectTimeout: connectTimeout,
+            timeout: readTimeout,
+          );
+          return null;
+        } on GrHttpException catch (e) {
+          pingRefused = true;
+          trace?.call(
+            TraceEvent(
+              channel: TraceChannel.session,
+              direction: TraceDirection.internal,
+              kind: 'livenessPingRefused',
+              fields: {'error': '$e'},
+            ),
+          );
+        }
+      }
+      return await client.props(
+        connectTimeout: connectTimeout,
+        timeout: readTimeout,
+      );
+    };
+  }
+
+  final Future<GrProps?> Function() _probe;
 
   /// Delay between the end of one probe and the start of the next.
   final Duration interval;
@@ -188,15 +244,15 @@ final class LivenessMonitor {
   /// Completes with the poll that declared the loss; polling stops then.
   Future<LivenessPoll> get lost => _lost.future;
 
-  /// The camera identity being enforced: the expected one, or the first one
-  /// seen.
+  /// The camera identity being enforced on `/v1/props` probes: the
+  /// expected one, or the first one seen.
   GrCameraIdentity? get identity => _identity;
 
   /// Whether polling is scheduled.
   bool get running => _running;
 
-  /// Starts polling; the first probe runs after [interval], like Image Sync's
-  /// `scheduleWithFixedDelay(500, 500)`.
+  /// Starts polling; the first probe runs after [interval], as Image Sync's
+  /// `scheduleWithFixedDelay` does.
   void start() {
     if (_running || _lost.isCompleted) return;
     _running = true;
@@ -231,9 +287,11 @@ final class LivenessMonitor {
     var mismatch = false;
     try {
       props = await _probe();
-      final seen = props.identity;
-      final expected = _identity ??= seen;
-      mismatch = expected != seen;
+      if (props != null) {
+        final seen = props.identity;
+        final expected = _identity ??= seen;
+        mismatch = expected != seen;
+      }
     } on Object catch (e) {
       error = e;
     }

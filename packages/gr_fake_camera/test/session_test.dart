@@ -542,6 +542,50 @@ void main() {
     );
   });
 
+  test('closing the session turns the camera Wi-Fi off and leaves the camera '
+      'on', () async {
+    camera = await startCamera(fastConfig(bonded: true));
+    final s = await connect();
+    expect(camera.wlanOn, isTrue);
+    await s.close();
+    expect(camera.wlanOn, isFalse);
+    expect(camera.poweredOn, isTrue);
+    expect(await camera.wifi.currentSsid(), isNull);
+  });
+
+  test('liveness probes /v1/ping and leaves /v1/props alone until the camera '
+      'announces a battery or storage change', () async {
+    camera = await startCamera(fastConfig(bonded: true));
+    final s = await connect();
+    final reads = <GrProps>[];
+    s.propsUpdates.listen(reads.add);
+    final polls = await s.liveness!.polls.take(3).toList();
+    expect(polls.map((p) => (p.ok, p.props)), everyElement((true, null)));
+    expect(reads, isEmpty);
+
+    camera.battery = 40;
+    await until(() => reads.isNotEmpty);
+    expect(reads.last.battery, 40);
+
+    final before = reads.length;
+    camera.addPhoto(
+      FakePhoto('101RICOH', 'R0000999.JPG', DateTime(2026, 11, 6)),
+    );
+    await until(() => reads.length > before);
+  });
+
+  test('a camera that refuses /v1/ping is probed with /v1/props', () async {
+    camera = await startCamera(fastConfig(bonded: true, answersPing: false));
+    final s = await connect();
+    final polls = await s.liveness!.polls.take(3).toList();
+    expect(polls.map((p) => p.ok), everyElement(isTrue));
+    expect(
+      polls.map((p) => p.props?.serialNo),
+      everyElement(camera.config.serial),
+    );
+    expect(s.phase, GrSessionPhase.connected);
+  });
+
   test('change WebSocket delivers storage and battery changes', () async {
     camera = await startCamera(fastConfig(bonded: true));
     final s = await connect();

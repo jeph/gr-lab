@@ -32,7 +32,7 @@ final class ShootRig {
         wifi: camera.wifi,
         trace: trace.add,
         httpFactory: camera.httpClient,
-        // Liveness probes would otherwise run every 500 ms.
+        // Liveness probes would otherwise run every 5 s.
         sessionOptions: const GrSessionOptions(
           livenessInterval: Duration(hours: 1),
           livenessLossAfter: Duration(hours: 2),

@@ -348,6 +348,7 @@ final class FakeCameraConfig {
     this.dropWifiAfter,
     this.unreachable = false,
     this.reportsWifiLoss = true,
+    this.answersPing = true,
     this.cutDownloadsAfterBytes,
     this.previewFailures = 0,
     this.brokenPreviews = 0,
@@ -475,6 +476,12 @@ final class FakeCameraConfig {
   /// ([WifiNetworkControl.lost]), as Android does; false leaves the loss
   /// to liveness polling, as on iOS.
   final bool reportsWifiLoss;
+
+  /// `GET /v1/ping` answers. GR III/IV firmware registers the route
+  /// (research/firmware-protocol-inventory.md), but no camera has been
+  /// seen answering it \[unknown\]; false answers 404, as a camera without
+  /// it would.
+  final bool answersPing;
 
   /// Full-size downloads stop after this many body bytes and the socket is
   /// closed, as when Wi-Fi drops mid-transfer.

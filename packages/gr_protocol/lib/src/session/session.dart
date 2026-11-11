@@ -137,7 +137,7 @@ final class GrSessionOptions {
     this.joinRetryDelay = const Duration(seconds: 2),
     this.verifyTimeout = const Duration(seconds: 30),
     this.verifyProbeTimeout = const Duration(seconds: 3),
-    this.livenessInterval = const Duration(milliseconds: 500),
+    this.livenessInterval = const Duration(seconds: 5),
     this.livenessFailureThreshold = 3,
     this.livenessLossAfter = const Duration(seconds: 40),
     this.wifiRecoveryDelays = const [
@@ -201,8 +201,13 @@ final class GrSessionOptions {
   /// GR WORLD's `connectToWifi` verification uses a 3 s timeout.
   final Duration verifyProbeTimeout;
 
-  /// Image Sync liveness: 500 ms between polls, loss after 3 consecutive
-  /// failures and 40 s without success.
+  /// Pause between liveness probes (`/v1/ping`, [LivenessMonitor])
+  /// \[design\]. Image Sync polls `/v1/props` every 500 ms, but its poll
+  /// also refreshes its settings (connection-imagesync.md §2.2); here a
+  /// probe only tells whether the camera still answers. With Image Sync's
+  /// rule (3 consecutive failures and 40 s without success) probes 5 s
+  /// apart find a loss 40 to 45 s after the last answer, 45 s when each
+  /// probe runs into its 10 s read timeout, against 40 to 42 s.
   final Duration livenessInterval;
 
   /// Consecutive failed polls before loss can be declared (Image Sync: 3).
@@ -381,6 +386,12 @@ final class GrSession {
   GrChangesSocket? _changes;
   LivenessMonitor? _monitor;
   StreamSubscription<void>? _lostSub;
+  StreamSubscription<GrChangeEvent>? _changesSub;
+
+  /// A `/v1/props` read for a change the camera announced is running, and
+  /// another change came since it started.
+  bool _propsRefreshing = false;
+  bool _propsStale = false;
   StreamSubscription<Object?>? _powerSub;
   bool _closing = false;
   Future<void>? _bleReconnect;
@@ -458,7 +469,7 @@ final class GrSession {
   /// The `/v1/changes` socket; non-null while Wi-Fi services run.
   GrChangesSocket? get changes => _changes;
 
-  /// The `/v1/props` liveness monitor; non-null while Wi-Fi services run.
+  /// The liveness monitor; non-null while Wi-Fi services run.
   LivenessMonitor? get liveness => _monitor;
 
   /// Runs the full hand-off: [connectBluetooth], then [startWifi], which
@@ -1670,11 +1681,16 @@ final class GrSession {
     }
   }
 
-  /// Opens the change WebSocket and starts liveness polling, for a start or
+  /// Opens the change WebSocket and starts liveness probing, for a start or
   /// recovery in [phase]. Throws when [stopWifi] or [close] came meanwhile,
   /// leaving nothing running. A socket whose first open fails is retried by
-  /// its reconnect policy while HTTP polling runs; Wi-Fi is not rejoined
+  /// its reconnect policy while HTTP probing runs; Wi-Fi is not rejoined
   /// for it (connection-imagesync.md §2.2).
+  ///
+  /// `/v1/props` was read when the join was verified, as GR WORLD reads it
+  /// once per join, and is read again only when the camera announces a
+  /// battery or storage change on the socket ([_refreshProps]) \[design\];
+  /// the probes do not read it unless the camera refuses `/v1/ping`.
   Future<void> _startWifiServices(GrSessionPhase phase) async {
     _checkWifiStopped(phase);
     final http = _http!;
@@ -1713,14 +1729,44 @@ final class GrSession {
       }),
     );
     _lostSub = wifi.lost.listen((_) => _wifiLost('network'));
-    // Ends with the monitor: stopping it closes its polls.
+    // Ends with the monitor: stopping it closes its polls. A probe has
+    // props only after the camera refused `/v1/ping`.
     monitor.polls.listen((poll) {
       final props = poll.props;
       if (poll.ok && props != null && identical(_monitor, monitor)) {
         _setProps(props);
       }
     });
+    _changesSub = changes.events.listen((event) {
+      if (event is GrBatteryChange || event is GrStorageChange) {
+        unawaited(_refreshProps(changes, http));
+      }
+    });
     monitor.start();
+  }
+
+  /// Reads `/v1/props` over [http] after the camera announced on [changes]
+  /// that its battery or storages changed, which is what the session's
+  /// readers take from it over Wi-Fi. One read runs at a time; changes
+  /// announced during it are covered by one more read after it.
+  Future<void> _refreshProps(GrChangesSocket changes, GrHttpClient http) async {
+    _propsStale = true;
+    if (_propsRefreshing) return;
+    _propsRefreshing = true;
+    try {
+      while (_propsStale && identical(_changes, changes)) {
+        _propsStale = false;
+        try {
+          final props = await http.props();
+          if (identical(_changes, changes)) _setProps(props);
+        } on Object catch (e) {
+          // Liveness and the caller's own requests judge the link.
+          _emit('props.refreshFailed', {'error': '$e'});
+        }
+      }
+    } finally {
+      _propsRefreshing = false;
+    }
   }
 
   /// Records a `/v1/props` reading taken on this session's HTTP client
@@ -1763,6 +1809,8 @@ final class GrSession {
   Future<void> _stopWifiServices() async {
     await _lostSub?.cancel();
     _lostSub = null;
+    await _changesSub?.cancel();
+    _changesSub = null;
     final monitor = _monitor;
     _monitor = null;
     await monitor?.stop();
