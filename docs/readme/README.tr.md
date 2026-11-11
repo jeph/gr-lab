@@ -108,7 +108,10 @@ Kontrolü stillerini yönetilmeye değer bir şey olarak görmek.
 - **Arşiv.** Kameradaki fotoğraf ve videolara gün gün göz atın; JPEG, RAW, video veya henüz
   indirilmemiş olanlara göre filtreleyin ve istediğiniz çekimi ayrıntılarıyla birlikte tam ekranda
   açın. Tek bir çekimi ya da bir seçimi JPEG, RAW veya her ikisi olarak telefonunuzun fotoğraf
-  arşivindeki bir GR Lab albümüne indirin. Videolar uygulamanın içinde oynatılır.
+  arşivindeki bir GR Lab albümüne indirin. İndirmeler, başka bir uygulama kullanırken veya telefonu
+  kilitlediğinizde de sürer: Android bunları Duraklat ve Tümünü iptal et düğmeli bir bildirimde, iOS
+  26 ve sonrası ise ilerlemeyi kilit ekranında ve Dynamic Island'da gösterir. Videolar uygulamanın
+  içinde oynatılır.
 - **Uzaktan deklanşör.** Yalnızca Bluetooth üzerinden çalışan büyük bir deklanşör düğmesi; yanında
   zamanlayıcı, geçiş modu, mod kadranı, kalan çekim sayısı ve pil durumu. Android’de ses düğmeleri
   de deklanşöre basar.

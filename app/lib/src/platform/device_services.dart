@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:grlab/src/debug/debug_log.dart';
 import 'package:grlab/src/platform/app_dirs.dart';
+import 'package:grlab/src/platform/background_downloads.dart';
 import 'package:grlab/src/platform/media_saver.dart';
 import 'package:grlab/src/services.dart';
 
@@ -16,6 +17,7 @@ Future<AppServices> buildDeviceServices() async {
     camera: GrCameraEnvironment.device(trace: trace.call),
     trace: trace,
     media: PlatformMediaSaver(),
+    background: PlatformBackgroundDownloads(),
     clientName: await deviceClientName(),
     dataDir: dirs.data,
     cacheDir: dirs.cache,

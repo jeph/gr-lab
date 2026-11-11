@@ -105,7 +105,9 @@ estilos de Controlo de Imagem como algo que merece ser gerido.
 - **Biblioteca.** Percorra as fotos e os vídeos da câmara por dia, filtre por JPEG, RAW, vídeo ou
   por transferir e abra qualquer foto em ecrã inteiro com os respetivos detalhes. Transfira uma foto
   ou uma seleção, em JPEG, RAW ou ambos, para um álbum GR Lab na biblioteca de fotografias do
-  telemóvel. Os vídeos são reproduzidos na app.
+  telemóvel. As transferências continuam enquanto usa outra app ou bloqueia o telemóvel: o Android
+  mostra-as numa notificação com Pausar e Cancelar tudo, e o iOS 26 ou posterior mostra o progresso
+  no ecrã bloqueado e na Dynamic Island. Os vídeos são reproduzidos na app.
 - **Disparador remoto.** Um botão de obturador grande, só por Bluetooth, com o temporizador
   automático, o modo de fotografar, o seletor de modo, as fotos restantes e a bateria. No Android,
   os botões de volume também disparam o obturador.

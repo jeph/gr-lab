@@ -8,6 +8,7 @@ import 'package:grlab/src/camera/camera_pages.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/connection/idle_disconnect.dart';
 import 'package:grlab/src/connection/wifi_consent_dialog.dart';
+import 'package:grlab/src/downloads/download_background.dart';
 import 'package:grlab/src/home/home_pages.dart';
 import 'package:grlab/src/theme/tokens.dart';
 
@@ -36,8 +37,10 @@ class GrLabApp extends StatelessWidget {
           theme: grTheme(chosen ?? GrColors.light),
           darkTheme: chosen == null ? grTheme(GrColors.dark) : null,
           navigatorObservers: [models.routes, models.idle.observer],
-          builder: (context, child) =>
-              IdleInput(idle: models.idle, child: child!),
+          builder: (context, child) => IdleInput(
+            idle: models.idle,
+            child: DownloadBackground(child: child!),
+          ),
           home: const RootScreen(),
         );
       },

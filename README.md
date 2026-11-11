@@ -101,7 +101,10 @@ treating Image Control looks as something worth managing.
   loading the slots works over Bluetooth alone, without joining the camera's Wi-Fi.
 - **Library.** Browse the camera's photos and videos by day, filter by JPEG, RAW, video or not yet
   downloaded, and open any shot full screen with its details. Download one shot or a selection, as
-  JPEG, RAW or both, into a GR Lab album in your phone's photo library. Videos play in the app.
+  JPEG, RAW or both, into a GR Lab album in your phone's photo library. Downloads carry on while you
+  use another app or lock the phone: Android shows them in a notification with Pause and Cancel all,
+  and iOS 26 or later shows their progress on the Lock Screen and in the Dynamic Island. Videos play
+  in the app.
 - **Remote shutter.** A large shutter button over Bluetooth alone, with the self-timer, the drive
   mode, the mode dial, shots left and battery. On Android the volume buttons fire the shutter too.
 - **Live view.** The camera's picture over Wi-Fi: tap to focus, set aperture, shutter speed, ISO and

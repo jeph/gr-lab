@@ -111,7 +111,10 @@ Contrôle de l'image comme quelque chose qui mérite d'être géré.
 - **Bibliothèque.** Parcourez les photos et les vidéos de l'appareil photo par jour, filtrez par
   JPEG, RAW, vidéo ou non téléchargées, et ouvrez n'importe quelle vue en plein écran avec ses
   détails. Téléchargez une vue ou une sélection, en JPEG, en RAW ou les deux, dans un album GR Lab
-  de la photothèque de votre téléphone. Les vidéos se lisent dans l'application.
+  de la photothèque de votre téléphone. Les téléchargements continuent pendant que vous utilisez une
+  autre application ou verrouillez le téléphone : Android les affiche dans une notification avec
+  Mettre en pause et Tout annuler, et iOS 26 ou version ultérieure affiche leur progression sur
+  l'écran verrouillé et dans la Dynamic Island. Les vidéos se lisent dans l'application.
 - **Déclencheur à distance.** Un grand bouton de déclenchement qui passe par le Bluetooth seul, avec
   le retardateur, le mode de déclenchement, la position de la molette de mode, les vues restantes et
   la batterie. Sur Android, les boutons de volume déclenchent aussi.

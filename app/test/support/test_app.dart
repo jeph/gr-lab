@@ -36,6 +36,7 @@ final class TestApp {
     required this.camera,
     required this.ble,
     required this.media,
+    required this.background,
     required this._permission,
     required this._root,
   });
@@ -46,6 +47,9 @@ final class TestApp {
   /// The transport the app uses: the camera's, with call counts.
   final CountingTransport ble;
   final RecordingMediaSaver media;
+
+  /// What the app asked the platform to show of its downloads.
+  final RecordingBackgroundDownloads background;
   final _Permission _permission;
   final Directory _root;
   WidgetTester? _tester;
@@ -194,6 +198,7 @@ Future<TestApp> createTestApp({
     transport == null ? camera.transport : transport(camera.transport),
   );
   final saver = RecordingMediaSaver();
+  final background = RecordingBackgroundDownloads();
   final trace = TraceRelay();
   final services = AppServices(
     camera: GrCameraEnvironment(
@@ -207,6 +212,7 @@ Future<TestApp> createTestApp({
     ),
     trace: trace,
     media: saver,
+    background: background,
     clientName: 'GR Lab',
     dataDir: data,
     cacheDir: cache,
@@ -219,6 +225,7 @@ Future<TestApp> createTestApp({
     camera: camera,
     ble: ble,
     media: saver,
+    background: background,
     permission: permission,
     root: root,
   );
@@ -371,6 +378,41 @@ final class RecordingMediaSaver implements MediaSaver {
       sizes: [for (final f in files) f.lengthSync()],
       album: album,
     ));
+  }
+}
+
+/// Records what the app shows of its downloads outside itself instead of
+/// asking the platform; [press] stands for a button there.
+final class RecordingBackgroundDownloads implements BackgroundDownloads {
+  final _actions = StreamController<BackgroundDownloadAction>.broadcast(
+    sync: true,
+  );
+
+  /// Every status shown, oldest first.
+  final List<BackgroundDownloadStatus> shown = [];
+
+  /// What the platform shows now; null when nothing.
+  BackgroundDownloadStatus? current;
+
+  /// The `finished` of every [hide], oldest first.
+  final List<bool> hides = [];
+
+  @override
+  Stream<BackgroundDownloadAction> get actions => _actions.stream;
+
+  /// The user presses [action] on the platform's display.
+  void press(BackgroundDownloadAction action) => _actions.add(action);
+
+  @override
+  Future<void> show(BackgroundDownloadStatus status) async {
+    shown.add(status);
+    current = status;
+  }
+
+  @override
+  Future<void> hide({required bool finished}) async {
+    hides.add(finished);
+    current = null;
   }
 }
 

@@ -766,7 +766,7 @@
   },
   "downloadBarDownloading": "Downloading",
   "@downloadBarDownloading": {
-    "description": "Download bar title while a shot is being downloaded."
+    "description": "Download bar title while a shot is being downloaded. Also the title of the download notification on Android and of the Live Activity on iOS."
   },
   "downloadBarFailed": "{count, plural, =1{1 download failed} other{{count} downloads failed}}",
   "@downloadBarFailed": {
@@ -781,7 +781,7 @@
   },
   "downloadBarFailedCount": "{count, plural, other{{count} failed}}",
   "@downloadBarFailedCount": {
-    "description": "Download bar detail: how many downloads failed so far.",
+    "description": "Download bar detail: how many downloads failed so far. Also shown in the download notification on Android and the Live Activity on iOS.",
     "placeholders": {
       "count": {
         "type": "int",
@@ -792,7 +792,7 @@
   },
   "downloadBarLeft": "{count, plural, other{{count} left}}",
   "@downloadBarLeft": {
-    "description": "Download bar: how many shots are still to download while none is running.",
+    "description": "Download bar: how many shots are still to download while none is running. Also shown in the download notification on Android while downloads are paused.",
     "placeholders": {
       "count": {
         "type": "int",
@@ -803,11 +803,11 @@
   },
   "downloadBarPaused": "Downloads paused",
   "@downloadBarPaused": {
-    "description": "Download bar title while the user has paused downloads."
+    "description": "Download bar title while the user has paused downloads. Also the title of the download notification on Android."
   },
   "downloadBarPosition": "{current} of {total}",
   "@downloadBarPosition": {
-    "description": "Download bar: which shot of the batch is being downloaded, e.g. '2 of 6'.",
+    "description": "Download bar: which shot of the batch is being downloaded, e.g. '2 of 6'. Also shown in the download notification on Android and the Live Activity on iOS.",
     "placeholders": {
       "current": {
         "type": "int",
@@ -835,7 +835,7 @@
   },
   "downloadCancelAll": "Cancel all",
   "@downloadCancelAll": {
-    "description": "Button and tooltip that removes every download from the queue."
+    "description": "Button and tooltip that removes every download from the queue. Also a button of the download notification on Android."
   },
   "downloadErrorConnectionLost": "Lost the connection to the camera",
   "@downloadErrorConnectionLost": {
@@ -913,7 +913,7 @@
   },
   "downloadPause": "Pause",
   "@downloadPause": {
-    "description": "Tooltip of the button that pauses downloads."
+    "description": "Tooltip of the button that pauses downloads. Also a button of the download notification on Android."
   },
   "downloadQueueEmpty": "Nothing to download",
   "@downloadQueueEmpty": {
@@ -921,11 +921,11 @@
   },
   "downloadQueueTitle": "Downloads",
   "@downloadQueueTitle": {
-    "description": "Title of the download queue sheet."
+    "description": "Title of the download queue sheet. Also the name of the download notifications in Android's notification settings."
   },
   "downloadResume": "Resume",
   "@downloadResume": {
-    "description": "Tooltip of the button that resumes paused downloads."
+    "description": "Tooltip of the button that resumes paused downloads. Also a button of the download notification on Android."
   },
   "downloadRetry": "Retry",
   "@downloadRetry": {

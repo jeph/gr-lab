@@ -107,7 +107,10 @@ trattare gli stili di Controllo immagine come qualcosa che vale la pena gestire.
 - **Libreria.** Sfoglia le foto e i video della fotocamera divisi per giorno, filtra per JPEG, RAW,
   video o Non scaricati e apri qualsiasi scatto a schermo intero con i suoi dettagli. Scarica uno
   scatto o una selezione, in JPEG, in RAW o in entrambi i formati, in un album GR Lab nella
-  libreria foto del telefono. I video si riproducono nell'app.
+  libreria foto del telefono. I download continuano mentre usi un'altra app o blocchi il telefono:
+  Android li mostra in una notifica con Pausa e Annulla tutti, e iOS 26 o versioni successive ne
+  mostra l'avanzamento nella schermata di blocco e nella Dynamic Island. I video si riproducono
+  nell'app.
 - **Scatto remoto.** Un grande pulsante di scatto con il solo Bluetooth, con l'autoscatto, la
   modalità di scatto, la ghiera dei modi, gli scatti rimasti e la batteria. Su Android si scatta
   anche con i tasti del volume.

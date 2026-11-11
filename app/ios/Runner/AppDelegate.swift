@@ -34,6 +34,9 @@ import UIKit
     if let registrar = registry.registrar(forPlugin: "GrLabMediaPlugin") {
       MediaPlugin.register(with: registrar)
     }
+    if let registrar = registry.registrar(forPlugin: "GrLabBackgroundDownloadsPlugin") {
+      BackgroundDownloadsPlugin.register(with: registrar)
+    }
     if let registrar = registry.registrar(forPlugin: "GrLabDevicePlugin") {
       // The name the camera shows under Paired Devices. Since iOS 16 this
       // is the model ("iPhone") unless the app holds a special entitlement.

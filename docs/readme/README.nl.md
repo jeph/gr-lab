@@ -107,7 +107,9 @@ Beeldregeling-looks behandelen als iets wat het beheren waard is.
 - **Bibliotheek.** Blader per dag door de foto's en video's op de camera, filter op JPEG, RAW, video
   of Niet gedownload, en open elke opname op volledig scherm met de details erbij. Download één
   opname of een selectie, als JPEG, RAW of allebei, naar een GR Lab-album in de fotobibliotheek van
-  je telefoon. Video's worden in de app afgespeeld.
+  je telefoon. Downloads gaan door terwijl je een andere app gebruikt of de telefoon vergrendelt:
+  Android toont ze in een melding met Pauzeren en Alles annuleren, en iOS 26 of nieuwer toont de
+  voortgang op het toegangsscherm en in het Dynamic Island. Video's worden in de app afgespeeld.
 - **Afstandsontspanner.** Een grote ontspanknop via Bluetooth alleen, met de zelfontspanner, het
   opnametransport, de functiekiezer, het aantal opnamen dat over is en de batterij. Op Android
   maken ook de volumeknoppen de foto.

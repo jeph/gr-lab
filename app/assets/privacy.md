@@ -1,6 +1,6 @@
 # GR Lab privacy policy
 
-Last updated: 10 November 2026
+Last updated: 11 November 2026
 
 GR Lab is an app for Ricoh GR cameras. It pairs with your camera over Bluetooth, connects to the camera's own Wi-Fi network, and lets you browse and download your photos and videos and shoot remotely. GR Lab has no accounts, no analytics, no advertising and no crash reporting. It sends nothing to the developer or to anyone else.
 
@@ -47,6 +47,8 @@ On Android, GR Lab asks for or uses:
 - Nearby devices (Bluetooth scan and connect), to find, pair with and control your camera. GR Lab tells Android that it does not use Bluetooth scans to work out your location, and it does not ask for location access.
 - Wi-Fi and network access, to join the camera's Wi-Fi network, which Android asks you to approve, to check that the phone is on it and to send the camera's traffic over it.
 - Internet, which Android requires for any network connection. GR Lab uses it only to talk to the camera.
+- Notifications, to show a running download with its progress and buttons to pause or cancel it while you use another app. Android asks you to allow them the first time you download. GR Lab sends no other notifications, and downloads run whether or not you allow them.
+- Running in the background and keeping the phone awake, only while downloads run, so that they carry on when you leave GR Lab or lock the phone.
 
 Saving photos and videos to Pictures needs no permission on the Android versions GR Lab runs on.
 
@@ -57,7 +59,9 @@ On iOS, GR Lab asks for:
 - Photos, to save the photos and videos you download to the GR Lab album. iOS lets an app keep an album only with full access to your library, so that is what GR Lab asks for. It uses the access only to add what you download and to find the album named GR Lab; it does not look at, change or delete your other photos and videos. If you allow limited access or Add Photos Only instead, GR Lab still saves what you download, outside the album.
 - Joining the camera's Wi-Fi network, which iOS asks you to approve. GR Lab also reads the name of the Wi-Fi network your phone is on, only to check that it has joined the camera.
 
-GR Lab does not use your location, camera, microphone, contacts or notifications.
+On iOS 26 and later, iOS shows a running download on the Lock Screen and in the Dynamic Island while you use another app. That needs no permission.
+
+GR Lab does not use your location, camera, microphone or contacts. It shows notifications only on Android, and only for running downloads.
 
 ## Deleting your data
 

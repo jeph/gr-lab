@@ -107,7 +107,9 @@ tieltäsi, ja Kuvansäätö-tyylejä kohdellaan asiana, jota kannattaa hallita.
 - **Kirjasto.** Selaa kameran kuvia ja videoita päivittäin ryhmiteltyinä, suodata valinnoilla JPEG,
   RAW, Video tai Lataamatta ja avaa mikä tahansa otos koko näytölle tietoineen. Lataa yksi otos tai
   valitsemasi joukko JPEG- tai RAW-muodossa tai molempina GR Lab ‑albumiin puhelimesi
-  kuvakirjastoon. Videot toistetaan sovelluksessa.
+  kuvakirjastoon. Lataukset jatkuvat, kun käytät toista sovellusta tai lukitset puhelimen: Android
+  näyttää ne ilmoituksessa, jossa on Keskeytä ja Peruuta kaikki, ja iOS 26 tai uudempi näyttää
+  niiden edistymisen lukitulla näytöllä ja Dynamic Islandissa. Videot toistetaan sovelluksessa.
 - **Kaukolaukaisin.** Suuri laukaisinpainike pelkällä Bluetoothilla sekä ajastin, kuvaustapa,
   tilanvalitsimen asento, jäljellä olevien kuvien määrä ja akun varaus. Androidissa myös
   äänenvoimakkuuspainikkeet laukaisevat kameran.

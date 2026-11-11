@@ -6,6 +6,7 @@ import 'package:gr_fake_camera/gr_fake_camera.dart';
 
 import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/platform/app_dirs.dart';
+import 'package:grlab/src/platform/background_downloads.dart';
 import 'package:grlab/src/platform/media_saver.dart';
 import 'package:grlab/src/services.dart';
 
@@ -63,6 +64,7 @@ Future<AppServices> buildDemoServices() async {
     ),
     trace: trace,
     media: PlatformMediaSaver(),
+    background: PlatformBackgroundDownloads(),
     clientName: 'GR Lab',
     dataDir: data,
     cacheDir: cache,

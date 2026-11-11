@@ -105,8 +105,10 @@ Control de imagen como algo que merece la pena gestionar.
   conectarse al Wi-Fi de la cámara.
 - **Biblioteca.** Explora las fotos y los vídeos de la cámara por días, filtra por JPEG, RAW, vídeo
   o sin descargar, y abre cualquier toma a pantalla completa con sus detalles. Descarga una toma o
-  una selección, como JPEG, RAW o ambos, en un álbum GR Lab de la fototeca de tu teléfono. Los
-  vídeos se reproducen en la app.
+  una selección, como JPEG, RAW o ambos, en un álbum GR Lab de la fototeca de tu teléfono. Las
+  descargas siguen mientras usas otra app o bloqueas el teléfono: Android las muestra en una
+  notificación con Pausar y Cancelar todo, e iOS 26 o posterior muestra su progreso en la pantalla
+  de bloqueo y en la Dynamic Island. Los vídeos se reproducen en la app.
 - **Disparador remoto.** Un botón de disparo grande que funciona solo con Bluetooth, con el
   autodisparador, el modo Fotografiar, el dial de modos, las fotos restantes y la batería. En
   Android, los botones de volumen también disparan.

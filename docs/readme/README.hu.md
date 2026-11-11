@@ -108,7 +108,10 @@ ne legyen útban, és hogy a Képvezérlés stílusait érdemes legyen benne kez
 - **Könyvtár.** Böngészheti a kamera fotóit és videóit napok szerint, szűrhet a JPEG, a RAW, a Videó
   és a Nincs letöltve szűrővel, és bármelyik felvételt megnyithatja teljes képernyőn, a részleteivel
   együtt. Letölthet egyetlen felvételt vagy egy kijelölést, JPEG-ként, RAW-ként vagy mindkettőként,
-  a telefon fotókönyvtárának GR Lab albumába. A videók az alkalmazásban játszhatók le.
+  a telefon fotókönyvtárának GR Lab albumába. A letöltések akkor is folytatódnak, ha másik
+  alkalmazást használ vagy lezárja a telefont: az Android értesítésben mutatja őket Szüneteltetés és
+  Összes megszakítása gombbal, az iOS 26 vagy újabb pedig a zárolási képernyőn és a Dynamic Islanden
+  mutatja az állapotukat. A videók az alkalmazásban játszhatók le.
 - **Távkioldó.** Nagy zárkioldó gomb, kizárólag Bluetooth-kapcsolaton, az önkioldóval, a meghajtási
   móddal, a módválasztó tárcsa állásával, a hátralévő képek számával és az akkumulátor
   töltöttségével. Androidon a hangerőgombok is exponálnak.
