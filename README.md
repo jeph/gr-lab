@@ -9,6 +9,30 @@
   <img src="https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey" alt="Platforms: iOS and Android">
 </p>
 
+<p align="center">
+  <b>English</b> ·
+  <a href="docs/readme/README.fr.md">Français</a> ·
+  <a href="docs/readme/README.de.md">Deutsch</a> ·
+  <a href="docs/readme/README.es.md">Español</a> ·
+  <a href="docs/readme/README.pt.md">Português</a> ·
+  <a href="docs/readme/README.it.md">Italiano</a> ·
+  <a href="docs/readme/README.nl.md">Nederlands</a> ·
+  <a href="docs/readme/README.da.md">Dansk</a> ·
+  <a href="docs/readme/README.sv.md">Svenska</a> ·
+  <a href="docs/readme/README.fi.md">Suomi</a> ·
+  <a href="docs/readme/README.pl.md">Polski</a> ·
+  <a href="docs/readme/README.cs.md">Čeština</a> ·
+  <a href="docs/readme/README.hu.md">Magyar</a> ·
+  <a href="docs/readme/README.tr.md">Türkçe</a> ·
+  <a href="docs/readme/README.el.md">Ελληνικά</a> ·
+  <a href="docs/readme/README.ru.md">Русский</a> ·
+  <a href="docs/readme/README.th.md">ไทย</a> ·
+  <a href="docs/readme/README.ko.md">한국어</a> ·
+  <a href="docs/readme/README.zh.md">中文简体</a> ·
+  <a href="docs/readme/README.zh-Hant.md">中文繁體</a> ·
+  <a href="docs/readme/README.ja.md">日本語</a>
+</p>
+
 **GR Lab** is a companion app for Ricoh GR cameras (GR III, GR IIIx and GR IV) on iOS and Android.
 It browses and downloads the photos on your camera, works as a remote shutter with live view, and
 keeps your Image Control looks in one place. It is built to be fast and easy to use, and to manage

@@ -120,9 +120,12 @@ GR Lab is set up for translation, so every text the app itself shows comes from 
 
 GR Lab is translated into the 21 languages of the camera's own menus (`research/camera-menu-languages.md`), one `app/lib/l10n/app_<locale>.arb` each, listed in `app/l10n.yaml`. It follows the phone's language, falls back to English when the phone's is none of them, and lets the user choose one in Settings.
 
+Everything a user reads is kept in all 21 languages. A change to text the app shows, to text iOS shows on its behalf or to the README is made in every language in the same change, never in English alone with the translations left for later.
+
 - A new or changed message is translated into every language in the same change; `tool/check_translations.dart` fails when a translation lacks a message or doesn't keep its placeholders, plural and select cases, `<b>` tags and line breaks. Translations hold the texts only: descriptions stay in `app_en.arb`. After editing an ARB file, run `flutter pub get` in `app` to regenerate `AppLocalizations`.
 - Word camera things as the camera does in each language: menu entries, Image Control names and their values come from the camera's firmware, which `research/tools/menu_strings.py` prints for every language. Write everything else the way the phone's own system text reads in that language, and build sentences so a name the user typed (`{cameraName}`) needs no case ending.
 - Texts that iOS shows on GR Lab's behalf, the permission explanations in `app/ios/Runner/Info.plist`, are translated in `app/ios/Runner/InfoPlist.xcstrings`.
+- `README.md` is translated in `docs/readme/README.<locale>.md`, one file per language (`README.zh-Hant.md` for `zh_Hant`). A change to `README.md` is made in every translation in the same change, the Development section included, so each stays a complete translation with the same sections, lists, tables, code blocks and links. Name the app's screens, buttons and settings as that language's ARB file does and camera menu entries as the camera does. Relative links are rewritten for where the file is (`../../LICENSE`, `../screenshots/…`), and the Contents list uses the anchors of the translated headings. Every README, the English one included, opens with the same list of languages in the order of `app/l10n.yaml`; a new language gets a file and an entry in each list.
 - Capitals for a label go through `AppLocalizations.upperCase`, not `toUpperCase`, which is wrong for Turkish and Greek.
 - The privacy policy (`app/assets/privacy.md`) is in English only.
 
