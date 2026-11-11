@@ -38,6 +38,7 @@ Nothing in this repository may identify a real camera, phone or person: not in c
 - Serial numbers: use a synthetic serial such as `1234567`, never one a camera reported, even to make a test look realistic.
 - Bluetooth and Wi-Fi addresses: use the documentation range `00:00:5E:00:53:xx` (RFC 7042) in code and tests, and mask real ones in `research/` (`F0:3E:05:xx:xx:xx`). Camera network and Bluetooth names are built from the address (`GR_H` plus its last three bytes), so they identify the camera too: derive them from a synthetic address.
 - No Wi-Fi passphrases, home network names, phone or computer names, Bluetooth device IDs, or keys and tokens taken from Ricoh's apps. A passphrase in a test is made up, not an edited real one.
+- Other details from traces, photos and test sessions point to a camera or its owner too, so describe them in general terms or make them up: the location `/v1/props` reports, a photo's EXIF (shutter count, manufacture date), what is on the memory card (file names, sizes, file counts, shots left and recordable time), the model and OS build of the phone or computer used ("an Android phone"), which language splits an app install has, home network addresses and interface names, and trace file names.
 
 Before committing, search the change for the values in the traces you worked from. If a real identifier has already been pushed, tell the user rather than rewriting history yourself: removing it takes a force push, which only the user can approve.
 

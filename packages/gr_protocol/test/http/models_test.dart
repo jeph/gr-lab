@@ -61,7 +61,7 @@ void main() {
       obj('''
 {
         "errCode":200,"model":"RICOH GR IV HDF","serialNo":"12345678",
-        "firmwareVersion":"1.10","macAddress":"00:11:22:33:44:55",
+        "firmwareVersion":"1.10","macAddress":"00:00:5E:00:53:55",
         "bdName":"GR_123456","ssid":"GR_123456","key":"secret",
         "battery":87,
         "storages":[{"name":"in","equipped":true,"writable":true,"remain":"120"},

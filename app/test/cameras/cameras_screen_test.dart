@@ -22,7 +22,7 @@ const _cameras = Key('cameras');
 
 /// The GR IIIx paired earlier, which is not around.
 const _other = GrPairedCamera(
-  deviceId: 'AA:BB:CC:DD:EE:FF',
+  deviceId: '00:00:5E:00:53:01',
   serialNumber: '1111111',
   modelName: 'RICOH GR IIIx',
 );

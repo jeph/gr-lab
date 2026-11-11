@@ -98,7 +98,7 @@ final class _FakePlatform extends UniversalBlePlatform {
       throw UnimplementedError(invocation.memberName.toString());
 }
 
-const _device = 'aa:bb:cc:dd:ee:ff';
+const _device = '00:00:5e:00:53:01';
 const _service = '9a5ed1c5-74cc-4c50-b5b6-66a48e7ccff1';
 const _characteristic = 'b29e6de3-1aec-48c1-9d05-02cea57ce664';
 const _timeout = Duration(seconds: 5);

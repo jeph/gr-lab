@@ -45,7 +45,7 @@ BleAdvertisement _ad(String deviceId, int serial, {required bool on}) =>
       },
     );
 
-SavedCamera _camera(String serial, {String deviceId = 'AA:AA:AA:AA:AA:AA'}) =>
+SavedCamera _camera(String serial, {String deviceId = '00:00:5E:00:53:AA'}) =>
     SavedCamera(
       paired: GrPairedCamera(deviceId: deviceId, serialNumber: serial),
       name: 'GR IV',
@@ -75,7 +75,7 @@ void main() {
 
   test('a camera advertising under another address is found by the digits '
       'of its serial, however the camera writes them', () async {
-    await advertise(_ad('BB:BB:BB:BB:BB:BB', 123456, on: false));
+    await advertise(_ad('00:00:5E:00:53:BB', 123456, on: false));
     expect(presence.of(_camera('00123456')), Presence.nearbyOff);
     expect(presence.of(_camera('No.123456')), Presence.nearbyOff);
     expect(presence.of(_camera('1234567')), Presence.away);
@@ -83,16 +83,16 @@ void main() {
 
   test('a scan response without the Ricoh payload keeps the serial and '
       'power state the primary packet had', () async {
-    await advertise(_ad('BB:BB:BB:BB:BB:BB', 1234567, on: true));
+    await advertise(_ad('00:00:5E:00:53:BB', 1234567, on: true));
     await advertise(
-      const BleAdvertisement(deviceId: 'BB:BB:BB:BB:BB:BB', rssi: -60),
+      const BleAdvertisement(deviceId: '00:00:5E:00:53:BB', rssi: -60),
     );
     expect(presence.of(_camera('1234567')), Presence.nearbyOn);
   });
 
   test('the paired address matches without a Ricoh payload', () async {
     await advertise(
-      const BleAdvertisement(deviceId: 'AA:AA:AA:AA:AA:AA', rssi: -60),
+      const BleAdvertisement(deviceId: '00:00:5E:00:53:AA', rssi: -60),
     );
     expect(presence.of(_camera('1234567')), Presence.nearby);
   });

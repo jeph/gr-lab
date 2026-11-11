@@ -306,7 +306,7 @@ void main() {
     // RootScreen connects in the same tick in which the camera store
     // switches cameras; the controller disconnects from the old one.
     const other = GrPairedCamera(
-      deviceId: 'AA:BB:CC:DD:EE:FF',
+      deviceId: '00:00:5E:00:53:01',
       serialNumber: '1111111',
       modelName: 'RICOH GR IIIx',
     );
