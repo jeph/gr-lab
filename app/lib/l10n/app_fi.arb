@@ -276,7 +276,6 @@
   "looksConflictOk": "OK",
   "looksConflictSettingsBody": "Toisella tyylillä, ”{name}”, on samat asetukset. Kahdella tyylillä ei voi olla samoja asetuksia.",
   "looksConflictTitle": "Tyyliä ei voi tallentaa",
-  "looksCustomSlots": "Mukautettu 1–3",
   "looksDelete": "Poista",
   "looksDeleteBody": "Tyyli poistetaan GR Labista. Jos se on jossakin Mukautettu-paikassa, se säilyy siellä.",
   "looksDeleteFailed": "Tyyliä ”{name}” ei voitu poistaa tästä puhelimesta.",

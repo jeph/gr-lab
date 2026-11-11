@@ -276,7 +276,6 @@
   "looksConflictOk": "OK",
   "looksConflictSettingsBody": "Un altro stile, “{name}”, ha le stesse impostazioni. Due stili non possono avere le stesse impostazioni.",
   "looksConflictTitle": "Impossibile salvare questo stile",
-  "looksCustomSlots": "Personalizzata 1-3",
   "looksDelete": "Elimina",
   "looksDeleteBody": "Lo stile viene rimosso da GR Lab. Gli slot Personalizzata che lo contengono lo conservano.",
   "looksDeleteFailed": "Impossibile eliminare “{name}” da questo telefono.",

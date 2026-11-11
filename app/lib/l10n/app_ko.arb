@@ -276,7 +276,6 @@
   "looksConflictOk": "확인",
   "looksConflictSettingsBody": "다른 룩 ‘{name}’의 설정과 같습니다. 설정이 같은 룩은 두 개 저장할 수 없습니다.",
   "looksConflictTitle": "이 룩을 저장할 수 없습니다",
-  "looksCustomSlots": "커스텀 1~3",
   "looksDelete": "삭제",
   "looksDeleteBody": "룩이 GR Lab에서 삭제됩니다. 이 룩이 등록된 커스텀 슬롯에는 그대로 남습니다.",
   "looksDeleteFailed": "‘{name}’ 룩을 이 휴대전화에서 삭제하지 못했습니다.",

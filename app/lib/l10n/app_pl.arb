@@ -276,7 +276,6 @@
   "looksConflictOk": "OK",
   "looksConflictSettingsBody": "Inny styl, „{name}”, ma te same ustawienia. Dwa style nie mogą mieć takich samych ustawień.",
   "looksConflictTitle": "Nie można zapisać tego stylu",
-  "looksCustomSlots": "Niestand.1-3",
   "looksDelete": "Usuń",
   "looksDeleteBody": "Styl zostanie usunięty z GR Lab. Sloty Niestand., w których jest wczytany, zachowają go.",
   "looksDeleteFailed": "Nie udało się usunąć stylu „{name}” z tego telefonu.",

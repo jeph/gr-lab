@@ -1493,10 +1493,6 @@
   "@looksConflictTitle": {
     "description": "Title of the dialog shown when a look is not saved because a saved look has the same name or the same settings."
   },
-  "looksCustomSlots": "Custom 1-3",
-  "@looksCustomSlots": {
-    "description": "Note beside the On the camera label: which camera settings the three slots are."
-  },
   "looksDelete": "Delete",
   "@looksDelete": {
     "description": "Menu item and confirmation button that delete a saved look."

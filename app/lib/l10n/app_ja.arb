@@ -276,7 +276,6 @@
   "looksConflictOk": "OK",
   "looksConflictSettingsBody": "別のルック「{name}」が同じ設定です。同じ設定のルックを2つ保存することはできません。",
   "looksConflictTitle": "このルックは保存できません",
-  "looksCustomSlots": "カスタム1〜3",
   "looksDelete": "削除",
   "looksDeleteBody": "ルックはGR Labから削除されます。カスタムスロットに登録済みのものは、そのまま残ります。",
   "looksDeleteFailed": "「{name}」をこのスマートフォンから削除できませんでした。",

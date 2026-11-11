@@ -276,7 +276,6 @@
   "looksConflictOk": "ตกลง",
   "looksConflictSettingsBody": "ลุคอื่นชื่อ “{name}” มีการตั้งค่าเดียวกัน ลุคสองลุคจะมีการตั้งค่าเหมือนกันไม่ได้",
   "looksConflictTitle": "บันทึกลุคนี้ไม่ได้",
-  "looksCustomSlots": "กำหนดเอง 1-3",
   "looksDelete": "ลบ",
   "looksDeleteBody": "ลุคจะถูกลบออกจาก GR Lab ส่วนช่องกำหนดเองที่มีลุคนี้อยู่จะยังเก็บไว้",
   "looksDeleteFailed": "ลบ “{name}” ออกจากโทรศัพท์เครื่องนี้ไม่ได้",

@@ -276,7 +276,6 @@
   "looksConflictOk": "确定",
   "looksConflictSettingsBody": "另一个风格“{name}”的设置与此相同。两个风格的设置不能相同。",
   "looksConflictTitle": "无法保存此风格",
-  "looksCustomSlots": "自定义1-3",
   "looksDelete": "删除",
   "looksDeleteBody": "此风格将从 GR Lab 中移除。已载入它的自定义槽位仍会保留。",
   "looksDeleteFailed": "无法从这部手机删除“{name}”。",

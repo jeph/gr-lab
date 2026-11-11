@@ -276,7 +276,6 @@
   "looksConflictOk": "OK",
   "looksConflictSettingsBody": "Een andere look, “{name}”, heeft dezelfde instellingen. Twee looks kunnen niet dezelfde instellingen hebben.",
   "looksConflictTitle": "Kan deze look niet opslaan",
-  "looksCustomSlots": "Aangepast 1-3",
   "looksDelete": "Verwijderen",
   "looksDeleteBody": "De look wordt uit GR Lab verwijderd. Aangepast-plaatsen waarin hij staat, behouden hem.",
   "looksDeleteFailed": "Kan “{name}” niet van deze telefoon verwijderen.",

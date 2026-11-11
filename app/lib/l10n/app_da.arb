@@ -276,7 +276,6 @@
   "looksConflictOk": "OK",
   "looksConflictSettingsBody": "Et andet look, »{name}«, har de samme indstillinger. To looks kan ikke have de samme indstillinger.",
   "looksConflictTitle": "Looket kan ikke gemmes",
-  "looksCustomSlots": "Tilpasset 1-3",
   "looksDelete": "Slet",
   "looksDeleteBody": "Looket fjernes fra GR Lab. Tilpasset-pladser, der indeholder det, beholder det.",
   "looksDeleteFailed": "Kunne ikke slette »{name}« fra denne telefon.",

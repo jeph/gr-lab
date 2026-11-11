@@ -276,7 +276,6 @@
   "looksConflictOk": "ОК",
   "looksConflictSettingsBody": "У другого стиля, «{name}», такие же настройки. Двух стилей с одинаковыми настройками быть не может.",
   "looksConflictTitle": "Не удается сохранить стиль",
-  "looksCustomSlots": "Польз. 1–3",
   "looksDelete": "Удалить",
   "looksDeleteBody": "Стиль будет удален из GR Lab. В слотах «Польз.», куда он записан, он останется.",
   "looksDeleteFailed": "Не удалось удалить стиль «{name}» с этого телефона.",

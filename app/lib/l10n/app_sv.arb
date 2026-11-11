@@ -276,7 +276,6 @@
   "looksConflictOk": "OK",
   "looksConflictSettingsBody": "En annan stil, ”{name}”, har samma inställningar. Två stilar kan inte ha samma inställningar.",
   "looksConflictTitle": "Stilen kan inte sparas",
-  "looksCustomSlots": "Egen 1–3",
   "looksDelete": "Radera",
   "looksDeleteBody": "Stilen tas bort från GR Lab. Egen-platser som innehåller den behåller den.",
   "looksDeleteFailed": "Kunde inte radera ”{name}” från telefonen.",

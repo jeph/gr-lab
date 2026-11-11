@@ -276,7 +276,6 @@
   "looksConflictOk": "OK",
   "looksConflictSettingsBody": "Un autre style, « {name} », a les mêmes réglages. Deux styles ne peuvent pas avoir les mêmes réglages.",
   "looksConflictTitle": "Impossible d'enregistrer ce style",
-  "looksCustomSlots": "Personnalisé 1-3",
   "looksDelete": "Supprimer",
   "looksDeleteBody": "Le style est supprimé de GR Lab. Les emplacements Personnalisé qui le contiennent le conservent.",
   "looksDeleteFailed": "Impossible de supprimer « {name} » de ce téléphone.",

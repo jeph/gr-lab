@@ -276,7 +276,6 @@
   "looksConflictOk": "OK",
   "looksConflictSettingsBody": "Ein anderer Look, „{name}“, hat dieselben Einstellungen. Zwei Looks können nicht dieselben Einstellungen haben.",
   "looksConflictTitle": "Look kann nicht gespeichert werden",
-  "looksCustomSlots": "Individuell 1–3",
   "looksDelete": "Löschen",
   "looksDeleteBody": "Der Look wird aus GR Lab entfernt. Individuell-Slots, die ihn enthalten, behalten ihn.",
   "looksDeleteFailed": "„{name}“ konnte nicht von diesem Smartphone gelöscht werden.",

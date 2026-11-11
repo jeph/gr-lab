@@ -276,7 +276,6 @@
   "looksConflictOk": "OK",
   "looksConflictSettingsBody": "Egy másik stílus („{name}”) beállításai ugyanezek. Két stílusnak nem lehetnek azonos beállításai.",
   "looksConflictTitle": "A stílus nem menthető",
-  "looksCustomSlots": "1–3. egyéni",
   "looksDelete": "Törlés",
   "looksDeleteBody": "A stílus törlődik a GR Lab alkalmazásból. Azokon az egyéni helyeken, ahová be van töltve, megmarad.",
   "looksDeleteFailed": "A stílus („{name}”) törlése a telefonról nem sikerült.",

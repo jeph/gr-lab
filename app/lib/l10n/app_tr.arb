@@ -276,7 +276,6 @@
   "looksConflictOk": "Tamam",
   "looksConflictSettingsBody": "“{name}” adlı başka bir stil aynı ayarlara sahip. İki stilin ayarları aynı olamaz.",
   "looksConflictTitle": "Bu stil kaydedilemiyor",
-  "looksCustomSlots": "Özel 1-3",
   "looksDelete": "Sil",
   "looksDeleteBody": "Stil GR Lab uygulamasından kaldırılır. Onu içeren Özel yuvaları stili korur.",
   "looksDeleteFailed": "“{name}” bu telefondan silinemedi.",

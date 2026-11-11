@@ -215,24 +215,14 @@ class _SlotsSection extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(22, 14, 22, 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.upperCase(l10n.looksOnCamera),
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: l10n.capitalSpacing(.8),
-                    color: c.t3,
-                  ),
-                ),
-              ),
-              Text(
-                l10n.looksCustomSlots,
-                style: TextStyle(fontSize: 12, color: c.t3),
-              ),
-            ],
+          child: Text(
+            l10n.upperCase(l10n.looksOnCamera),
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: l10n.capitalSpacing(.8),
+              color: c.t3,
+            ),
           ),
         ),
         Padding(

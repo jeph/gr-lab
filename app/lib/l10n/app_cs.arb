@@ -276,7 +276,6 @@
   "looksConflictOk": "OK",
   "looksConflictSettingsBody": "Jiný vzhled, „{name}“, má stejné nastavení. Dva vzhledy nemohou mít stejné nastavení.",
   "looksConflictTitle": "Vzhled nelze uložit",
-  "looksCustomSlots": "Vlastní 1–3",
   "looksDelete": "Smazat",
   "looksDeleteBody": "Vzhled bude z GR Lab odstraněn. V pozicích Vlastní, které ho obsahují, zůstane.",
   "looksDeleteFailed": "Vzhled „{name}“ se nepodařilo z tohoto telefonu smazat.",
