@@ -112,6 +112,25 @@ void main() {
       expect(app.ble.connects, 1);
     });
 
+    test('disconnect turns the camera Wi-Fi off and leaves a camera that '
+        'was on switched on', () async {
+      final app = await createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+      );
+      addTearDown(app.dispose);
+      final connection = app.models.connection;
+      await connection.connect();
+      await connection.openCamera(CameraTab.library);
+      expect(app.camera.wlanOn, isTrue);
+
+      await connection.disconnect();
+      expect(connection.status, ConnectionStatus.offline);
+      expect(app.camera.wlanOn, isFalse);
+      expect(app.camera.poweredOn, isTrue);
+      expect(await app.camera.wifi.currentSsid(), isNull);
+    });
+
     test('a join still under way stops when the pages close, and when live '
         'view goes back to Remote', () async {
       final app = await createTestApp(

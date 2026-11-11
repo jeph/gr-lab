@@ -812,12 +812,33 @@ void main() {
       s.connect(deviceId: 'cam'),
       throwsA(isA<GrSessionException>()),
     );
-    await s.close(wlanOff: true, powerOff: true);
+    await s.close(powerOff: true);
     expect(camera.ops.where((o) => o == 'write wlan 0'), isEmpty);
     expect(camera.ops.skipWhile((o) => !o.startsWith('write power')), [
       'write power 0',
       'disconnect',
     ]);
+  });
+
+  test('close turns the Wi-Fi of a camera that is on off before '
+      'disconnecting, though the session never turned it on', () async {
+    final camera = BondedCamera();
+    final s = session(camera);
+    await s.connectBluetooth(deviceId: 'cam');
+    await s.close();
+    expect(camera.ops.skipWhile((o) => o != 'write wlan 0'), [
+      'write wlan 0',
+      'disconnect',
+    ]);
+  });
+
+  test('close writes nothing to a camera that is off', () async {
+    final camera = BondedCamera(operationMode: 2);
+    final s = session(camera);
+    await s.connectBluetooth(deviceId: 'cam');
+    await s.close();
+    expect(camera.ops.where((o) => o.startsWith('write')), isEmpty);
+    expect(camera.ops.last, 'disconnect');
   });
 
   test('first link drops while the off camera wakes: reconnects and '
@@ -1500,8 +1521,8 @@ void main() {
       });
     }
 
-    test('close with default arguments releases the join of a connected '
-        'session', () async {
+    test('close releases the join of a connected session and turns the '
+        "camera's Wi-Fi off", () async {
       final camera = BondedCamera();
       final wifi = JoiningWifi();
       final s = wifiSession(camera, wifi, await CameraServer.start());
@@ -1510,7 +1531,10 @@ void main() {
       await s.close();
       expect(wifi.leaves, 1);
       expect(wifi.joined, isFalse);
-      expect(camera.ops.where((o) => o == 'write wlan 0'), isEmpty);
+      expect(camera.ops.skipWhile((o) => o != 'write wlan 0'), [
+        'write wlan 0',
+        'disconnect',
+      ]);
     });
 
     test('close with default arguments releases a pending join, and again '

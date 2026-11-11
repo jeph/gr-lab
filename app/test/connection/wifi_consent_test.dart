@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
@@ -106,7 +108,9 @@ void main() {
 
   testWidgets('a cancelled attempt withdraws the question', (tester) async {
     final app = await _asked(tester);
-    await tester.runAsync(app.models.connection.disconnect);
+    // The session's close writes to the camera, which answers in the
+    // test's fake time, so it is pumped rather than awaited.
+    unawaited(app.models.connection.disconnect());
     await pumpUntil(
       tester,
       () => find.byKey(_dialog).evaluate().isEmpty,

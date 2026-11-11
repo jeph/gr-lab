@@ -606,12 +606,7 @@ final class GrSession {
     if (ble != null && powerOffIfWoken && _wokeCamera) {
       await _powerOff(ble);
     } else if (ble != null) {
-      try {
-        await ble.setWlan(on: false);
-        _emit('wlan.off');
-      } on Object catch (e) {
-        _emit('wlan.offFailed', {'error': '$e'});
-      }
+      await _wlanOff(ble);
     }
     _set(GrSessionPhase.bluetooth, 'wifi.stopped');
   }
@@ -891,6 +886,17 @@ final class GrSession {
     }
   }
 
+  /// Turns the camera's Wi-Fi off over [ble] (WLAN Control `00`, GR
+  /// WORLD's release); a write that fails is reported and nothing more.
+  Future<void> _wlanOff(GrBleClient ble) async {
+    try {
+      await ble.setWlan(on: false);
+      _emit('wlan.off');
+    } on Object catch (e) {
+      _emit('wlan.offFailed', {'error': '$e'});
+    }
+  }
+
   void _checkWifiStopped(GrSessionPhase phase) {
     if (_closing) throw GrSessionException(phase, 'closed');
     if (_wifiStopped) throw GrSessionException(phase, 'Wi-Fi stopped');
@@ -898,17 +904,20 @@ final class GrSession {
 
   /// Stops supervision, releases the phone's join, and closes the
   /// WebSocket, HTTP client and BLE link; a scan or a setup step still in
-  /// flight ends without changing the phase. [wlanOff] writes WLAN-off
-  /// over BLE first (GR WORLD's explicit release); by default the camera's
-  /// Wi-Fi is left as it is. [powerOff] turns the camera off over BLE
-  /// (Camera Power `00`, as GR WORLD's power-off flow) after Wi-Fi
-  /// supervision has stopped, so the loss is not reported.
-  /// [powerOffIfWoken] does so only when the session turned the camera on
-  /// ([wokeCamera]); a wake still in flight ([wake], or a Wi-Fi start's or
-  /// recovery's) is cut short and let finish first, so one whose write
-  /// lands during the close is not missed.
+  /// flight ends without changing the phase. A camera that is linked and
+  /// on has its Wi-Fi turned off over BLE first ([_wlanOff]), as GR
+  /// WORLD's explicit disconnect does
+  /// (research/protocol/connection-lifecycle.md), whether or not this
+  /// session turned it on \[design\]: a session that ended without
+  /// closing (the app was stopped) leaves it on, and nothing else turns
+  /// it off. [powerOff] turns the camera off over BLE instead (Camera
+  /// Power `00`, as GR WORLD's power-off flow) after Wi-Fi supervision has
+  /// stopped, so the loss is not reported. [powerOffIfWoken] does so only
+  /// when the session turned the camera on ([wokeCamera]); a wake still in
+  /// flight ([wake], or a Wi-Fi start's or recovery's) is cut short and
+  /// let finish first, so one whose write lands during the close is not
+  /// missed.
   Future<void> close({
-    bool wlanOff = false,
     bool powerOff = false,
     bool powerOffIfWoken = false,
   }) async {
@@ -921,8 +930,7 @@ final class GrSession {
     _stopWake();
     // Releasing the join first cuts a platform join short; the start,
     // recovery and post-wake relink then end on [_closing], and release a
-    // join that completes meanwhile themselves. Leaving the camera's
-    // access point up is a separate choice ([wlanOff], [powerOff]).
+    // join that completes meanwhile themselves.
     await _leaveWifi();
     var turnOff = powerOff;
     if (powerOffIfWoken) {
@@ -938,18 +946,14 @@ final class GrSession {
       await _wakeCall;
       turnOff = turnOff || _wokeCamera;
     }
-    if (wlanOff && !turnOff && _ble != null) {
-      try {
-        await _ble!.setWlan(on: false);
-        _emit('wlan.off');
-      } on Object catch (e) {
-        _emit('wlan.offFailed', {'error': '$e'});
-      }
-    }
+    // A camera being turned off takes its access point with it, and one
+    // that is off has none.
+    final ble = _ble;
+    if (ble != null && !turnOff && !_cameraOff) await _wlanOff(ble);
     await _stopWifiServices();
-    if (turnOff && _ble != null) {
+    if (turnOff && ble != null) {
       try {
-        await _ble!.powerOff();
+        await ble.powerOff();
         _wokeCamera = false;
         _emit('power.off');
       } on Object catch (e) {
@@ -959,7 +963,6 @@ final class GrSession {
     _http?.close(force: true);
     _http = null;
     await _powerSub?.cancel();
-    final ble = _ble;
     _ble = null;
     if (ble != null) {
       try {
