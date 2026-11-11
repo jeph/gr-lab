@@ -571,7 +571,7 @@ void main() {
     tester.view
       ..physicalSize = const Size(320, 800)
       ..devicePixelRatio = 1;
-    tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
     await pumpRounds(tester, 3);
     expectWholeDate('a narrow phone at large text');
 

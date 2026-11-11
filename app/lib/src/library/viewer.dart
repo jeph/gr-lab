@@ -1291,8 +1291,10 @@ class _ActionBar extends StatelessWidget {
       ),
       child: SafeArea(
         top: false,
-        child: SizedBox(
-          height: 72,
+        // At least as tall as the mock's bar, and taller for a label at
+        // large text.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 72),
           child: Center(
             child: _DownloadAction(
               key: const ValueKey('viewer-download'),
