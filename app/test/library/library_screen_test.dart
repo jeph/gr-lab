@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
+import 'package:grlab/src/camera/camera_top_bar.dart';
 import 'package:grlab/src/library/library_screen.dart';
 import 'package:grlab/src/library/shot.dart' show Shot;
 import 'package:grlab/src/library/viewer.dart';
@@ -782,6 +783,69 @@ void main() {
       () => _downloadedBadge(shot).evaluate().isEmpty,
       reason: 'downloaded mark gone',
     );
+
+    await app.dispose();
+  });
+
+  testWidgets('Updating… and Connecting… show beside the Library title and '
+      'leave the photos where they are', (tester) async {
+    tester.view
+      ..physicalSize = const Size(1170, 2532)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final app = (await tester.runAsync(
+      () => createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+      ),
+    ))!;
+    await app.pumpApp(tester);
+    await _openLibrary(tester);
+    await pumpUntilFound(tester, _thumbs);
+    final progress = find.byKey(const Key('library-progress'));
+    final chips = find.byKey(const ValueKey('chip:all'));
+    await pumpUntil(
+      tester,
+      () => progress.evaluate().isEmpty,
+      reason: 'the first update to end',
+    );
+    final settled = tester.getTopLeft(chips);
+
+    void expectBesideTitle(String text) {
+      expect(
+        find.descendant(of: progress, matching: find.text(text)),
+        findsOneWidget,
+      );
+      final title = tester.getRect(
+        find.descendant(
+          of: find.byType(PageTitle),
+          matching: find.text('Library'),
+        ),
+      );
+      final shown = tester.getRect(progress);
+      expect(shown.left, greaterThan(title.right));
+      expect(shown.center.dy, inInclusiveRange(title.top, title.bottom));
+      expect(tester.getTopLeft(chips), settled);
+    }
+
+    unawaited(app.models.library.model.refresh());
+    await tester.pump();
+    expectBesideTitle('Updating…');
+    await pumpUntil(
+      tester,
+      () => progress.evaluate().isEmpty,
+      reason: 'the update to end',
+    );
+    expect(tester.getTopLeft(chips), settled);
+
+    app.camera.dropWifi();
+    await pumpUntil(
+      tester,
+      () => app.models.library.link.value == null,
+      reason: 'link lost',
+    );
+    await tester.pump();
+    expectBesideTitle('Connecting…');
 
     await app.dispose();
   });

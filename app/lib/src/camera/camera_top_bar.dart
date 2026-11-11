@@ -158,33 +158,68 @@ class RoundIconButton extends StatelessWidget {
   }
 }
 
-/// The large title of a page (mock `.h1`), with its [actions] on the same
-/// row.
+/// The large title of a page (mock `.h1`), with its [status] after it and
+/// its [actions] at the end of the same row.
 class PageTitle extends StatelessWidget {
-  const new(this.text, {super.key, this.actions = const []});
+  const new(this.text, {super.key, this.status, this.actions = const []});
 
   final String text;
+
+  /// A state that comes and goes, such as the Library's Updating…. Beside
+  /// the title it leaves the rest of the page where it is. It gets the
+  /// width the title leaves and is scaled down to fit that \[design\]: a
+  /// status on a line of its own would move the page.
+  final Widget? status;
 
   /// Buttons at the end of the row, such as [SettingsButton].
   final List<Widget> actions;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 14, 18, 4),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -.8,
-            ),
+  Widget build(BuildContext context) {
+    final status = this.status;
+    final title = Text(
+      text,
+      style: const TextStyle(
+        fontSize: 32,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -.8,
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 18, 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: status == null
+                ? title
+                : LayoutBuilder(
+                    builder: (context, row) => Row(
+                      children: [
+                        // A Row lets a child like this be as wide as it
+                        // likes; a long title still wraps in the row.
+                        ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: row.maxWidth),
+                          child: title,
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsetsDirectional.only(
+                              start: 12,
+                            ),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: AlignmentDirectional.centerStart,
+                              child: status,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
           ),
-        ),
-        for (final action in actions) ...[const SizedBox(width: 8), action],
-      ],
-    ),
-  );
+          for (final action in actions) ...[const SizedBox(width: 8), action],
+        ],
+      ),
+    );
+  }
 }

@@ -137,6 +137,16 @@ class _LibraryViewState extends State<_LibraryView> {
         ? failure
         : null;
     final camera = _app.connection.camera;
+    final showsFailure = wifiFailure != null && camera != null;
+    final l10n = context.l10n;
+    // Cached photos stay up while their camera connects or is read again.
+    final progress = showsFailure || all == null
+        ? null
+        : model.refreshing
+        ? l10n.libraryUpdating
+        : model.connected
+        ? null
+        : l10n.libraryConnecting;
 
     return PopScope(
       canPop: !_selecting,
@@ -152,11 +162,13 @@ class _LibraryViewState extends State<_LibraryView> {
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
-                  const SliverSafeArea(
+                  SliverSafeArea(
                     bottom: false,
-                    sliver: SliverToBoxAdapter(child: _Header()),
+                    sliver: SliverToBoxAdapter(
+                      child: _Header(progress: progress),
+                    ),
                   ),
-                  if (wifiFailure != null && camera != null)
+                  if (showsFailure)
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
@@ -168,7 +180,10 @@ class _LibraryViewState extends State<_LibraryView> {
                       ),
                     )
                   else ...[
-                    SliverToBoxAdapter(child: _StatusLine(model: model)),
+                    if (all != null && progress == null && model.error != null)
+                      SliverToBoxAdapter(
+                        child: _UpdateFailedLine(onRetry: model.refresh),
+                      ),
                     if (filtered != null && all!.isNotEmpty)
                       SliverToBoxAdapter(
                         child: _Chips(
@@ -302,72 +317,91 @@ Future<void> showPermissionGuidance(BuildContext context) {
 }
 
 class _Header extends StatelessWidget {
-  const new();
+  const new({required this.progress});
+
+  /// What the listing waits for (Updating…, Connecting…), if anything.
+  final String? progress;
 
   @override
   Widget build(BuildContext context) {
+    final progress = this.progress;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const CameraTopBar(showSettings: false),
-        PageTitle(context.l10n.libraryTitle, actions: const [SettingsButton()]),
+        PageTitle(
+          context.l10n.libraryTitle,
+          status: progress == null ? null : _Progress(progress),
+          actions: const [SettingsButton()],
+        ),
       ],
     );
   }
 }
 
-/// Updating, or failed-update note under the title. The Library only shows
-/// while the camera's Wi-Fi is up; a failed update whose camera no longer
-/// answers returns to the Cameras screen instead (see `ConnectionLink`).
-class _StatusLine extends StatelessWidget {
-  const new({required this.model});
+/// A spinner and what it waits for, beside the title: there it comes and
+/// goes without moving the photos.
+class _Progress extends StatelessWidget {
+  const new(this.text);
 
-  final LibraryModel model;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = GrColors.of(context);
+    return Row(
+      key: const Key('library-progress'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 12,
+          height: 12,
+          child: CircularProgressIndicator(strokeWidth: 1.6, color: c.t2),
+        ),
+        const SizedBox(width: 8),
+        Text(text, style: TextStyle(fontSize: 13, color: c.t2)),
+      ],
+    );
+  }
+}
+
+/// Failed-update note under the title. The Library only shows while the
+/// camera's Wi-Fi is up; a failed update whose camera no longer answers
+/// returns to the Cameras screen instead (see `ConnectionLink`).
+class _UpdateFailedLine extends StatelessWidget {
+  const new({required this.onRetry});
+
+  final Future<void> Function() onRetry;
 
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
-    if (model.shots == null) return const SizedBox.shrink();
-    final style = TextStyle(fontSize: 13, color: c.t2);
-    final Widget content;
-    if (model.refreshing || !model.connected) {
-      content = Row(
-        children: [
-          SizedBox(
-            width: 12,
-            height: 12,
-            child: CircularProgressIndicator(strokeWidth: 1.6, color: c.t2),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            model.refreshing ? l10n.libraryUpdating : l10n.libraryConnecting,
-            style: style,
-          ),
-        ],
-      );
-    } else if (model.error != null) {
-      content = Row(
-        children: [
-          Icon(Icons.error_outline_rounded, size: 15, color: c.danger),
-          const SizedBox(width: 6),
-          Flexible(child: Text(l10n.libraryUpdateFailed, style: style)),
-          TextButton(
-            onPressed: () => unawaited(model.refresh()),
-            style: TextButton.styleFrom(
-              minimumSize: const Size(0, 32),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Text(l10n.libraryRetry),
-          ),
-        ],
-      );
-    } else {
-      return const SizedBox.shrink();
-    }
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 2, 20, 0),
-      child: SizedBox(height: 32, child: content),
+      child: SizedBox(
+        height: 32,
+        child: Row(
+          children: [
+            Icon(Icons.error_outline_rounded, size: 15, color: c.danger),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                l10n.libraryUpdateFailed,
+                style: TextStyle(fontSize: 13, color: c.t2),
+              ),
+            ),
+            TextButton(
+              onPressed: () => unawaited(onRetry()),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, 32),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(l10n.libraryRetry),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -957,7 +957,7 @@
   },
   "libraryConnecting": "Connecting…",
   "@libraryConnecting": {
-    "description": "Status under the Library title while the camera's Wi-Fi connects."
+    "description": "Status beside the Library title while the camera's Wi-Fi connects."
   },
   "libraryDayTime": "{day} {time}",
   "@libraryDayTime": {
@@ -1235,7 +1235,7 @@
   },
   "libraryUpdating": "Updating…",
   "@libraryUpdating": {
-    "description": "Status under the Library title while the photo list is read again."
+    "description": "Status beside the Library title while the photo list is read again."
   },
   "libraryYesterday": "Yesterday",
   "@libraryYesterday": {
