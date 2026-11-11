@@ -169,6 +169,21 @@ Open points:
 - Which GATT is served while off is **[unknown]**. The GR WORLD reading of operationMode `02` after connect implies the camera boots into a bleStartup state with bled serving GATT **[inferred]**.
 - `power-on-grworld.md` (read operationMode `02`, write `01`/`00`) is consistent with `OperationMode::Write` forwarding the byte. The exact bleStartup handling in camctld was not verified **[unknown]**.
 
+### 6.1 The radio runs a different firmware image in each power state
+
+Found in code (GR IV firmware 1.20 root file system, `firmware/gr4-root/firmware.bin_extract`):
+
+- **On.** `etc/rc.local` loads the Wi-Fi driver `moal.ko` with `mod_para=nxp/wifi_mod_para.conf`, whose active block names the image `nxp/sduart_nw61x_v1.bin.se` ([network configuration](../firmware-network-config.md)). bled brings Bluetooth up with `usr/bin/ble_enable.sh <reload>` (strings `ble_enable.sh ` and `fail to ble_enable.sh` in `usr/bin/bled`). With `reload` = 1 the script first unbinds and rebinds the radio's SDIO host (`1b000000.mmc` on `sdhci-milbeaut`) and waits 2 s. Either way it then attaches HCI on `/dev/ttyUSI1`, runs the board's `bt_power_config_ALL.sh`, sends vendor command `0x3f/0x0009` and detaches. Which argument bled passes, and when, is **[unknown]**: the call site was not read.
+- **Off.** sysmgrd's `load_bt_only_fw::Run` (step 1 above) runs `usr/bin/ble_loadBTonlyFW.sh`: unbind the SDIO host, turn UART flow control off, `fw_loader_linux /dev/ttyUSI1 115200 0 /lib/firmware/nxp/uartuart_n61x_v1.bin.se 4000000`, turn flow control on, then the same HCI attach, power configuration and vendor command. camctld has the matching interfaces `IfDeviceCmdset::IfLoadBTOnlyFW` and `IfStatChangedCmdset::IfBTOnlyFWBleSleepTransitionStartNotified`.
+
+So turning off downloads a second image into the radio over its UART. Going by the names and the SDIO unbind, `sduart_nw61x` is the combined image (Wi-Fi over SDIO, Bluetooth over UART) and `uartuart_n61x` the one without SDIO Wi-Fi **[inferred]**.
+
+What follows for a client:
+
+- **Turning off ends the link.** A radio that is given a new image restarts, so no LE link can outlive the camera turning off **[inferred]**. GR WORLD's 6 s wait after a power-off notification ([ble.md, path B](ble.md#b-connect-and-wlan-on-inside-the-reconnect-flow-0xd2e93c)) fits the swap taking about that long **[inferred]**; what a connect inside those 6 s does is **[unknown]**. The session code records that a GR IV HDF (fw 1.20, 2026-11-08) switched off over Bluetooth could be linked again about 15 s after the drop (`GrSessionOptions.bleLostAfter`); GR Lab then redialled 1 s after the drop, without the 6 s wait.
+- **Turning on from off.** The first link to an off camera drops about 5.5 s after it opens, before any GATT traffic; a link opened right after it holds, reads Operation Mode `02` and survives the power-on write ([GR WORLD power-on §3](power-on-grworld.md#3-power-on-sequence-home-power-button-import-and-remote-differ-only-where-noted), observed). That fits the connect waking the host, which boots into bleStartup and puts the combined image back through `ble_enable.sh 1`, ending the link the BT-only image had accepted; bled then serves the second link, and the power-on write needs nothing more from the radio **[inferred]**.
+- **Not established [unknown]:** whether a link that has been held in bleStartup for a while survives the power-on write (GR Lab stays linked to a camera it turned off, so its power-on is usually this case); how long the camera stays in bleStartup with a link and no power-on write, and whether it then loads the BT-only image again and drops that link. On 2026-11-10 the user reported GR Lab's card saying "Reconnecting…" after every power-on as well as every power-off (from the UI; no trace, body and firmware not recorded), so some link did drop at power-on. Hardware test: [session F](../hardware-validation.md#2-capture-sessions-phone-apps).
+
 ## 7. Ranked firmware-backed explanations and client requirements
 
 ### (a) The Mac cannot reconnect after pairing

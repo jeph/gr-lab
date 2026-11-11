@@ -98,6 +98,8 @@
   "connectionPillOffline": "Ei yhteyttä",
   "connectionPillReconnecting": "Yhdistetään uudelleen…",
   "connectionPillSemantics": "{cameraName}, {state}",
+  "connectionPillTurningOff": "Sammutetaan…",
+  "connectionPillTurningOn": "Käynnistetään…",
   "connectionPillWifi": "Wi-Fi",
   "connectionRenameCancel": "Peruuta",
   "connectionRenameSave": "Tallenna",

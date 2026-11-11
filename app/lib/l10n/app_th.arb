@@ -98,6 +98,8 @@
   "connectionPillOffline": "ออฟไลน์",
   "connectionPillReconnecting": "กำลังเชื่อมต่อใหม่…",
   "connectionPillSemantics": "{cameraName}, {state}",
+  "connectionPillTurningOff": "กำลังปิดกล้อง…",
+  "connectionPillTurningOn": "กำลังเปิดกล้อง…",
   "connectionPillWifi": "Wi-Fi",
   "connectionRenameCancel": "ยกเลิก",
   "connectionRenameSave": "บันทึก",

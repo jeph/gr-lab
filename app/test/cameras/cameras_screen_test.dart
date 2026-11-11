@@ -9,6 +9,7 @@ import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:grlab/src/camera/camera_top_bar.dart';
 import 'package:grlab/src/connection/camera_pill.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/connection/link_state.dart';
 import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/library/library_screen.dart';
 import 'package:grlab/src/looks/looks_screen.dart';
@@ -651,28 +652,67 @@ void main() {
   });
 
   testWidgets('the power button turns the camera off and on, keeping the '
-      'link, and a camera turned on this way stays on', (tester) async {
-    final app = await _start(tester);
+      'link, and a camera turned on this way stays on; the chip names the '
+      'change until the camera has settled, and never a lost link', (
+    tester,
+  ) async {
+    final app = await _start(
+      tester,
+      // Both of a GR IV's drops at power-off: of the link it was turned
+      // off over, and of the first link to it once it is off, which goes
+      // before the session can use it.
+      config: const FakeCameraConfig(
+        bonded: true,
+        firstOffLinkDrop: Duration(milliseconds: 300),
+      ),
+      sessionOptions: const GrSessionOptions(
+        powerOffGuard: Duration(milliseconds: 300),
+      ),
+    );
     final connection = app.models.connection;
     await pumpUntilFound(
       tester,
       find.byKey(const Key('camera-card-link-bluetooth')),
     );
     expect(find.byKey(const Key('camera-card-power-on')), findsOneWidget);
+    final labels = <LinkLabel>{};
+    var linksDown = 0;
+    var linked = connection.bleLinked;
+    void record() {
+      labels.add(LinkState.of(connection).label);
+      if (linked && !connection.bleLinked) linksDown++;
+      linked = connection.bleLinked;
+    }
+
+    connection.addListener(record);
 
     await _tap(tester, const Key('camera-card-power'));
+    await pumpUntilFound(tester, find.text('Turning off…'));
     await pumpUntil(tester, () => !app.camera.poweredOn, reason: 'off');
     await pumpUntilFound(
       tester,
       find.byKey(const Key('camera-card-power-off')),
     );
-    // The session links the camera again in its off state.
-    await pumpUntil(tester, () => connection.bleLinked, reason: 'relinked');
+    // The session links the camera again in its off state; the button is
+    // busy until then.
+    await pumpUntil(
+      tester,
+      () => connection.powerChange == null,
+      reason: 'power off settled',
+    );
+    expect(linksDown, 1);
+    expect(app.ble.connects, 3);
+    expect(connection.bleLinked, isTrue);
     expect(connection.status, ConnectionStatus.bluetooth);
     expect(connection.cameraOff, isTrue);
     expect(app.camera.poweredOn, isFalse);
+    await tester.pump();
+    expect(find.text('Turning off…'), findsNothing);
+    expect(labels, {LinkLabel.bluetooth, LinkLabel.turningOff});
 
+    labels.clear();
     await _tap(tester, const Key('camera-card-power'));
+    await pumpUntilFound(tester, find.text('Turning on…'));
     await pumpUntil(tester, () => app.camera.poweredOn, reason: 'on');
     await pumpUntilFound(tester, find.byKey(const Key('camera-card-power-on')));
     await pumpUntil(
@@ -680,11 +720,43 @@ void main() {
       () => connection.powerChange == null,
       reason: 'power on done',
     );
+    expect(linksDown, 2);
+    expect(connection.bleLinked, isTrue);
     expect(connection.cameraOff, isFalse);
+    expect(labels, {LinkLabel.bluetooth, LinkLabel.turningOn});
+    connection.removeListener(record);
 
     // Ending the session turns off only cameras the app woke for itself.
     await _disconnect(tester, connection);
     expect(app.camera.poweredOn, isTrue);
+
+    await app.dispose();
+  });
+
+  testWidgets("the camera sheet's Bluetooth row names the power change "
+      'while the camera has the link down for it', (tester) async {
+    final app = await _start(
+      tester,
+      sessionOptions: const GrSessionOptions(
+        powerOffGuard: Duration(milliseconds: 500),
+      ),
+    );
+    final connection = app.models.connection;
+    await _untilStatus(tester, app, ConnectionStatus.bluetooth);
+    await _openSheet(tester, 'bluetooth');
+    expect(_sheetState('bluetooth', 'Connected'), findsOneWidget);
+
+    unawaited(connection.powerOff());
+    await pumpUntilFound(tester, _sheetState('bluetooth', 'Turning off…'));
+    expect(connection.bleLinked, isFalse);
+    await pumpUntilFound(tester, _sheetState('bluetooth', 'Connected'));
+    expect(connection.cameraOff, isTrue);
+
+    unawaited(connection.powerOn());
+    await pumpUntilFound(tester, _sheetState('bluetooth', 'Turning on…'));
+    expect(connection.bleLinked, isFalse);
+    await pumpUntilFound(tester, _sheetState('bluetooth', 'Connected'));
+    expect(connection.cameraOff, isFalse);
 
     await app.dispose();
   });

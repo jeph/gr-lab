@@ -142,8 +142,14 @@ final class CameraSession {
   bool get bleLinked => _session.ble != null;
 
   /// The Bluetooth link dropped on its own and the session is linking
-  /// again.
+  /// again. Not while the camera is off or turning off ([turningOff]):
+  /// those drops are the camera's own and no loss.
   bool get bleReconnecting => _session.bleReconnecting;
+
+  /// This session turned the camera off and the camera has not settled
+  /// yet: until it is linked again in its off state, or the time for that
+  /// runs out.
+  bool get turningOff => _session.turningOff;
 
   /// The camera's Wi-Fi was lost and the session is getting it back.
   bool get wifiRecovering => _session.wifiRecovering;
@@ -211,7 +217,8 @@ final class CameraSession {
   Future<void> powerOn() => _session.powerOn();
 
   /// Turns the camera off over Bluetooth, as GR WORLD's power button does;
-  /// the camera drops the link. Only while the camera's Wi-Fi is not in
+  /// the camera drops the link and is linked again in its off state
+  /// ([turningOff] meanwhile). Only while the camera's Wi-Fi is not in
   /// use ([stopWifi] first). Returns whether the camera took it.
   Future<bool> powerOff() => _session.powerOff();
 

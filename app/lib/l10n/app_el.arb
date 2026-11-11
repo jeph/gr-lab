@@ -98,6 +98,8 @@
   "connectionPillOffline": "Εκτός σύνδεσης",
   "connectionPillReconnecting": "Επανασύνδεση…",
   "connectionPillSemantics": "{cameraName}, {state}",
+  "connectionPillTurningOff": "Απενεργοποίηση…",
+  "connectionPillTurningOn": "Ενεργοποίηση…",
   "connectionPillWifi": "Wi-Fi",
   "connectionRenameCancel": "Ακύρωση",
   "connectionRenameSave": "Αποθήκευση",

@@ -338,6 +338,7 @@ final class FakeCameraConfig {
     this.bleLatency = const Duration(milliseconds: 10),
     this.wakeDelay = const Duration(seconds: 1),
     this.wakeKeepsLink = false,
+    this.firstOffLinkDrop,
     this.wlanOnDelay = const Duration(milliseconds: 500),
     this.joinDelay = const Duration(milliseconds: 500),
     this.httpLatency = const Duration(milliseconds: 30),
@@ -434,6 +435,14 @@ final class FakeCameraConfig {
   /// The power-on write turns the camera on and the link stays up and
   /// answering (GR IV HDF, 2026-11-08, write on a 3 s old link).
   final bool wakeKeepsLink;
+
+  /// The first link opened to the camera after it went into its BT-only
+  /// state goes silent and drops this long after it opened, before any
+  /// GATT traffic, while the camera's host wakes; links opened after that
+  /// work (GR IV HDF, firmware 1.20, 2026-11-07: ~5.5 s, and the link made
+  /// 0.1 s later held; research/protocol/power-on-grworld.md §3). Null:
+  /// every link to an off camera works.
+  final Duration? firstOffLinkDrop;
 
   /// From the WLAN-on write until the access point can be joined.
   final Duration wlanOnDelay;

@@ -98,6 +98,8 @@
   "connectionPillOffline": "離線",
   "connectionPillReconnecting": "正在重新連線…",
   "connectionPillSemantics": "{cameraName}，{state}",
+  "connectionPillTurningOff": "正在關閉電源…",
+  "connectionPillTurningOn": "正在開啟電源…",
   "connectionPillWifi": "Wi-Fi",
   "connectionRenameCancel": "取消",
   "connectionRenameSave": "儲存",

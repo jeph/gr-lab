@@ -98,6 +98,8 @@
   "connectionPillOffline": "Sin conexión",
   "connectionPillReconnecting": "Reconectando…",
   "connectionPillSemantics": "{cameraName}, {state}",
+  "connectionPillTurningOff": "Apagando…",
+  "connectionPillTurningOn": "Encendiendo…",
   "connectionPillWifi": "Wi-Fi",
   "connectionRenameCancel": "Cancelar",
   "connectionRenameSave": "Guardar",

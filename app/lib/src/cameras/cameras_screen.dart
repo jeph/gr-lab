@@ -459,12 +459,22 @@ class _CameraCard extends StatelessWidget {
     },
   };
 
-  /// The link as the chip words it: why the last attempt failed, that the
-  /// Wi-Fi was left for lack of use (until the next join), or the link's
-  /// state in the camera pill's words.
+  /// The link as the chip words it: that the camera is being turned on or
+  /// off, why the last attempt failed, that the Wi-Fi was left for lack of
+  /// use (until the next join), or the link's state in the camera pill's
+  /// words.
   Widget _chip(BuildContext context, Presence seen) {
     final l10n = context.l10n;
     void openSheet() => unawaited(showCameraSheet(context));
+    final link = _Link.of(connection, seen);
+    final state = LinkState.of(connection);
+    if (state.changingPower) {
+      return _LinkChip(
+        link: link,
+        label: state.label.text(l10n),
+        onTap: openSheet,
+      );
+    }
     // Bluetooth failures end the link; Wi-Fi ones are kept next to it.
     final failure = switch (connection.status) {
       ConnectionStatus.failed ||
@@ -478,7 +488,6 @@ class _CameraCard extends StatelessWidget {
         onTap: openSheet,
       );
     }
-    final link = _Link.of(connection, seen);
     final idleFor = connection.idleClosedAfter;
     if (link == _Link.bluetooth && idleFor != null) {
       return _LinkChip(
@@ -492,7 +501,7 @@ class _CameraCard extends StatelessWidget {
       link: link,
       label: switch (link) {
         _Link.away || _Link.nearby => l10n.connectionPillNotConnected,
-        _ => LinkState.of(connection).label.text(l10n),
+        _ => state.label.text(l10n),
       },
       detail: switch (link) {
         _Link.away => l10n.camerasLinkAway,

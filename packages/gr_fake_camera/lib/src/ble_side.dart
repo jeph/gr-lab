@@ -37,8 +37,8 @@ final class _FakeLink implements BleConnection {
   final Completer<BleDisconnect> _down = Completer();
   final Map<String, Set<StreamController<Uint8List>>> _listeners = {};
 
-  /// The camera is restarting into its main firmware: nothing on this link
-  /// is answered until it drops.
+  /// The camera is restarting its radio (into its main firmware, or as
+  /// its host wakes): nothing on this link is answered until it drops.
   bool _booting = false;
 
   bool get _open => !_down.isCompleted;
@@ -270,6 +270,12 @@ extension on FakeGrCamera {
     await Future<void>.delayed(config.connectDelay);
     final link = _FakeLink(this, deviceId);
     _links.add(link);
+    final drop = config.firstOffLinkDrop;
+    if (_hostAsleep && drop != null) {
+      _hostAsleep = false;
+      link._booting = true;
+      _after(drop, () => link._drop('link supervision timeout'));
+    }
     return link;
   }
 

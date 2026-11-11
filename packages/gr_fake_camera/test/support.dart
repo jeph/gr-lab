@@ -30,6 +30,7 @@ FakeCameraConfig fastConfig({
   Duration? joinDelay,
   bool reportsWifiLoss = true,
   bool wakeKeepsLink = false,
+  Duration? firstOffLinkDrop,
   int remainingPictures = 1234,
   double selfTimerScale = 0.01,
 }) => FakeCameraConfig(
@@ -39,6 +40,7 @@ FakeCameraConfig fastConfig({
   focusTime: ms(150),
   poweredOn: poweredOn,
   wakeKeepsLink: wakeKeepsLink,
+  firstOffLinkDrop: firstOffLinkDrop,
   executePairingOpen: executePairingOpen,
   bonded: bonded,
   openExecutePairingOnScan: openExecutePairingOnScan,
@@ -68,6 +70,7 @@ const fastSessionOptions = GrSessionOptions(
   joinTimeout: Duration(seconds: 2),
   joinRetryDelay: Duration(milliseconds: 20),
   wakeSettle: Duration(milliseconds: 200),
+  powerOffGuard: Duration(milliseconds: 40),
   verifyTimeout: Duration(seconds: 2),
   verifyProbeTimeout: Duration(seconds: 1),
   livenessInterval: Duration(milliseconds: 20),

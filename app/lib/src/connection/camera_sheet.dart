@@ -122,13 +122,17 @@ class CameraSheet extends StatelessWidget {
           name: name,
           icon: icon,
           title: title,
-          // The camera drops the link when it is woken for its Wi-Fi or
-          // turned off; the session links it again.
+          // The camera drops the link when it is woken or turned off; the
+          // session links it again.
           state: connection.cameraSession?.bleLinked ?? false
               ? l10n.connectionSheetConnected
-              : connection.bleLinking
-              ? l10n.connectionPillReconnecting
-              : l10n.connectionPillNotConnected,
+              : !connection.bleLinking
+              ? l10n.connectionPillNotConnected
+              : switch (connection.powerChange) {
+                  CameraPowerChange.on => l10n.connectionPillTurningOn,
+                  CameraPowerChange.off => l10n.connectionPillTurningOff,
+                  null => l10n.connectionPillReconnecting,
+                },
           action: _LinkAction.disconnect,
           onPressed: disconnect,
         );

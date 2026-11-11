@@ -41,7 +41,8 @@ enum CameraTab {
   looks,
 }
 
-/// What the Cameras screen's power button is doing.
+/// The camera is being turned on or off
+/// ([ConnectionController.powerChange]).
 enum CameraPowerChange { on, off }
 
 enum ConnectFailureKind {
@@ -301,9 +302,24 @@ final class ConnectionController extends ChangeNotifier {
   /// The camera is off (BT-only), or reported turning off.
   bool get cameraOff => _session?.cameraOff ?? false;
 
-  /// The power button's request under way ([powerOn], [powerOff]); null
-  /// when none is.
-  CameraPowerChange? get powerChange => _powerChange;
+  /// The camera is being turned on or off, until it has settled: the
+  /// power button's request under way ([powerOn], [powerOff]), a camera
+  /// the session turned off that is not linked again in its off state yet,
+  /// or a camera being woken over Bluetooth alone (for Shoot or Looks);
+  /// null otherwise. The link drops meanwhile are the camera's own
+  /// (research/protocol/firmware-bonding.md §6), so the link is worded as
+  /// this change, not as reconnecting.
+  CameraPowerChange? get powerChange {
+    final requested = _powerChange;
+    if (requested != null) return requested;
+    final session = _session;
+    if (session == null) return null;
+    if (session.turningOff) return CameraPowerChange.off;
+    final waking =
+        _status == ConnectionStatus.bluetooth &&
+        session.phase == GrSessionPhase.waking;
+    return waking ? CameraPowerChange.on : null;
+  }
 
   /// Turns [camera] on, as GR WORLD's power button does (the Cameras
   /// screen's power button), linking it over Bluetooth first when needed.
@@ -323,8 +339,9 @@ final class ConnectionController extends ChangeNotifier {
   /// Turns [camera] off over Bluetooth, as GR WORLD's power button does,
   /// linking it first when needed and leaving its Wi-Fi first when in use.
   /// The session stays: it links the camera again in its off state, as
-  /// after [closeCamera] turns off a camera the app woke. Returns false
-  /// when the camera could not be linked or did not take the request.
+  /// after [closeCamera] turns off a camera the app woke, and
+  /// [powerChange] lasts until then. Returns false when the camera could
+  /// not be linked or did not take the request.
   Future<bool> powerOff() =>
       _changePower(CameraPowerChange.off, (session) async {
         if (session.cameraOff) return true;

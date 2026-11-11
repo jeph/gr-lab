@@ -98,6 +98,8 @@
   "connectionPillOffline": "Çevrimdışı",
   "connectionPillReconnecting": "Yeniden bağlanıyor…",
   "connectionPillSemantics": "{cameraName}, {state}",
+  "connectionPillTurningOff": "Kapanıyor…",
+  "connectionPillTurningOn": "Açılıyor…",
   "connectionPillWifi": "Wi-Fi",
   "connectionRenameCancel": "İptal",
   "connectionRenameSave": "Kaydet",

@@ -98,6 +98,8 @@
   "connectionPillOffline": "Offline",
   "connectionPillReconnecting": "Obnovování spojení…",
   "connectionPillSemantics": "{cameraName}, {state}",
+  "connectionPillTurningOff": "Vypínání…",
+  "connectionPillTurningOn": "Zapínání…",
   "connectionPillWifi": "Wi-Fi",
   "connectionRenameCancel": "Zrušit",
   "connectionRenameSave": "Uložit",

@@ -13,6 +13,13 @@ final class LinkState {
     final label = switch (connection.status) {
       ConnectionStatus.offline => LinkLabel.offline,
       ConnectionStatus.failed => LinkLabel.notConnected,
+      // The camera drops the link as it turns off and as it turns on: no
+      // loss, and not worded as one.
+      ConnectionStatus.bluetooth || ConnectionStatus.connected
+          when connection.powerChange != null =>
+        connection.powerChange == CameraPowerChange.off
+            ? LinkLabel.turningOff
+            : LinkLabel.turningOn,
       ConnectionStatus.connecting || ConnectionStatus.bluetooth
           when connection.reconnecting =>
         LinkLabel.reconnecting,
@@ -36,9 +43,17 @@ final class LinkState {
   /// camera's Wi-Fi carries on without it.
   final bool bluetooth;
 
+  /// The camera is being turned on or off
+  /// ([ConnectionController.powerChange]).
+  bool get changingPower =>
+      label == LinkLabel.turningOn || label == LinkLabel.turningOff;
+
   LinkKind get kind => switch (label) {
     LinkLabel.offline => LinkKind.offline,
-    LinkLabel.connecting || LinkLabel.connectingWifi => LinkKind.connecting,
+    LinkLabel.connecting ||
+    LinkLabel.connectingWifi ||
+    LinkLabel.turningOn ||
+    LinkLabel.turningOff => LinkKind.connecting,
     LinkLabel.bluetooth || LinkLabel.wifi => LinkKind.connected,
     LinkLabel.reconnecting => LinkKind.reconnecting,
     LinkLabel.notConnected || LinkLabel.cameraOff => LinkKind.failed,
@@ -70,7 +85,14 @@ enum LinkLabel {
   wifi,
 
   /// Switched off with the Library open, while it is turned back on.
-  cameraOff;
+  cameraOff,
+
+  /// The camera is being turned on, until it is on and linked.
+  turningOn,
+
+  /// The camera is being turned off, until it is linked again in its off
+  /// state.
+  turningOff;
 
   String text(AppLocalizations l10n) => switch (this) {
     offline => l10n.connectionPillOffline,
@@ -81,5 +103,7 @@ enum LinkLabel {
     bluetooth => l10n.connectionPillBluetooth,
     wifi => l10n.connectionPillWifi,
     cameraOff => l10n.connectionPillCameraOff,
+    turningOn => l10n.connectionPillTurningOn,
+    turningOff => l10n.connectionPillTurningOff,
   };
 }

@@ -98,6 +98,8 @@
   "connectionPillOffline": "Offline",
   "connectionPillReconnecting": "Újracsatlakozás…",
   "connectionPillSemantics": "{cameraName}, {state}",
+  "connectionPillTurningOff": "Kikapcsolás…",
+  "connectionPillTurningOn": "Bekapcsolás…",
   "connectionPillWifi": "Wi-Fi",
   "connectionRenameCancel": "Mégse",
   "connectionRenameSave": "Mentés",

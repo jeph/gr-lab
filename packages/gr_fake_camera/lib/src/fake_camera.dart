@@ -63,6 +63,7 @@ final class FakeGrCamera {
           )),
       executePairingOpen = config.executePairingOpen,
       _poweredOn = config.poweredOn,
+      _hostAsleep = !config.poweredOn,
       _apGone = !config.poweredOn,
       _bonded = config.bonded,
       _battery = config.battery,
@@ -103,6 +104,10 @@ final class FakeGrCamera {
   Completer<void>? infoGate;
 
   bool _poweredOn;
+
+  /// Off, and no link has been opened since: the next one wakes the
+  /// camera's host ([FakeCameraConfig.firstOffLinkDrop]).
+  bool _hostAsleep;
   int _mode = BleOperationMode.playback.wire;
   bool _bonded;
   int _battery;
@@ -467,6 +472,7 @@ final class FakeGrCamera {
   void _setPower(bool on, {required int mode, bool keepLinks = false}) {
     if (on == _poweredOn) return;
     _poweredOn = on;
+    _hostAsleep = !on;
     if (on) {
       _mode = mode;
     } else {

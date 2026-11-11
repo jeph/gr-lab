@@ -545,6 +545,14 @@
       }
     }
   },
+  "connectionPillTurningOff": "Turning off…",
+  "@connectionPillTurningOff": {
+    "description": "Link state on the camera pill and the camera card's chip, and under Bluetooth on the camera sheet: the camera is being turned off, which makes it drop its Bluetooth link for a few seconds. Shown until the camera is linked again."
+  },
+  "connectionPillTurningOn": "Turning on…",
+  "@connectionPillTurningOn": {
+    "description": "Link state on the camera pill and the camera card's chip, and under Bluetooth on the camera sheet: the camera is being turned on, which can make it drop its Bluetooth link for a few seconds. Shown until the camera is on and linked."
+  },
   "connectionPillWifi": "Wi-Fi",
   "@connectionPillWifi": {
     "description": "Link state on the camera pill and the camera card's chip: connected over the camera's Wi-Fi."

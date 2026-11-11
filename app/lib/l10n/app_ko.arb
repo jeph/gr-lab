@@ -98,6 +98,8 @@
   "connectionPillOffline": "오프라인",
   "connectionPillReconnecting": "다시 연결 중…",
   "connectionPillSemantics": "{cameraName}, {state}",
+  "connectionPillTurningOff": "전원을 끄는 중…",
+  "connectionPillTurningOn": "전원을 켜는 중…",
   "connectionPillWifi": "Wi-Fi",
   "connectionRenameCancel": "취소",
   "connectionRenameSave": "저장",

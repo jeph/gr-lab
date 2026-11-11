@@ -98,6 +98,8 @@
   "connectionPillOffline": "Offline",
   "connectionPillReconnecting": "A religar…",
   "connectionPillSemantics": "{cameraName}, {state}",
+  "connectionPillTurningOff": "A desligar a câmara…",
+  "connectionPillTurningOn": "A ligar a câmara…",
   "connectionPillWifi": "Wi-Fi",
   "connectionRenameCancel": "Cancelar",
   "connectionRenameSave": "Guardar",

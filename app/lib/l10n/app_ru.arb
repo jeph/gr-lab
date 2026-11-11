@@ -98,6 +98,8 @@
   "connectionPillOffline": "Нет связи",
   "connectionPillReconnecting": "Переподключение…",
   "connectionPillSemantics": "{cameraName}, {state}",
+  "connectionPillTurningOff": "Выключение…",
+  "connectionPillTurningOn": "Включение…",
   "connectionPillWifi": "Wi-Fi",
   "connectionRenameCancel": "Отменить",
   "connectionRenameSave": "Сохранить",

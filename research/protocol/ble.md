@@ -395,7 +395,7 @@ Self-timer button (0xe534d0) is allowed only when idle and the drive mode is 0, 
 
 ## Camera power off
 
-Write `00` to `B58CE84C-…` (0xe4b1c8; constant false at 0xe4b304). The app does this from the power-off/disconnect flow 0xe49d2c (log `"write camera power: "` [pp+0x4dc88]) and after a successful firmware update (0xe86104). It never writes `01` to this characteristic.
+Write `00` to `B58CE84C-…` (0xe4b1c8; constant false at 0xe4b304). The app does this from the power-off/disconnect flow 0xe49d2c (log `"write camera power: "` [pp+0x4dc88]) and after a successful firmware update (0xe86104). It never writes `01` to this characteristic. The camera then loads a different firmware image into its radio, which ends the link: [firmware bonding §6.1](firmware-bonding.md#61-the-radio-runs-a-different-firmware-image-in-each-power-state).
 
 ## Camera power on
 
@@ -590,7 +590,7 @@ Working notes with more detail: `research/notes/ble/{CamSvcChars,WfbChars,WlanCh
 
 **Link parameters**
 6. Negotiated MTU (the app requests 512). Characteristic properties (Write vs Write Without Response support; notify vs indicate), as seen in the GATT discovery dump.
-7. What exactly the 6 s guard protects (time since camera power-off). Is a shorter reconnect after power-off rejected?
+7. What exactly the 6 s guard protects (time since camera power-off). Is a shorter reconnect after power-off rejected? Firmware lead: at power-off the camera downloads its BT-only image into the radio ([firmware bonding §6.1](firmware-bonding.md#61-the-radio-runs-a-different-firmware-image-in-each-power-state)) **[inferred]**.
 
 **WLAN**
 8. WLAN: are SSID/passphrase fixed-length NUL-padded on read (the app strips `\u0000` [inferred])? What does `9111CDD0` read back while WLAN is on vs off? How long after the `01` write until the AP beacons? Which ATT error does the camera return when WLAN-on is refused (movie mode, USB connection)? Are new ssid/passphrase/freq/security values applied only at the next WLAN-on?

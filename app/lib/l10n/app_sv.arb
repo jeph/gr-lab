@@ -98,6 +98,8 @@
   "connectionPillOffline": "Offline",
   "connectionPillReconnecting": "Återansluter…",
   "connectionPillSemantics": "{cameraName}, {state}",
+  "connectionPillTurningOff": "Stänger av…",
+  "connectionPillTurningOn": "Slår på…",
   "connectionPillWifi": "Wi-Fi",
   "connectionRenameCancel": "Avbryt",
   "connectionRenameSave": "Spara",
