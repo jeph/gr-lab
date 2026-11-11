@@ -16,6 +16,10 @@ build_number="${1:-$(date -u +%y%m%d%H%M)}"
 
 cd "$root/app"
 
+# Regenerates AppLocalizations from the ARB files. The build's own pub get
+# does not, and its static checks then fail on messages a pull brought in.
+flutter pub get
+
 # Flutter leaves the archive unsigned: signing it would take a development
 # provisioning profile, which Apple only issues to a team with a registered
 # device. The export below signs it for the App Store, which needs none.
