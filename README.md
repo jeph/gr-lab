@@ -25,7 +25,7 @@ Joining is timed around the camera's access point, which comes up a varying time
 | `packages/gr_fake_camera` | Simulated GR IV (BLE, Wi-Fi join, HTTP server on loopback) for tests and demo mode |
 | `app` | The Flutter app, with Kotlin and Swift code for saving to the photo library |
 | `research` | Protocol research: how each route and characteristic was found, firmware evidence, hardware results, open questions |
-| `tool` | `check.sh`, every code-quality check |
+| `tool` | `check.sh`, every code-quality check; `testflight.sh`, the iOS upload |
 
 ## Running
 
@@ -46,6 +46,14 @@ Demo mode keeps its data in a separate `demo/` folder. On first launch, Add a ca
 ### Debug log
 
 GR Lab keeps debug logs while Settings > Enable debug logging is on: everything it sends to and receives from the camera (Bluetooth scans, reads, writes and notifications, every HTTP request and answer, WebSocket messages, live-view frame sizes, and the Wi-Fi joining steps), every line the app prints, uncaught errors, and the native Wi-Fi code's lines. The setting is on by default in `dev` and off in `prod`. While it is off nothing is logged, not even to logcat or the console, with one exception: the Flutter engine still reports uncaught errors there itself, so crashes stay visible. Settings > Debug log exports the log through the share sheet as JSON Lines files and clears it. The log keeps about 50 MB. It contains the camera's Wi-Fi password.
+
+### TestFlight
+
+```sh
+tool/testflight.sh       # builds the prod iOS app and uploads it to TestFlight
+```
+
+The script builds the `prod` flavor with the upload's time as its build number and sends it to App Store Connect, where it appears under TestFlight once processed. Internal testers install it from the TestFlight app, without a cable. Xcode signs and uploads the build, so the only setup on a Mac is adding the development team's Apple account in Xcode > Settings > Accounts. The archive is built unsigned and signed for the App Store on export (`app/ios/ExportOptions.plist`), because signing the archive itself would need a registered test device on the team.
 
 ## Checks
 

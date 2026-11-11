@@ -94,6 +94,7 @@ Run `tool/check.sh` before considering any change done. It runs the formatter, t
 
 - Flavors: `dev` (application ID `io.jeph.grlab.dev`, "GR Lab Dev") and `prod` (`io.jeph.grlab`, "GR Lab"). `flutter run` and `flutter build` without `--flavor` build `dev`.
 - Demo mode: `--dart-define=GR_DEMO=true` runs against the simulated camera.
+- TestFlight: `tool/testflight.sh` builds the `prod` iOS app and uploads it to App Store Connect (see `README.md`). Uploading publishes a build to the user's testers, so run it only when the user asks.
 
 ## Testing on devices
 
