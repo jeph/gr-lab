@@ -132,8 +132,9 @@ String exposureLabel(AppLocalizations l10n, BleShootingMode mode) {
 }
 
 /// A `/v1/props` setting value as the camera shows it
-/// (remote-shooting.md §4.3): readouts such as `f/2.8`, `1/250` and `AUTO`
-/// as data, menu names such as Spot and Positive Film as messages.
+/// (remote-shooting.md §4.3; a GR IV's Image Controls, image-control.md
+/// §3): readouts such as `f/2.8`, `1/250` and `AUTO` as data, menu names
+/// such as Spot and Positive Film as messages.
 String settingLabel(AppLocalizations l10n, String key, String value) =>
     switch (key) {
       'av' => value == '---' ? '---' : 'f/$value',
@@ -150,16 +151,21 @@ String settingLabel(AppLocalizations l10n, String key, String value) =>
       'effect' => switch (value) {
         'off' => l10n.shootEffectStandard,
         'col_vivid' => l10n.shootEffectVivid,
-        'col_custom1' => l10n.shootEffectCustom1,
-        'col_custom2' => l10n.shootEffectCustom2,
         'efc_monochrome' => l10n.shootEffectMonotone,
         'efc_softMonochrome' => l10n.shootEffectSoftMonotone,
         'efc_hardMonochrome' => l10n.shootEffectHardMonotone,
         'efc_highContrast' => l10n.shootEffectHiContrast,
+        'efc_negaFilm' => l10n.looksBaseNegativeFilm,
         'efc_posiFilm' => l10n.shootEffectPositiveFilm,
+        'efc_cineYellow' => l10n.looksBaseCinemaYellow,
+        'efc_cineGreen' => l10n.looksBaseCinemaGreen,
+        'efc_crossProcess' => l10n.looksBaseCrossProcessing,
         'efc_bleachBypass' => l10n.shootEffectBleachBypass,
         'efc_retro' => l10n.shootEffectRetro,
         'efc_HDRTone' => l10n.shootEffectHdrTone,
+        'col_custom1' => l10n.shootEffectCustom1,
+        'col_custom2' => l10n.shootEffectCustom2,
+        'col_custom3' => l10n.shootEffectCustom3,
         _ => value,
       },
       _ => value,

@@ -18,6 +18,11 @@ void main() {
   test('menu names are messages', () {
     expect(settingLabel(en, 'meteringMode', 'spot'), 'Spot');
     expect(settingLabel(en, 'effect', 'efc_posiFilm'), 'Positive Film');
+    expect(settingLabel(en, 'effect', 'efc_negaFilm'), 'Negative Film');
+    expect(settingLabel(en, 'effect', 'efc_cineYellow'), 'Cinema (Yellow)');
+    expect(settingLabel(en, 'effect', 'efc_cineGreen'), 'Cinema (Green)');
+    expect(settingLabel(en, 'effect', 'efc_crossProcess'), 'Cross Processing');
+    expect(settingLabel(en, 'effect', 'col_custom3'), 'Custom 3');
     expect(settingLabel(en, 'effect', 'unknown'), 'unknown');
     expect(ShootDrive.multipleExposure.label(en), 'Multi-exposure');
     expect(ShootTimer.off.label(en), 'Off');

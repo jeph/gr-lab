@@ -25,7 +25,8 @@ const _shootModes = <BleDriveMode, String>{
 /// Writable settings and the values `/v1/props` lists for them. Spelling
 /// follows Image Sync's GR III tables (remote-shooting.md §4.3); the
 /// ranges are a GR IV's \[design\]: f/2.8–16 and ISO 100–204800 in 1/3 steps,
-/// 1/4000–30 s, ±5 EV. A real camera's lists come from its own props.
+/// 1/4000–30 s, ±5 EV. `effect` is the list a GR IV gave, in its order
+/// (image-control.md §3). A real camera's lists come from its own props.
 final _settingLists = <String, List<String>>{
   'av': [
     '2.8', '3.2', '3.5', '4.0', '4.5', '5.0', '5.6', '6.3', //
@@ -57,9 +58,10 @@ final _settingLists = <String, List<String>>{
   ],
   'meteringMode': ['multi', 'center', 'spot', 'highlight'],
   'effect': [
-    'off', 'col_vivid', 'col_custom1', 'col_custom2', 'efc_monochrome', //
-    'efc_softMonochrome', 'efc_hardMonochrome', 'efc_highContrast',
-    'efc_posiFilm', 'efc_bleachBypass', 'efc_retro', 'efc_HDRTone',
+    'off', 'col_vivid', 'efc_monochrome', 'efc_softMonochrome', //
+    'efc_hardMonochrome', 'efc_highContrast', 'efc_negaFilm', 'efc_posiFilm',
+    'efc_cineYellow', 'efc_cineGreen', 'efc_crossProcess', 'efc_bleachBypass',
+    'efc_retro', 'efc_HDRTone', 'col_custom1', 'col_custom2', 'col_custom3',
   ],
   'shootMode': _shootModes.values.toList(),
 };

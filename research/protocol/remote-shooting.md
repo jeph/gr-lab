@@ -315,6 +315,8 @@ The YAML `rest_value` maps SDK constant name → wire value. GR III, GR III HDF,
 | Drive | `shootMode` | `single continuous self10s self2s bracket bracketSelf10s bracketSelf2s multiExp multiExpSelf10s multiExpSelf2s interval intervalSelf10s intervalSelf2s intervalComp intervalCompSelf10s intervalCompSelf2s` (`:370-388`) | – (no drive key) |
 | Capture mode (read) | `captureMode` | `still movie` (`:405-409`) | – |
 
+The GR IV's `effect` values differ from the GR III family's: a GR IV HDF lists 17, adding `efc_negaFilm efc_cineYellow efc_cineGreen efc_crossProcess col_custom3` (`image-control.md` §3, observed on firmware 1.20 on 2026-11-09).
+
 `sv` is the ISO in effect, not the ISO setting:
 
 - Found in code (GR IV webapid): `CameraParams::Fetch` (0x9d888) takes `sv` from `sv::GetCurrentValue` (0xb9614), which reads the *current* value of camera property 0x44 (0x77 for movies), not the setting value. `sv::ConvertToWebapi` (0xb91e0) turns 0 into `auto`, 1 into `auto_hi` and anything else into the number. With ISO AUTO the current value is the metered ISO, so `/v1/props` and the `PUT /v1/params/camera` answer report a number. The GR III webapid does the same (`sv::GetCurrentValue` 0xebc6c, `ConvertToWebapi` 0xebb40).

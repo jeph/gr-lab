@@ -886,6 +886,36 @@ void main() {
       await app.dispose();
     });
 
+    testWidgets('the Image Control list names every one the camera offers', (
+      tester,
+    ) async {
+      final app = await inLiveView(tester);
+      final http = app.camera.httpClient('', null);
+      final props = (await tester.runAsync(http.props))!;
+      http.close();
+      await tapWhenReady(tester, find.byKey(const Key('live-chip-effect')));
+      final list = find.byKey(const Key('shoot-setting-sheet-effect'));
+      // The sheet slides in from below; scrolling needs it on screen.
+      await pumpUntilFound(tester, list.hitTestable());
+      for (final effect in props.setting('effect')!.options!) {
+        final option = find.byKey(Key('shoot-option-effect-$effect'));
+        await tester.scrollUntilVisible(
+          option,
+          100,
+          scrollable: find.descendant(
+            of: list,
+            matching: find.byType(Scrollable),
+          ),
+        );
+        expect(
+          find.descendant(of: option, matching: find.text(effect)),
+          findsNothing,
+          reason: '$effect is shown as the camera sends it',
+        );
+      }
+      await app.dispose();
+    });
+
     testWidgets('× goes back to Remote and keeps the Wi-Fi up, with the '
         'camera still on', (tester) async {
       final app = await inLiveView(tester);

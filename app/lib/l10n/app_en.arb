@@ -2705,6 +2705,10 @@
   "@shootEffectCustom2": {
     "description": "Image Control setting, as in the camera's menu: Custom 2."
   },
+  "shootEffectCustom3": "Custom 3",
+  "@shootEffectCustom3": {
+    "description": "Image Control setting, as in the camera's menu: Custom 3."
+  },
   "shootEffectHardMonotone": "Hard Monotone",
   "@shootEffectHardMonotone": {
     "description": "Image Control setting, as in the camera's menu: Hard Monotone."
