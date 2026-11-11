@@ -1357,6 +1357,10 @@
   "@looksBaseHighContrastBw": {
     "description": "Image Control base image, as Ricoh names it."
   },
+  "looksBaseImage": "Image Control",
+  "@looksBaseImage": {
+    "description": "Title of the list of base images in the look editor, and accessibility label of the field that opens it. The camera's own name for the menu that lists them (Image Control)."
+  },
   "looksBaseMonoHdrTone": "HDR Tone",
   "@looksBaseMonoHdrTone": {
     "description": "Image Control base image, as Ricoh names it on the GR IV Monochrome."
@@ -1381,6 +1385,10 @@
   "@looksBaseNegativeFilm": {
     "description": "Image Control base image, as Ricoh names it."
   },
+  "looksBaseNext": "Next",
+  "@looksBaseNext": {
+    "description": "Tooltip of the arrow in the look editor that moves the look to the next base image in the camera's menu order."
+  },
   "looksBasePalette": "Palette",
   "@looksBasePalette": {
     "description": "Image Control base image, as Ricoh names it."
@@ -1389,9 +1397,29 @@
   "@looksBasePictorialist": {
     "description": "Image Control base image, as Ricoh names it on the GR IV Monochrome."
   },
+  "looksBasePosition": "{position} of {total}",
+  "@looksBasePosition": {
+    "description": "Under the name of the look's base image in the look editor: its place in the camera's list of base images, e.g. 7 of 14.",
+    "placeholders": {
+      "position": {
+        "type": "int",
+        "description": "Place of the base image in the list, from 1.",
+        "format": "decimalPattern"
+      },
+      "total": {
+        "type": "int",
+        "description": "Number of base images in the list.",
+        "format": "decimalPattern"
+      }
+    }
+  },
   "looksBasePositiveFilm": "Positive Film",
   "@looksBasePositiveFilm": {
     "description": "Image Control base image, as Ricoh names it."
+  },
+  "looksBasePrevious": "Previous",
+  "@looksBasePrevious": {
+    "description": "Tooltip of the arrow in the look editor that moves the look to the previous base image in the camera's menu order."
   },
   "looksBaseRetro": "Retro",
   "@looksBaseRetro": {
@@ -1825,7 +1853,7 @@
   },
   "looksPreviewFullScreen": "Full screen",
   "@looksPreviewFullScreen": {
-    "description": "Tooltip of the button under the look editor's preview that gives the preview the whole screen, and accessibility hint of the preview itself, which a tap does the same for."
+    "description": "Tooltip of the button under the look editor's preview that gives the preview the whole screen."
   },
   "looksPreviewRough": "This photo's own look can't be undone exactly, so the preview is rougher than usual.",
   "@looksPreviewRough": {

@@ -65,7 +65,6 @@ void main() {
     Look? look,
     double width = 120,
     double height = 120,
-    VoidCallback? onTap,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -82,8 +81,6 @@ void main() {
                 photo: photo,
                 look: look ?? _standard,
                 mode: mode,
-                onTap: onTap,
-                onTapHint: 'Does it',
               ),
             ),
           ),
@@ -252,115 +249,37 @@ void main() {
     expect(await colourAt(tester, across: .25, down: .3), grey);
   });
 
-  testWidgets('a tap on a picture goes to whoever asked for the taps, in '
-      "every way of comparing, and does nothing of the way's own; the "
-      'divider still follows a finger', (tester) async {
-    final photo = await photoOf(tester);
-    for (final mode in LookCompareMode.values) {
-      var taps = 0;
-      await show(
-        tester,
-        photo,
-        mode: mode,
-        look: _monotone,
-        height: 80,
-        onTap: () => taps++,
-      );
-      final box = tester.getRect(compare);
-      // On the left picture of two, clear of the tags.
-      await tester.tapAt(box.topLeft + Offset(box.width * .1, 30));
-      await tester.pump();
-      expect(taps, 1, reason: mode.name);
-      // Sliding keeps the divider's own semantics, a slider's.
-      if (mode != LookCompareMode.slide) {
-        expect(
-          tester.getSemantics(find.byKey(const Key('look-compare-tap')).first),
-          isSemantics(isButton: true, hint: 'Does it', hasTapAction: true),
-        );
-      }
-      switch (mode) {
-        case LookCompareMode.slide:
-          // The divider is still in the middle.
-          expect(await colourAt(tester, across: .25, down: .15), near(_red));
-          expect(await colourAt(tester, across: .75, down: .15), grey);
-          await tester.dragFrom(
-            box.topLeft + Offset(box.width * .5, 12),
-            Offset(box.width * .4, 0),
-          );
-          await tester.pump();
-          expect(await colourAt(tester, across: .85, down: .15), near(_blue));
-          expect(taps, 1);
-        case LookCompareMode.single:
-          expect(find.text('APPROXIMATE'), findsOneWidget);
-          expect(find.text('BEFORE'), findsNothing);
-        case LookCompareMode.sideBySide:
-          await tester.tapAt(box.topLeft + Offset(box.width * .9, 30));
-          expect(taps, 2);
-      }
-    }
-
-    var taps = 0;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: grTheme(GrColors.dark),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: LookCompare(
-          photo: photo,
-          look: null,
-          mode: LookCompareMode.slide,
-          onTap: () => taps++,
-        ),
+  testWidgets('one at a time: its tag swaps the pictures, from a little '
+      'around it too', (tester) async {
+    final swap = find.byKey(const Key('look-compare-swap'));
+    await show(
+      tester,
+      await photoOf(tester),
+      mode: LookCompareMode.single,
+      look: _monotone,
+      height: 80,
+    );
+    expect(find.text('APPROXIMATE'), findsOneWidget);
+    expect(
+      tester.getSemantics(swap),
+      isSemantics(
+        isButton: true,
+        hint: 'Swaps between before and the look',
+        hasTapAction: true,
       ),
     );
-    final asTaken = find.byKey(const Key('look-compare-as-taken'));
-    await pumpUntilFound(
-      tester,
-      find.descendant(of: asTaken, matching: find.byType(RawImage)),
-    );
-    await tester.tap(find.byType(RawImage));
-    expect(taps, 1, reason: 'a photo shown as it was taken');
-  });
 
-  testWidgets('one at a time: its tag swaps the pictures, from a little '
-      'around it too, whether or not taps on the picture go elsewhere', (
-    tester,
-  ) async {
-    final swap = find.byKey(const Key('look-compare-swap'));
-    final photo = await photoOf(tester);
-    for (final taken in [false, true]) {
-      var taps = 0;
-      await show(
-        tester,
-        photo,
-        mode: LookCompareMode.single,
-        look: _monotone,
-        height: 80,
-        onTap: taken ? () => taps++ : null,
-      );
-      expect(find.text('APPROXIMATE'), findsOneWidget);
-      expect(
-        tester.getSemantics(swap),
-        isSemantics(
-          isButton: true,
-          hint: 'Swaps between before and the look',
-          hasTapAction: true,
-        ),
-      );
+    await tester.tap(find.text('APPROXIMATE'));
+    await tester.pump();
+    expect(find.text('BEFORE'), findsOneWidget);
+    expect(await colourAt(tester, across: .25, down: .3), near(_red));
 
-      await tester.tap(find.text('APPROXIMATE'));
-      await tester.pump();
-      expect(find.text('BEFORE'), findsOneWidget, reason: '$taken');
-      expect(await colourAt(tester, across: .25, down: .3), near(_red));
-
-      final tag = tester.getRect(find.byType(PhotoTag));
-      expect(tag.height, lessThan(30), reason: 'small enough to miss');
-      await tester.tapAt(tag.topRight + const Offset(10, -10));
-      await tester.pump();
-      expect(find.text('APPROXIMATE'), findsOneWidget, reason: '$taken');
-      expect(await colourAt(tester, across: .25, down: .3), grey);
-      expect(taps, 0);
-    }
+    final tag = tester.getRect(find.byType(PhotoTag));
+    expect(tag.height, lessThan(30), reason: 'small enough to miss');
+    await tester.tapAt(tag.topRight + const Offset(10, -10));
+    await tester.pump();
+    expect(find.text('APPROXIMATE'), findsOneWidget);
+    expect(await colourAt(tester, across: .25, down: .3), grey);
   });
 
   testWidgets('without a look the photo is shown alone as it is, whole and '

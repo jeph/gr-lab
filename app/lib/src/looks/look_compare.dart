@@ -39,17 +39,14 @@ enum LookCompareMode {
 /// as large as the box allows and set against each other as [mode] says
 /// \[design\]. Without a [look] it is the photo as it is, alone.
 ///
-/// A tap on a picture is [onTap]'s when there is one. Without it the tap
-/// is the mode's own: it brings the divider of [LookCompareMode.slide]
-/// there, and swaps the pictures of [LookCompareMode.single], which their
-/// tag always does.
+/// A tap on a picture is the mode's own: it brings the divider of
+/// [LookCompareMode.slide] there, and swaps the pictures of
+/// [LookCompareMode.single], as their tag does.
 class LookCompare extends StatefulWidget {
   const new({
     required this.photo,
     required this.look,
     required this.mode,
-    this.onTap,
-    this.onTapHint,
     super.key,
   });
 
@@ -59,12 +56,6 @@ class LookCompare extends StatefulWidget {
   /// under one.
   final Look? look;
   final LookCompareMode mode;
-
-  /// Takes the taps on the pictures.
-  final VoidCallback? onTap;
-
-  /// What [onTap] does, for assistive technology.
-  final String? onTapHint;
 
   @override
   State<LookCompare> createState() => _LookCompareState();
@@ -144,22 +135,6 @@ class _LookCompareState extends State<LookCompare> {
 
   void _swap() => setState(() => _before = !_before);
 
-  /// [pictures], whose taps are [LookCompare.onTap]'s when there is one.
-  Widget _tappable(Widget pictures) {
-    final onTap = widget.onTap;
-    if (onTap == null) return pictures;
-    return Semantics(
-      button: true,
-      hint: widget.onTapHint,
-      child: GestureDetector(
-        key: const Key('look-compare-tap'),
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: pictures,
-      ),
-    );
-  }
-
   /// The photo upright, as it is or under [look].
   Widget _picture({Look? look}) => ExifOrientation(
     orientation: widget.photo.orientation ?? 1,
@@ -205,7 +180,7 @@ class _LookCompareState extends State<LookCompare> {
     if (look == null) {
       return Center(
         key: const Key('look-compare-as-taken'),
-        child: AspectRatio(aspectRatio: shape, child: _tappable(_picture())),
+        child: AspectRatio(aspectRatio: shape, child: _picture()),
       );
     }
     final beforeTag = l10n.upperCase(l10n.looksBefore);
@@ -235,10 +210,7 @@ class _LookCompareState extends State<LookCompare> {
                 child: GestureDetector(
                   key: const Key('look-compare-slide'),
                   behavior: HitTestBehavior.opaque,
-                  onTap: widget.onTap,
-                  onTapDown: widget.onTap != null
-                      ? null
-                      : (d) => _slideTo(d.localPosition.dx / box.maxWidth),
+                  onTapDown: (d) => _slideTo(d.localPosition.dx / box.maxWidth),
                   onHorizontalDragStart: (d) =>
                       _slideTo(d.localPosition.dx / box.maxWidth),
                   onHorizontalDragUpdate: (d) =>
@@ -286,24 +258,22 @@ class _LookCompareState extends State<LookCompare> {
             final horizontal = across.width >= down.width;
             final size = horizontal ? across : down;
             return Center(
-              child: _tappable(
-                Flex(
-                  direction: horizontal ? Axis.horizontal : Axis.vertical,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox.fromSize(
-                      key: const Key('look-compare-before'),
-                      size: size,
-                      child: _tagged(_picture(), PhotoTag(beforeTag)),
-                    ),
-                    const SizedBox.square(dimension: _gap),
-                    SizedBox.fromSize(
-                      key: const Key('look-compare-look'),
-                      size: size,
-                      child: _tagged(_picture(look: look), PhotoTag(lookTag)),
-                    ),
-                  ],
-                ),
+              child: Flex(
+                direction: horizontal ? Axis.horizontal : Axis.vertical,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox.fromSize(
+                    key: const Key('look-compare-before'),
+                    size: size,
+                    child: _tagged(_picture(), PhotoTag(beforeTag)),
+                  ),
+                  const SizedBox.square(dimension: _gap),
+                  SizedBox.fromSize(
+                    key: const Key('look-compare-look'),
+                    size: size,
+                    child: _tagged(_picture(look: look), PhotoTag(lookTag)),
+                  ),
+                ],
               ),
             );
           },
@@ -322,21 +292,18 @@ class _LookCompareState extends State<LookCompare> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (widget.onTap != null)
-                  _tappable(pictures)
-                else
-                  Semantics(
-                    button: true,
-                    hint: l10n.looksCompareSwapHint,
-                    child: GestureDetector(
-                      key: const Key('look-compare-single'),
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _swap,
-                      child: pictures,
-                    ),
+                Semantics(
+                  button: true,
+                  hint: l10n.looksCompareSwapHint,
+                  child: GestureDetector(
+                    key: const Key('look-compare-single'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _swap,
+                    child: pictures,
                   ),
-                // The tag swaps the pictures wherever a tap on them goes,
-                // from a little around it too: it is small.
+                ),
+                // The tag swaps them too, from a little around it: it is
+                // small.
                 Positioned(
                   left: _tagInset - _tagReach,
                   bottom: _tagInset - _tagReach,

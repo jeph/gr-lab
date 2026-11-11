@@ -90,6 +90,30 @@ Future<void> _editorOpen(WidgetTester tester) async {
   await pumpRounds(tester, 30);
 }
 
+/// Opens the editor's list of base images.
+Future<void> _openBases(WidgetTester tester) async {
+  await tapWhenReady(tester, find.byKey(const Key('look-base-name')));
+  await pumpUntilFound(tester, find.byKey(const Key('look-base-list')));
+}
+
+/// Picks [base] from the editor's list of base images, and waits for the
+/// list to close.
+Future<void> _pickBase(WidgetTester tester, LookBase base) async {
+  await _openBases(tester);
+  await tapWhenReady(tester, find.byKey(ValueKey('look-base:${base.name}')));
+  await pumpUntil(
+    tester,
+    () => find.byKey(const Key('look-base-list')).evaluate().isEmpty,
+    reason: 'the list of base images closed',
+  );
+}
+
+/// [text] in the editor's field for the base image.
+Finder _inBases(String text) => find.descendant(
+  of: find.byKey(const Key('look-bases')),
+  matching: find.text(text),
+);
+
 Look _slotLook(TestApp app, int number) =>
     Look.fromBytes(Uint8List.fromList(app.camera.lookSlot(number).data))!;
 
@@ -129,16 +153,13 @@ void main() {
     await tapWhenReady(tester, _inSlot(1, 'Tokyo Night'));
     await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
 
-    final bleach = find.byKey(const ValueKey('look-base:bleachBypass'));
-    await tester.scrollUntilVisible(
-      bleach,
-      120,
-      scrollable: find.descendant(
-        of: find.byKey(const Key('look-bases')),
-        matching: find.byType(Scrollable),
-      ),
-    );
-    await tapWhenReady(tester, bleach);
+    // Positive Film is the 7th of the camera's 14 base images, and Bleach
+    // Bypass the one after it.
+    expect(_inBases('Positive Film'), findsOneWidget);
+    expect(_inBases('7 of 14'), findsOneWidget);
+    await tapWhenReady(tester, find.byKey(const Key('look-base-next')));
+    expect(_inBases('Bleach Bypass'), findsOneWidget);
+    expect(_inBases('8 of 14'), findsOneWidget);
     await tapWhenReady(
       tester,
       find.descendant(
@@ -183,6 +204,9 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(_inBases('Positive Film'), findsOneWidget);
+    expect(_inBases('1 of 7'), findsNothing, reason: 'not one of the 7');
+    await _openBases(tester);
     expect(
       find.byKey(const ValueKey('look-base:positiveFilm')),
       findsNothing,
@@ -192,6 +216,11 @@ void main() {
     await tapWhenReady(
       tester,
       find.byKey(const ValueKey('look-base:standardMono')),
+    );
+    await pumpUntil(
+      tester,
+      () => find.byKey(const Key('look-not-offered')).evaluate().isEmpty,
+      reason: 'a base the camera offers',
     );
     expect(find.byKey(const Key('look-not-offered')), findsNothing);
     await tapWhenReady(tester, load);
@@ -247,10 +276,10 @@ void main() {
     );
     await tapWhenReady(tester, _inSlot(1, 'Tokyo Night'));
     await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
-    await tapWhenReady(
-      tester,
-      find.byKey(const ValueKey('look-base:standardMono')),
-    );
+    // Positive Film is not one of this camera's base images: the arrow
+    // forward goes to the first of them.
+    await tapWhenReady(tester, find.byKey(const Key('look-base-next')));
+    expect(_inBases('1 of 7'), findsOneWidget);
     await tapWhenReady(tester, find.byKey(const Key('look-load')));
     await tapWhenReady(tester, find.byKey(const Key('looks-load-confirm')));
     await pumpUntilFound(tester, find.text('Loaded Tokyo Night into C1'));
@@ -341,6 +370,7 @@ void main() {
     await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
     expect(find.byKey(const Key('look-load')), findsNothing);
     expect(find.byKey(const Key('look-not-offered')), findsNothing);
+    await _openBases(tester);
     expect(find.byKey(const ValueKey('look-base:vivid')), findsNothing);
     await tapWhenReady(
       tester,
@@ -353,6 +383,7 @@ void main() {
     await tester.pageBack();
     await tapWhenReady(tester, find.byKey(const Key('looks-new')));
     await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
+    await _openBases(tester);
     expect(
       find.byKey(const ValueKey('look-base:standardMono')),
       findsOneWidget,
@@ -448,7 +479,7 @@ void main() {
     await open(plain);
     expect(note, findsNothing);
     expect(previewed(), isNot(isA<AssetImage>()));
-    await tapWhenReady(tester, find.byKey(const ValueKey('look-base:vivid')));
+    await _pickBase(tester, LookBase.vivid);
     expect(note, findsNothing, reason: 'a Standard photo suits every look');
     expect(preview().look.base, LookBase.vivid);
     expect(
@@ -499,7 +530,7 @@ void main() {
     );
     expect(asTaken, findsNothing);
     // Under a look it has nothing to offer, it is shown as it was taken.
-    await tapWhenReady(tester, find.byKey(const ValueKey('look-base:vivid')));
+    await _pickBase(tester, LookBase.vivid);
     await pumpUntilFound(
       tester,
       noteSaying(
@@ -526,7 +557,7 @@ void main() {
 
     // The same photo under a colour look from the start: the sample too.
     await open(grey);
-    await tapWhenReady(tester, find.byKey(const ValueKey('look-base:vivid')));
+    await _pickBase(tester, LookBase.vivid);
     await pumpRounds(tester, 3);
     expect(noteSaying(startsOnSample), findsOneWidget);
     expect(previewed(), isA<AssetImage>());
@@ -683,11 +714,10 @@ void main() {
     ('half a phone, as in split screen', Size(360, 330)),
     ('a phone held on its side', Size(844, 390)),
   ]) {
-    testWidgets('on $name a tap on the preview, or its button, gives it the '
-        'whole screen with the choice of photo and of comparison and '
-        'nothing else; its button or Back brings the editor back as it was', (
-      tester,
-    ) async {
+    testWidgets("on $name the preview's button grows it to the whole screen, "
+        'with the choice of photo and of comparison and nothing else, and '
+        'a tap on its pictures does not; its button or Back brings the '
+        'editor back as it was', (tester) async {
       final modes = <Object?>[];
       final messenger = tester.binding.defaultBinaryMessenger
         ..setMockMethodCallHandler(SystemChannels.platform, (call) async {
@@ -726,6 +756,12 @@ void main() {
           )
           .position;
       LookCompare shown() => tester.widget<LookCompare>(compare);
+      // Lets the preview get to the whole screen or back to its place.
+      Future<void> arrive() async {
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pump();
+      }
 
       await tester.drag(list, const Offset(0, -60));
       await tester.pump();
@@ -737,22 +773,40 @@ void main() {
       expect(modes, isEmpty);
 
       // Where the picture is: half the preview is scrolled away on the
-      // shortest screen.
+      // shortest screen. A tap there is the comparison's own.
       await tester.tapAt(inEditor.bottomCenter - const Offset(40, 40));
+      await tester.pump();
+      expect(modes, isEmpty);
+      expect(find.byType(AppBar), findsOneWidget);
+      expect(tester.getRect(compare), inEditor);
+
+      await tester.tap(button);
       await tester.pump();
       expect(tester.takeException(), isNull);
       expect(modes, ['SystemUiMode.immersiveSticky']);
+      expect(
+        tester.getRect(compare),
+        rectMoreOrLessEquals(inEditor),
+        reason: 'it sets off from its place',
+      );
+      await tester.pump(const Duration(milliseconds: 150));
+      final midway = tester.getSize(compare).height;
+      expect(midway, greaterThan(inEditor.height), reason: 'it grows');
+      expect(find.byType(AppBar), findsOneWidget, reason: 'over the editor');
+      await arrive();
+      expect(tester.takeException(), isNull);
       expect(find.byType(AppBar), findsNothing);
       expect(save.hitTestable(), findsNothing);
       expect(tester.state(compare), same(state), reason: 'its picture kept');
       expect(tester.getSize(compare).width, size.width);
+      expect(tester.getSize(compare).height, greaterThan(midway));
       expect(tester.getSize(compare).height, greaterThan(size.height - 100));
       expect(find.byTooltip('Exit full screen'), findsOneWidget);
       expect(find.byTooltip('Full screen'), findsNothing);
       expect(find.byType(PreviewPhotoSwitch).hitTestable(), findsOneWidget);
       expect(find.byType(LookCompareModeSwitch).hitTestable(), findsOneWidget);
 
-      // There a tap on the picture is the comparison's own again.
+      // There too a tap on the picture is the comparison's own.
       await tester.tap(find.byKey(const ValueKey('look-compare:single')));
       await tester.pump();
       expect(find.text('APPROXIMATE'), findsOneWidget);
@@ -773,15 +827,16 @@ void main() {
         'SystemUiMode.edgeToEdge',
       ]);
       expect(find.byType(AppBar), findsOneWidget);
+      expect(find.byTooltip('Full screen'), findsOneWidget);
+      await arrive();
       expect(tester.state(compare), same(state));
       expect(tester.getRect(compare), inEditor);
       expect(shown().mode, LookCompareMode.single);
       expect(shown().photo, same(sample));
       expect(scroll().pixels, scrolled, reason: 'the controls where they were');
-      expect(find.byTooltip('Full screen'), findsOneWidget);
 
       await tester.tap(button);
-      await tester.pump();
+      await arrive();
       expect(find.byType(AppBar), findsNothing);
       expect(modes.last, 'SystemUiMode.immersiveSticky');
       await tester.binding.handlePopRoute();
@@ -827,6 +882,30 @@ void main() {
     expect(find.byType(LookCompareModeSwitch).hitTestable(), findsOneWidget);
     await app.dispose();
     expect(modes, ['SystemUiMode.immersiveSticky', 'SystemUiMode.edgeToEdge']);
+  });
+
+  testWidgets('where the phone asks for less motion the preview has the '
+      'whole screen, and is back in its place, at once', (tester) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    final app = await _start(tester, saveCamera: false);
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+    await tapWhenReady(tester, find.byKey(const Key('looks-new')));
+    await _editorOpen(tester);
+    final compare = find.byType(LookCompare);
+    final button = find.byKey(const Key('look-preview-fullscreen'));
+    final inEditor = tester.getRect(compare);
+
+    await tester.tap(button);
+    await tester.pump();
+    expect(find.byType(AppBar), findsNothing);
+    expect(tester.getSize(compare).height, greaterThan(inEditor.height));
+    await tester.tap(button);
+    await tester.pump();
+    expect(find.byType(AppBar), findsOneWidget);
+    expect(tester.getRect(compare), inEditor);
+    await app.dispose();
   });
 
   // The second is as tall as a screen can be before the preview stays in
@@ -909,14 +988,14 @@ void main() {
         lessThanOrEqualTo(tester.getRect(bases).left),
       );
       expect(tester.getRect(compare).width, greaterThan(size.width * .4));
-      expect(tester.getRect(save).left, tester.getRect(bases).left + 16);
+      expect(tester.getRect(save).left, tester.getRect(bases).left);
       expect((Offset.zero & size).contains(tester.getRect(save).center), true);
 
       await tapWhenReady(
         tester,
         find.byKey(const ValueKey('look-compare:sideBySide')),
       );
-      await tapWhenReady(tester, find.byKey(const ValueKey('look-base:vivid')));
+      await _pickBase(tester, LookBase.vivid);
       final state = tester.state(compare);
       tester.view.physicalSize = size.flipped;
       await tester.pump();
@@ -935,18 +1014,81 @@ void main() {
     });
   }
 
-  testWidgets('the editor opens with the base image of its look in view, '
-      'however far along the row it is', (tester) async {
+  testWidgets("the look's base image is stepped through with the arrows, "
+      'as far as the first and the last; their list marks it, and closing '
+      'the list without picking leaves it', (tester) async {
     final app = await _inLooks(tester);
     await tapWhenReady(tester, _inSlot(3, 'Soft Summer'));
     await _editorOpen(tester);
+    final next = find.byKey(const Key('look-base-next'));
+    final list = find.byKey(const Key('look-base-list'));
+    expect(_inBases('Negative Film'), findsOneWidget);
+    expect(_inBases('11 of 14'), findsOneWidget);
 
-    final bases = tester.getRect(find.byKey(const Key('look-bases')));
-    final opened = tester.getRect(
-      find.byKey(const ValueKey('look-base:negativeFilm')),
+    await _openBases(tester);
+    expect(
+      tester.getSemantics(find.byKey(const ValueKey('look-base:negativeFilm'))),
+      isSemantics(isSelected: true),
     );
-    expect(opened.left, greaterThanOrEqualTo(bases.left));
-    expect(opened.right, lessThanOrEqualTo(bases.right));
+    expect(
+      tester.getSemantics(find.byKey(const ValueKey('look-base:retro'))),
+      isSemantics(isSelected: false),
+    );
+    // Above the list.
+    await tester.tapAt(const Offset(20, 20));
+    await pumpUntil(
+      tester,
+      () => list.evaluate().isEmpty,
+      reason: 'the list of base images closed',
+    );
+    expect(_inBases('Negative Film'), findsOneWidget);
+
+    await tapWhenReady(tester, find.byKey(const Key('look-base-previous')));
+    expect(_inBases('HDR Tone'), findsOneWidget);
+    expect(_inBases('10 of 14'), findsOneWidget);
+    for (var i = 0; i < 4; i++) {
+      await tapWhenReady(tester, next);
+    }
+    expect(_inBases('Cross Processing'), findsOneWidget);
+    expect(_inBases('14 of 14'), findsOneWidget);
+    // No base image comes after the last.
+    await tapWhenReady(tester, next);
+    expect(_inBases('Cross Processing'), findsOneWidget);
+    await app.dispose();
+  });
+
+  testWidgets('on a camera a look opened from the library has Save alone, '
+      'and its menu loads it into any slot; opened from a slot it loads '
+      'into that slot', (tester) async {
+    final app = await _inLooks(tester);
+    // The slots have been read: a look can be loaded.
+    await pumpUntilFound(tester, _inSlot(1, 'Tokyo Night'));
+    final saved = (await tester.runAsync(
+      () => app.models.looks.add(
+        name: 'Plain',
+        data: _slotLook(app, 1).withBase(LookBase.vivid).toBytes(),
+      ),
+    ))!;
+    await tapWhenReady(tester, find.byKey(ValueKey('look:${saved.id}')));
+    await _editorOpen(tester);
+    expect(find.byKey(const Key('look-load')), findsNothing);
+    await tapWhenReady(tester, find.byKey(const Key('look-editor-menu')));
+    await tapWhenReady(tester, find.text('Load into C3'));
+    await tapWhenReady(tester, find.byKey(const Key('looks-load-confirm')));
+    await pumpUntilFound(tester, find.text('Loaded Plain into C3'));
+    expect(_slotLook(app, 3).base, LookBase.vivid);
+
+    await tester.pageBack();
+    await tapWhenReady(tester, _inSlot(2, 'Daido'));
+    final load = find.byKey(const Key('look-load'));
+    await pumpUntilFound(tester, load);
+    expect(
+      find.descendant(of: load, matching: find.text('Load into C2')),
+      findsOneWidget,
+    );
+    await tapWhenReady(tester, load);
+    await tapWhenReady(tester, find.byKey(const Key('looks-load-confirm')));
+    await pumpUntilFound(tester, find.text('Loaded Daido into C2'));
     await app.dispose();
   });
 
@@ -1034,7 +1176,7 @@ void main() {
       "Another look, Plain, has the same settings. Two looks can't have the "
       'same settings.',
     );
-    await tapWhenReady(tester, find.byKey(const ValueKey('look-base:vivid')));
+    await _pickBase(tester, LookBase.vivid);
     await saveAs('Plain');
     await dismiss(
       'Another look is already named Plain. Give this look a different name.',

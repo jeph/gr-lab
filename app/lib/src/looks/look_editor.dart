@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:gr_camera/gr_camera.dart';
 
 import 'package:grlab/l10n/l10n.dart';
+import 'package:grlab/src/looks/look_base_stepper.dart';
 import 'package:grlab/src/looks/look_compare.dart';
 import 'package:grlab/src/looks/look_spec.dart';
 import 'package:grlab/src/looks/look_widgets.dart';
@@ -16,15 +17,16 @@ import 'package:grlab/src/shoot/shoot_widgets.dart';
 import 'package:grlab/src/theme/tokens.dart';
 
 /// Opens the editor on [look] under [name]. [saved] is the library entry
-/// it edits, if any; [target] is the slot its main action loads it into;
-/// [source] says where a look that is not saved yet came from (a slot).
+/// it edits, if any; [slot] is the Custom slot it was opened from, which
+/// its Load button loads into; [source] says where a look that is not
+/// saved yet came from (a slot).
 Future<void> openLookEditor(
   BuildContext context, {
   required LooksModel model,
   required String name,
   required Look look,
-  required int target,
   SavedLook? saved,
+  int? slot,
   String? source,
 }) => Navigator.of(context).push(
   MaterialPageRoute<void>(
@@ -33,7 +35,7 @@ Future<void> openLookEditor(
       name: name,
       look: look,
       saved: saved,
-      target: target,
+      slot: slot,
       source: source,
     ),
   ),
@@ -50,26 +52,26 @@ Future<void> openNewLook(BuildContext context, LooksModel model) async {
     model: model,
     name: baseLabel(context.l10n, base),
     look: Look.onBase(base, template: template),
-    target: 1,
   );
 }
 
 /// The look editor (mock `b-look-edit`): a photo before and under the look
-/// ([LookCompare]), the base image, its parameters grouped as Tone, Colour,
-/// Detail and Effects, then Save and, on a camera's Looks page, Load into
-/// the slot. The preview sits above the controls, beside them where the
-/// screen is wider than it is tall, and scrolls with them where it is too
-/// short for both \[design\]. A tap on it, or its button, gives it the
-/// whole screen, with the choice of photo and of comparison and nothing
-/// else.
+/// ([LookCompare]), the base image ([LookBaseStepper]), its parameters
+/// grouped as Tone, Colour, Detail and Effects, then Save and, when it was
+/// opened from a Custom slot, Load into that slot. The preview sits above
+/// the controls, beside them where the screen is wider than it is tall,
+/// and scrolls with them where it is too short for both \[design\]. Its
+/// button grows it to the whole screen, with the choice of photo and of
+/// comparison and nothing else; a tap on its pictures is the comparison's
+/// own there and in its place \[design\].
 class LookEditor extends StatefulWidget {
   const new({
     required this.model,
     required this.name,
     required this.look,
-    required this.target,
     super.key,
     this.saved,
+    this.slot,
     this.source,
   });
 
@@ -77,7 +79,11 @@ class LookEditor extends StatefulWidget {
   final String name;
   final Look look;
   final SavedLook? saved;
-  final int target;
+
+  /// The Custom slot (1–3) the editor was opened from; null when it was
+  /// opened from the library or on a new look.
+  final int? slot;
+
   final String? source;
 
   @override
@@ -86,40 +92,33 @@ class LookEditor extends StatefulWidget {
 
 enum _EditorAction { rename, load1, load2, load3, delete }
 
-class _LookEditorState extends State<LookEditor> {
+class _LookEditorState extends State<LookEditor>
+    with SingleTickerProviderStateMixin {
   late Look _look = widget.look;
   late String _name = widget.name;
   late SavedLook? _saved = widget.saved;
-  late int _target = widget.target;
   LookGroup? _group;
 
-  /// The chip of the base the editor opened on, scrolled into view once
-  /// along its row.
-  final GlobalKey _openedBase = GlobalKey();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final chip = _openedBase.currentContext;
-      if (chip == null) return;
-      // The row of base images only: `Scrollable.ensureVisible` would also
-      // scroll the list the row is in when the preview scrolls with the
-      // controls, and open the editor past its preview.
-      Scrollable.of(chip).position
-          .ensureVisible(chip.findRenderObject()!, alignment: .5);
-    });
-  }
+  /// How far the preview is on its way to the whole screen: 0 in its place
+  /// in the editor, 1 with the whole screen. The editor is rebuilt when it
+  /// sets off and when it arrives, which is when the preview changes
+  /// parents.
+  late final AnimationController _expansion = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 300),
+  )..addStatusListener((_) => setState(() {}));
 
   @override
   void dispose() {
     if (_fullscreen) _showSystemBars();
+    _expansion.dispose();
     super.dispose();
   }
 
   void _enterFullscreen() {
     if (_fullscreen) return;
     setState(() => _fullscreen = true);
+    _expand(to: 1);
     unawaited(
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
     );
@@ -128,7 +127,20 @@ class _LookEditorState extends State<LookEditor> {
   void _leaveFullscreen() {
     if (!_fullscreen) return;
     setState(() => _fullscreen = false);
+    _expand(to: 0);
     _showSystemBars();
+  }
+
+  /// Grows the preview to the whole screen ([to] 1) or shrinks it back to
+  /// its place ([to] 0); at once where the phone asks for less motion.
+  void _expand({required double to}) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _expansion.value = to;
+    } else if (to == 0) {
+      _expansion.reverse();
+    } else {
+      _expansion.forward();
+    }
   }
 
   /// Brings back the status and navigation bars, as the rest of the app
@@ -168,14 +180,20 @@ class _LookEditorState extends State<LookEditor> {
 
   LookCompareMode _mode = LookCompareMode.slide;
 
-  /// The preview has the whole screen: the editor's bar and controls and
-  /// the system's bars are hidden.
+  /// The preview has the whole screen or is on its way there: the system's
+  /// bars are hidden, and Back brings the editor back before it closes it.
   bool _fullscreen = false;
 
   /// The preview and the controls keep their state when the screen turns
-  /// and they change places.
+  /// and they change places, and the preview when it leaves its place for
+  /// the whole screen.
   final GlobalKey _previewKey = GlobalKey();
   final GlobalKey _controlsKey = GlobalKey();
+
+  /// The preview's place in the editor and the box the editor fills, for
+  /// working out where on the screen that place is.
+  final GlobalKey _placeKey = GlobalKey();
+  final GlobalKey _stageKey = GlobalKey();
 
   /// [photo] no larger than the picture the renderer's effects come out
   /// best on.
@@ -235,15 +253,19 @@ class _LookEditorState extends State<LookEditor> {
     showLooksMessage(messenger, l10n.looksSaved(name));
   }
 
-  Future<void> _load(int number) async {
-    setState(() => _target = number);
-    await confirmAndLoad(
+  Future<void> _load(int number) =>
+      confirmAndLoad(context, _model, name: _name, look: _look, number: number);
+
+  void _setBase(LookBase base) => setState(() => _look = _look.withBase(base));
+
+  /// Lists [bases] in a sheet and moves the look to the one picked.
+  Future<void> _pickBase(List<LookBase> bases) async {
+    final picked = await showLookBaseList(
       context,
-      _model,
-      name: _name,
-      look: _look,
-      number: number,
+      bases: bases,
+      selected: _look.base,
     );
+    if (picked != null && mounted) _setBase(picked);
   }
 
   Future<void> _act(_EditorAction action) async {
@@ -277,62 +299,105 @@ class _LookEditorState extends State<LookEditor> {
     listenable: _model,
     builder: (context, _) {
       final canLoad = _model.canLoad(_look);
-      final chosen = GrColors.of(context);
       // The same under either parent, so that it keeps its state when it
       // moves between them.
       final preview = KeyedSubtree(
         key: _previewKey,
         child: Builder(builder: _preview),
       );
-      final editor = SafeArea(
-        top: false,
-        bottom: false,
-        child: LayoutBuilder(
-          builder: (context, box) => _layout(
-            context,
-            box,
-            // Away while it has the whole screen.
-            preview: _fullscreen ? const SizedBox.shrink() : preview,
-            canLoad: canLoad,
-          ),
-        ),
-      );
+      final inPlace = _expansion.isDismissed;
       return PopScope(
         canPop: !_fullscreen,
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop) _leaveFullscreen();
         },
-        child: Scaffold(
-          key: const Key('look-editor'),
-          backgroundColor: _fullscreen ? Colors.black : null,
-          appBar: _fullscreen ? null : _bar(context, canLoad: canLoad),
-          body: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Out of sight under a preview that has the whole screen,
-              // the controls keep their state: where they were scrolled
-              // to, above all.
-              Offstage(offstage: _fullscreen, child: editor),
-              if (_fullscreen)
-                Theme(
-                  // Dark around the pictures: the app's theme when it is
-                  // a dark one, as the live view page does.
-                  data: grTheme(
-                    chosen.brightness == Brightness.dark
-                        ? chosen
-                        : GrColors.dark,
-                  ),
-                  child: SafeArea(
-                    minimum: const EdgeInsets.only(bottom: 12),
-                    child: preview,
+        child: Stack(
+          key: _stageKey,
+          fit: StackFit.expand,
+          children: [
+            // Out of sight under a preview that has the whole screen, the
+            // editor keeps its state: where its controls were scrolled to,
+            // above all.
+            Offstage(
+              offstage: _expansion.isCompleted,
+              child: Scaffold(
+                key: const Key('look-editor'),
+                appBar: _bar(context, canLoad: canLoad),
+                body: SafeArea(
+                  top: false,
+                  bottom: false,
+                  child: LayoutBuilder(
+                    builder: (context, box) => _layout(
+                      context,
+                      box,
+                      // Its place keeps its size while it is away.
+                      preview: KeyedSubtree(
+                        key: _placeKey,
+                        child: inPlace ? preview : const SizedBox.expand(),
+                      ),
+                      canLoad: canLoad,
+                    ),
                   ),
                 ),
-            ],
-          ),
+              ),
+            ),
+            if (!inPlace) _expanding(context, preview),
+          ],
         ),
       );
     },
   );
+
+  /// [preview] over the editor, between its place there and the whole
+  /// screen or with the whole screen, on black that covers the editor as
+  /// the preview grows \[design\].
+  Widget _expanding(BuildContext context, Widget preview) {
+    final app = Theme.of(context);
+    // Dark around the pictures: the app's theme when it is a dark one, as
+    // the live view page does.
+    final dark = app.brightness == Brightness.dark
+        ? app
+        : grTheme(GrColors.dark);
+    final insets = MediaQuery.paddingOf(context);
+    return AnimatedBuilder(
+      animation: _expansion,
+      // Laid out after the editor, so the preview's place is where this
+      // frame has it: it moves when the system's bars come and go.
+      builder: (context, _) => LayoutBuilder(
+        builder: (context, box) {
+          final grown = Curves.easeInOutCubic.transform(_expansion.value);
+          final whole = insets
+              .copyWith(bottom: math.max(insets.bottom, 12))
+              .deflateRect(Offset.zero & box.biggest);
+          return Theme(
+            data: grown < .5 ? app : dark,
+            child: Material(
+              color: Colors.black.withValues(alpha: grown),
+              child: Stack(
+                children: [
+                  Positioned.fromRect(
+                    rect: Rect.lerp(_placeOnScreen() ?? whole, whole, grown)!,
+                    child: preview,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Where on the screen the preview's place in the editor is; null until
+  /// the editor has been laid out.
+  Rect? _placeOnScreen() {
+    final place = _placeKey.currentContext?.findRenderObject();
+    final stage = _stageKey.currentContext?.findRenderObject();
+    if (place is! RenderBox || stage is! RenderBox || !place.hasSize) {
+      return null;
+    }
+    return place.localToGlobal(Offset.zero, ancestor: stage) & place.size;
+  }
 
   /// The look's name, the way back and the menu of what else to do with
   /// the look.
@@ -492,8 +557,6 @@ class _LookEditorState extends State<LookEditor> {
             // preview: it is shown as it was taken.
             look: fit == LookSourceFit.unusable ? null : _look,
             mode: _mode,
-            onTap: _fullscreen ? null : _enterFullscreen,
-            onTapHint: l10n.looksPreviewFullScreen,
           ),
         ),
         // Above the switches, so they stay where they are when the note
@@ -561,29 +624,17 @@ class _LookEditorState extends State<LookEditor> {
         if (params.any((p) => groupOf(p) == g)) g,
     ];
     final group = groups.contains(_group) ? _group! : groups.firstOrNull;
-    final save = _unsaved ? () => unawaited(_save()) : null;
+    final bases = _model.basesFor(_look);
     final header = [
-      SingleChildScrollView(
-        key: const Key('look-bases'),
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-        child: SizedBox(
-          height: 40,
-          child: Row(
-            children: [
-              for (final b in _model.basesFor(_look))
-                Padding(
-                  key: b == widget.look.base ? _openedBase : null,
-                  padding: const EdgeInsets.only(right: 8),
-                  child: _BaseChip(
-                    key: ValueKey('look-base:${b.name}'),
-                    label: baseLabel(l10n, b),
-                    selected: base == b,
-                    onTap: () => setState(() => _look = _look.withBase(b)),
-                  ),
-                ),
-            ],
-          ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: LookBaseStepper(
+          key: const Key('look-bases'),
+          name: lookBaseLabel(l10n, _look),
+          bases: bases,
+          selected: base,
+          onSelect: _setBase,
+          onList: () => unawaited(_pickBase(bases)),
         ),
       ),
       if (group != null)
@@ -645,47 +696,7 @@ class _LookEditorState extends State<LookEditor> {
               right: false,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-                child: _model.onCamera
-                    ? Row(
-                        children: [
-                          Expanded(
-                            flex: 5,
-                            child: OutlinedButton(
-                              key: const Key('look-save'),
-                              onPressed: save,
-                              child: Text(l10n.looksSave),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            flex: 8,
-                            child: FilledButton.icon(
-                              key: const Key('look-load'),
-                              onPressed: canLoad
-                                  ? () => unawaited(_load(_target))
-                                  : null,
-                              icon: _model.loading == _target
-                                  ? const SizedBox.square(
-                                      dimension: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Icon(Icons.upload_rounded, size: 18),
-                              label: Text(l10n.looksLoadInto(_target)),
-                            ),
-                          ),
-                        ],
-                      )
-                    // Saving is all a look can do away from a camera.
-                    : SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          key: const Key('look-save'),
-                          onPressed: save,
-                          child: Text(l10n.looksSave),
-                        ),
-                      ),
+                child: _actions(context, canLoad: canLoad),
               ),
             ),
           ],
@@ -693,46 +704,50 @@ class _LookEditorState extends State<LookEditor> {
       },
     );
   }
-}
 
-class _BaseChip extends StatelessWidget {
-  const new({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    super.key,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = GrColors.of(context);
-    return Material(
-      color: selected ? c.invBg : c.s2,
-      shape: StadiumBorder(
-        side: BorderSide(color: selected ? Colors.transparent : c.line),
-      ),
-      child: InkWell(
-        customBorder: const StadiumBorder(),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Center(
-            widthFactor: 1,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 13.5,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                color: selected ? c.invFg : c.t2,
-              ),
-            ),
+  /// Save and, in an editor opened from a Custom slot, Load into that
+  /// slot. Opened from the library the look has Save alone: it may be
+  /// meant for any slot, and the menu loads it into each \[design\].
+  Widget _actions(BuildContext context, {required bool canLoad}) {
+    final l10n = context.l10n;
+    final save = _unsaved ? () => unawaited(_save()) : null;
+    final slot = widget.slot;
+    if (slot == null) {
+      return SizedBox(
+        width: double.infinity,
+        child: FilledButton(
+          key: const Key('look-save'),
+          onPressed: save,
+          child: Text(l10n.looksSave),
+        ),
+      );
+    }
+    return Row(
+      children: [
+        Expanded(
+          flex: 5,
+          child: OutlinedButton(
+            key: const Key('look-save'),
+            onPressed: save,
+            child: Text(l10n.looksSave),
           ),
         ),
-      ),
+        const SizedBox(width: 10),
+        Expanded(
+          flex: 8,
+          child: FilledButton.icon(
+            key: const Key('look-load'),
+            onPressed: canLoad ? () => unawaited(_load(slot)) : null,
+            icon: _model.loading == slot
+                ? const SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.upload_rounded, size: 18),
+            label: Text(l10n.looksLoadInto(slot)),
+          ),
+        ),
+      ],
     );
   }
 }

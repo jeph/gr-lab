@@ -359,7 +359,7 @@ class _SlotCard extends StatelessWidget {
                       name: slot.name,
                       look: look,
                       saved: saved,
-                      target: number,
+                      slot: number,
                       source: saved == null
                           ? l10n.looksSlotShort(number)
                           : null,
@@ -452,7 +452,6 @@ class _LookRow extends StatelessWidget {
           name: saved.name,
           look: look,
           saved: saved,
-          target: inSlots.firstOrNull ?? 1,
         ),
       ),
       child: model.onCamera
@@ -637,7 +636,6 @@ class _LookMenu extends StatelessWidget {
           name: saved.name,
           look: look,
           saved: saved,
-          target: model.slotsHolding(saved).firstOrNull ?? 1,
         );
       case _LookAction.load1 || _LookAction.load2 || _LookAction.load3:
         if (look == null) return;
