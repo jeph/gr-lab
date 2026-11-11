@@ -324,14 +324,13 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = this.progress;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const CameraTopBar(showSettings: false),
         PageTitle(
           context.l10n.libraryTitle,
-          status: progress == null ? null : _Progress(progress),
+          status: _Progress(progress),
           actions: const [SettingsButton()],
         ),
       ],
@@ -340,26 +339,38 @@ class _Header extends StatelessWidget {
 }
 
 /// A spinner and what it waits for, beside the title: there it comes and
-/// goes without moving the photos.
+/// goes without moving the photos. Where the title leaves less than its
+/// width, the text is scaled down and the spinner keeps its size.
 class _Progress extends StatelessWidget {
   const new(this.text);
 
-  final String text;
+  /// Nothing shows while this is null.
+  final String? text;
 
   @override
   Widget build(BuildContext context) {
+    final text = this.text;
+    if (text == null) return const SizedBox.shrink();
     final c = GrColors.of(context);
     return Row(
       key: const Key('library-progress'),
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          width: 12,
-          height: 12,
+          width: PageTitle.minStatusWidth,
+          height: PageTitle.minStatusWidth,
           child: CircularProgressIndicator(strokeWidth: 1.6, color: c.t2),
         ),
-        const SizedBox(width: 8),
-        Text(text, style: TextStyle(fontSize: 13, color: c.t2)),
+        Flexible(
+          child: Padding(
+            padding: const EdgeInsetsDirectional.only(start: 8),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(text, style: TextStyle(fontSize: 13, color: c.t2)),
+            ),
+          ),
+        ),
       ],
     );
   }

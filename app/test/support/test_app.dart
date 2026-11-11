@@ -250,7 +250,9 @@ Future<void> pumpUntilFound(
 }) => pumpUntil(
   tester,
   () => finder.evaluate().isNotEmpty,
-  reason: '$finder',
+  // Not '$finder': that lists what the finder last matched, which for a
+  // finder shared between tests are the elements of a test that ended.
+  reason: finder.describeMatch(Plurality.many),
   timeout: timeout,
 );
 

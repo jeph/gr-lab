@@ -850,6 +850,62 @@ void main() {
     await app.dispose();
   });
 
+  testWidgets('with text so large that the Library title fills its row, '
+      'Updating… keeps its spinner and leaves the photos where they are', (
+    tester,
+  ) async {
+    tester.view
+      ..physicalSize = const Size(1170, 2532)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final app = (await tester.runAsync(
+      () => createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+      ),
+    ))!;
+    await app.pumpApp(tester);
+    await _openLibrary(tester);
+    await pumpUntilFound(tester, _thumbs);
+    final progress = find.byKey(const Key('library-progress'));
+    final chips = find.byKey(const ValueKey('chip:all'));
+    await pumpUntil(
+      tester,
+      () => progress.evaluate().isEmpty,
+      reason: 'the first update to end',
+    );
+    final settled = tester.getTopLeft(chips);
+
+    unawaited(app.models.library.model.refresh());
+    await tester.pump();
+    final spinner = tester.getRect(
+      find.descendant(
+        of: progress,
+        matching: find.byType(CircularProgressIndicator),
+      ),
+    );
+    final title = tester.getRect(
+      find.descendant(
+        of: find.byType(PageTitle),
+        matching: find.text('Library'),
+      ),
+    );
+    final settings = tester.getRect(find.byKey(const Key('camera-settings')));
+    expect(spinner.size, const Size(12, 12));
+    expect(spinner.left, greaterThan(title.right));
+    expect(spinner.right, lessThan(settings.left));
+    expect(tester.getTopLeft(chips), settled);
+
+    await pumpUntil(
+      tester,
+      () => progress.evaluate().isEmpty,
+      reason: 'the update to end',
+    );
+    await app.dispose();
+  });
+
   testWidgets('Play cannot be tapped again while the camera confirms the '
       'movie', (tester) async {
     final app = (await tester.runAsync(

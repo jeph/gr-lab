@@ -166,10 +166,20 @@ class PageTitle extends StatelessWidget {
   final String text;
 
   /// A state that comes and goes, such as the Library's Updating…. Beside
-  /// the title it leaves the rest of the page where it is. It gets the
-  /// width the title leaves and is scaled down to fit that \[design\]: a
-  /// status on a line of its own would move the page.
+  /// the title it leaves the rest of the page where it is \[design\]: a
+  /// status on a line of its own would move the page. It gets the width the
+  /// title leaves, never less than [minStatusWidth], and has to fit that.
+  ///
+  /// A page passes its status widget in every state, showing nothing in it
+  /// between times: a title that had the whole row until the status came
+  /// could wrap then, and move the page after all.
   final Widget? status;
+
+  /// The width [status] always has: room for a spinner.
+  static const minStatusWidth = 12.0;
+
+  /// Between the title and [status].
+  static const _statusGap = 12.0;
 
   /// Buttons at the end of the row, such as [SettingsButton].
   final List<Widget> actions;
@@ -196,18 +206,23 @@ class PageTitle extends StatelessWidget {
                     builder: (context, row) => Row(
                       children: [
                         // A Row lets a child like this be as wide as it
-                        // likes; a long title still wraps in the row.
+                        // likes; a long title still wraps, in the row less
+                        // the status's room.
                         ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: row.maxWidth),
+                          constraints: BoxConstraints(
+                            maxWidth: math.max(
+                              0,
+                              row.maxWidth - _statusGap - minStatusWidth,
+                            ),
+                          ),
                           child: title,
                         ),
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsetsDirectional.only(
-                              start: 12,
+                              start: _statusGap,
                             ),
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
+                            child: Align(
                               alignment: AlignmentDirectional.centerStart,
                               child: status,
                             ),
