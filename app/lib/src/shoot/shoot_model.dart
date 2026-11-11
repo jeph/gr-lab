@@ -121,9 +121,10 @@ final class ShootModel extends ChangeNotifier {
   /// Battery percent, as the session's camera status has it.
   int? get battery => connection.cameraStatus?.battery;
 
-  /// Pictures that fit on the storage in use, as the session's camera
-  /// status has it.
-  int? get shotsLeft => connection.cameraStatus?.shotsLeft;
+  /// The camera's storages, each with the pictures that fit on it, as the
+  /// session's camera status has them.
+  List<CameraStorage> get storages =>
+      connection.cameraStatus?.storages ?? const [];
 
   /// Drive Mode as the camera reports it.
   BleEnumValue<BleDriveMode>? get drive => _remote?.drive;

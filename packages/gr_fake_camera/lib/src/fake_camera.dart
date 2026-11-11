@@ -238,7 +238,7 @@ final class FakeGrCamera {
   /// Mode-dial position (BLE Shooting Mode byte 0).
   BleExposureMode get exposureMode => _exposureMode;
 
-  /// Pictures the active storage still has room for.
+  /// Pictures the storage this camera saves to still has room for.
   int get remainingPictures => _remaining;
 
   /// The user turns the mode dial: BLE Shooting Mode notifies and

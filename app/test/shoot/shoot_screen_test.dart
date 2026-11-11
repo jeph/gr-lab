@@ -63,9 +63,8 @@ String _stat(WidgetTester tester, String key) {
 
 void main() {
   testWidgets('Shoot turns an off camera on for shooting and shows its '
-      'mode, shots left and battery; the shutter takes a picture', (
-    tester,
-  ) async {
+      'mode, the shots left on each storage and its battery; the shutter '
+      'takes a picture', (tester) async {
     final app = await _inShoot(
       tester,
       config: const FakeCameraConfig(bonded: true, poweredOn: false),
@@ -77,11 +76,32 @@ void main() {
     await pumpUntil(
       tester,
       () =>
-          _stat(tester, 'shoot-stat-shots') == '1,234' &&
+          find.byKey(const Key('shoot-stat-shots-sd1')).evaluate().isNotEmpty &&
           _stat(tester, 'shoot-stat-mode') == 'Av',
       reason: 'shots left and mode',
     );
     expect(_stat(tester, 'shoot-stat-battery'), '82%');
+    // The camera does not say which storage it saves to: both show, each
+    // under its name.
+    List<String?> line(String id) => [
+      for (final text in tester.widgetList<Text>(
+        find.descendant(
+          of: find.byKey(Key('shoot-stat-shots-$id')),
+          matching: find.byType(Text),
+        ),
+      ))
+        text.data,
+    ];
+    expect(line('sd1'), ['SD', '1,234']);
+    expect(line('in'), ['Internal', '500']);
+    expect(
+      {
+        for (final key in ['mode', 'shots', 'battery'])
+          tester.getSize(find.byKey(Key('shoot-stat-$key'))).height,
+      },
+      hasLength(1),
+      reason: 'two lines of shots left make all three readouts taller',
+    );
 
     final before = app.camera.photos.length;
     await tester.tap(find.byKey(const Key('shoot-shutter')));
@@ -92,9 +112,10 @@ void main() {
     );
     await pumpUntil(
       tester,
-      () => _stat(tester, 'shoot-stat-shots') == '1,233',
-      reason: 'shots left after the picture',
+      () => _stat(tester, 'shoot-stat-shots-sd1') == '1,233',
+      reason: 'shots left on the card after the picture',
     );
+    expect(line('in'), ['Internal', '500']);
     await app.dispose();
   });
 

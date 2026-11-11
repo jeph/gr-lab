@@ -14,10 +14,21 @@ void main() {
     final status = rig.session.status;
     expect(rig.remote.watching, isFalse);
     await until(
-      () => status.battery == 82 && status.shotsLeft == 1234,
+      () => status.battery == 82 && status.storages.length == 2,
       reason: 'first readings',
     );
-    expect(status.storages.map((s) => s.kind), contains(CameraStorageKind.sd1));
+    // Both storages in the camera's order, each with its own count and
+    // neither marked as the one pictures go to.
+    expect(
+      [
+        for (final s in status.storages)
+          (s.kind, s.remainingPictures, s.active),
+      ],
+      [
+        (CameraStorageKind.internal, 500, null),
+        (CameraStorageKind.sd1, 1234, null),
+      ],
+    );
 
     rig.camera.battery = 40;
     await until(() => status.battery == 40, reason: 'battery notification');

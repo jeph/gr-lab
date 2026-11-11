@@ -174,15 +174,17 @@ extension on FakeGrCamera {
     _countdown.wire,
   ];
 
-  /// Pictures left on [storage]: the active storage holds
-  /// [FakeCameraConfig.remainingPictures].
+  /// Pictures left on [storage]. [FakeCameraConfig.remainingPictures] is
+  /// the count of the storage this camera saves to: the card when one is
+  /// in, as a GR IV on Memory Card Priority does.
   int _remainOn(String storage) =>
       storage == _defaultStorage ? _remaining : _internalRemain;
 
-  /// Storage Information, 14-byte entries as GR WORLD parses them (ble.md
-  /// §Storage information): SD slot 1 when a card is in, then internal
-  /// memory. The storage pictures go to comes first, since the 14-byte form
-  /// has no active flag; a GR IV's order is \[unknown\].
+  /// Storage Information as GR IV firmware 1.20 builds it (ble.md §Storage
+  /// information): 14-byte entries in storage-id order, internal memory
+  /// before SD slot 1, with nothing saying which one pictures go to. What
+  /// a GR IV sends for an empty card slot is \[unknown\]; this camera
+  /// leaves the entry out.
   Uint8List _storageInformation() {
     BleStorageEntry entry(BleStorageType type, String storage, int seconds) =>
         BleStorageEntry(
@@ -197,13 +199,13 @@ extension on FakeGrCamera {
         );
     return GrBleCatalog.storageInformation.codec.encode(
       BleStorageInformation([
-        if (config.sdCard)
-          entry(BleStorageType.sdSlot1, GrStorageId.sd, _sdRecordableTime),
         entry(
           BleStorageType.internalMemory,
           GrStorageId.internal,
           _internalRecordableTime,
         ),
+        if (config.sdCard)
+          entry(BleStorageType.sdSlot1, GrStorageId.sd, _sdRecordableTime),
       ], 14),
     );
   }

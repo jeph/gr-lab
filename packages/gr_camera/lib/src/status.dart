@@ -49,7 +49,9 @@ final class CameraStorage {
   /// The camera can use it; null when the reading does not say.
   final bool? available;
 
-  /// The camera records to it; null when the reading does not say.
+  /// The camera records to it; null when the reading does not say. A GR IV
+  /// never says, over Bluetooth or Wi-Fi: where it saves is its Shooting
+  /// Memory Setting (research/protocol/ble.md §Storage information).
   final bool? active;
 
   /// Still pictures that fit; null when the reading does not say.
@@ -125,20 +127,9 @@ final class CameraStatus extends ChangeNotifier {
   /// Battery percent; null until the camera reported it.
   int? get battery => _battery;
 
-  /// Every storage the camera reported, in its order.
+  /// Every storage the camera reported, in its order (a GR IV: internal
+  /// memory, then the SD card).
   List<CameraStorage> get storages => _storages;
-
-  /// Still pictures that fit on the storage the camera records to: the one
-  /// marked active, else the first one present and usable.
-  int? get shotsLeft {
-    for (final s in _storages) {
-      if (s.active ?? false) return s.remainingPictures;
-    }
-    for (final s in _storages) {
-      if (s.present && s.available != false) return s.remainingPictures;
-    }
-    return null;
-  }
 
   static final _watched = <GrBleCharacteristic<Object>>[
     GrBleCatalog.batteryLevel,

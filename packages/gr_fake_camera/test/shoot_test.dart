@@ -211,6 +211,10 @@ void main() {
       expect((await ble.read(GrBleCatalog.batteryLevel)).value!.level, 82);
       final storage = (await ble.read(GrBleCatalog.storageInformation)).value!;
       expect(storage.entrySize, 14);
+      expect(storage.entries.map((e) => e.type.known), [
+        BleStorageType.internalMemory,
+        BleStorageType.sdSlot1,
+      ], reason: 'storage-id order, as GR IV firmware sends them');
       expect(sdEntry(storage).remainingPictures, 1234);
 
       final dial = <BleShootingMode>[];

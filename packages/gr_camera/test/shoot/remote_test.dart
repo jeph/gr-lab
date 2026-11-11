@@ -27,7 +27,11 @@ void main() {
     remote.watching = true;
     await until(() => remote.exposure != null, reason: 'mode');
     expect(remote.exposure!.mode.known, BleExposureMode.av);
-    await until(() => status.shotsLeft == 1234, reason: 'shots left');
+    int? leftOnCard() => status.storages
+        .where((s) => s.kind == CameraStorageKind.sd1)
+        .firstOrNull
+        ?.remainingPictures;
+    await until(() => leftOnCard() == 1234, reason: 'shots left');
 
     final before = rig.camera.photos.length;
     await remote.shutter();
@@ -35,7 +39,7 @@ void main() {
       () => rig.camera.photos.length == before + 1,
       reason: 'picture taken',
     );
-    await until(() => status.shotsLeft == 1233, reason: 'shots left after');
+    await until(() => leftOnCard() == 1233, reason: 'shots left after');
   });
 
   test('the mode follows the camera only while watched', () async {

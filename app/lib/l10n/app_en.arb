@@ -603,15 +603,15 @@
   },
   "connectionSheetStorageInternal": "Internal",
   "@connectionSheetStorageInternal": {
-    "description": "Label of the camera's internal memory on the storage tile."
+    "description": "Label of the camera's internal memory, before the number of photos that still fit on it: on the camera sheet's storage tile and on the Shoot remote's shots-left readout, which is narrow."
   },
   "connectionSheetStorageSd": "SD",
   "@connectionSheetStorageSd": {
-    "description": "Label of the camera's SD card on the storage tile."
+    "description": "Label of the camera's SD card, before the number of photos that still fit on it: on the camera sheet's storage tile and on the Shoot remote's shots-left readout, which is narrow."
   },
   "connectionSheetStorageUnnamed": "Storage",
   "@connectionSheetStorageUnnamed": {
-    "description": "Label on the storage tile of a storage the camera did not name."
+    "description": "Label of a storage the camera did not name, before the number of photos that still fit on it: on the camera sheet's storage tile and on the Shoot remote's shots-left readout."
   },
   "connectionStepBluetoothConnected": "Connected via Bluetooth",
   "@connectionStepBluetoothConnected": {
@@ -2797,7 +2797,7 @@
   },
   "shootStatShotsLeft": "Shots left",
   "@shootStatShotsLeft": {
-    "description": "Shoot remote readout label (shown in capitals): how many more pictures fit on the card."
+    "description": "Shoot remote readout label (shown in capitals): how many more pictures fit on each of the camera's storages, the SD card and the internal memory."
   },
   "shootTapToCancelTimer": "Tap to cancel the self-timer",
   "@shootTapToCancelTimer": {

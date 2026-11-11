@@ -9,6 +9,7 @@ import 'package:grlab/src/camera/camera_top_bar.dart';
 import 'package:grlab/src/connection/camera_pill.dart' show formatBattery;
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/connection/idle_disconnect.dart' show IdleDisconnect;
+import 'package:grlab/src/connection/storage_counts.dart';
 import 'package:grlab/src/data/settings.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart' show TrailingFit;
 import 'package:grlab/src/shoot/live_view_controller.dart';
@@ -18,7 +19,6 @@ import 'package:grlab/src/shoot/shoot_model.dart';
 import 'package:grlab/src/shoot/shoot_widgets.dart';
 import 'package:grlab/src/theme/tokens.dart';
 import 'package:grlab/src/widgets/group.dart';
-import 'package:intl/intl.dart';
 
 /// Android delivers the volume buttons to the app as key events; iOS does
 /// not, so the hint only promises them on Android.
@@ -235,43 +235,51 @@ class _RemoteView extends StatelessWidget {
   Widget _modeSwitch() =>
       ShootModeSwitch(mode: model.mode, onChanged: (m) => model.mode = m);
 
-  /// The camera's mode, shots left and battery.
+  /// The camera's mode, the shots left on each of its storages and its
+  /// battery, in readouts of one height.
   Widget _stats(BuildContext context) {
     final l10n = context.l10n;
-    final locale = Localizations.localeOf(context).toString();
     final exposure = model.exposure;
-    final shotsLeft = model.shotsLeft;
     final battery = model.battery;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        spacing: 8,
-        children: [
-          Expanded(
-            child: _Stat(
-              key: const Key('shoot-stat-mode'),
-              label: l10n.shootStatMode,
-              value: exposure == null ? '—' : exposureLabel(l10n, exposure),
-              color: GrColors.of(context).accent,
+      child: IntrinsicHeight(
+        child: Row(
+          spacing: 8,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: _Stat(
+                key: const Key('shoot-stat-mode'),
+                label: l10n.shootStatMode,
+                value: _StatText(
+                  exposure == null ? '—' : exposureLabel(l10n, exposure),
+                  color: GrColors.of(context).accent,
+                ),
+              ),
             ),
-          ),
-          Expanded(
-            child: _Stat(
-              key: const Key('shoot-stat-shots'),
-              label: l10n.shootStatShotsLeft,
-              value: shotsLeft == null
-                  ? '—'
-                  : NumberFormat.decimalPattern(locale).format(shotsLeft),
+            Expanded(
+              child: _Stat(
+                key: const Key('shoot-stat-shots'),
+                label: l10n.shootStatShotsLeft,
+                value: StorageCounts(
+                  storages: model.storages,
+                  lineKeyPrefix: 'shoot-stat-shots',
+                  soloSize: _StatText.size,
+                ),
+              ),
             ),
-          ),
-          Expanded(
-            child: _Stat(
-              key: const Key('shoot-stat-battery'),
-              label: l10n.shootStatBattery,
-              value: battery == null ? '—' : formatBattery(context, battery),
+            Expanded(
+              child: _Stat(
+                key: const Key('shoot-stat-battery'),
+                label: l10n.shootStatBattery,
+                value: _StatText(
+                  battery == null ? '—' : formatBattery(context, battery),
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -371,11 +379,10 @@ class _RemoteView extends StatelessWidget {
 
 /// A readout card (mock `.stats`).
 class _Stat extends StatelessWidget {
-  const new({required this.label, required this.value, super.key, this.color});
+  const new({required this.label, required this.value, super.key});
 
   final String label;
-  final String value;
-  final Color? color;
+  final Widget value;
 
   @override
   Widget build(BuildContext context) {
@@ -400,16 +407,33 @@ class _Stat extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GrFonts.monoStyle(context, size: 19, color: color ?? c.t1),
-          ),
+          value,
         ],
       ),
     );
   }
+}
+
+/// A [_Stat]'s value when it is one short text.
+class _StatText extends StatelessWidget {
+  const new(this.text, {this.color});
+
+  static const size = 19.0;
+
+  final String text;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    maxLines: 1,
+    overflow: TextOverflow.ellipsis,
+    style: GrFonts.monoStyle(
+      context,
+      size: size,
+      color: color ?? GrColors.of(context).t1,
+    ),
+  );
 }
 
 /// Under the shutter: what to do, or why it can't be pressed yet.

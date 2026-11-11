@@ -489,9 +489,10 @@ final class FakeCameraConfig {
   /// with a JPEG start and nothing else, which no decoder can show.
   final int brokenPreviews;
 
-  /// Pictures the active storage still has room for: `/v1/props`
-  /// `storages[].remain` and the BLE Storage Information entry's
-  /// remainingPictures. Each capture takes one; at 0 releases are refused.
+  /// Pictures the storage this camera saves to still has room for (the SD
+  /// card when [sdCard], else internal memory): that storage's `/v1/props`
+  /// `storages[].remain` and BLE Storage Information remainingPictures.
+  /// Each capture takes one; at 0 releases are refused.
   final int remainingPictures;
 
   /// Initial position of the mode dial (BLE Shooting Mode, `/v1/props`

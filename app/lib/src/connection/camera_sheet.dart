@@ -8,11 +8,11 @@ import 'package:grlab/src/cameras/camera_identity.dart';
 import 'package:grlab/src/connection/camera_pill.dart';
 import 'package:grlab/src/connection/connect_failure_view.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/connection/storage_counts.dart';
 import 'package:grlab/src/pairing/pairing_flow.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart';
 import 'package:grlab/src/theme/tokens.dart';
 import 'package:grlab/src/widgets/group.dart';
-import 'package:intl/intl.dart';
 
 /// Opens the camera sheet over the current screen.
 Future<void> showCameraSheet(BuildContext context) =>
@@ -254,11 +254,8 @@ class _StatusTiles extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
-    final count = NumberFormat.decimalPattern(
-      Localizations.localeOf(context).toString(),
-    );
     final battery = status?.battery;
-    final storages = _storages(l10n);
+    final storages = status?.storages ?? const <CameraStorage>[];
     return Padding(
       key: const Key('camera-sheet-connected'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -281,75 +278,20 @@ class _StatusTiles extends StatelessWidget {
           Expanded(
             child: _Tile(
               label: l10n.connectionSheetStorage,
-              value: Column(
+              value: StorageCounts(
                 key: const Key('camera-sheet-storage'),
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (storages.isEmpty)
-                    Text(
-                      '—',
-                      style: GrFonts.monoStyle(context, size: 20, color: c.t1),
-                    ),
-                  for (final s in storages)
-                    _Fit(
-                      key: Key('camera-sheet-storage-${s.id}'),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
-                            s.label,
-                            style: TextStyle(fontSize: 11.5, color: c.t2),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            s.remain == null ? '—' : count.format(s.remain),
-                            style: GrFonts.monoStyle(
-                              context,
-                              // Two cards share the tile's height.
-                              size: storages.length > 1 ? 15 : 20,
-                              color: c.t1,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
+                storages: storages,
+                lineKeyPrefix: 'camera-sheet-storage',
+                soloSize: 20,
               ),
-              caption: storages.isEmpty ? null : l10n.connectionSheetShotsLeft,
+              caption: storages.any((s) => s.present)
+                  ? l10n.connectionSheetShotsLeft
+                  : null,
             ),
           ),
         ],
       ),
     );
-  }
-
-  /// Every storage that can take photos, SD card first because that is
-  /// where photos normally go.
-  List<({String id, String label, int? remain})> _storages(
-    AppLocalizations l10n,
-  ) {
-    final storages = [
-      for (final s in status?.storages ?? const <CameraStorage>[])
-        if (s.present)
-          (
-            id: s.id,
-            label: switch (s.kind) {
-              CameraStorageKind.sd1 => l10n.connectionSheetStorageSd,
-              CameraStorageKind.internal => l10n.connectionSheetStorageInternal,
-              _ when s.id == '?' => l10n.connectionSheetStorageUnnamed,
-              _ => s.id,
-            },
-            remain: s.remainingPictures,
-          ),
-    ];
-    int rank(String id) => switch (id) {
-      'sd1' => 0,
-      'in' => 2,
-      _ => 1,
-    };
-    return storages..sort((a, b) => rank(a.id).compareTo(rank(b.id)));
   }
 }
 
@@ -445,7 +387,7 @@ class _Tile extends StatelessWidget {
 /// Shrinks one line of tile content to the tile's width instead of
 /// wrapping or overflowing it at large text sizes.
 class _Fit extends StatelessWidget {
-  const new({required this.child, super.key});
+  const new({required this.child});
 
   final Widget child;
 
