@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
@@ -512,6 +513,67 @@ void main() {
       reason: 'the skeleton gone',
     );
     expect(save, findsNothing);
+
+    await app.dispose();
+  });
+
+  testWidgets('the details show the whole date and time of a shot from '
+      'another year, on a narrow phone at large text too', (tester) async {
+    tester.view
+      ..physicalSize = const Size(1170, 2532)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final app = await _openViewer(tester, [
+      FakePhoto('100RICOH', 'R0000001.JPG', DateTime(2020, 10, 10, 1, 1)),
+      FakePhoto('100RICOH', 'R0000001.DNG', DateTime(2020, 10, 10, 1, 1)),
+    ], 'sd1|100RICOH/R0000001');
+    // The card, inside the margin around it.
+    final details = _inViewer(
+      find.descendant(
+        of: find.byType(GroupBox),
+        matching: find.byType(Material),
+      ),
+    ).first;
+    final taken = find.descendant(
+      of: details,
+      matching: find.textContaining('2020'),
+    );
+    await pumpUntilFound(tester, taken);
+
+    /// Every letter of the date is laid out, inside the details.
+    void expectWholeDate(String reason) {
+      expect(tester.takeException(), isNull, reason: reason);
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.descendant(of: taken, matching: find.byType(RichText)),
+      );
+      final text = paragraph.text.toPlainText();
+      expect(text, allOf(contains('Oct 10, 2020'), contains('1:01')));
+      final origin = paragraph.localToGlobal(Offset.zero);
+      final card = tester.getRect(details);
+      for (var i = 0; i < text.length; i++) {
+        if (text[i].trim().isEmpty) continue;
+        final boxes = paragraph.getBoxesForSelection(
+          TextSelection(baseOffset: i, extentOffset: i + 1),
+        );
+        expect(boxes, isNotEmpty, reason: '$reason: "${text[i]}" at $i');
+        final letter = boxes.single.toRect().shift(origin);
+        expect(
+          card.expandToInclude(letter),
+          card,
+          reason: '$reason: "${text[i]}" at $i',
+        );
+      }
+    }
+
+    expectWholeDate('a phone');
+
+    tester.view
+      ..physicalSize = const Size(320, 800)
+      ..devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+    await pumpRounds(tester, 3);
+    expectWholeDate('a narrow phone at large text');
 
     await app.dispose();
   });

@@ -975,39 +975,46 @@ class _Details extends StatelessWidget {
     final duration = model.info(shot.primary)?.duration;
     final label = TextStyle(fontSize: 11.5, color: c.t3);
     final value = GrFonts.monoStyle(context, size: 13.5, color: c.t1);
-    Widget cell(String title, String text) => Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: label),
-          const SizedBox(height: 3),
-          Text(text, style: value, maxLines: 1, overflow: TextOverflow.fade),
-        ],
-      ),
+    Widget cell(String title, String text) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: label),
+        const SizedBox(height: 3),
+        Text(text, style: value),
+      ],
     );
     return GroupBox(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-          child: Row(
-            children: [
-              cell(l10n.viewerFormat, formatLabel(context, shot.format)),
-              cell(
-                shot.isVideo ? l10n.viewerLength : l10n.viewerSize,
-                shot.isVideo
-                    ? (duration == null
-                          ? '…'
-                          : formatDuration(context, duration))
-                    : size,
-              ),
-              cell(
-                l10n.viewerTaken,
-                taken == null
-                    ? '…'
-                    : formatDayTime(context, taken, DateTime.now()),
-              ),
-            ],
+          // Cells as wide as their text, which go on to another line once
+          // the row is full: a third of the row each cut the time off a
+          // date, and the date itself in another year or at large text.
+          child: SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              spacing: 24,
+              runSpacing: 10,
+              children: [
+                cell(l10n.viewerFormat, formatLabel(context, shot.format)),
+                cell(
+                  shot.isVideo ? l10n.viewerLength : l10n.viewerSize,
+                  shot.isVideo
+                      ? (duration == null
+                            ? '…'
+                            : formatDuration(context, duration))
+                      : size,
+                ),
+                cell(
+                  l10n.viewerTaken,
+                  taken == null
+                      ? '…'
+                      : formatDayTime(context, taken, DateTime.now()),
+                ),
+              ],
+            ),
           ),
         ),
         Padding(
