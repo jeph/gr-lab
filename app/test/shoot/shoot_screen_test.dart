@@ -381,6 +381,7 @@ void main() {
         // A foldable's cover screen, text at 130 %.
         (const Size(904, 2316), 2.625, 1.3),
         (const Size(2316, 904), 2.625, 1.0),
+        (const Size(2316, 904), 2.625, 1.3),
         (const Size(2532, 1170), 3.0, 1.0),
       ];
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
@@ -408,9 +409,11 @@ void main() {
       await app.dispose();
     });
 
-    testWidgets('the picture is as large as the window allows on phones, '
-        'foldables and tablets, the camera level or upright, with the '
-        'shutter, the readouts and × in reach', (tester) async {
+    testWidgets('the picture is as large as the window allows and in the '
+        'middle of its width on phones, foldables and tablets, the camera '
+        'level or upright, with the shutter, the readouts and × in reach', (
+      tester,
+    ) async {
       final app = await inLiveView(tester);
       const windows = [
         // A phone.
@@ -442,12 +445,17 @@ void main() {
           await pumpRounds(tester, 3);
           final reason = '$window, ${orientation.name}';
           expect(tester.takeException(), isNull, reason: reason);
-          final picture = tester.getSize(turned);
+          final picture = tester.getRect(turned);
           expect(
             (picture.width - window.width).abs() < .5 ||
                 (picture.height - window.height).abs() < .5,
             isTrue,
-            reason: '$picture in $reason',
+            reason: '${picture.size} in $reason',
+          );
+          expect(
+            picture.center.dx,
+            closeTo(window.width / 2, .5),
+            reason: reason,
           );
           for (final key in [
             'shoot-shutter',
@@ -487,10 +495,10 @@ void main() {
       await app.dispose();
     });
 
-    testWidgets('a window as short as a phone on its side has the controls '
-        "beside the picture, where the dial opens in the chips' place", (
-      tester,
-    ) async {
+    testWidgets('a window as short as a phone on its side has a rail of '
+        'controls on each side of the picture, the shutter between the '
+        'readouts and the last shot; the dial opens along the bottom of '
+        'the picture and moves none of them', (tester) async {
       final app = await inLiveView(tester);
       tester.view
         ..physicalSize = const Size(998, 448)
@@ -501,24 +509,101 @@ void main() {
         () => find.text('f/2.8').evaluate().isNotEmpty,
         reason: 'aperture readout',
       );
-      final picture = tester.getRect(find.byKey(const Key('live-turned-0')));
-      final panel = tester.getRect(find.byKey(const Key('live-panel')));
+      Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+      final picture = rect('live-turned-0');
       expect(picture.height, 448);
-      expect(panel.left, greaterThanOrEqualTo(picture.right));
+      for (final key in [
+        'live-close',
+        'live-exposure',
+        'camera-pill',
+        'live-chip-drive',
+        'live-chip-timer',
+      ]) {
+        expect(rect(key).right, lessThanOrEqualTo(picture.left), reason: key);
+      }
+      for (final key in [
+        'live-readout-av',
+        'live-readout-xv',
+        'shoot-shutter',
+        'live-last-shot',
+      ]) {
+        expect(
+          rect(key).left,
+          greaterThanOrEqualTo(picture.right),
+          reason: key,
+        );
+      }
+      final shutter = rect('shoot-shutter');
+      expect(shutter.top, greaterThan(rect('live-readout-sv').bottom + 8));
+      expect(shutter.bottom, lessThan(rect('live-last-shot').top - 8));
+      // Too narrow for a row of each: the readouts go two to a row, the
+      // chips one under the other, the camera's state under its name.
+      expect(
+        rect('live-readout-tv').center.dy,
+        closeTo(rect('live-readout-av').center.dy, .5),
+      );
+      expect(
+        rect('live-readout-sv').top,
+        greaterThanOrEqualTo(rect('live-readout-av').bottom),
+      );
+      expect(
+        rect('live-chip-timer').top,
+        greaterThanOrEqualTo(rect('live-chip-drive').bottom),
+      );
+      final name = find.descendant(
+        of: find.byKey(const Key('camera-pill')),
+        matching: find.text('GR IV'),
+      );
+      expect(
+        rect('camera-pill-state').top,
+        greaterThanOrEqualTo(tester.getRect(name).bottom),
+      );
 
-      final readout = find.byKey(const Key('live-readout-av'));
-      final before = tester.getTopLeft(readout);
-      expect(find.byKey(const Key('live-chip-drive')), findsOneWidget);
-      await tester.tap(readout);
+      final controls = [
+        for (final key in [
+          'live-readout-av',
+          'shoot-shutter',
+          'live-chip-drive',
+        ])
+          rect(key),
+      ];
+      await tester.tap(find.byKey(const Key('live-readout-av')));
       await pumpUntilFound(tester, find.byKey(const Key('live-dial-av')));
-      expect(find.byKey(const Key('live-chip-drive')), findsNothing);
       expect(find.byKey(const Key('live-dial-av')).hitTestable(), findsOne);
-      expect(tester.getTopLeft(readout), before);
+      final dial = rect('live-dial-av');
+      expect(dial.center.dx, closeTo(picture.center.dx, .5));
+      expect(dial.left, greaterThan(picture.left));
+      expect(dial.right, lessThan(picture.right));
+      expect(dial.bottom, lessThan(picture.bottom));
+      expect([
+        for (final key in [
+          'live-readout-av',
+          'shoot-shutter',
+          'live-chip-drive',
+        ])
+          rect(key),
+      ], controls);
       await app.dispose();
     });
 
-    testWidgets('where the panel beside the picture lies over its edge, a '
-        'tap between the controls there still focuses', (tester) async {
+    testWidgets('a camera cutout at one side of a phone on its side leaves '
+        'the picture in the middle of the screen, the rails as far in from '
+        'one side as from the other', (tester) async {
+      final app = await inLiveView(tester);
+      tester.view
+        ..physicalSize = const Size(998, 448)
+        ..devicePixelRatio = 1
+        ..padding = const FakeViewPadding(left: 50);
+      await pumpRounds(tester, 3);
+      Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+      expect(rect('live-turned-0').center.dx, closeTo(499, .5));
+      expect(rect('live-rail-start').left, 50);
+      expect(rect('live-rail-end').right, 948);
+      await app.dispose();
+    });
+
+    testWidgets("where the rails lie over the picture's edges, a tap "
+        'between the controls there still focuses', (tester) async {
       final app = await inLiveView(tester);
       tester.view
         ..physicalSize = const Size(800, 400)
@@ -529,21 +614,62 @@ void main() {
         () => find.text('f/2.8').evaluate().isNotEmpty,
         reason: 'aperture readout',
       );
-      final picture = tester.getRect(find.byKey(const Key('live-turned-0')));
-      final panel = tester.getRect(find.byKey(const Key('live-panel')));
-      final chips = tester.getRect(find.byKey(const Key('live-chip-drive')));
-      final readouts = tester.getRect(find.byKey(const Key('live-readout-av')));
-      final gap = Offset(panel.left + 40, (chips.bottom + readouts.top) / 2);
-      expect(picture.contains(gap), isTrue);
-      expect(readouts.top - chips.bottom, greaterThan(16));
+      Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+      final picture = rect('live-turned-0');
+      final start = rect('live-rail-start');
+      final end = rect('live-rail-end');
+      expect(start.right, greaterThan(picture.left + 40));
+      expect(end.left, lessThan(picture.right - 40));
 
-      await tester.tapAt(gap);
+      // Under the readouts, above the shutter.
+      final readouts = rect('live-readout-sv');
+      final shutter = rect('shoot-shutter');
+      expect(shutter.top - readouts.bottom, greaterThan(16));
+      await tester.tapAt(
+        Offset(end.left + 40, (readouts.bottom + shutter.top) / 2),
+      );
+      await pumpUntilFound(tester, find.byKey(const Key('live-focus-focused')));
+      // Under the chips.
+      await tester.tapAt(Offset(start.right - 40, start.bottom - 20));
       await pumpUntil(
         tester,
-        () => app.camera.focusPoints.isNotEmpty,
-        reason: 'focus sent',
+        () => app.camera.focusPoints.length == 2,
+        reason: 'second focus sent',
       );
-      expect(app.camera.focusPoints.single.$1, 90);
+      await pumpUntilFound(tester, find.byKey(const Key('live-focus-focused')));
+      expect(app.camera.focusPoints.map((p) => p.$1), [98, 2]);
+      await app.dispose();
+    });
+
+    testWidgets('in a window too narrow for the dial between the rails, as '
+        'half a phone in split screen, it runs across the window under '
+        'them, with the shutter in reach', (tester) async {
+      final app = await inLiveView(tester);
+      tester.view
+        ..physicalSize = const Size(360, 330)
+        ..devicePixelRatio = 1;
+      await pumpRounds(tester, 3);
+      await pumpUntil(
+        tester,
+        () => find.text('f/2.8').evaluate().isNotEmpty,
+        reason: 'aperture readout',
+      );
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const Key('live-readout-av')));
+      await pumpUntilFound(tester, find.byKey(const Key('live-dial-av')));
+      expect(tester.takeException(), isNull);
+      final dial = tester.getRect(find.byKey(const Key('live-dial-av')));
+      expect(dial.width, greaterThan(300));
+      for (final rail in ['live-rail-start', 'live-rail-end']) {
+        expect(
+          tester.getRect(find.byKey(Key(rail))).bottom,
+          lessThanOrEqualTo(dial.top),
+          reason: rail,
+        );
+      }
+      for (final key in ['live-dial-av', 'shoot-shutter', 'live-close']) {
+        expect(find.byKey(Key(key)).hitTestable(), findsOne, reason: key);
+      }
       await app.dispose();
     });
 

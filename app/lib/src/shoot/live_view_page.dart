@@ -21,10 +21,11 @@ import 'package:grlab/src/widgets/pressable.dart';
 /// Live view (mock `b-shoot`): a viewfinder, always dark, in the chosen
 /// theme when that is dark and in the Dark theme otherwise. The picture is
 /// shown whole and as large as the window allows. The controls take the
-/// room it leaves, above and below it or beside it; where that room is too
-/// little they lie over the picture's edges, on a shade that keeps them
-/// legible, and the picture can be tapped to focus anywhere between them.
-/// The exposure readouts edit on a dial; × goes back to Remote.
+/// room it leaves, above and below it or in a rail on each side of it;
+/// where that room is too little they lie over the picture's edges, on a
+/// shade that keeps them legible, and the picture can be tapped to focus
+/// anywhere between them. The exposure readouts edit on a dial; × goes
+/// back to Remote.
 class LiveViewPage extends StatelessWidget {
   const new({required this.model, super.key});
 
@@ -141,20 +142,20 @@ class _LiveLayoutState extends State<_LiveLayout> {
   /// each instead of a stack \[design\].
   static const _wideWidth = 600.0;
 
-  /// The panel beside the picture in [_beside] takes the room the picture
-  /// leaves, within these widths \[design\].
-  static const _minPanelWidth = 300.0;
-  static const _maxPanelWidth = 360.0;
+  /// Each rail beside the picture in [_rails] takes the room the picture
+  /// leaves on its side, within these widths \[design\].
+  static const _minRailWidth = 152.0;
+  static const _maxRailWidth = 220.0;
 
-  /// The readouts are at most this wide in a row with the shutter
-  /// \[design\].
+  /// The readouts are at most this wide in a row with the shutter, and
+  /// the dial as wide as that \[design\].
   static const _maxReadoutsWidth = 420.0;
 
-  static const _shutterSize = 80.0;
+  /// The dial lies between the rails where it is at least this wide
+  /// there \[design\].
+  static const _minDialWidth = 200.0;
 
-  /// Height of the Remote / Live view switch as a row of its own, with the
-  /// space above it.
-  static const _modeSwitchRowHeight = 52.0;
+  static const _shutterSize = 80.0;
 
   /// Height of the open dial with the space under it.
   static const _dialRoom = 56.0;
@@ -186,26 +187,26 @@ class _LiveLayoutState extends State<_LiveLayout> {
     return _live.orientation?.upright ?? false ? 1 / aspect : aspect;
   }
 
-  /// Whether the controls go beside the picture ([_beside]) rather than
-  /// above and below it ([_bars]), in a window of [size] that the picture
-  /// fills to [picture]. Whichever keeps clear of the picture wins, the
-  /// bars first (an upright window); the panel then suits a window as
-  /// short as a phone on its side. Where both lie over the picture, the
-  /// bars do unless they would hide more than a third of its height and
-  /// the panel less of its width: a row of controls over each end of a
-  /// large picture hides little of it, a panel squeezed in beside it does
-  /// not read well \[design\].
-  bool _controlsBeside(Size size, Size picture, {required bool wide}) {
+  /// Whether the controls go in a rail on each side of the picture
+  /// ([_rails]) rather than above and below it ([_bars]), in a window of
+  /// [size] that the picture fills to [picture]. Whichever keeps clear of
+  /// the picture wins, the bars first (an upright window); the rails then
+  /// suit a window as short as a phone on its side. Where both lie over
+  /// the picture, the bars do unless they would hide more than a third of
+  /// its height and the rails less of its width: a row of controls over
+  /// each end of a large picture hides little of it, rails squeezed in
+  /// beside it do not read well \[design\].
+  bool _controlsInRails(Size size, Size picture, {required bool wide}) {
     final bars = _barsHeight(MediaQuery.textScalerOf(context), wide: wide);
     if (size.height - bars < _minRoomBetweenBars) return true;
     final underBars =
         math.max(0, bars - (size.height - picture.height)) / picture.height;
     if (underBars == 0) return false;
-    final underPanel =
-        math.max(0, _minPanelWidth - (size.width - picture.width)) /
+    final underRails =
+        math.max(0, 2 * _minRailWidth - (size.width - picture.width)) /
         picture.width;
-    if (underPanel == 0) return true;
-    return underBars > 1 / 3 && underPanel < underBars;
+    if (underRails == 0) return true;
+    return underBars > 1 / 3 && underRails < underBars;
   }
 
   @override
@@ -213,14 +214,21 @@ class _LiveLayoutState extends State<_LiveLayout> {
     final dialKey = _dialKey != null && _editable(_dialKey!) != null
         ? _dialKey
         : null;
+    // As far in from one side of the screen as from the other: a phone on
+    // its side has its camera cutout at one, and the picture stays in the
+    // middle of the screen.
+    final insets = MediaQuery.paddingOf(context);
     return SafeArea(
+      minimum: EdgeInsets.symmetric(
+        horizontal: math.max(insets.left, insets.right),
+      ),
       child: LayoutBuilder(
         builder: (context, box) {
           final size = box.biggest;
           final wide = size.width >= _wideWidth;
           final picture = _largestWithin(size, _pictureAspect);
-          return _controlsBeside(size, picture, wide: wide)
-              ? _beside(size, picture, dialKey)
+          return _controlsInRails(size, picture, wide: wide)
+              ? _rails(size, picture, dialKey)
               : _bars(size, picture, dialKey, wide: wide);
         },
       ),
@@ -261,7 +269,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
             edge: Alignment.bottomCenter,
             child: wide
                 ? _bottomRow(dialKey, readoutsWidth: readoutsWidth, hint: hint)
-                : _bottomStack(dialKey, shutterInset: 40, hint: hint),
+                : _bottomStack(dialKey, hint: hint),
           ),
         ),
         if (dialKey != null)
@@ -273,138 +281,158 @@ class _LiveLayoutState extends State<_LiveLayout> {
     );
   }
 
-  /// The controls in a panel at the end of a window of [size]. The
-  /// [picture] is centred in the room beside the panel, and lies under it
-  /// where that room is too narrow. The dial opens above the readouts.
-  Widget _beside(Size size, Size picture, String? dialKey) {
-    final text = MediaQuery.textScalerOf(context);
-    final panelWidth = math.min(
-      size.width,
-      (size.width - picture.width).clamp(_minPanelWidth, _maxPanelWidth),
+  /// The controls in a rail at each end of a window of [size], where the
+  /// hands hold a phone on its side: ×, the camera and the chips at the
+  /// start, the readouts, the shutter and the last shot at the end. The
+  /// [picture] is centred between the rails, and lies under them where
+  /// the window is too narrow. A rail is too narrow for Remote / Live
+  /// view (× goes back to Remote too) and for the hint \[design\]. The
+  /// dial opens along the bottom of the picture.
+  Widget _rails(Size size, Size picture, String? dialKey) {
+    final railWidth = math.min(
+      size.width / 2,
+      ((size.width - picture.width) / 2).clamp(_minRailWidth, _maxRailWidth),
     );
-    final room = size.width - panelWidth;
-    final bars = _barsHeight(text, wide: false);
-    // A window too short for all of it does without the switch: × goes
-    // back to Remote too.
-    final modeSwitch = size.height >= bars;
-    final height = math.max(
-      size.height,
-      bars - (modeSwitch ? 0 : _modeSwitchRowHeight),
+    final between = size.width - 2 * railWidth;
+    // In a window too narrow for the dial between the rails, it runs
+    // across the window and they end above it.
+    final dialBetween = between - 24 >= _minDialWidth;
+    final dialWidth = math.min(
+      _maxReadoutsWidth,
+      (dialBetween ? between : size.width) - 24,
     );
-    // The open dial takes the chips' place in a window too short for both.
-    final chips = dialKey == null || size.height >= height + _dialRoom;
-    // Only where the panel is clear of the picture and has room to spare.
-    final hint =
-        room >= picture.width &&
-        size.height >= bars + _dialRoom + _hintHeight(text);
+    final railHeight =
+        size.height - (dialKey == null || dialBetween ? 0 : _dialRoom);
     final pictureBox = _streaming
-        ? Offset(
-                math.max(0, (room - picture.width) / 2),
-                (size.height - picture.height) / 2,
-              ) &
-              picture
-        // The steps of joining the camera's Wi-Fi keep clear of the panel.
-        : Offset.zero & Size(room, size.height);
+        ? Alignment.center.inscribe(picture, Offset.zero & size)
+        // The steps of joining the camera's Wi-Fi keep clear of the rails.
+        : Rect.fromLTWH(railWidth, 0, between, size.height);
     return Stack(
       children: [
-        PositionedDirectional(
-          start: pictureBox.left,
-          top: pictureBox.top,
-          width: pictureBox.width,
-          height: pictureBox.height,
+        Positioned.fromRect(
+          rect: pictureBox,
           child: _Picture(model: _model),
+        ),
+        PositionedDirectional(
+          start: 0,
+          top: 0,
+          width: railWidth,
+          height: railHeight,
+          child: _Scrim(
+            edge: AlignmentDirectional.centerStart,
+            child: _startRail(),
+          ),
         ),
         PositionedDirectional(
           end: 0,
           top: 0,
-          bottom: 0,
-          width: panelWidth,
+          width: railWidth,
+          height: railHeight,
           child: _Scrim(
             edge: AlignmentDirectional.centerEnd,
-            // Scrolls in a window too short even without the switch, by
-            // dragging a control: the space between the controls is left
-            // to the picture under it, for a tap there to focus.
-            child: SingleChildScrollView(
-              key: const Key('live-panel'),
-              hitTestBehavior: HitTestBehavior.deferToChild,
-              child: SizedBox(
-                height: height,
-                child: CustomMultiChildLayout(
-                  delegate: _BarsLayout(),
-                  children: [
-                    LayoutId(
-                      id: _Bar.top,
-                      child: _top(
-                        wide: false,
-                        modeSwitch: modeSwitch,
-                        chips: chips,
-                      ),
-                    ),
-                    LayoutId(
-                      id: _Bar.bottom,
-                      child: _bottomStack(
-                        dialKey,
-                        shutterInset: 16,
-                        hint: hint,
-                      ),
-                    ),
-                    if (dialKey != null)
-                      LayoutId(
-                        id: _Bar.dial,
-                        child: SizedBox(
-                          width: panelWidth - 32,
-                          child: _dial(dialKey),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
+            child: _endRail(dialKey, railHeight),
           ),
         ),
+        if (dialKey != null)
+          Positioned(
+            left: (size.width - dialWidth) / 2,
+            bottom: 0,
+            width: dialWidth,
+            height: _dialRoom,
+            child: Align(alignment: Alignment.topCenter, child: _dial(dialKey)),
+          ),
       ],
     );
   }
 
-  /// ×, the camera, Remote / Live view, the exposure mode and the chips:
-  /// stacked in three rows (fewer without the [modeSwitch] or the
-  /// [chips]), or when [wide] in two.
-  Widget _top({required bool wide, bool modeSwitch = true, bool chips = true}) {
+  /// ×, the exposure mode, the camera and the chips, down from the top
+  /// of the start rail. It scrolls in a window too short for them, by
+  /// dragging a control: the space between the controls is left to the
+  /// picture under it, for a tap there to focus.
+  Widget _startRail() => SingleChildScrollView(
+    key: const Key('live-rail-start'),
+    hitTestBehavior: HitTestBehavior.deferToChild,
+    padding: const EdgeInsets.all(12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 12,
+      children: [
+        Row(children: [_close(), const Spacer(), ?_exposureMode()]),
+        const CameraPill(stacked: true),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 8,
+          children: _chips(),
+        ),
+      ],
+    ),
+  );
+
+  /// The readouts, two to a row, at the top of the end rail, the last
+  /// shot at the bottom and the shutter between them. It is [height]
+  /// tall, or as tall as they take in a window too short for them, where
+  /// it scrolls as [_startRail] does.
+  Widget _endRail(String? dialKey, double height) => SingleChildScrollView(
+    key: const Key('live-rail-end'),
+    hitTestBehavior: HitTestBehavior.deferToChild,
+    padding: const EdgeInsets.all(12),
+    child: ConstrainedBox(
+      constraints: BoxConstraints(minHeight: height - 2 * 12),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        spacing: 8,
+        children: [
+          _readoutsFor(dialKey, perRow: 2),
+          _shutter(),
+          _LastShot(bytes: _live.lastShot),
+        ],
+      ),
+    ),
+  );
+
+  Widget _close() => _RoundButton(
+    key: const Key('live-close'),
+    icon: Icons.close_rounded,
+    label: context.l10n.liveViewBackToRemote,
+    onTap: () => _model.mode = ShootMode.remote,
+  );
+
+  /// The camera's exposure mode; null while [ShootModel.exposure] is.
+  Widget? _exposureMode() {
+    final exposure = _model.exposure;
+    if (exposure == null) return null;
     final c = GrColors.of(context);
-    final l10n = context.l10n;
-    final close = _RoundButton(
-      key: const Key('live-close'),
-      icon: Icons.close_rounded,
-      label: l10n.liveViewBackToRemote,
-      onTap: () => _model.mode = ShootMode.remote,
+    return Container(
+      key: const Key('live-exposure'),
+      height: 36,
+      constraints: const BoxConstraints(minWidth: 36),
+      padding: const EdgeInsets.symmetric(horizontal: 9),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: c.s2.withValues(alpha: _surfaceOpacity),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: c.line2),
+      ),
+      child: Text(
+        exposureLabel(context.l10n, exposure),
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: c.accent,
+        ),
+      ),
     );
+  }
+
+  /// ×, the camera, Remote / Live view, the exposure mode and the chips:
+  /// stacked in three rows, or when [wide] in two.
+  Widget _top({required bool wide}) {
+    final close = _close();
+    final exposure = _exposureMode();
     final remoteOrLiveView = ShootModeSwitch(
       mode: _model.mode,
       onChanged: (m) => _model.mode = m,
     );
-    final exposure = switch (_model.exposure) {
-      null => null,
-      final exposure => Container(
-        key: const Key('live-exposure'),
-        height: 36,
-        constraints: const BoxConstraints(minWidth: 36),
-        padding: const EdgeInsets.symmetric(horizontal: 9),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: c.s2.withValues(alpha: _surfaceOpacity),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: c.line2),
-        ),
-        child: Text(
-          exposureLabel(l10n, exposure),
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: c.accent,
-          ),
-        ),
-      ),
-    };
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -446,69 +474,64 @@ class _LiveLayoutState extends State<_LiveLayout> {
                   ],
           ),
         ),
-        if (!wide && modeSwitch) ...[
+        if (!wide) ...[
           const SizedBox(height: 14),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: remoteOrLiveView,
           ),
         ],
-        if (chips) ...[const SizedBox(height: 12), _chips()],
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(spacing: 8, children: _chips()),
+        ),
         const SizedBox(height: 12),
       ],
     );
   }
 
-  Widget _chips() {
+  /// The drive, the self-timer, the metering and the Image Control.
+  List<Widget> _chips() {
     final l10n = context.l10n;
     final split = _model.driveAndTimer;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        spacing: 8,
-        children: [
-          _Chip(
-            key: const Key('live-chip-drive'),
-            icon: Icons.burst_mode_outlined,
-            label: split?.$1.label(l10n) ?? '—',
-            onTap: _model.canShoot
-                ? () => unawaited(showDrivePicker(context, _model))
-                : null,
-          ),
-          _Chip(
-            key: const Key('live-chip-timer'),
-            icon: Icons.timer_outlined,
-            label: split?.$2.label(l10n) ?? '—',
-            onTap: _model.canShoot && split?.$1 != ShootDrive.continuous
-                ? () => unawaited(_pickTimer())
-                : null,
-          ),
-          for (final (key, icon, title) in [
-            ('meteringMode', Icons.filter_center_focus, l10n.liveViewMetering),
-            ('effect', Icons.tune_rounded, l10n.liveViewImageControl),
-          ])
-            if (_live.props?.setting(key)?.current case final v?)
-              _Chip(
-                key: Key('live-chip-$key'),
-                icon: icon,
-                label: settingLabel(l10n, key, v),
-                onTap: _editable(key) == null
-                    ? null
-                    : () => unawaited(_pick(key, title)),
-              ),
-        ],
+    return [
+      _Chip(
+        key: const Key('live-chip-drive'),
+        icon: Icons.burst_mode_outlined,
+        label: split?.$1.label(l10n) ?? '—',
+        onTap: _model.canShoot
+            ? () => unawaited(showDrivePicker(context, _model))
+            : null,
       ),
-    );
+      _Chip(
+        key: const Key('live-chip-timer'),
+        icon: Icons.timer_outlined,
+        label: split?.$2.label(l10n) ?? '—',
+        onTap: _model.canShoot && split?.$1 != ShootDrive.continuous
+            ? () => unawaited(_pickTimer())
+            : null,
+      ),
+      for (final (key, icon, title) in [
+        ('meteringMode', Icons.filter_center_focus, l10n.liveViewMetering),
+        ('effect', Icons.tune_rounded, l10n.liveViewImageControl),
+      ])
+        if (_live.props?.setting(key)?.current case final v?)
+          _Chip(
+            key: Key('live-chip-$key'),
+            icon: icon,
+            label: settingLabel(l10n, key, v),
+            onTap: _editable(key) == null
+                ? null
+                : () => unawaited(_pick(key, title)),
+          ),
+    ];
   }
 
   /// The readouts over the last shot and the shutter, and the hint when
   /// there is room for it ([hint]).
-  Widget _bottomStack(
-    String? dialKey, {
-    required double shutterInset,
-    required bool hint,
-  }) => Column(
+  Widget _bottomStack(String? dialKey, {required bool hint}) => Column(
     mainAxisSize: MainAxisSize.min,
     children: [
       const SizedBox(height: 12),
@@ -518,7 +541,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
       ),
       const SizedBox(height: 16),
       Padding(
-        padding: EdgeInsets.symmetric(horizontal: shutterInset),
+        padding: const EdgeInsets.symmetric(horizontal: 40),
         child: Row(
           children: [
             _LastShot(bytes: _live.lastShot),
@@ -571,8 +594,10 @@ class _LiveLayoutState extends State<_LiveLayout> {
     ],
   );
 
-  Widget _readoutsFor(String? dialKey) => _Readouts(
+  /// The readouts, [perRow] of them side by side.
+  Widget _readoutsFor(String? dialKey, {int perRow = 4}) => _Readouts(
     live: _live,
+    perRow: perRow,
     readouts: _readouts,
     selected: dialKey,
     editable: (k) => _editable(k) != null,
@@ -627,8 +652,8 @@ Size _largestWithin(Size size, double aspect) =>
 /// The parts [_BarsLayout] places.
 enum _Bar { picture, top, bottom, dial }
 
-/// Places controls at the top and the bottom of its box and the dial above
-/// the bottom ones, and for [_LiveLayoutState._bars] the picture centred
+/// Places [_LiveLayoutState._bars]: the controls at the top and the bottom
+/// of its box, the dial above the bottom ones, and the picture centred
 /// between them as far as the box allows.
 class _BarsLayout extends MultiChildLayoutDelegate {
   new({this.picture});
@@ -656,7 +681,6 @@ class _BarsLayout extends MultiChildLayoutDelegate {
         Offset((size.width - dial.width) / 2, bottom - dial.height),
       );
     }
-    if (!hasChild(_Bar.picture)) return;
     final picture = this.picture;
     final box = picture == null
         ? Rect.fromLTRB(0, top, size.width, math.max(top, bottom))
@@ -880,12 +904,13 @@ class _FocusMark extends StatelessWidget {
   }
 }
 
-/// Aperture, shutter, ISO and EV; tapping one the camera lets the app change
-/// opens the dial for it.
+/// Aperture, shutter, ISO and EV, [perRow] side by side; tapping one the
+/// camera lets the app change opens the dial for it.
 class _Readouts extends StatelessWidget {
   const new({
     required this.live,
     required this.readouts,
+    required this.perRow,
     required this.selected,
     required this.editable,
     required this.onTap,
@@ -895,6 +920,7 @@ class _Readouts extends StatelessWidget {
 
   /// The `/v1/props` keys to show.
   final List<String> readouts;
+  final int perRow;
   final String? selected;
   final bool Function(String key) editable;
   final ValueChanged<String> onTap;
@@ -902,8 +928,6 @@ class _Readouts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    final l10n = context.l10n;
-    final props = live.props;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 7),
       decoration: BoxDecoration(
@@ -911,60 +935,69 @@ class _Readouts extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: c.line2),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        spacing: 6,
         children: [
-          for (final key in readouts)
-            Expanded(
-              child: Pressable(
-                key: Key('live-readout-$key'),
-                onTap: editable(key) ? () => onTap(key) : null,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                // A narrow window shrinks the text rather than wrapping
-                // a value over two lines.
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: Column(
-                    children: [
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          l10n.upperCase(_readoutLabel(l10n, key)),
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: l10n.capitalSpacing(.6),
-                            color: c.t2,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          switch (props?.setting(key)?.current) {
-                            final v? => settingLabel(l10n, key, v),
-                            null => '—',
-                          },
-                          style: GrFonts.monoStyle(
-                            context,
-                            size: 17,
-                            weight: FontWeight.w500,
-                            color: key == selected
-                                ? c.accent
-                                : editable(key)
-                                ? c.t1
-                                : c.t2,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+          for (var first = 0; first < readouts.length; first += perRow)
+            Row(
+              children: [
+                for (final key in readouts.skip(first).take(perRow))
+                  Expanded(child: _readout(context, key)),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// A narrow window shrinks the text rather than wrapping a value over
+  /// two lines.
+  Widget _readout(BuildContext context, String key) {
+    final c = GrColors.of(context);
+    final l10n = context.l10n;
+    return Pressable(
+      key: Key('live-readout-$key'),
+      onTap: editable(key) ? () => onTap(key) : null,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3),
+        child: Column(
+          children: [
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                l10n.upperCase(_readoutLabel(l10n, key)),
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: l10n.capitalSpacing(.6),
+                  color: c.t2,
                 ),
               ),
             ),
-        ],
+            const SizedBox(height: 3),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                switch (live.props?.setting(key)?.current) {
+                  final v? => settingLabel(l10n, key, v),
+                  null => '—',
+                },
+                style: GrFonts.monoStyle(
+                  context,
+                  size: 17,
+                  weight: FontWeight.w500,
+                  color: key == selected
+                      ? c.accent
+                      : editable(key)
+                      ? c.t1
+                      : c.t2,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1137,12 +1170,19 @@ class _Chip extends StatelessWidget {
             children: [
               Icon(icon, size: 15, color: onTap == null ? c.t3 : c.t1),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: GrFonts.monoStyle(
-                  context,
-                  size: 12.5,
-                  color: onTap == null ? c.t2 : c.t1,
+              // A rail shrinks a long label rather than cutting it short.
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    label,
+                    style: GrFonts.monoStyle(
+                      context,
+                      size: 12.5,
+                      color: onTap == null ? c.t2 : c.t1,
+                    ),
+                  ),
                 ),
               ),
             ],

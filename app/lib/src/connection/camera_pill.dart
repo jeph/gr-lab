@@ -8,8 +8,12 @@ import 'package:intl/intl.dart';
 
 /// Camera name, link state and battery at the top of the Library (mock
 /// `.pill` in `b-library-*`, `b-connect`). Tapping opens the camera sheet.
+/// [stacked] puts the state under the name, for a place too narrow for
+/// both in a row (live view's rail); it has to bound the pill's width.
 class CameraPill extends StatelessWidget {
-  const new({super.key});
+  const new({super.key, this.stacked = false});
+
+  final bool stacked;
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +74,29 @@ class CameraPill extends StatelessWidget {
                         link: link,
                         battery: link.label == LinkLabel.wifi ? battery : null,
                       );
+                      if (stacked) {
+                        return Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            dot,
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  name,
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: AlignmentDirectional.centerStart,
+                                    child: meta,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      }
                       // Headers may give the pill unbounded width (a Row
                       // child), where Flexible is not allowed; there the
                       // name gets a fixed cap instead. When bounded, the
