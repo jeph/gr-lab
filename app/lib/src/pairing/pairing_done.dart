@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
-import 'package:grlab/src/connection/camera_sheet.dart';
+import 'package:grlab/src/cameras/camera_rename.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart';
 import 'package:grlab/src/theme/tokens.dart';
 import 'package:grlab/src/widgets/group.dart';

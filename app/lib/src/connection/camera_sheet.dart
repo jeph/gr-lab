@@ -6,9 +6,9 @@ import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/cameras/camera_identity.dart';
 import 'package:grlab/src/connection/camera_pill.dart';
+import 'package:grlab/src/connection/connect_failure_view.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/connection/link_state.dart';
-import 'package:grlab/src/data/cameras.dart';
+import 'package:grlab/src/pairing/pairing_flow.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart';
 import 'package:grlab/src/theme/tokens.dart';
 import 'package:grlab/src/widgets/group.dart';
@@ -23,10 +23,13 @@ Future<void> showCameraSheet(BuildContext context) =>
       builder: (_) => const CameraSheet(),
     );
 
-/// Everything about the current camera, from the camera pill (subset of
-/// mock `b-camera`): battery, storage and link while connected, and the
-/// camera's name and power-on choice. Disconnecting Wi-Fi returns to the
-/// Cameras screen; Bluetooth stays.
+/// The current camera's connection, from the camera card's chip and the
+/// camera pill (mock `connection-controls.html`, direction A): why the
+/// last attempt failed, battery and storage while on the camera's Wi-Fi,
+/// and a row each for Bluetooth and Wi-Fi that says what the link is doing
+/// and connects or disconnects it. Disconnecting Bluetooth ends the
+/// session, Wi-Fi included; disconnecting Wi-Fi keeps Bluetooth. Either
+/// one returns to the Cameras screen from the camera's pages.
 class CameraSheet extends StatelessWidget {
   const new({super.key});
 
@@ -34,15 +37,18 @@ class CameraSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final models = AppScope.of(context);
     return ListenableBuilder(
-      listenable: Listenable.merge([
-        models.cameras,
-        models.connection,
-        models.settings,
-      ]),
+      listenable: Listenable.merge([models.cameras, models.connection]),
       builder: (context, _) {
         final camera = models.cameras.current;
         if (camera == null) return const SizedBox(height: 120);
         final connection = models.connection;
+        final l10n = context.l10n;
+        // Bluetooth failures end the link; Wi-Fi ones are kept next to it.
+        final failure = switch (connection.status) {
+          ConnectionStatus.failed ||
+          ConnectionStatus.bluetooth => connection.failure,
+          _ => null,
+        };
         return SingleChildScrollView(
           key: const Key('camera-sheet'),
           padding: const EdgeInsets.only(bottom: 24),
@@ -50,22 +56,30 @@ class CameraSheet extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ...switch (connection.status) {
-                ConnectionStatus.connected => _connected(
-                  context,
-                  camera,
-                  connection,
+              _Header(title: camera.name, subtitle: camera.identityLine(l10n)),
+              if (failure != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: ConnectFailureView(
+                    camera: camera,
+                    failure: failure,
+                    connection: connection,
+                    // Pairing takes the sheet's place.
+                    onPairAgain: () {
+                      Navigator.of(context).pop();
+                      unawaited(PairingFlow.push(context));
+                    },
+                  ),
                 ),
-                // On Bluetooth alone (Shoot's Remote, Looks, or after the
-                // Wi-Fi was left for lack of use), or while the sheet
-                // closes.
-                ConnectionStatus.connecting ||
-                ConnectionStatus.bluetooth ||
-                ConnectionStatus.failed ||
-                ConnectionStatus.offline => _offline(context, camera),
-              },
-              SectionLabel(context.l10n.connectionSheetSectionCamera),
-              _CameraRows(camera: camera),
+              if (connection.status == ConnectionStatus.connected)
+                _StatusTiles(status: connection.cameraStatus),
+              SectionLabel(l10n.connectionSheetLink),
+              GroupBox(
+                children: [
+                  _bluetoothRow(l10n, connection),
+                  _wifiRow(l10n, connection),
+                ],
+              ),
             ],
           ),
         );
@@ -73,141 +87,244 @@ class CameraSheet extends StatelessWidget {
     );
   }
 
-  // ------------------------------------------------------------- connected
-
-  List<Widget> _connected(
-    BuildContext context,
-    SavedCamera camera,
+  static _LinkRow _bluetoothRow(
+    AppLocalizations l10n,
     ConnectionController connection,
   ) {
+    const name = 'bluetooth';
+    const icon = Icons.bluetooth_rounded;
+    final title = l10n.connectionSheetLinkBluetooth;
+    void disconnect() => unawaited(connection.disconnect());
+    switch (connection.status) {
+      case ConnectionStatus.offline || ConnectionStatus.failed:
+        return _LinkRow(
+          name: name,
+          icon: icon,
+          title: title,
+          state: l10n.connectionPillNotConnected,
+          action: _LinkAction.connect,
+          onPressed: () => unawaited(connection.connect()),
+        );
+      case ConnectionStatus.connecting
+          when connection.step == ConnectStep.bluetooth:
+        return _LinkRow(
+          name: name,
+          icon: icon,
+          title: title,
+          state: l10n.connectionPillConnecting,
+          action: _LinkAction.cancel,
+          onPressed: disconnect,
+        );
+      case ConnectionStatus.connecting ||
+          ConnectionStatus.bluetooth ||
+          ConnectionStatus.connected:
+        return _LinkRow(
+          name: name,
+          icon: icon,
+          title: title,
+          // The camera drops the link when it is woken for its Wi-Fi or
+          // turned off; the session links it again.
+          state: connection.cameraSession?.bleLinked ?? false
+              ? l10n.connectionSheetConnected
+              : connection.bleLinking
+              ? l10n.connectionPillReconnecting
+              : l10n.connectionPillNotConnected,
+          action: _LinkAction.disconnect,
+          onPressed: disconnect,
+        );
+    }
+  }
+
+  static _LinkRow _wifiRow(
+    AppLocalizations l10n,
+    ConnectionController connection,
+  ) {
+    const name = 'wifi';
+    const icon = Icons.wifi_rounded;
+    final title = l10n.connectionSheetLinkWifi;
+    void disconnect() => unawaited(connection.disconnectWifi());
+    final reconnecting = connection.reconnecting;
+    switch (connection.status) {
+      case ConnectionStatus.connected:
+        return _LinkRow(
+          name: name,
+          icon: icon,
+          title: title,
+          state: !reconnecting
+              ? l10n.connectionSheetConnected
+              : connection.cameraOff
+              ? l10n.connectionPillCameraOff
+              : l10n.connectionPillReconnecting,
+          action: _LinkAction.disconnect,
+          onPressed: disconnect,
+        );
+      case ConnectionStatus.connecting when connection.step == ConnectStep.wifi:
+        return _LinkRow(
+          name: name,
+          icon: icon,
+          title: title,
+          state: reconnecting
+              ? l10n.connectionPillReconnecting
+              : l10n.connectionPillConnecting,
+          action: _LinkAction.cancel,
+          onPressed: disconnect,
+        );
+      case ConnectionStatus.offline ||
+          ConnectionStatus.failed ||
+          ConnectionStatus.connecting ||
+          ConnectionStatus.bluetooth:
+        return _LinkRow(
+          name: name,
+          icon: icon,
+          title: title,
+          state: l10n.connectionPillNotConnected,
+          action: _LinkAction.connect,
+          // Links Bluetooth first when needed.
+          onPressed: () => unawaited(connection.joinWifi()),
+        );
+    }
+  }
+}
+
+/// What a [_LinkRow]'s button does.
+enum _LinkAction {
+  connect,
+
+  /// Stops connecting.
+  cancel,
+  disconnect,
+}
+
+/// One link of the connection, Bluetooth or Wi-Fi: what it is doing and a
+/// button to connect it, stop connecting or disconnect it.
+class _LinkRow extends StatelessWidget {
+  const new({
+    required this.name,
+    required this.icon,
+    required this.title,
+    required this.state,
+    required this.action,
+    required this.onPressed,
+  });
+
+  /// `bluetooth` or `wifi`, for the row's keys.
+  final String name;
+  final IconData icon;
+  final String title;
+  final String state;
+  final _LinkAction action;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return GroupRow(
+      key: Key('camera-sheet-$name'),
+      icon: icon,
+      title: title,
+      subtitle: state,
+      trailing: TrailingFit(
+        child: OutlinedButton(
+          key: Key('camera-sheet-$name-${action.name}'),
+          style: smallOutlinedStyle,
+          onPressed: onPressed,
+          child: Text(switch (action) {
+            _LinkAction.connect => l10n.camerasConnect,
+            _LinkAction.cancel => l10n.camerasCancel,
+            _LinkAction.disconnect => l10n.connectionSheetDisconnect,
+          }),
+        ),
+      ),
+    );
+  }
+}
+
+/// The camera's battery and the photos that still fit on its storages,
+/// as it reports them over its Wi-Fi.
+class _StatusTiles extends StatelessWidget {
+  const new({required this.status});
+
+  final CameraStatus? status;
+
+  @override
+  Widget build(BuildContext context) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
     final count = NumberFormat.decimalPattern(
       Localizations.localeOf(context).toString(),
     );
-    final status = connection.cameraStatus;
     final battery = status?.battery;
-    final storages = _storages(l10n, status);
-    final link = LinkState.of(connection);
-    return [
-      _Header(
-        title: camera.name,
-        subtitle: camera.identityLine(l10n),
-        large: true,
-      ),
-      Padding(
-        key: const Key('camera-sheet-connected'),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _Tile(
-                label: l10n.connectionSheetBattery,
-                value: _Fit(
-                  child: Text(
-                    battery == null ? '—' : formatBattery(context, battery),
-                    key: const Key('camera-sheet-battery'),
-                    style: GrFonts.monoStyle(context, size: 20, color: c.t1),
-                  ),
+    final storages = _storages(l10n);
+    return Padding(
+      key: const Key('camera-sheet-connected'),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: _Tile(
+              label: l10n.connectionSheetBattery,
+              value: _Fit(
+                child: Text(
+                  battery == null ? '—' : formatBattery(context, battery),
+                  key: const Key('camera-sheet-battery'),
+                  style: GrFonts.monoStyle(context, size: 20, color: c.t1),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _Tile(
-                label: l10n.connectionSheetStorage,
-                value: Column(
-                  key: const Key('camera-sheet-storage'),
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (storages.isEmpty)
-                      Text(
-                        '—',
-                        style: GrFonts.monoStyle(
-                          context,
-                          size: 20,
-                          color: c.t1,
-                        ),
-                      ),
-                    for (final s in storages)
-                      _Fit(
-                        key: Key('camera-sheet-storage-${s.id}'),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Text(
-                              s.label,
-                              style: TextStyle(fontSize: 11.5, color: c.t2),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _Tile(
+              label: l10n.connectionSheetStorage,
+              value: Column(
+                key: const Key('camera-sheet-storage'),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (storages.isEmpty)
+                    Text(
+                      '—',
+                      style: GrFonts.monoStyle(context, size: 20, color: c.t1),
+                    ),
+                  for (final s in storages)
+                    _Fit(
+                      key: Key('camera-sheet-storage-${s.id}'),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            s.label,
+                            style: TextStyle(fontSize: 11.5, color: c.t2),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            s.remain == null ? '—' : count.format(s.remain),
+                            style: GrFonts.monoStyle(
+                              context,
+                              // Two cards share the tile's height.
+                              size: storages.length > 1 ? 15 : 20,
+                              color: c.t1,
                             ),
-                            const SizedBox(width: 6),
-                            Text(
-                              s.remain == null ? '—' : count.format(s.remain),
-                              style: GrFonts.monoStyle(
-                                context,
-                                // Two cards share the tile's height.
-                                size: storages.length > 1 ? 15 : 20,
-                                color: c.t1,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                  ],
-                ),
-                caption: storages.isEmpty
-                    ? null
-                    : l10n.connectionSheetShotsLeft,
+                    ),
+                ],
               ),
+              caption: storages.isEmpty ? null : l10n.connectionSheetShotsLeft,
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _Tile(
-                label: l10n.connectionSheetLink,
-                value: Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.bluetooth_rounded,
-                        size: 18,
-                        color: link.bluetooth ? c.ok : c.t3,
-                      ),
-                      const SizedBox(width: 6),
-                      Icon(
-                        Icons.wifi_rounded,
-                        size: 18,
-                        color: link.label == LinkLabel.wifi ? c.ok : c.accent,
-                      ),
-                    ],
-                  ),
-                ),
-                caption: link.label == LinkLabel.wifi
-                    ? l10n.connectionSheetLinkWifi
-                    : link.label.text(l10n),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
-      Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-        child: OutlinedButton(
-          key: const Key('camera-sheet-disconnect'),
-          onPressed: () => unawaited(connection.disconnectWifi()),
-          child: Text(l10n.connectionSheetDisconnectWifi),
-        ),
-      ),
-    ];
+    );
   }
 
   /// Every storage that can take photos, SD card first because that is
   /// where photos normally go.
-  static List<({String id, String label, int? remain})> _storages(
+  List<({String id, String label, int? remain})> _storages(
     AppLocalizations l10n,
-    CameraStatus? status,
   ) {
     final storages = [
       for (final s in status?.storages ?? const <CameraStorage>[])
@@ -230,47 +347,27 @@ class CameraSheet extends StatelessWidget {
     };
     return storages..sort((a, b) => rank(a.id).compareTo(rank(b.id)));
   }
-
-  // --------------------------------------------------------------- offline
-
-  List<Widget> _offline(BuildContext context, SavedCamera camera) => [
-    _Header(
-      title: camera.name,
-      subtitle: camera.identityLine(context.l10n),
-      large: true,
-    ),
-    Padding(
-      key: const Key('camera-sheet-offline'),
-      padding: const EdgeInsets.fromLTRB(22, 10, 22, 0),
-      child: Text(
-        context.l10n.connectionSheetNotConnected,
-        style: TextStyle(fontSize: 14, color: GrColors.of(context).t2),
-      ),
-    ),
-  ];
 }
 
 class _Header extends StatelessWidget {
-  const new({required this.title, required this.subtitle, this.large = false});
+  const new({required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
-  final bool large;
 
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    final size = large ? 64.0 : 56.0;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 6, 20, 6),
       child: Row(
         children: [
           Container(
-            width: size,
-            height: size,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
               color: c.s3,
-              borderRadius: BorderRadius.circular(large ? 18 : 16),
+              borderRadius: BorderRadius.circular(18),
             ),
             child: Icon(Icons.photo_camera_outlined, size: 28, color: c.t1),
           ),
@@ -282,7 +379,7 @@ class _Header extends StatelessWidget {
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: large ? 20 : 19,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -.2,
                     color: c.t1,
@@ -299,7 +396,7 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// One of the three status tiles (battery, storage, link).
+/// One of the status tiles (battery, storage).
 class _Tile extends StatelessWidget {
   const new({required this.label, required this.value, this.caption});
 
@@ -353,94 +450,5 @@ class _Fit extends StatelessWidget {
     fit: BoxFit.scaleDown,
     alignment: Alignment.centerLeft,
     child: child,
-  );
-}
-
-/// The camera's name.
-class _CameraRows extends StatelessWidget {
-  const new({required this.camera});
-
-  final SavedCamera camera;
-
-  @override
-  Widget build(BuildContext context) => GroupBox(
-    children: [
-      GroupRow(
-        key: const Key('camera-sheet-rename'),
-        icon: Icons.edit_outlined,
-        title: context.l10n.connectionSheetName,
-        trailing: TrailingFit.value(context, camera.name),
-        chevron: true,
-        onTap: () => showRenameCameraDialog(context, camera),
-      ),
-    ],
-  );
-}
-
-/// Asks for a new display name for [camera] and saves it.
-Future<void> showRenameCameraDialog(
-  BuildContext context,
-  SavedCamera camera,
-) async {
-  final cameras = AppScope.of(context).cameras;
-  final name = await showDialog<String>(
-    context: context,
-    builder: (_) => _RenameDialog(initial: camera.name),
-  );
-  if (name == null) return;
-  await cameras.rename(camera.serial, name);
-}
-
-class _RenameDialog extends StatefulWidget {
-  const new({required this.initial});
-
-  final String initial;
-
-  @override
-  State<_RenameDialog> createState() => _RenameDialogState();
-}
-
-class _RenameDialogState extends State<_RenameDialog> {
-  late final TextEditingController _text = TextEditingController(
-    text: widget.initial,
-  );
-
-  @override
-  void dispose() {
-    _text.dispose();
-    super.dispose();
-  }
-
-  void _save() {
-    final name = _text.text.trim();
-    if (name.isEmpty) return;
-    Navigator.of(context).pop(name);
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: Text(context.l10n.connectionRenameTitle),
-    content: TextField(
-      key: const Key('camera-rename-field'),
-      controller: _text,
-      autofocus: true,
-      maxLength: 32,
-      textCapitalization: TextCapitalization.words,
-      onSubmitted: (_) => _save(),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: Text(context.l10n.connectionRenameCancel),
-      ),
-      ListenableBuilder(
-        listenable: _text,
-        builder: (context, _) => TextButton(
-          key: const Key('camera-rename-save'),
-          onPressed: _text.text.trim().isEmpty ? null : _save,
-          child: Text(context.l10n.connectionRenameSave),
-        ),
-      ),
-    ],
   );
 }

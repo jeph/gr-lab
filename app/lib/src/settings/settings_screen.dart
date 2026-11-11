@@ -12,8 +12,8 @@ import 'package:grlab/src/widgets/group.dart';
 import 'package:grlab/src/widgets/pressable.dart';
 
 /// App settings (subset of mock `b-settings`): appearance and language,
-/// leaving the camera's Wi-Fi when the app is not used, the debug log,
-/// licenses and the privacy policy.
+/// connecting to the camera when the app opens, leaving its Wi-Fi when the
+/// app is not used, the debug log, licenses and the privacy policy.
 class SettingsScreen extends StatelessWidget {
   const new({super.key});
 
@@ -55,6 +55,19 @@ class SettingsScreen extends StatelessWidget {
             SectionLabel(l10n.settingsCamera),
             GroupBox(
               children: [
+                GroupRow(
+                  key: const Key('setting-connect-nearby'),
+                  icon: Icons.bluetooth_searching_rounded,
+                  title: l10n.settingsConnectNearby,
+                  subtitle: l10n.settingsConnectNearbySubtitle,
+                  trailing: Switch(
+                    key: const Key('setting-connect-nearby-switch'),
+                    value: settings.connectWhenNearby,
+                    onChanged: (v) => settings.connectWhenNearby = v,
+                  ),
+                  onTap: () =>
+                      settings.connectWhenNearby = !settings.connectWhenNearby,
+                ),
                 GroupRow(
                   key: const Key('setting-auto-disconnect'),
                   icon: Icons.timer_outlined,

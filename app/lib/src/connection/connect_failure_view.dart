@@ -31,8 +31,32 @@ final ButtonStyle smallOutlinedStyle = OutlinedButton.styleFrom(
   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
 );
 
+/// What went wrong, in a line: the title of [ConnectFailureView], and what
+/// the camera card's chip says.
+String connectFailureTitle(
+  AppLocalizations l10n,
+  ConnectFailure failure,
+  String cameraName,
+) => switch (failure.kind) {
+  ConnectFailureKind.bluetoothOff => l10n.connectionFailureBluetoothOffTitle,
+  ConnectFailureKind.bluetoothDenied =>
+    l10n.connectionFailureBluetoothDeniedTitle,
+  ConnectFailureKind.unreachable => l10n.connectionFailureUnreachableTitle(
+    cameraName,
+  ),
+  ConnectFailureKind.needsPairing => l10n.connectionFailureNeedsPairingTitle(
+    cameraName,
+  ),
+  ConnectFailureKind.wifi => l10n.connectionFailureWifiTitle(cameraName),
+  ConnectFailureKind.wifiDeclined => l10n.connectionFailureWifiDeclinedTitle(
+    cameraName,
+  ),
+  ConnectFailureKind.wifiVpn => l10n.connectionFailureWifiVpnTitle(cameraName),
+};
+
 /// Why connecting failed, with the checks that fix it (mock
-/// `b-home-fail`). It stays until Try again or another camera is chosen;
+/// `b-home-fail`), on the camera sheet and on the pages that need the
+/// camera's Wi-Fi. It stays until Try again or another camera is chosen;
 /// pairing is never retried by itself.
 class ConnectFailureView extends StatelessWidget {
   const new({
@@ -40,49 +64,34 @@ class ConnectFailureView extends StatelessWidget {
     required this.failure,
     required this.connection,
     super.key,
+    this.onPairAgain,
   });
 
   final SavedCamera camera;
   final ConnectFailure failure;
   final ConnectionController connection;
 
+  /// Opens pairing in place of [PairingFlow.push]: the camera sheet closes
+  /// itself first.
+  final VoidCallback? onPairAgain;
+
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
     final kind = failure.kind;
-    final name = camera.name;
-    final (title, body) = switch (kind) {
-      ConnectFailureKind.bluetoothOff => (
-        l10n.connectionFailureBluetoothOffTitle,
-        l10n.connectionFailureBluetoothOffBody,
-      ),
-      ConnectFailureKind.bluetoothDenied => (
-        l10n.connectionFailureBluetoothDeniedTitle,
+    final title = connectFailureTitle(l10n, failure, camera.name);
+    final body = switch (kind) {
+      ConnectFailureKind.bluetoothOff => l10n.connectionFailureBluetoothOffBody,
+      ConnectFailureKind.bluetoothDenied =>
         l10n.connectionFailureBluetoothDeniedBody,
-      ),
-      ConnectFailureKind.unreachable => (
-        l10n.connectionFailureUnreachableTitle(name),
-        l10n.connectionFailureUnreachableBody,
-      ),
-      ConnectFailureKind.needsPairing => (
-        l10n.connectionFailureNeedsPairingTitle(name),
-        l10n.connectionFailureNeedsPairingBody,
-      ),
-      ConnectFailureKind.wifi => (
-        l10n.connectionFailureWifiTitle(name),
-        l10n.connectionFailureWifiBody,
-      ),
-      ConnectFailureKind.wifiDeclined => (
-        l10n.connectionFailureWifiDeclinedTitle(name),
-        l10n.connectionFailureWifiDeclinedBody,
-      ),
-      ConnectFailureKind.wifiVpn => (
-        l10n.connectionFailureWifiVpnTitle(name),
-        l10n.connectionFailureWifiVpnBody,
-      ),
+      ConnectFailureKind.unreachable => l10n.connectionFailureUnreachableBody,
+      ConnectFailureKind.needsPairing => l10n.connectionFailureNeedsPairingBody,
+      ConnectFailureKind.wifi => l10n.connectionFailureWifiBody,
+      ConnectFailureKind.wifiDeclined => l10n.connectionFailureWifiDeclinedBody,
+      ConnectFailureKind.wifiVpn => l10n.connectionFailureWifiVpnBody,
     };
-    void pairAgain() => unawaited(PairingFlow.push(context));
+    final pairAgain = onPairAgain ?? () => unawaited(PairingFlow.push(context));
     final checks = switch (kind) {
       ConnectFailureKind.unreachable => [
         GroupRow(
@@ -151,15 +160,11 @@ class ConnectFailureView extends StatelessWidget {
           ? l10n.connectionFailureJoinWifi
           : l10n.connectionFailureTryAgain,
     );
-    // Wi-Fi failures keep the Bluetooth link; only Wi-Fi is tried again,
-    // from the camera's pages when they are open.
-    final wifiStep = failure.step == ConnectStep.wifi;
+    // Wi-Fi failures keep the Bluetooth link; only Wi-Fi is tried again.
     void retry() => unawaited(
-      !wifiStep
-          ? connection.connect()
-          : connection.tab == null
-          ? connection.openCamera(CameraTab.library)
-          : connection.joinWifi(),
+      failure.step == ConnectStep.wifi
+          ? connection.joinWifi()
+          : connection.connect(),
     );
     return Column(
       key: Key('connect-failed-${kind.name}'),

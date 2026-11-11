@@ -9,8 +9,11 @@ import 'package:grlab/src/cameras/camera_details.dart';
 import 'package:grlab/src/cameras/camera_drawing.dart';
 import 'package:grlab/src/cameras/camera_identity.dart';
 import 'package:grlab/src/cameras/camera_presence.dart';
+import 'package:grlab/src/connection/camera_pill.dart';
+import 'package:grlab/src/connection/camera_sheet.dart';
 import 'package:grlab/src/connection/connect_failure_view.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grlab/src/connection/link_state.dart';
 import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/pairing/pairing_flow.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart';
@@ -366,20 +369,6 @@ class _CameraList extends StatelessWidget {
     final current = cameras.first;
     final others = cameras.skip(1).toList();
     final connecting = connection.status == ConnectionStatus.connecting;
-    // Bluetooth failures end the link; Wi-Fi ones are kept next to it.
-    final failure = switch (connection.status) {
-      ConnectionStatus.failed ||
-      ConnectionStatus.bluetooth => connection.failure,
-      _ => null,
-    };
-    final lost =
-        failure != null &&
-        failure.lost &&
-        (failure.kind == ConnectFailureKind.wifi ||
-            failure.kind == ConnectFailureKind.unreachable);
-    final idleFor = connection.status == ConnectionStatus.bluetooth
-        ? connection.idleClosedAfter
-        : null;
     return SafeArea(
       bottom: false,
       child: ListView(
@@ -404,30 +393,10 @@ class _CameraList extends StatelessWidget {
               ),
             ],
           ),
-          if (lost)
-            _Banner(
-              key: const Key('cameras-lost'),
-              icon: failure.kind == ConnectFailureKind.wifi
-                  ? Icons.wifi_off_rounded
-                  : Icons.bluetooth_disabled_rounded,
-              title: context.l10n.camerasLostTitle(current.name),
-              body: failure.kind == ConnectFailureKind.wifi
-                  ? context.l10n.camerasLostWifiBody
-                  : context.l10n.camerasLostBluetoothBody,
-            )
-          else if (idleFor != null)
-            _Banner(
-              key: const Key('cameras-idle'),
-              icon: Icons.timer_outlined,
-              title: context.l10n.camerasIdleTitle(current.name),
-              body: context.l10n.camerasIdleBody(idleFor.inMinutes),
-            ),
           _CameraCard(
             camera: current,
             presence: presence,
             connection: connection,
-            // The banner says what happened.
-            failure: lost ? null : failure,
           ),
           SectionLabel(context.l10n.camerasOtherCameras),
           IgnorePointer(
@@ -457,23 +426,26 @@ class _CameraList extends StatelessWidget {
 
 // ----------------------------------------------------------------- card
 
-/// The camera used last (mock `.ccard`): a drawing of its model
-/// ([CameraDrawing]), an icon for its link, which pulses while the link is
-/// being made, its power button and buttons to its pages
-/// ([ConnectionController.tabs]); or Cancel while Bluetooth is linked for
-/// a new connection, or why the last attempt failed.
+/// The camera used last (mock `.ccard`, and `connection-controls.html`,
+/// direction A): a chip that says how it is linked and opens the camera
+/// sheet, where the links are connected and disconnected; a drawing of its
+/// model ([CameraDrawing]); its power button and the buttons to its pages
+/// ([ConnectionController.tabs]). Nothing on the card moves or gives its
+/// place to another control as the connection changes, so a tap lands on
+/// what was there when it was aimed \[design\]: Cancel, shown only while
+/// Bluetooth is linked for a new connection, has a place of its own that
+/// is empty otherwise, and a failure is the chip's words, with its checks
+/// in the sheet.
 class _CameraCard extends StatelessWidget {
   const new({
     required this.camera,
     required this.presence,
     required this.connection,
-    required this.failure,
   });
 
   final SavedCamera camera;
   final CameraPresence presence;
   final ConnectionController connection;
-  final ConnectFailure? failure;
 
   /// Whether the camera is on: from its session while there is one, else
   /// from its advertisement; null when neither says.
@@ -487,12 +459,60 @@ class _CameraCard extends StatelessWidget {
     },
   };
 
+  /// The link as the chip words it: why the last attempt failed, that the
+  /// Wi-Fi was left for lack of use (until the next join), or the link's
+  /// state in the camera pill's words.
+  Widget _chip(BuildContext context, Presence seen) {
+    final l10n = context.l10n;
+    void openSheet() => unawaited(showCameraSheet(context));
+    // Bluetooth failures end the link; Wi-Fi ones are kept next to it.
+    final failure = switch (connection.status) {
+      ConnectionStatus.failed ||
+      ConnectionStatus.bluetooth => connection.failure,
+      _ => null,
+    };
+    if (failure != null) {
+      return _LinkChip(
+        link: _Link.failed,
+        label: connectFailureTitle(l10n, failure, camera.name),
+        onTap: openSheet,
+      );
+    }
+    final link = _Link.of(connection, seen);
+    final idleFor = connection.idleClosedAfter;
+    if (link == _Link.bluetooth && idleFor != null) {
+      return _LinkChip(
+        link: _Link.idle,
+        label: l10n.camerasChipIdle(idleFor.inMinutes),
+        onTap: openSheet,
+      );
+    }
+    final battery = connection.cameraStatus?.battery;
+    return _LinkChip(
+      link: link,
+      label: switch (link) {
+        _Link.away || _Link.nearby => l10n.connectionPillNotConnected,
+        _ => LinkState.of(connection).label.text(l10n),
+      },
+      detail: switch (link) {
+        _Link.away => l10n.camerasLinkAway,
+        _Link.nearby => l10n.camerasLinkNearby,
+        _Link.wifi when battery != null => formatBattery(context, battery),
+        _ => null,
+      },
+      onTap: openSheet,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
     final seen = presence.of(camera);
     final on = _cameraOn(seen);
+    final linking =
+        connection.status == ConnectionStatus.connecting &&
+        connection.step == ConnectStep.bluetooth;
     return Container(
       key: const Key('camera-card'),
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
@@ -507,19 +527,38 @@ class _CameraCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              _Link.of(connection, seen).icon(c, l10n),
-              const Spacer(),
+              Expanded(
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: _chip(context, seen),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Cancel's own place, empty unless Bluetooth is being linked
+              // for a new connection.
+              SizedBox.square(
+                dimension: 36,
+                child: linking
+                    ? GrIconButton(
+                        key: const Key('camera-card-cancel'),
+                        icon: Icons.close_rounded,
+                        tooltip: l10n.camerasCancel,
+                        onPressed: () => unawaited(connection.disconnect()),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 8),
               GrIconButton(
                 key: const Key('camera-card-more'),
                 icon: Icons.more_horiz_rounded,
-                tooltip: context.l10n.camerasDetailsTooltip,
+                tooltip: l10n.camerasDetailsTooltip,
                 onPressed: () =>
                     unawaited(CameraDetailsScreen.push(context, camera.serial)),
               ),
             ],
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 4, 14, 18),
+            padding: const EdgeInsets.fromLTRB(14, 18, 14, 18),
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 300),
@@ -558,128 +597,43 @@ class _CameraCard extends StatelessWidget {
               _PowerButton(camera: camera, connection: connection, on: on),
             ],
           ),
-          _CardFoot(child: _foot(context)),
-        ],
-      ),
-    );
-  }
-
-  /// Cancel while Bluetooth is linked for a new connection, why the last
-  /// attempt failed, or the buttons to the camera's pages; keyed by which,
-  /// so [_CardFoot] brings each in.
-  Widget _foot(BuildContext context) {
-    final failure = this.failure;
-    final l10n = context.l10n;
-    final linking =
-        connection.status == ConnectionStatus.connecting &&
-        connection.step == ConnectStep.bluetooth;
-    if (linking) {
-      return Padding(
-        key: const ValueKey('cancel'),
-        padding: const EdgeInsets.only(top: 16),
-        child: OutlinedButton(
-          key: const Key('camera-card-cancel'),
-          style: smallOutlinedStyle,
-          onPressed: () => unawaited(connection.disconnect()),
-          child: Text(l10n.camerasCancel),
-        ),
-      );
-    }
-    if (failure != null) {
-      return ConnectFailureView(
-        key: const ValueKey('failure'),
-        camera: camera,
-        failure: failure,
-        connection: connection,
-      );
-    }
-    return Padding(
-      key: const ValueKey('pages'),
-      padding: const EdgeInsets.only(top: 16),
-      child: Row(
-        children: [
-          for (final (i, tab) in connection.tabs.indexed) ...[
-            if (i > 0) const SizedBox(width: 8),
-            Expanded(
-              child: _PageButton(
-                key: Key('camera-card-${tab.name}'),
-                icon: CameraTabBar.icon(tab),
-                label: switch (tab) {
-                  CameraTab.library => l10n.camerasLibrary,
-                  CameraTab.shoot => l10n.camerasShoot,
-                  CameraTab.looks => l10n.camerasLooks,
-                },
-                onPressed: () => unawaited(connection.openCamera(tab)),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// The foot of the camera card. When what it holds changes, as when the
-/// buttons to the camera's pages follow the Bluetooth link, the new
-/// content fades and slides in while the card grows or shrinks to fit it;
-/// at once when the platform asks for less motion.
-class _CardFoot extends StatelessWidget {
-  const new({required this.child});
-
-  /// What the foot holds, keyed by what it is.
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (MediaQuery.disableAnimationsOf(context)) return child;
-    const duration = Duration(milliseconds: 280);
-    return ClipRect(
-      child: AnimatedSize(
-        duration: duration,
-        curve: Curves.easeOutCubic,
-        alignment: Alignment.topCenter,
-        child: AnimatedSwitcher(
-          duration: duration,
-          reverseDuration: const Duration(milliseconds: 140),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeIn,
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween(
-                begin: const Offset(0, .16),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            ),
-          ),
-          layoutBuilder: (current, leaving) => Stack(
-            fit: StackFit.passthrough,
-            clipBehavior: Clip.none,
+          const SizedBox(height: 16),
+          Row(
             children: [
-              // Out of the layout, so the card takes the height of what
-              // comes in, and out of reach while it fades.
-              for (final child in leaving)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: IgnorePointer(child: child),
+              for (final (i, tab) in connection.tabs.indexed) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: _PageButton(
+                    key: Key('camera-card-${tab.name}'),
+                    icon: CameraTabBar.icon(tab),
+                    label: switch (tab) {
+                      CameraTab.library => l10n.camerasLibrary,
+                      CameraTab.shoot => l10n.camerasShoot,
+                      CameraTab.looks => l10n.camerasLooks,
+                    },
+                    onPressed: () => unawaited(connection.openCamera(tab)),
+                  ),
                 ),
-              ?current,
+              ],
             ],
           ),
-          child: child,
-        ),
+        ],
       ),
     );
   }
 }
 
-/// The camera's link as the card's icon shows it. Wi-Fi counts as a step
+/// The camera's link as the card's chip shows it. Wi-Fi counts as a step
 /// up from Bluetooth rather than as a second link, so from the join on
-/// the icon is the Wi-Fi's, whatever the Bluetooth link under it does.
+/// the chip is the Wi-Fi's, whatever the Bluetooth link under it does.
 enum _Link {
+  /// The last attempt failed, or a link that was up was lost.
+  failed,
+
+  /// Linked over Bluetooth after the Wi-Fi was left for lack of use
+  /// ([ConnectionController.idleClosedAfter]).
+  idle,
+
   /// Not linked, and the scan does not see the camera (or cannot look).
   away,
 
@@ -710,71 +664,52 @@ enum _Link {
     return seen == Presence.away ? away : nearby;
   }
 
-  _LinkIcon icon(GrColors c, AppLocalizations l10n) => switch (this) {
-    away => _LinkIcon(
-      link: this,
-      icon: Icons.bluetooth_disabled_rounded,
-      color: c.t3,
-      label: l10n.camerasLinkAway,
-    ),
-    nearby => _LinkIcon(
-      link: this,
-      icon: Icons.bluetooth_disabled_rounded,
-      color: c.t2,
-      label: l10n.camerasLinkNearby,
-    ),
-    bluetoothConnecting => _LinkIcon(
-      link: this,
-      icon: Icons.bluetooth_rounded,
-      color: c.t1,
-      label: l10n.camerasLinkBluetoothConnecting,
-      pulsing: true,
-    ),
-    bluetooth => _LinkIcon(
-      link: this,
-      icon: Icons.bluetooth_connected_rounded,
-      color: c.ok,
-      label: l10n.camerasLinkBluetooth,
-    ),
-    wifiConnecting => _LinkIcon(
-      link: this,
-      icon: Icons.wifi_rounded,
-      color: c.t1,
-      label: l10n.camerasLinkWifiConnecting,
-      pulsing: true,
-    ),
-    wifi => _LinkIcon(
-      link: this,
-      icon: Icons.wifi_rounded,
-      color: c.ok,
-      label: l10n.camerasLinkWifi,
-    ),
+  IconData get icon => switch (this) {
+    failed => Icons.error_outline_rounded,
+    idle => Icons.timer_outlined,
+    away || nearby => Icons.bluetooth_disabled_rounded,
+    bluetoothConnecting => Icons.bluetooth_rounded,
+    bluetooth => Icons.bluetooth_connected_rounded,
+    wifiConnecting || wifi => Icons.wifi_rounded,
   };
+
+  Color iconColor(GrColors c) => switch (this) {
+    failed => c.danger,
+    idle => c.accent,
+    away => c.t3,
+    nearby => c.t2,
+    bluetoothConnecting || wifiConnecting => c.t1,
+    bluetooth || wifi => c.ok,
+  };
+
+  /// The link is being made: the chip's icon pulses.
+  bool get pulsing => this == bluetoothConnecting || this == wifiConnecting;
 }
 
-/// The card's link, as an icon alone; its words are the tooltip and the
-/// accessibility label. The icon fades out and in while the link is being
-/// made ([pulsing]), and is still when the platform asks for less motion.
-class _LinkIcon extends StatefulWidget {
+/// The card's link in words, with [detail] (whether the camera is nearby,
+/// its battery) in small type after them; a tap opens the camera sheet.
+/// As tall as the round buttons beside it, and never wider than the room
+/// they leave: the words are cut short instead. The icon fades out and in
+/// while the link is being made ([_Link.pulsing]), and is still when the
+/// platform asks for less motion.
+class _LinkChip extends StatefulWidget {
   const new({
     required this.link,
-    required this.icon,
-    required this.color,
     required this.label,
-    this.pulsing = false,
+    required this.onTap,
+    this.detail,
   });
 
   final _Link link;
-  final IconData icon;
-  final Color color;
   final String label;
-  final bool pulsing;
+  final String? detail;
+  final VoidCallback onTap;
 
   @override
-  State<_LinkIcon> createState() => _LinkIconState();
+  State<_LinkChip> createState() => _LinkChipState();
 }
 
-class _LinkIconState extends State<_LinkIcon>
+class _LinkChipState extends State<_LinkChip>
     with SingleTickerProviderStateMixin {
   late final _pulse = AnimationController(
     vsync: this,
@@ -792,13 +727,13 @@ class _LinkIconState extends State<_LinkIcon>
   }
 
   @override
-  void didUpdateWidget(_LinkIcon old) {
+  void didUpdateWidget(_LinkChip old) {
     super.didUpdateWidget(old);
-    if (widget.pulsing != old.pulsing) _syncPulse();
+    if (widget.link.pulsing != old.link.pulsing) _syncPulse();
   }
 
   void _syncPulse() {
-    if (!widget.pulsing || MediaQuery.disableAnimationsOf(context)) {
+    if (!widget.link.pulsing || MediaQuery.disableAnimationsOf(context)) {
       _pulse
         ..stop()
         ..value = 0;
@@ -816,23 +751,67 @@ class _LinkIconState extends State<_LinkIcon>
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    return Tooltip(
-      message: widget.label,
-      child: Semantics(
-        label: widget.label,
-        excludeSemantics: true,
-        child: Container(
-          key: Key('camera-card-link-${widget.link.name}'),
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: c.s2,
-            shape: BoxShape.circle,
-            border: Border.all(color: c.line),
-          ),
-          child: FadeTransition(
-            opacity: _opacity,
-            child: Icon(widget.icon, size: 18, color: widget.color),
+    final link = widget.link;
+    // A failure and the idle note stand out from the link's plain states.
+    final tint = switch (link) {
+      _Link.failed => c.danger,
+      _Link.idle => c.accent,
+      _ => null,
+    };
+    final detail = widget.detail;
+    return Semantics(
+      button: true,
+      child: Material(
+        key: Key('camera-card-link-${link.name}'),
+        color: tint == null
+            ? c.s2
+            : Color.alphaBlend(tint.withValues(alpha: .12), c.s1),
+        shape: StadiumBorder(
+          side: BorderSide(color: tint?.withValues(alpha: .36) ?? c.line),
+        ),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: widget.onTap,
+          // Grows with large text instead of clipping it.
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 36),
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(start: 11, end: 7),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FadeTransition(
+                    opacity: _opacity,
+                    child: Icon(link.icon, size: 17, color: link.iconColor(c)),
+                  ),
+                  const SizedBox(width: 7),
+                  Flexible(
+                    child: Text.rich(
+                      TextSpan(
+                        text: widget.label,
+                        children: [
+                          if (detail != null)
+                            TextSpan(
+                              text: '  $detail',
+                              style: GrFonts.monoStyle(context, size: 11.5),
+                            ),
+                        ],
+                      ),
+                      key: const Key('camera-card-link-words'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: link == _Link.failed ? c.danger : c.t1,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  Icon(Icons.chevron_right_rounded, size: 18, color: c.t3),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -981,58 +960,6 @@ class _PageButton extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// A note above the camera card: the camera's link was lost (mock
-/// `b-home-lost`), or its Wi-Fi was left for lack of use. Shown once: the
-/// next attempt clears it.
-class _Banner extends StatelessWidget {
-  const new({
-    required this.icon,
-    required this.title,
-    required this.body,
-    super.key,
-  });
-
-  final IconData icon;
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = GrColors.of(context);
-    return Container(
-      margin: const EdgeInsets.fromLTRB(18, 4, 18, 6),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: c.accent.withValues(alpha: .14),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: c.accent.withValues(alpha: .32)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: c.accent),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(body, style: TextStyle(fontSize: 12.5, color: c.t2)),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

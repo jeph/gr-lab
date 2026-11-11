@@ -36,6 +36,11 @@ void main() {
       expect(settings.autoDisconnect, AutoDisconnect.never);
       expect(find.text('Never'), findsOneWidget);
 
+      expect(settings.connectWhenNearby, isTrue);
+      await tester.tap(find.byKey(const Key('setting-connect-nearby-switch')));
+      await tester.pump();
+      expect(settings.connectWhenNearby, isFalse);
+
       await tester.scrollUntilVisible(find.text('Licenses'), 200);
       expect(find.text('Licenses'), findsOneWidget);
 
@@ -49,6 +54,7 @@ void main() {
       ))!;
       expect(reloaded.theme, AppTheme.cyanotype);
       expect(reloaded.autoDisconnect, AutoDisconnect.never);
+      expect(reloaded.connectWhenNearby, isFalse);
 
       await app.dispose();
     });

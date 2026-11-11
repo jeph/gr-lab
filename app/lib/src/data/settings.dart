@@ -48,6 +48,8 @@ final class SettingsController extends ChangeNotifier {
           c._autoDisconnect;
       c._shootMode =
           ShootMode.values.asNameMap()[json['shootMode']] ?? c._shootMode;
+      final connectWhenNearby = json['connectWhenNearby'];
+      if (connectWhenNearby is bool) c._connectWhenNearby = connectWhenNearby;
       final debugLogging = json['debugLogging'];
       c
         .._debugLogging = debugLogging is bool ? debugLogging : null
@@ -70,6 +72,7 @@ final class SettingsController extends ChangeNotifier {
 
   AppTheme _theme = AppTheme.system;
   AutoDisconnect _autoDisconnect = AutoDisconnect.fiveMinutes;
+  bool _connectWhenNearby = true;
   ShootMode _shootMode = ShootMode.remote;
   bool? _debugLogging;
   Locale? _language;
@@ -78,6 +81,11 @@ final class SettingsController extends ChangeNotifier {
 
   /// Leave the camera's Wi-Fi after this long without use.
   AutoDisconnect get autoDisconnect => _autoDisconnect;
+
+  /// Connect to the camera used last when the app opens and the Cameras
+  /// screen sees it nearby (`CamerasScreen.autoConnect`). Off, the user
+  /// connects it: from the camera card, its sheet or its pages.
+  bool get connectWhenNearby => _connectWhenNearby;
 
   /// Shoot opens in the mode used last; the first time in Remote, which
   /// needs no Wi-Fi.
@@ -95,6 +103,7 @@ final class SettingsController extends ChangeNotifier {
 
   set theme(AppTheme v) => _update(() => _theme = v);
   set autoDisconnect(AutoDisconnect v) => _update(() => _autoDisconnect = v);
+  set connectWhenNearby(bool v) => _update(() => _connectWhenNearby = v);
   set shootMode(ShootMode v) => _update(() => _shootMode = v);
   set debugLogging(bool? v) => _update(() => _debugLogging = v);
   set language(Locale? v) => _update(() => _language = v);
@@ -107,6 +116,7 @@ final class SettingsController extends ChangeNotifier {
     final snapshot = {
       _themeKey: _theme.name,
       'autoDisconnect': _autoDisconnect.name,
+      'connectWhenNearby': _connectWhenNearby,
       'shootMode': _shootMode.name,
       'debugLogging': ?_debugLogging,
       _languageKey: ?_language?.toLanguageTag(),

@@ -47,16 +47,16 @@ Future<void> _untilListed(WidgetTester tester, TestApp app) => pumpUntil(
   reason: 'listing',
 );
 
-Future<void> _expectLeft(WidgetTester tester, TestApp app) async {
-  await pumpUntilFound(tester, find.byKey(const Key('cameras-idle')));
+/// The Wi-Fi was left after [minutes] without use: the camera card's chip
+/// says so, on Bluetooth.
+Future<void> _expectLeft(
+  WidgetTester tester,
+  TestApp app, {
+  int minutes = 5,
+}) async {
+  await pumpUntilFound(tester, find.byKey(const Key('camera-card-link-idle')));
   expect(app.models.connection.status, ConnectionStatus.bluetooth);
-  expect(
-    find.text(
-      "GR Lab wasn't used for 5 minutes. Tap Library to join "
-      'again.',
-    ),
-    findsOneWidget,
-  );
+  expect(find.text('Left Wi-Fi after $minutes min'), findsOneWidget);
   await pumpUntil(tester, () => !app.camera.wlanOn, reason: 'WLAN off');
 }
 
@@ -132,7 +132,7 @@ void main() {
     await tester.pump(const Duration(minutes: 4));
     expect(app.models.connection.status, ConnectionStatus.connected);
     expect(app.camera.wlanOn, isTrue);
-    expect(find.byKey(const Key('cameras-idle')), findsNothing);
+    expect(find.byKey(const Key('camera-card-link-idle')), findsNothing);
 
     await tester.pump(const Duration(minutes: 1, seconds: 1));
     await _expectLeft(tester, app);
@@ -173,14 +173,7 @@ void main() {
     // 30 minutes without use already passed.
     settings.autoDisconnect = AutoDisconnect.oneMinute;
     await tester.pump();
-    await pumpUntilFound(tester, find.byKey(const Key('cameras-idle')));
-    expect(
-      find.text(
-        "GR Lab wasn't used for 1 minute. Tap Library to join "
-        'again.',
-      ),
-      findsOneWidget,
-    );
+    await _expectLeft(tester, app, minutes: 1);
 
     await app.dispose();
   });

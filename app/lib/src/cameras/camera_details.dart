@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/cameras/camera_identity.dart';
-import 'package:grlab/src/connection/camera_sheet.dart';
+import 'package:grlab/src/cameras/camera_rename.dart';
 import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/library/format.dart';

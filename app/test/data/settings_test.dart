@@ -27,6 +27,7 @@ void main() {
     final blocker = await Directory('${temp.path}/settings.json').create();
     settings
       ..theme = AppTheme.dark
+      ..connectWhenNearby = false
       ..shootMode = ShootMode.liveView;
     await expectLater(settings.flush(), throwsA(isA<FileSystemException>()));
     expect(printed, contains(startsWith('Saving settings.json failed')));
@@ -38,6 +39,7 @@ void main() {
     final reloaded = await SettingsController.load(temp);
     expect(reloaded.theme, AppTheme.dark);
     expect(reloaded.shootMode, ShootMode.liveView);
+    expect(reloaded.connectWhenNearby, isFalse);
     expect(reloaded.autoDisconnect, AutoDisconnect.never);
     // Failed writes leave no temporary files behind.
     expect(temp.listSync().map((e) => e.uri.pathSegments.last), [

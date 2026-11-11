@@ -8,7 +8,7 @@ GR Lab is an app for Ricoh GR cameras. It pairs with your camera over Bluetooth,
 
 GR Lab keeps the following in its own app storage on your phone:
 
-- Your settings: the theme, the language if you chose one, the auto-disconnect time, the Shoot mode you used last and whether debug logging is on.
+- Your settings: the theme, the language if you chose one, whether GR Lab connects to your camera when it is nearby, the auto-disconnect time, the Shoot mode you used last and whether debug logging is on.
 - Your paired cameras: the name you gave each one, its model, serial number, firmware version, Bluetooth name and address, the identifier your phone uses for it, when you paired it and whether your phone has already joined its Wi-Fi.
 - A record of your downloads: which files from which camera you have saved, with the date and size the camera reported for each (so GR Lab notices when a camera later holds a different file under the same name), and downloads still waiting.
 - Your saved looks: the name you gave each one, its Image Control settings, where it came from (a photo's file name or a Custom slot) and, for a look saved from a photo, a smaller copy of that photo, which way up it was taken and the Image Control settings it was taken with.

@@ -34,11 +34,22 @@
   },
   "camerasCancel": "Cancel",
   "@camerasCancel": {
-    "description": "Button on the camera card that stops connecting to the camera."
+    "description": "Stops connecting to the camera: tooltip and accessibility label of the ✕ button on the camera card, and button of the Bluetooth and Wi-Fi rows on the camera sheet."
+  },
+  "camerasChipIdle": "Left Wi-Fi after {minutes} min",
+  "@camerasChipIdle": {
+    "description": "On the camera card's chip after GR Lab left the camera's Wi-Fi because the app was not used; Bluetooth stays connected. Keep it short: the chip is one line. \"min\" is the abbreviation for minutes.",
+    "placeholders": {
+      "minutes": {
+        "type": "int",
+        "format": "decimalPattern",
+        "description": "Minutes without use (1, 5, 10 or 15)."
+      }
+    }
   },
   "camerasConnect": "Connect",
   "@camerasConnect": {
-    "description": "Button that connects to a paired camera (other cameras list, camera details)."
+    "description": "Button that connects to a paired camera (other cameras list, camera details), or one of its links (Bluetooth and Wi-Fi rows on the camera sheet)."
   },
   "camerasDetailsForget": "Forget camera",
   "@camerasDetailsForget": {
@@ -142,76 +153,21 @@
       }
     }
   },
-  "camerasIdleBody": "GR Lab wasn't used for {minutes, plural, one{{minutes} minute} other{{minutes} minutes}}. Tap Library to join again.",
-  "@camerasIdleBody": {
-    "description": "Banner on the Cameras screen after GR Lab left the camera's Wi-Fi because the app was not used. Library is the camera card's button.",
-    "placeholders": {
-      "minutes": {
-        "type": "int",
-        "description": "How many minutes the app was not used before it left the Wi-Fi.",
-        "format": "decimalPattern"
-      }
-    }
-  },
-  "camerasIdleTitle": "Left {cameraName}'s Wi-Fi",
-  "@camerasIdleTitle": {
-    "description": "Title of the banner on the Cameras screen after GR Lab left the camera's Wi-Fi because the app was not used.",
-    "placeholders": {
-      "cameraName": {
-        "type": "String",
-        "description": "The camera's name as the user named it, for example GR IV."
-      }
-    }
-  },
   "camerasLibrary": "Library",
   "@camerasLibrary": {
     "description": "Label of the camera card's button that opens the photos on the camera."
   },
   "camerasLinkAway": "Not nearby",
   "@camerasLinkAway": {
-    "description": "Accessibility label and tooltip of the camera card's link icon: the camera is not linked and the scan does not see it."
-  },
-  "camerasLinkBluetooth": "Connected over Bluetooth",
-  "@camerasLinkBluetooth": {
-    "description": "Accessibility label and tooltip of the camera card's link icon: the camera is linked over Bluetooth only."
-  },
-  "camerasLinkBluetoothConnecting": "Connecting over Bluetooth…",
-  "@camerasLinkBluetoothConnecting": {
-    "description": "Accessibility label and tooltip of the camera card's link icon while it pulses: the camera is being linked over Bluetooth."
+    "description": "Small text on the camera card's chip, after Not connected: the scan does not see the camera."
   },
   "camerasLinkNearby": "Nearby",
   "@camerasLinkNearby": {
-    "description": "Accessibility label and tooltip of the camera card's link icon: the scan sees the camera nearby, but it is not linked."
-  },
-  "camerasLinkWifi": "Connected over Wi-Fi",
-  "@camerasLinkWifi": {
-    "description": "Accessibility label and tooltip of the camera card's link icon: the phone is on the camera's Wi-Fi."
-  },
-  "camerasLinkWifiConnecting": "Connecting to Wi-Fi…",
-  "@camerasLinkWifiConnecting": {
-    "description": "Accessibility label and tooltip of the camera card's link icon while it pulses: the phone is joining the camera's Wi-Fi."
+    "description": "Small text on the camera card's chip, after Not connected: the scan sees the camera nearby."
   },
   "camerasLooks": "Looks",
   "@camerasLooks": {
     "description": "Label of the camera card's button that opens the camera's Image Control looks."
-  },
-  "camerasLostBluetoothBody": "The camera stopped answering over Bluetooth.",
-  "@camerasLostBluetoothBody": {
-    "description": "Banner on the Cameras screen after the Bluetooth link to the camera was lost."
-  },
-  "camerasLostTitle": "Lost the connection to {cameraName}",
-  "@camerasLostTitle": {
-    "description": "Title of the banner on the Cameras screen after the link to the camera was lost.",
-    "placeholders": {
-      "cameraName": {
-        "type": "String",
-        "description": "The camera's name as the user named it, for example GR IV."
-      }
-    }
-  },
-  "camerasLostWifiBody": "The phone left the camera's Wi-Fi.",
-  "@camerasLostWifiBody": {
-    "description": "Banner on the Cameras screen after the camera's Wi-Fi was lost."
   },
   "camerasOtherCameras": "Other cameras",
   "@camerasOtherCameras": {
@@ -549,23 +505,23 @@
   },
   "connectionPillBluetooth": "Bluetooth",
   "@connectionPillBluetooth": {
-    "description": "Link state on the camera pill: connected over Bluetooth only."
+    "description": "Link state on the camera pill and the camera card's chip: connected over Bluetooth only."
   },
   "connectionPillCameraOff": "Camera off",
   "@connectionPillCameraOff": {
-    "description": "Link state on the camera pill, and the link tile caption on the camera sheet: the camera was switched off and is being turned back on."
+    "description": "Link state on the camera pill and the camera card's chip, and under Wi-Fi on the camera sheet: the camera was switched off and is being turned back on."
   },
   "connectionPillConnecting": "Connecting…",
   "@connectionPillConnecting": {
-    "description": "Link state on the camera pill: linking over Bluetooth."
+    "description": "Link state on the camera pill and the camera card's chip: linking over Bluetooth. Also under Bluetooth or Wi-Fi on the camera sheet: that link is being connected."
   },
   "connectionPillConnectingWifi": "Connecting to Wi-Fi…",
   "@connectionPillConnectingWifi": {
-    "description": "Link state on the camera pill: joining the camera's Wi-Fi."
+    "description": "Link state on the camera pill and the camera card's chip: joining the camera's Wi-Fi."
   },
   "connectionPillNotConnected": "Not connected",
   "@connectionPillNotConnected": {
-    "description": "Link state on the camera pill: connecting failed."
+    "description": "Link state on the camera pill: connecting failed. Also on the camera card's chip while the camera is not connected, and under Bluetooth or Wi-Fi on the camera sheet: that link is not connected."
   },
   "connectionPillOffline": "Offline",
   "@connectionPillOffline": {
@@ -573,7 +529,7 @@
   },
   "connectionPillReconnecting": "Reconnecting…",
   "@connectionPillReconnecting": {
-    "description": "Link state on the camera pill, and the link tile caption on the camera sheet: getting a lost link back."
+    "description": "Link state on the camera pill and the camera card's chip, and under Bluetooth or Wi-Fi on the camera sheet: getting a lost link back."
   },
   "connectionPillSemantics": "{cameraName}, {state}",
   "@connectionPillSemantics": {
@@ -591,7 +547,7 @@
   },
   "connectionPillWifi": "Wi-Fi",
   "@connectionPillWifi": {
-    "description": "Link state on the camera pill: connected over the camera's Wi-Fi."
+    "description": "Link state on the camera pill and the camera card's chip: connected over the camera's Wi-Fi."
   },
   "connectionRenameCancel": "Cancel",
   "@connectionRenameCancel": {
@@ -609,29 +565,25 @@
   "@connectionSheetBattery": {
     "description": "Tile on the camera sheet showing the camera's battery level."
   },
-  "connectionSheetDisconnectWifi": "Disconnect Wi-Fi",
-  "@connectionSheetDisconnectWifi": {
-    "description": "Button on the camera sheet that leaves the camera's Wi-Fi; Bluetooth stays."
+  "connectionSheetConnected": "Connected",
+  "@connectionSheetConnected": {
+    "description": "State under Bluetooth or Wi-Fi on the camera sheet: that link to the camera is connected."
   },
-  "connectionSheetLink": "Link",
+  "connectionSheetDisconnect": "Disconnect",
+  "@connectionSheetDisconnect": {
+    "description": "Button of the Bluetooth and Wi-Fi rows on the camera sheet: disconnects that link."
+  },
+  "connectionSheetLink": "Connection",
   "@connectionSheetLink": {
-    "description": "Tile on the camera sheet showing how the phone is connected to the camera."
+    "description": "Section heading on the camera sheet above the Bluetooth and Wi-Fi rows."
+  },
+  "connectionSheetLinkBluetooth": "Bluetooth",
+  "@connectionSheetLinkBluetooth": {
+    "description": "Title of the camera sheet row for the Bluetooth link to the camera."
   },
   "connectionSheetLinkWifi": "Wi-Fi",
   "@connectionSheetLinkWifi": {
-    "description": "Caption of the link tile on the camera sheet: connected over Wi-Fi."
-  },
-  "connectionSheetName": "Name",
-  "@connectionSheetName": {
-    "description": "Row on the camera sheet showing the camera's name; tapping it renames the camera."
-  },
-  "connectionSheetNotConnected": "Not connected.",
-  "@connectionSheetNotConnected": {
-    "description": "Camera sheet text while the camera is not connected."
-  },
-  "connectionSheetSectionCamera": "Camera",
-  "@connectionSheetSectionCamera": {
-    "description": "Section heading on the camera sheet above the camera name row."
+    "description": "Title of the camera sheet row for the camera's Wi-Fi."
   },
   "connectionSheetShotsLeft": "shots left",
   "@connectionSheetShotsLeft": {
@@ -2572,6 +2524,14 @@
   "settingsCamera": "Camera",
   "@settingsCamera": {
     "description": "Settings section heading: camera connection settings."
+  },
+  "settingsConnectNearby": "Connect when nearby",
+  "@settingsConnectNearby": {
+    "description": "Settings switch: connect over Bluetooth to the camera used last when GR Lab opens and the camera is nearby."
+  },
+  "settingsConnectNearbySubtitle": "Connects to the camera used last when GR Lab opens",
+  "@settingsConnectNearbySubtitle": {
+    "description": "Settings: explanation under Connect when nearby."
   },
   "settingsDebugLog": "Debug log",
   "@settingsDebugLog": {

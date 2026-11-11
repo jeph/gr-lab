@@ -134,14 +134,15 @@ final class WifiConsentRequest {
 
 /// One [CameraSession] for the current camera, in two stages. Bluetooth
 /// ([connect]) is meant to run by itself whenever a camera is current; the
-/// camera's Wi-Fi ([joinWifi]) is joined only when the user opens the
-/// Library or live view ([wifiNeeded]). Joining it is slow, so once it is
-/// up it stays up when the user moves on to a page that does not need it,
-/// or back to the Cameras screen: it is left when the app was not used for
-/// the auto-disconnect time ([leaveUnusedWifi]) or the user disconnects it
-/// ([disconnectWifi]). [openCamera] opens the camera's pages ([tab]) over
-/// the Cameras screen, and [closeCamera] leaves them while Bluetooth
-/// stays.
+/// camera's Wi-Fi ([joinWifi]) is joined when the user opens the Library
+/// or live view ([wifiNeeded]), or asks for it on the camera sheet.
+/// Joining it is slow, so once it is up it stays up when the user moves on
+/// to a page that does not need it, or back to the Cameras screen: it is
+/// left when the app was not used for the auto-disconnect time
+/// ([leaveUnusedWifi]) or the user disconnects it ([disconnectWifi]), or
+/// the camera with it ([disconnect]). [openCamera] opens the camera's
+/// pages ([tab]) over the Cameras screen, and [closeCamera] leaves them
+/// while Bluetooth stays.
 ///
 /// The session's BLE reconnect runs underneath and shows as
 /// [reconnecting]. On Bluetooth alone it ends when the session counts the
@@ -473,8 +474,9 @@ final class ConnectionController extends ChangeNotifier {
     }
   }
 
-  /// Joins the camera's Wi-Fi for the Library or live view, linking
-  /// Bluetooth first when needed (or waiting for the link being made).
+  /// Joins the camera's Wi-Fi for the Library or live view, or ahead of
+  /// them from the camera sheet, linking Bluetooth first when needed (or
+  /// waiting for the link being made).
   /// Does nothing while Wi-Fi is up or being joined, except that it cuts
   /// short the wait before a quiet rejoin. Leaving the Wi-Fi or the pages
   /// before Bluetooth is up cancels the join.
@@ -517,8 +519,8 @@ final class ConnectionController extends ChangeNotifier {
   }
 
   /// Closes the camera's pages and leaves the camera's Wi-Fi, or stops
-  /// joining it or getting it back, keeping Bluetooth (Disconnect Wi-Fi in
-  /// the camera sheet); the app returns to the Cameras screen. A camera
+  /// joining it or getting it back, keeping Bluetooth (the camera sheet's
+  /// Wi-Fi row); the app returns to the Cameras screen. A camera
   /// the app turned on (for the Library or Shoot) is turned back off. A
   /// Wi-Fi failure shown in the pages is cleared.
   Future<void> disconnectWifi() {
@@ -703,11 +705,13 @@ final class ConnectionController extends ChangeNotifier {
     _wifiUp.add(null);
   }
 
-  /// Ends the session or cancels an attempt; used when the current camera
-  /// changes or is forgotten. The state goes offline at once so a
-  /// [connect] issued in the same tick (switching cameras) starts a new
-  /// attempt instead of seeing the old one. Completes once every session
-  /// close still running has finished.
+  /// Ends the session or cancels an attempt, leaving the camera's Wi-Fi
+  /// with its Bluetooth: when the user disconnects the camera (the camera
+  /// sheet) or stops connecting to it (the camera card), and when the
+  /// current camera changes or is forgotten. The state goes offline at once
+  /// so a [connect] issued in the same tick (switching cameras) starts a
+  /// new attempt instead of seeing the old one. Completes once every
+  /// session close still running has finished.
   Future<void> disconnect() {
     _generation++;
     _wifiRun++;
@@ -717,6 +721,7 @@ final class ConnectionController extends ChangeNotifier {
     _status = ConnectionStatus.offline;
     _step = null;
     _quietRejoin = false;
+    _failure = null;
     _idleClosedAfter = null;
     _declineConsent();
     final closing = _endSession();

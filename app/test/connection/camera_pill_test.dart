@@ -96,8 +96,8 @@ void main() {
     await app.dispose();
   });
 
-  testWidgets('the connected sheet shows the camera; Disconnect Wi-Fi keeps '
-      'Bluetooth', (tester) async {
+  testWidgets('the connected sheet shows the camera; disconnecting Wi-Fi '
+      'keeps Bluetooth', (tester) async {
     final app = await _start(tester);
     await _connect(tester, app);
     await _openSheet(tester);
@@ -114,7 +114,7 @@ void main() {
     expect(tester.getTopLeft(sd).dy, lessThan(tester.getTopLeft(internal).dy));
     expect(find.text('No. 1234567 · fw 1.20'), findsOneWidget);
 
-    await _tap(tester, const Key('camera-sheet-disconnect'));
+    await _tap(tester, const Key('camera-sheet-wifi-disconnect'));
     await pumpUntil(
       tester,
       () => app.models.connection.status == ConnectionStatus.bluetooth,
@@ -134,7 +134,7 @@ void main() {
     await pumpUntilFound(
       tester,
       find.descendant(
-        of: find.byKey(const Key('camera-sheet-connected')),
+        of: find.byKey(const Key('camera-sheet-wifi')),
         matching: find.text('Reconnecting…'),
       ),
     );
@@ -186,27 +186,6 @@ void main() {
       final line = tester.getRect(find.byKey(Key('camera-sheet-storage-$id')));
       expect(line.right, lessThanOrEqualTo(tile.right + .5));
     }
-
-    await app.dispose();
-  });
-
-  testWidgets('renaming from the sheet updates the pill', (tester) async {
-    final app = await _start(tester);
-    await _openSheet(tester);
-
-    await _tap(tester, const Key('camera-sheet-rename'));
-    await pumpUntilFound(tester, find.byKey(const Key('camera-rename-field')));
-    await tester.enterText(
-      find.byKey(const Key('camera-rename-field')),
-      '  Street GR  ',
-    );
-    await _tap(tester, const Key('camera-rename-save'));
-    await pumpUntil(
-      tester,
-      () => app.models.cameras.current?.name == 'Street GR',
-      reason: 'renamed',
-    );
-    expect(find.text('Street GR'), findsWidgets);
 
     await app.dispose();
   });

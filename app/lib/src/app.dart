@@ -64,8 +64,10 @@ class _RootScreenState extends State<RootScreen> {
   late final AppLifecycleListener _lifecycle;
 
   /// The Cameras screen connects to the camera used last when it sees it
-  /// nearby, only until the first connection attempt of this launch,
-  /// whoever starts it (that screen, pairing, or the user).
+  /// nearby (unless Settings says not to,
+  /// `SettingsController.connectWhenNearby`), only until the first
+  /// connection attempt of this launch, whoever starts it (that screen,
+  /// pairing, or the user).
   bool _autoConnect = true;
   WifiConsentRequest? _shownConsent;
 
@@ -160,7 +162,9 @@ class _RootScreenState extends State<RootScreen> {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: _models.connection,
-    builder: (context, _) => HomePages(autoConnect: _autoConnect),
+    listenable: Listenable.merge([_models.connection, _models.settings]),
+    builder: (context, _) => HomePages(
+      autoConnect: _autoConnect && _models.settings.connectWhenNearby,
+    ),
   );
 }
