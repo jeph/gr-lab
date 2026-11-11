@@ -49,7 +49,7 @@
   },
   "camerasConnect": "Connect",
   "@camerasConnect": {
-    "description": "Button that connects to a paired camera (other cameras list, camera details), or one of its links (Bluetooth and Wi-Fi rows on the camera sheet)."
+    "description": "Button that connects to a paired camera (other cameras list), or one of its links (Bluetooth and Wi-Fi rows on the camera sheet)."
   },
   "camerasDetailsForget": "Forget camera",
   "@camerasDetailsForget": {

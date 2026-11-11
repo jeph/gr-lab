@@ -1,12 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/cameras/camera_identity.dart';
 import 'package:grlab/src/cameras/camera_rename.dart';
-import 'package:grlab/src/connection/connection_controller.dart';
 import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/library/format.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart';
@@ -14,7 +11,8 @@ import 'package:grlab/src/theme/tokens.dart';
 import 'package:grlab/src/widgets/group.dart';
 
 /// One paired camera, from ⋯ on the Cameras screen (mock
-/// `b-camera-detail`): connect to it, rename it or forget it.
+/// `b-camera-detail`): rename it or forget it. Connecting is on the
+/// Cameras screen: the camera card and its sheet, or the camera's row.
 class CameraDetailsScreen extends StatelessWidget {
   const new({required this.serial, super.key});
 
@@ -33,7 +31,7 @@ class CameraDetailsScreen extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: Listenable.merge([models.cameras, models.connection]),
+          listenable: models.cameras,
           builder: (context, _) {
             final camera = models.cameras.cameras
                 .where((c) => c.serial == serial)
@@ -58,20 +56,6 @@ class CameraDetailsScreen extends StatelessWidget {
                   ),
                 ),
                 _Header(camera: camera),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: FilledButton(
-                    key: const Key('camera-details-connect'),
-                    onPressed:
-                        models.connection.status == ConnectionStatus.connecting
-                        ? null
-                        : () {
-                            Navigator.of(context).pop();
-                            unawaited(models.connection.connectTo(serial));
-                          },
-                    child: Text(context.l10n.camerasConnect),
-                  ),
-                ),
                 SectionLabel(context.l10n.camerasDetailsSectionThisCamera),
                 GroupBox(
                   children: [
