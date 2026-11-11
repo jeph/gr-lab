@@ -15,7 +15,7 @@ import 'package:grlab/src/widgets/pressable.dart';
 
 import '../support/test_app.dart';
 
-/// Liveness probes would otherwise run every 500 ms against a camera
+/// Liveness probes would otherwise run every 5 s against a camera
 /// answering in real time.
 const _quietLiveness = GrSessionOptions(
   livenessInterval: Duration(hours: 1),
@@ -913,6 +913,46 @@ void main() {
           reason: '$effect is shown as the camera sends it',
         );
       }
+      await app.dispose();
+    });
+
+    testWidgets('stops while the app is hidden, as when the phone locks, and '
+        'starts again on return with the Wi-Fi it kept', (tester) async {
+      final app = await inLiveView(tester);
+      final camera = app.camera;
+      await pumpUntil(
+        tester,
+        () => camera.liveViewStreams == 1,
+        reason: 'streaming',
+      );
+
+      // A system sheet over the app does not hide it.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await pumpRounds(tester, 10);
+      expect(camera.liveViewStreams, 1);
+
+      [
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+      ].forEach(tester.binding.handleAppLifecycleStateChanged);
+      await pumpUntil(
+        tester,
+        () => camera.liveViewStreams == 0,
+        reason: 'stopped',
+      );
+      expect(app.models.connection.status, ConnectionStatus.connected);
+      expect(camera.wlanOn, isTrue);
+
+      [
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ].forEach(tester.binding.handleAppLifecycleStateChanged);
+      await pumpUntil(
+        tester,
+        () => camera.liveViewStreams == 1,
+        reason: 'streaming again',
+      );
       await app.dispose();
     });
 

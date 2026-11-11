@@ -45,9 +45,9 @@ final class SettingRefusalByCamera extends SettingRefusal {
 /// camera's Wi-Fi, and the session's [CameraLiveView] runs while the Wi-Fi
 /// is up. A focus result shows for 2 s.
 ///
-/// Not wanting it stops live view and leaves the Wi-Fi up for the next
-/// page that needs it ([ConnectionController.leaveUnusedWifi] leaves it).
-/// \[design\]
+/// Not wanting it (another tab or mode, or the app no longer in front)
+/// stops live view and leaves the Wi-Fi up for the next page that needs it
+/// ([ConnectionController.leaveUnusedWifi] leaves it). \[design\]
 final class LiveViewController extends ChangeNotifier {
   new({required this.connection}) {
     connection.addListener(_sync);

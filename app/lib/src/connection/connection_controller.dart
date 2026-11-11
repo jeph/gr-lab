@@ -425,13 +425,15 @@ final class ConnectionController extends ChangeNotifier {
   /// Emits every time the Wi-Fi link comes up, or comes back after a loss.
   Stream<void> get wifiUp => _wifiUp.stream;
 
-  /// Whether the app is in front. A quiet rejoin that comes due in the
-  /// background waits until this turns true again, and a camera that could
-  /// not be reached over Bluetooth is tried again on return.
+  /// Whether the app is in front; its changes notify the listeners. A
+  /// quiet rejoin that comes due in the background waits until this turns
+  /// true again, and a camera that could not be reached over Bluetooth is
+  /// tried again on return.
   bool get foreground => _foreground;
   set foreground(bool value) {
     if (_foreground == value) return;
     _foreground = value;
+    notifyListeners();
     if (!value) return;
     if (_redialOnResume) {
       _redialOnResume = false;

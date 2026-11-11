@@ -222,6 +222,9 @@ final class FakeGrCamera {
   /// Open BLE links.
   int get linkCount => _links.length;
 
+  /// Open live-view streams.
+  int get liveViewStreams => _liveViews.length;
+
   /// Battery charge in percent; setting it notifies BLE Battery Level and
   /// pushes a `battery` change over the WebSocket.
   int get battery => _battery;

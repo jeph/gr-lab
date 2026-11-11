@@ -285,10 +285,17 @@ final class ShootModel extends ChangeNotifier {
   }
 
   /// Live view waits for the camera to be on in shooting mode: the wake
-  /// and a Wi-Fi join must not overlap.
+  /// and a Wi-Fi join must not overlap. It stops while the app is not in
+  /// front ([ConnectionController.foreground]: the phone locked, or
+  /// another app showing) and starts again on return \[design\]: the tab
+  /// still counts as showing then, and the camera would go on sending a
+  /// picture nobody sees for as long as the app's process runs.
   void _updateLiveView() {
     liveView.wanted =
-        _visible && mode == ShootMode.liveView && _power == ShootPower.ready;
+        _visible &&
+        connection.foreground &&
+        mode == ShootMode.liveView &&
+        _power == ShootPower.ready;
   }
 
   @override
