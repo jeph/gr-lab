@@ -67,6 +67,11 @@ enum ConnectFailureKind {
   /// use it while a VPN carried GR Lab's traffic: a VPN may be blocking it.
   /// Retried like [wifi].
   wifiVpn,
+
+  /// The camera turned off while its Wi-Fi was in use (its power button,
+  /// or the camera itself), so the Wi-Fi went with it. It is left off:
+  /// only the user asking turns it on and joins again.
+  cameraOff,
 }
 
 /// The link a [ConnectFailure] lost after it had been up.
@@ -150,12 +155,15 @@ final class WifiConsentRequest {
 /// camera as gone (`GrSessionOptions.bleLostAfter`): the session ends, the
 /// app goes back to the Cameras screen and it says the connection was
 /// lost. When the camera's Wi-Fi is lost while a page needs it,
-/// the session gets it back (turning the camera on again when it was
-/// switched off) while the pages stay, also shown as [reconnecting]. When
-/// that fails with Bluetooth still there, the pages stay and the Library
-/// says the Wi-Fi was lost; without Bluetooth the session ends, the app
-/// goes back to the Cameras screen and it says the connection was lost. A
-/// Wi-Fi lost while nothing needs it is let go without a word. Leaving the
+/// the session gets it back while the pages stay, also shown as
+/// [reconnecting]. When that fails with Bluetooth still there, the pages
+/// stay and the Library says the Wi-Fi was lost; without Bluetooth the
+/// session ends, the app goes back to the Cameras screen and it says the
+/// connection was lost. A camera that turned off is not turned back on
+/// \[design\]: the pages stay on Bluetooth and say the camera is off
+/// ([ConnectFailureKind.cameraOff]), until the user turns it on from there
+/// or at the camera, which joins its Wi-Fi again for a page that needs it.
+/// A Wi-Fi lost while nothing needs it is let go without a word. Leaving the
 /// camera's pages turns a camera the app turned on back off, once its
 /// Wi-Fi is left too. A join that failed, or a lost Wi-Fi that could not
 /// be got back, while the app was in the background is tried again on
@@ -788,6 +796,12 @@ final class ConnectionController extends ChangeNotifier {
 
   void _onEvent(int generation, GrSessionEvent e) {
     if (generation != _generation) return;
+    if (_failure?.kind == ConnectFailureKind.cameraOff && !cameraOff) {
+      // On again, by its own power button or the app's: no join was asked
+      // for, so a page that needs the Wi-Fi gets it back here.
+      _failure = null;
+      if (wifiNeeded) unawaited(joinWifi());
+    }
     switch (e.kind) {
       case 'ble.ready':
         // A firmware update shows on the next link.
@@ -833,9 +847,8 @@ final class ConnectionController extends ChangeNotifier {
         }
       case 'wifi.lost'
           when _status == ConnectionStatus.connected && !wifiNeeded:
-        // Only kept for the next page that needs it. Leaving it stops the
-        // session's recovery before its first try, which would turn a
-        // camera the user switched off back on.
+        // Only kept for the next page that needs it, so it is not got
+        // back.
         unawaited(
           _leaveWifi(
             reason: WifiStopReason.lostUnneeded,
@@ -850,6 +863,7 @@ final class ConnectionController extends ChangeNotifier {
       case 'recovery.gaveUp':
         return _wifiGaveUp(
           noBle: e.fields['noBle'] == true,
+          cameraOff: e.fields['cameraOff'] == true,
           declined: e.fields['declined'] == true,
           vpnSuspected: e.fields['vpnSuspected'] == true,
         );
@@ -857,17 +871,20 @@ final class ConnectionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// The session could not get the camera's Wi-Fi back. Without Bluetooth
-  /// either ([noBle]) the camera is gone (switched off with its Bluetooth,
-  /// or out of range): the session ends and the Cameras screen says the
-  /// connection was lost. Otherwise the camera's pages stay on Bluetooth,
-  /// the Library says the Wi-Fi was lost (or declined, or that a VPN may
-  /// be blocking it: [vpnSuspected]), and the phone leaves the camera's
+  /// The session could not get the camera's Wi-Fi back, or left it because
+  /// the camera turned off ([cameraOff]). Without Bluetooth either
+  /// ([noBle]) the camera is gone (out of range, or its battery pulled):
+  /// the session ends and the Cameras screen says the connection was lost.
+  /// Otherwise the camera's pages stay on Bluetooth, the Library says the
+  /// camera is off, or that the Wi-Fi was lost (or declined, or that a VPN
+  /// may be blocking it: [vpnSuspected]), and the phone leaves the camera's
   /// Wi-Fi. A loss in the background that was not declined is instead
   /// joined again on return, as a join that failed in the background is:
-  /// the OS only joins camera networks for the app in front.
+  /// the OS only joins camera networks for the app in front. Not one of a
+  /// camera that is off, which joining would turn on.
   void _wifiGaveUp({
     required bool noBle,
+    required bool cameraOff,
     required bool declined,
     required bool vpnSuspected,
   }) {
@@ -892,9 +909,15 @@ final class ConnectionController extends ChangeNotifier {
       reason: WifiStopReason.recoveryGaveUp,
       powerOffIfWoken: _tab == null,
     );
-    if (!declined && !_foreground && _scheduleRedial()) return;
+    final rejoinOnReturn = !cameraOff && !declined && !_foreground;
+    if (rejoinOnReturn && _scheduleRedial()) return;
     _status = ConnectionStatus.bluetooth;
-    _failure = declined
+    _failure = cameraOff
+        ? const ConnectFailure(
+            ConnectFailureKind.cameraOff,
+            step: ConnectStep.wifi,
+          )
+        : declined
         ? const ConnectFailure(
             ConnectFailureKind.wifiDeclined,
             step: ConnectStep.wifi,

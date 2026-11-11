@@ -193,35 +193,45 @@ void main() {
       expect(camera.wlanOn, isFalse);
     });
 
-    test('switched off while its Wi-Fi is in use, the camera is turned on '
-        'again over Bluetooth and rejoined', () async {
+    test('switched off while its Wi-Fi is in use, the camera is left off: '
+        'the recovery ends, and the next Wi-Fi start turns it on', () async {
       camera = await startCamera(fastConfig(bonded: true));
       final kinds = <String>[];
       final s = await linkBluetooth(kinds);
       await s.startWifi();
-      expect(s.wokeCamera, isFalse);
 
-      final recovered = s.events.firstWhere((e) => e.kind == 'recovery.done');
+      final gaveUp = s.events.firstWhere((e) => e.kind == 'recovery.gaveUp');
+      final relinked = s.events.firstWhere((e) => e.kind == 'ble.restored');
       camera.poweredOn = false;
-      await recovered.timeout(const Duration(seconds: 5));
+      final e = await gaveUp.timeout(const Duration(seconds: 5));
+      expect(e.fields['cameraOff'], isTrue);
+      expect(s.phase, GrSessionPhase.lost);
+      // Linked again in its off state, where a wake would reach it.
+      await relinked.timeout(const Duration(seconds: 5));
+      await Future<void>.delayed(ms(100));
+      expect(s.cameraOff, isTrue);
+      expect(camera.poweredOn, isFalse);
+      expect(camera.wlanOn, isFalse);
+      expect(kinds, isNot(contains('power.on')));
+
+      await s.stopWifi();
+      await s.startWifi();
       expect(s.phase, GrSessionPhase.connected);
       expect(camera.poweredOn, isTrue);
       expect(camera.wifiJoined, isTrue);
-      expect(s.wokeCamera, isTrue);
-      expect(
-        kinds,
-        containsAllInOrder(['wifi.lost', 'recovery.start', 'power.on']),
-      );
     });
 
-    test('switched off with its Bluetooth too, recovery gives up once the '
-        'link has not come back', () async {
+    test('gone without saying it turned off (Bluetooth dropped first), '
+        'recovery gives up once the link has not come back', () async {
       camera = await startCamera(fastConfig(bonded: true));
       final s = await linkBluetooth([]);
       await s.startWifi();
 
       final gaveUp = s.events.firstWhere((e) => e.kind == 'recovery.gaveUp');
-      camera.powerOffFully();
+      // No link is left to notify Camera Power on.
+      camera
+        ..dropBluetooth()
+        ..powerOffFully();
       final e = await gaveUp.timeout(const Duration(seconds: 5));
       expect(e.fields['noBle'], isTrue);
       expect(s.phase, GrSessionPhase.lost);

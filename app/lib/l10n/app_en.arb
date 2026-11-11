@@ -343,6 +343,20 @@
   "@connectionFailureBluetoothOffTitle": {
     "description": "Title of the connection failure when the phone's Bluetooth is off."
   },
+  "connectionFailureCameraOffBody": "The camera turned off, so its Wi-Fi went with it. Turn it on to connect again.",
+  "@connectionFailureCameraOffBody": {
+    "description": "Body of the notice on the Library, live view and the camera sheet after the camera turned off (its power button, or by itself) while GR Lab was using its Wi-Fi. GR Lab leaves it off; the button below, Turn on, turns it on and joins its Wi-Fi again."
+  },
+  "connectionFailureCameraOffTitle": "{cameraName} is off",
+  "@connectionFailureCameraOffTitle": {
+    "description": "Title of the notice shown after the camera turned off while GR Lab was using its Wi-Fi; also on the camera card's chip.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name as the user named it, for example GR IV."
+      }
+    }
+  },
   "connectionFailureCheckActionMode": "Action Mode is On",
   "@connectionFailureCheckActionMode": {
     "description": "Check in the list under a camera that could not be reached: the camera's Action Mode setting is On."
@@ -447,6 +461,10 @@
   "@connectionFailureTryAgain": {
     "description": "Button under a connection failure that tries to connect again."
   },
+  "connectionFailureTurnOn": "Turn on",
+  "@connectionFailureTurnOn": {
+    "description": "Button under the notice that the camera turned off: turns the camera on and joins its Wi-Fi again."
+  },
   "connectionFailureUnreachableBody": "The camera didn't answer over Bluetooth.",
   "@connectionFailureUnreachableBody": {
     "description": "Body of the connection failure when the camera could not be reached."
@@ -509,7 +527,7 @@
   },
   "connectionPillCameraOff": "Camera off",
   "@connectionPillCameraOff": {
-    "description": "Link state on the camera pill and the camera card's chip, and under Wi-Fi on the camera sheet: the camera was switched off and is being turned back on."
+    "description": "Link state on the camera pill and the camera card's chip, and under Wi-Fi on the camera sheet: the camera turned off while its Wi-Fi was in use, and stays off until the user turns it on."
   },
   "connectionPillConnecting": "Connecting…",
   "@connectionPillConnecting": {

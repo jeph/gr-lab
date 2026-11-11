@@ -503,6 +503,41 @@ void main() {
     await app.dispose();
   });
 
+  testWidgets('a camera switched off with the Library open is left off; '
+      'the Library says so, and its Turn on button turns it on and joins '
+      'again', (tester) async {
+    final app = await _start(tester);
+    await pumpUntilFound(tester, find.byKey(const Key('camera-card-library')));
+    await _tap(tester, const Key('camera-card-library'));
+    await pumpUntilFound(tester, find.byType(LibraryScreen));
+    await pumpUntil(
+      tester,
+      () => app.models.connection.status == ConnectionStatus.connected,
+      reason: 'Wi-Fi joined',
+    );
+
+    app.camera.poweredOn = false;
+    await pumpUntilFound(
+      tester,
+      find.byKey(const Key('connect-failed-cameraOff')).hitTestable(),
+    );
+    expect(find.byType(LibraryScreen), findsOneWidget);
+    expect(find.text('GR IV is off'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Turn on'), findsOneWidget);
+    expect(app.camera.poweredOn, isFalse);
+
+    await _tap(tester, const Key('connect-retry'));
+    await pumpUntil(
+      tester,
+      () => app.models.connection.status == ConnectionStatus.connected,
+      reason: 'Wi-Fi joined again',
+    );
+    expect(app.camera.poweredOn, isTrue);
+    expect(find.byKey(const Key('connect-failed-cameraOff')), findsNothing);
+
+    await app.dispose();
+  });
+
   testWidgets('back from the Library returns to Cameras with the '
       "camera's Wi-Fi still up", (tester) async {
     final app = await _start(tester);

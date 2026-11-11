@@ -445,29 +445,102 @@ void main() {
       expect(connection.inSession, isTrue);
     });
 
-    test('a camera switched off shows as off, is turned back on and '
-        'rejoined', () async {
+    /// The camera's power button is pressed with the Library open; ends
+    /// once the Library says the camera is off.
+    Future<void> switchOff(TestApp app) async {
+      final connection = app.models.connection;
+      app.camera.poweredOn = false;
+      await _until(
+        () => connection.failure?.kind == ConnectFailureKind.cameraOff,
+      );
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(connection.failure?.step, ConnectStep.wifi);
+      expect(connection.tab, CameraTab.library);
+    }
+
+    test('a camera switched off is left off, and the Library says so; '
+        'joining again turns it on', () async {
       final app = await connected(const FakeCameraConfig(bonded: true));
       final connection = app.models.connection;
-      final off = <bool>[];
-      // The camera pill turns red while the Library stays.
-      void record() {
-        final pill = LinkState.of(connection);
-        off.add(connection.inSession && pill.label == LinkLabel.cameraOff);
-      }
+      await switchOff(app);
+      expect(LinkState.of(connection).label, LinkLabel.cameraOff);
 
+      // Linked again in its off state, where a wake would reach it.
+      await _until(() => connection.bleLinked);
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      expect(app.camera.poweredOn, isFalse);
+      expect(app.camera.wlanOn, isFalse);
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(connection.failure?.kind, ConnectFailureKind.cameraOff);
+
+      // What the notice's Turn on button does.
+      await connection.joinWifi();
+      expect(connection.status, ConnectionStatus.connected);
+      expect(connection.failure, isNull);
+      expect(app.camera.poweredOn, isTrue);
+      expect(app.camera.wifiJoined, isTrue);
+    });
+
+    test('a camera switched off and then on again at the camera is joined '
+        'again for the Library', () async {
+      final app = await connected(const FakeCameraConfig(bonded: true));
+      final connection = app.models.connection;
+      await switchOff(app);
+
+      final up = connection.wifiUp.first;
+      app.camera.poweredOn = true;
+      await up.timeout(const Duration(seconds: 20));
+      expect(connection.status, ConnectionStatus.connected);
+      expect(connection.failure, isNull);
+      expect(connection.tab, CameraTab.library);
+    });
+
+    test('a camera switched on again while no page needs its Wi-Fi is not '
+        'joined', () async {
+      final app = await connected(const FakeCameraConfig(bonded: true));
+      final connection = app.models.connection;
+      await switchOff(app);
+
+      connection.selectTab(CameraTab.shoot);
+      app.camera.poweredOn = true;
+      await _until(() => connection.failure == null);
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(app.camera.wlanOn, isFalse);
+    });
+
+    test('a camera switched off while the app is in the background is not '
+        'turned on on return', () async {
+      final app = await connected(const FakeCameraConfig(bonded: true));
+      final connection = app.models.connection..foreground = false;
+      await switchOff(app);
+
+      connection.foreground = true;
+      await _until(() => connection.bleLinked);
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(connection.failure?.kind, ConnectFailureKind.cameraOff);
+      expect(app.camera.poweredOn, isFalse);
+    });
+
+    test('a camera switched off with its Bluetooth too is said to be off, '
+        'and the session ends once the link has not come back', () async {
+      final app = await connected(const FakeCameraConfig(bonded: true));
+      final connection = app.models.connection;
+      final kinds = <ConnectFailureKind?>[];
+      void record() => kinds.add(connection.failure?.kind);
       connection.addListener(record);
       addTearDown(() => connection.removeListener(record));
 
-      app.camera.poweredOn = false;
-      await _until(() => off.contains(true));
+      app.camera.powerOffFully();
       await _until(
-        () => !connection.reconnecting && app.camera.wifiJoined,
-        timeout: const Duration(seconds: 5),
+        () => connection.status == ConnectionStatus.failed,
+        timeout: const Duration(seconds: 30),
       );
-      expect(app.camera.poweredOn, isTrue);
-      expect(connection.status, ConnectionStatus.connected);
-      expect(connection.cameraOff, isFalse);
+      expect(kinds, contains(ConnectFailureKind.cameraOff));
+      expect(connection.failure?.kind, ConnectFailureKind.unreachable);
+      expect(connection.failure?.loss, ConnectLoss.bluetooth);
+      expect(connection.tab, isNull);
     });
 
     test('a Wi-Fi that does not come back returns to Cameras on Bluetooth '
@@ -485,11 +558,14 @@ void main() {
       expect(await app.camera.wifi.currentSsid(), isNull);
     });
 
-    test('a camera gone with its Bluetooth ends the session with a lost '
-        'connection', () async {
+    test('a camera gone with its Bluetooth, without saying it turned off, '
+        'ends the session with a lost connection', () async {
       final app = await connected(const FakeCameraConfig(bonded: true));
       final connection = app.models.connection;
-      app.camera.powerOffFully();
+      // No link is left to notify Camera Power on.
+      app.camera
+        ..dropBluetooth()
+        ..powerOffFully();
       await _until(
         () => connection.status == ConnectionStatus.failed,
         timeout: const Duration(seconds: 5),

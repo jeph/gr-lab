@@ -20,6 +20,10 @@ final class LinkState {
         connection.powerChange == CameraPowerChange.off
             ? LinkLabel.turningOff
             : LinkLabel.turningOn,
+      // Turned off while its Wi-Fi was in use, and left off.
+      ConnectionStatus.bluetooth
+          when connection.failure?.kind == ConnectFailureKind.cameraOff =>
+        LinkLabel.cameraOff,
       ConnectionStatus.connecting || ConnectionStatus.bluetooth
           when connection.reconnecting =>
         LinkLabel.reconnecting,
@@ -28,8 +32,8 @@ final class LinkState {
             ? LinkLabel.connectingWifi
             : LinkLabel.connecting,
       ConnectionStatus.bluetooth => LinkLabel.bluetooth,
-      // Switched off with the Library open: red while it is woken and
-      // its Wi-Fi joined again.
+      // Turning off with its Wi-Fi in use: red from the camera's notice,
+      // before the session has let the Wi-Fi go.
       ConnectionStatus.connected when connection.reconnecting =>
         connection.cameraOff ? LinkLabel.cameraOff : LinkLabel.reconnecting,
       ConnectionStatus.connected => LinkLabel.wifi,

@@ -77,8 +77,8 @@ enum WifiStopReason {
 /// One connection to one paired camera, in two stages: Bluetooth
 /// ([connectBluetooth]) and the camera's Wi-Fi ([startWifi], [stopWifi]).
 /// The session reconnects Bluetooth and recovers a lost Wi-Fi link by
-/// itself, reporting each step in [events] (also traced on
-/// [TraceChannel.session]).
+/// itself, except that it leaves a camera that turned off off, reporting
+/// each step in [events] (also traced on [TraceChannel.session]).
 final class CameraSession {
   /// A session with the camera reached through [camera], asking [consent]
   /// before joining its Wi-Fi.
@@ -127,7 +127,8 @@ final class CameraSession {
 
   /// Every step of the session, such as `ble.lost`, `ble.restored`,
   /// `ble.gaveUp`, `ble.needsPairing`, `wifi.lost`, `recovery.done` and
-  /// `recovery.gaveUp` (fields `noBle`, `declined`, `vpnSuspected`).
+  /// `recovery.gaveUp` (fields `cameraOff`, `noBle`, `declined`,
+  /// `vpnSuspected`).
   Stream<GrSessionEvent> get events => _session.events;
 
   /// Current stage, from scanning through the Bluetooth link and Wi-Fi

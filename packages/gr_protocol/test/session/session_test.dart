@@ -1974,4 +1974,114 @@ void main() {
     expect(camera.ops.where((o) => o == 'write wlan 0'), isEmpty);
     await s.close();
   });
+
+  group('a lost Wi-Fi', () {
+    Future<GrSessionEvent> next(GrSession s, String kind) => s.events
+        .firstWhere((e) => e.kind == kind)
+        .timeout(const Duration(seconds: 5));
+
+    int wlanOnWrites(BondedCamera camera) =>
+        camera.ops.where((o) => o == 'write wlan 1').length;
+
+    test('of a camera that is on is got back with WLAN-on and a rejoin, '
+        'without a power-on write', () async {
+      final camera = BondedCamera();
+      final wifi = JoiningWifi();
+      final server = await CameraServer.start();
+      final s = wifiSession(camera, wifi, server);
+      await s.connect(deviceId: 'cam');
+
+      final wlanOn = next(s, 'recovery.wlanOn');
+      final recovered = next(s, 'recovery.done');
+      server.props = null;
+      wifi.loseNetwork();
+      await wlanOn;
+      server.props = cameraProps;
+      await recovered;
+      expect(s.phase, GrSessionPhase.connected);
+      expect(wlanOnWrites(camera), 2);
+      expect(wifi.joins, 2);
+      expect(camera.ops.where((o) => o.startsWith('write mode')), isEmpty);
+      await s.close();
+    });
+
+    test('of a camera that reports turning off ends without a try: nothing '
+        'is written, and only the next start turns the camera on', () async {
+      final camera = BondedCamera()
+        ..cameraPower = StreamController<Uint8List>.broadcast();
+      final wifi = JoiningWifi();
+      final s = wifiSession(camera, wifi, await CameraServer.start());
+      await s.connect(deviceId: 'cam');
+      final kinds = <String>[];
+      s.events.listen((e) => kinds.add(e.kind));
+
+      final gaveUp = next(s, 'recovery.gaveUp');
+      camera.cameraPower!.add(Uint8List.fromList([BleCameraPower.off.wire]));
+      final event = await gaveUp;
+      expect(event.fields, {'attempts': 0, 'cameraOff': true});
+      expect(s.phase, GrSessionPhase.lost);
+      expect(s.cameraOff, isTrue);
+      expect(kinds, isNot(contains('recovery.attempt')));
+
+      await s.stopWifi();
+      expect(s.phase, GrSessionPhase.bluetooth);
+      expect(wifi.joined, isFalse);
+      expect(wlanOnWrites(camera), 1);
+      expect(
+        camera.ops.where(
+          (o) => o.startsWith('write mode') || o == 'write wlan 0',
+        ),
+        isEmpty,
+      );
+
+      await s.startWifi();
+      expect(s.phase, GrSessionPhase.connected);
+      expect(camera.ops, contains('write mode 1'));
+      await s.close();
+    });
+
+    test('of a camera found off on the Bluetooth link that returned ends '
+        'there, without a power-on or WLAN-on write', () async {
+      final camera = BondedCamera();
+      final wifi = JoiningWifi();
+      final server = await CameraServer.start();
+      final s = wifiSession(camera, wifi, server);
+      await s.connect(deviceId: 'cam');
+
+      final gaveUp = next(s, 'recovery.gaveUp');
+      // Off without its power notification reaching the phone: the access
+      // point and the link go, and the camera reads off on the next link.
+      server.props = null;
+      camera
+        ..operationMode = 2
+        ..dropAll();
+      wifi.loseNetwork();
+      final event = await gaveUp;
+      expect(event.fields['cameraOff'], isTrue);
+      expect(event.fields, isNot(contains('noBle')));
+      expect(s.ble, isNotNull);
+      expect(wlanOnWrites(camera), 1);
+      expect(camera.ops.where((o) => o.startsWith('write mode')), isEmpty);
+      await s.close();
+    });
+
+    test('a camera the session turned on that turns off by itself is not '
+        'turned off again when its Wi-Fi is left', () async {
+      final camera = BondedCamera(operationMode: 2)
+        ..cameraPower = StreamController<Uint8List>.broadcast();
+      final s = wifiSession(camera, JoiningWifi(), await CameraServer.start());
+      await s.connect(deviceId: 'cam');
+      expect(s.wokeCamera, isTrue);
+
+      final gaveUp = next(s, 'recovery.gaveUp');
+      camera.cameraPower!.add(Uint8List.fromList([BleCameraPower.off.wire]));
+      await gaveUp;
+      expect(s.wokeCamera, isFalse);
+
+      await s.stopWifi(powerOffIfWoken: true);
+      expect(s.turningOff, isFalse);
+      expect(camera.ops, isNot(contains('write power 0')));
+      await s.close();
+    });
+  });
 }

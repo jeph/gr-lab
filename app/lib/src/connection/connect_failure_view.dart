@@ -52,12 +52,16 @@ String connectFailureTitle(
     cameraName,
   ),
   ConnectFailureKind.wifiVpn => l10n.connectionFailureWifiVpnTitle(cameraName),
+  ConnectFailureKind.cameraOff => l10n.connectionFailureCameraOffTitle(
+    cameraName,
+  ),
 };
 
 /// Why connecting failed, with the checks that fix it (mock
 /// `b-home-fail`), on the camera sheet and on the pages that need the
-/// camera's Wi-Fi. It stays until Try again or another camera is chosen;
-/// pairing is never retried by itself.
+/// camera's Wi-Fi. It stays until Try again (Turn on for a camera that
+/// turned off) or another camera is chosen; pairing is never retried by
+/// itself.
 class ConnectFailureView extends StatelessWidget {
   const new({
     required this.camera,
@@ -90,6 +94,7 @@ class ConnectFailureView extends StatelessWidget {
       ConnectFailureKind.wifi => l10n.connectionFailureWifiBody,
       ConnectFailureKind.wifiDeclined => l10n.connectionFailureWifiDeclinedBody,
       ConnectFailureKind.wifiVpn => l10n.connectionFailureWifiVpnBody,
+      ConnectFailureKind.cameraOff => l10n.connectionFailureCameraOffBody,
     };
     final pairAgain = onPairAgain ?? () => unawaited(PairingFlow.push(context));
     final checks = switch (kind) {
@@ -152,15 +157,17 @@ class ConnectFailureView extends StatelessWidget {
       ],
       ConnectFailureKind.bluetoothOff ||
       ConnectFailureKind.bluetoothDenied ||
-      ConnectFailureKind.wifiDeclined => const <Widget>[],
+      ConnectFailureKind.wifiDeclined ||
+      ConnectFailureKind.cameraOff => const <Widget>[],
     };
     final detail = _detail(l10n);
-    final retryLabel = Text(
-      kind == ConnectFailureKind.wifiDeclined
-          ? l10n.connectionFailureJoinWifi
-          : l10n.connectionFailureTryAgain,
-    );
-    // Wi-Fi failures keep the Bluetooth link; only Wi-Fi is tried again.
+    final retryLabel = Text(switch (kind) {
+      ConnectFailureKind.wifiDeclined => l10n.connectionFailureJoinWifi,
+      ConnectFailureKind.cameraOff => l10n.connectionFailureTurnOn,
+      _ => l10n.connectionFailureTryAgain,
+    });
+    // Wi-Fi failures keep the Bluetooth link; only Wi-Fi is tried again,
+    // which turns a camera that is off on first.
     void retry() => unawaited(
       failure.step == ConnectStep.wifi
           ? connection.joinWifi()

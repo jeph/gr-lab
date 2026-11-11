@@ -973,5 +973,27 @@ void main() {
       expect(app.models.connection.status, ConnectionStatus.connected);
       await app.dispose();
     });
+
+    testWidgets('a camera switched off during live view is left off and '
+        'offers to turn it on; turned on, the picture comes back', (
+      tester,
+    ) async {
+      final app = await inLiveView(tester);
+      app.camera.poweredOn = false;
+      await pumpUntilFound(tester, find.byKey(const Key('shoot-turn-on')));
+      // Long enough for the off camera to be linked again, where a wake
+      // would reach it.
+      await pumpRounds(tester, 300);
+      expect(app.camera.poweredOn, isFalse);
+      expect(app.camera.wlanOn, isFalse);
+      expect(find.byKey(const Key('shoot-turn-on')), findsOneWidget);
+      expect(find.byKey(const Key('live-picture')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('shoot-turn-on')));
+      await pumpUntilFound(tester, find.byKey(const Key('live-picture')));
+      expect(app.camera.poweredOn, isTrue);
+      expect(app.models.connection.status, ConnectionStatus.connected);
+      await app.dispose();
+    });
   });
 }
