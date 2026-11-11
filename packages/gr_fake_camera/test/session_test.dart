@@ -559,9 +559,13 @@ void main() {
     final s = await connect();
     final reads = <GrProps>[];
     s.propsUpdates.listen(reads.add);
+    // The probes are answered while `/v1/props` is not.
+    final unanswered = camera.propsGate = Completer<void>();
     final polls = await s.liveness!.polls.take(3).toList();
-    expect(polls.map((p) => (p.ok, p.props)), everyElement((true, null)));
+    expect(polls.map((p) => p.ok), everyElement(isTrue));
     expect(reads, isEmpty);
+    camera.propsGate = null;
+    unanswered.complete();
 
     camera.battery = 40;
     await until(() => reads.isNotEmpty);
@@ -572,18 +576,6 @@ void main() {
       FakePhoto('101RICOH', 'R0000999.JPG', DateTime(2026, 11, 6)),
     );
     await until(() => reads.length > before);
-  });
-
-  test('a camera that refuses /v1/ping is probed with /v1/props', () async {
-    camera = await startCamera(fastConfig(bonded: true, answersPing: false));
-    final s = await connect();
-    final polls = await s.liveness!.polls.take(3).toList();
-    expect(polls.map((p) => p.ok), everyElement(isTrue));
-    expect(
-      polls.map((p) => p.props?.serialNo),
-      everyElement(camera.config.serial),
-    );
-    expect(s.phase, GrSessionPhase.connected);
   });
 
   test('a battery change after a Wi-Fi recovery is read, though a /v1/props '

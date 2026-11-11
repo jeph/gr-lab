@@ -212,7 +212,7 @@ Independent corroboration: Ricoh Image Sync does the same thing on `OperationMod
 GR WORLD lets go of a camera it turned off and connects again on demand ([ble.md, Reconnect](ble.md#reconnect--normal-connect-ilb-0xd2b990--0xd2dc0c--0xd465b8--0xd2e93c)). GR Lab stays linked, so it meets every drop the camera makes when its power changes ([firmware bonding §6.1](firmware-bonding.md#61-the-radio-runs-a-different-firmware-image-in-each-power-state)). What the session does about them is our choice **[design]**:
 
 - **Turning off.** From the Camera Power `00` write until the camera is linked again and reads Operation Mode `02`, every link drop belongs to turning off (`ble.lost` with `afterPowerOff`, then `power.offSettled`); none counts as a lost link. The session waits out GR WORLD's 6 s from the power-off before it connects again. A camera that does not settle within `bleLostAfter` plus those 6 s ends the wait (`power.offUnsettled`).
-- **Off.** A drop of a link to a camera that reads `02` is linked again without counting as a loss either.
+- **Off.** A drop of a link to a camera that reads `02` is linked again without counting as a loss either. A GR IV HDF (fw 1.20, 2026-11-11) drops such a link about 8 s after it opens, so the session links an off camera again about every 23 s for as long as the session lasts ([firmware bonding §6.1](firmware-bonding.md#61-the-radio-runs-a-different-firmware-image-in-each-power-state)). Whether GR Lab should let go of an off camera instead, as GR WORLD does, is undecided.
 - **Turning on.** After the Operation Mode write the session watches the link for `wakeSettle` (8 s). A drop within it is part of the wake and is linked again (`power.relink`). A link that holds has the camera on (`power.onLinked`), and the watch ends at once when the camera notifies Camera Power `01` on that link (`reportedOn`).
 
 The app words all three as "Turning off…" or "Turning on…" until the camera has settled.
@@ -221,5 +221,4 @@ Still **[unknown]**, for [hardware session F](../hardware-validation.md#2-captur
 
 1. Whether a GR IV notifies Camera Power `01` after the Operation Mode write on a link that holds. GR WORLD subscribes to it and drives its UI from it (§4) but never waits for it. Without the notification the watch runs its full 8 s, as before.
 2. Whether a link held in bleStartup survives the Operation Mode write, and when it drops if it does not.
-3. After Camera Power `00`: when the link drops and with which HCI reason, what a connect inside the 6 s does, and whether the first link afterwards shows the 5.5 s drop of §3.
-4. Whether a link to a camera in bleStartup holds for as long as the phone keeps it.
+3. What a connect inside the 6 s after Camera Power `00` does. The rest is observed (GR IV HDF, fw 1.20, 2026-11-11, [hardware results](../hardware-validation.md#4-results-log)): the link drops 1.1 s after the write with "Remote User Terminated Connection", the first link after the 6 s wait drops before discovery as in §3, and the next one holds, until the camera drops it about 8 s later when nothing is written on it.

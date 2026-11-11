@@ -1692,7 +1692,7 @@ final class GrSession {
   /// `/v1/props` was read when the join was verified, as GR WORLD reads it
   /// once per join, and is read again only when the camera announces a
   /// battery or storage change on the socket ([_refreshProps]) \[design\];
-  /// the probes do not read it unless the camera refuses `/v1/ping`.
+  /// the probes do not read it.
   Future<void> _startWifiServices(GrSessionPhase phase) async {
     _checkWifiStopped(phase);
     final http = _http!;
@@ -1719,7 +1719,6 @@ final class GrSession {
       interval: options.livenessInterval,
       failureThreshold: options.livenessFailureThreshold,
       lossAfter: options.livenessLossAfter,
-      expectedIdentity: _props?.identity,
       trace: _trace,
     );
     _monitor = monitor;
@@ -1731,14 +1730,6 @@ final class GrSession {
       }),
     );
     _lostSub = wifi.lost.listen((_) => _wifiLost('network'));
-    // Ends with the monitor: stopping it closes its polls. A probe has
-    // props only after the camera refused `/v1/ping`.
-    monitor.polls.listen((poll) {
-      final props = poll.props;
-      if (poll.ok && props != null && identical(_monitor, monitor)) {
-        _setProps(props);
-      }
-    });
     _changesSub = changes.events.listen((event) {
       if (event is GrBatteryChange || event is GrStorageChange) {
         unawaited(_refreshProps(changes, http));

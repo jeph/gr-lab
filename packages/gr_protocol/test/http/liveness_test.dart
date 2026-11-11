@@ -61,39 +61,23 @@ void main() {
   });
 
   group('LivenessMonitor', () {
-    GrProps props(String serial) => GrProps({
-      'errCode': 200,
-      'model': 'RICOH GR IV HDF',
-      'serialNo': serial,
-      'bdName': 'GR_1',
-    });
-
     test(
-      'identity change counts as failure; loss uses the injected clock',
+      'a probe that throws is a failure; loss uses the injected clock',
       () async {
         var now = t0;
-        final answers = <Object>[
-          props('A'),
-          props('B'),
-          const SocketException('unreachable'),
-          props('B'),
-        ];
-        var i = 0;
+        var answers = true;
         final monitor = LivenessMonitor.withProbe(() async {
-          final a = answers[i++];
-          if (a is GrProps) return a;
-          throw a as Exception;
+          if (!answers) throw const SocketException('unreachable');
         }, clock: () => now);
         addTearDown(monitor.stop);
 
         now = at(1);
         final first = await monitor.pollOnce();
-        expect(first.ok, isTrue);
-        expect(monitor.identity!.serialNo, 'A');
+        expect((first.ok, first.consecutiveFailures), (true, 0));
 
+        answers = false;
         now = at(10);
-        final mismatch = await monitor.pollOnce();
-        expect((mismatch.ok, mismatch.identityMismatch), (false, true));
+        expect((await monitor.pollOnce()).ok, isFalse);
 
         now = at(20);
         final error = await monitor.pollOnce();

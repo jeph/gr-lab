@@ -59,7 +59,7 @@ extension on FakeGrCamera {
         case ['props']:
           if (propsGate case final gate?) await gate.future;
           return await _send(request, _props());
-        case ['ping'] when config.answersPing:
+        case ['ping']:
           return await _send(request, {
             'errCode': 200,
             'errMsg': 'OK',

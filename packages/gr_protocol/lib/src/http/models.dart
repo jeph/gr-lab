@@ -553,14 +553,14 @@ final class GrFocusResult extends GrEnvelope {
 }
 
 /// `GET /v1/ping`. The firmware builds a `Pong` from the camera datetime
-/// (firmware-protocol-inventory.md "Additional-route verification"); the
-/// JSON key name is \[unknown\], so [datetime] reads the most likely key and
-/// [raw] keeps everything.
+/// (firmware-protocol-inventory.md "Additional-route verification"). A GR
+/// IV HDF (fw 1.20, 2026-11-11) answers `errCode` 200, `errMsg` `OK` and
+/// `datetime` (hardware-validation.md §4).
 final class GrPing extends GrEnvelope {
   /// Wraps a decoded `/v1/ping` object.
   new(super.raw);
 
-  /// Camera clock, if the camera uses the `datetime` key.
+  /// The camera's clock as `YYYY-MM-DDTHH:MM:SS`, without a zone.
   String? get datetime => fields.string('datetime');
 }
 
