@@ -257,6 +257,9 @@ camera's serial number and Wi-Fi password, so attach it only if you are comforta
 Before sending a change, run `tool/check.sh`; every check has to pass. [`AGENTS.md`](AGENTS.md)
 describes how the code is organised and the rules it follows.
 
+Do not report suspected security vulnerabilities in public issues. Follow the
+[security policy](.github/SECURITY.md) to submit a private vulnerability report.
+
 ## Acknowledgements
 
 GR Lab is built with [Flutter](https://flutter.dev) and uses
