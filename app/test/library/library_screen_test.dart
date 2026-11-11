@@ -892,10 +892,12 @@ void main() {
         matching: find.text('Library'),
       ),
     );
-    final settings = tester.getRect(find.byKey(const Key('camera-settings')));
+    final row = tester.getRect(
+      find.ancestor(of: find.text('Library'), matching: find.byType(PageTitle)),
+    );
     expect(spinner.size, const Size(12, 12));
     expect(spinner.left, greaterThan(title.right));
-    expect(spinner.right, lessThan(settings.left));
+    expect(spinner.right, lessThan(row.right));
     expect(tester.getTopLeft(chips), settled);
 
     await pumpUntil(
@@ -903,6 +905,80 @@ void main() {
       () => progress.evaluate().isEmpty,
       reason: 'the update to end',
     );
+    await app.dispose();
+  });
+
+  testWidgets('the top bar, with Settings in it, leaves as the Library '
+      'scrolls down and comes back over the photos when it scrolls up', (
+    tester,
+  ) async {
+    tester.view
+      ..physicalSize = const Size(1170, 2532)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final app = (await tester.runAsync(
+      () => createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+      ),
+    ))!;
+    await app.pumpApp(tester);
+    await _openLibrary(tester);
+    await pumpUntilFound(tester, _thumbs);
+    const bar = ['camera-back', 'camera-pill', 'camera-settings'];
+    Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+    void expectBar({required bool shown}) {
+      for (final key in bar) {
+        expect(
+          find.byKey(Key(key)).hitTestable(),
+          shown ? findsOne : findsNothing,
+          reason: key,
+        );
+      }
+    }
+
+    final title = find.descendant(
+      of: find.byType(PageTitle),
+      matching: find.text('Library'),
+    );
+    final page = find.descendant(
+      of: find.byType(LibraryScreen),
+      matching: find.byType(CustomScrollView),
+    );
+    final scrolled = tester
+        .state<ScrollableState>(
+          find.descendant(of: page, matching: find.byType(Scrollable)).first,
+        )
+        .position;
+    Future<void> scroll(double dy) async {
+      await tester.drag(page, Offset(0, dy));
+      // The bar finishes sliding once the finger is up.
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+
+    expectBar(shown: true);
+    expect(rect('camera-settings').center.dy, rect('camera-back').center.dy);
+    expect(
+      rect('camera-settings').left,
+      greaterThan(rect('camera-pill').right),
+    );
+    expect(rect('camera-back').bottom, lessThan(tester.getRect(title).top));
+
+    await scroll(-400);
+    expectBar(shown: false);
+
+    await scroll(60);
+    expectBar(shown: true);
+    expect(rect('camera-back').top, greaterThan(0));
+    // Only the bar came back: the page is still where it was scrolled to.
+    expect(scrolled.pixels, greaterThan(300));
+    expect(title.hitTestable(), findsNothing);
+
+    await scroll(-60);
+    expectBar(shown: false);
+
     await app.dispose();
   });
 

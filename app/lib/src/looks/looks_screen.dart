@@ -88,10 +88,7 @@ class _LooksScreenState extends State<LooksScreen> {
             bottom: false,
             child: CustomScrollView(
               slivers: [
-                if (_model.onCamera)
-                  const SliverToBoxAdapter(
-                    child: CameraTopBar(showSettings: false),
-                  ),
+                if (_model.onCamera) const SliverCameraTopBar(),
                 SliverToBoxAdapter(
                   child: PageTitle(
                     l10n.looksTitle,
@@ -102,7 +99,8 @@ class _LooksScreenState extends State<LooksScreen> {
                         label: l10n.looksNew,
                         onTap: () => unawaited(openNewLook(context, _model)),
                       ),
-                      const SettingsButton(),
+                      // The phone's page has no top bar to carry it.
+                      if (!_model.onCamera) const SettingsButton(),
                     ],
                   ),
                 ),

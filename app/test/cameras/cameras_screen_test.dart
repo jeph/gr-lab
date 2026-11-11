@@ -534,28 +534,18 @@ void main() {
     await app.dispose();
   });
 
-  testWidgets('Settings sits on the title row of Cameras and the Library', (
-    tester,
-  ) async {
-    void expectOnTitleRow(String title, Key settings) {
-      final titleRect = tester.getRect(
-        find.descendant(of: find.byType(PageTitle), matching: find.text(title)),
-      );
-      final button = tester.getRect(find.byKey(settings));
-      expect(
-        button.center.dy,
-        moreOrLessEquals(titleRect.center.dy, epsilon: 1),
-      );
-      expect(button.left, greaterThan(titleRect.right));
-    }
-
+  testWidgets('Settings sits on the title row of Cameras', (tester) async {
     final app = await _start(tester);
     await pumpUntilFound(tester, find.byKey(const Key('camera-card-library')));
-    expectOnTitleRow('Cameras', const Key('cameras-settings'));
-
-    await _tap(tester, const Key('camera-card-library'));
-    await pumpUntilFound(tester, find.byType(LibraryScreen));
-    expectOnTitleRow('Library', const Key('camera-settings'));
+    final title = tester.getRect(
+      find.descendant(
+        of: find.byType(PageTitle),
+        matching: find.text('Cameras'),
+      ),
+    );
+    final button = tester.getRect(find.byKey(const Key('cameras-settings')));
+    expect(button.center.dy, moreOrLessEquals(title.center.dy, epsilon: 1));
+    expect(button.left, greaterThan(title.right));
 
     await app.dispose();
   });

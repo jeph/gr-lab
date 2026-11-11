@@ -6,16 +6,12 @@ import 'package:grlab/l10n/l10n.dart';
 import 'package:grlab/src/connection/camera_pill.dart';
 import 'package:grlab/src/settings/settings_screen.dart';
 import 'package:grlab/src/theme/tokens.dart';
+import 'package:grlab/src/widgets/scroll_away_header.dart';
 
 /// The row at the top of the camera's pages (mock `.topbar`): back to the
-/// Cameras screen, the camera pill and, on pages without a [PageTitle],
-/// Settings.
+/// Cameras screen, the camera pill and Settings.
 class CameraTopBar extends StatelessWidget {
-  const new({super.key, this.showSettings = true, this.middle});
-
-  /// Whether the bar carries [SettingsButton]. Pages with a [PageTitle] put
-  /// it in the title's row instead.
-  final bool showSettings;
+  const new({super.key, this.middle});
 
   /// Centred in the bar, for a page in a window too short to give it a row
   /// of its own. It gets the width that [_minSideWidth] leaves and has to
@@ -51,10 +47,8 @@ class CameraTopBar extends StatelessWidget {
                 child: CameraPill(),
               ),
             ),
-            if (showSettings) ...[
-              const SizedBox(width: 8),
-              const SettingsButton(),
-            ],
+            const SizedBox(width: 8),
+            const SettingsButton(),
           ],
         ),
       );
@@ -83,10 +77,10 @@ class CameraTopBar extends StatelessWidget {
                 child: middle,
               ),
             ),
-            Expanded(
+            const Expanded(
               child: Align(
                 alignment: AlignmentDirectional.centerEnd,
-                child: showSettings ? const SettingsButton() : null,
+                child: SettingsButton(),
               ),
             ),
           ],
@@ -94,6 +88,33 @@ class CameraTopBar extends StatelessWidget {
       ),
     );
   }
+}
+
+/// [CameraTopBar] as the first sliver of a page that scrolls
+/// ([SliverScrollAwayHeader]). It leaves as the page scrolls down and
+/// comes back over the page as soon as it scrolls up \[design\]: Cameras,
+/// the link and Settings stay a short scroll away in a long Library.
+class SliverCameraTopBar extends StatelessWidget {
+  const new({super.key});
+
+  /// Under the bar, between its buttons and the page it lies over.
+  static const _bottomGap = 6.0;
+
+  @override
+  Widget build(BuildContext context) => SliverScrollAwayHeader(
+    // Opaque, and through the status bar where the page scrolls under it:
+    // the page must not show through the bar that lies over it.
+    child: ColoredBox(
+      color: GrColors.of(context).bg,
+      child: const SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: _bottomGap),
+          child: CameraTopBar(),
+        ),
+      ),
+    ),
+  );
 }
 
 /// Opens Settings from the camera's pages.

@@ -7,6 +7,7 @@ import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 
 import 'package:grlab/src/camera/camera_pages.dart';
+import 'package:grlab/src/camera/camera_top_bar.dart';
 import 'package:grlab/src/library/image_orientation.dart';
 import 'package:grlab/src/looks/look_compare.dart';
 import 'package:grlab/src/looks/look_preview.dart';
@@ -341,6 +342,83 @@ void main() {
     expect(find.text('From R0001234.JPG'), findsOneWidget);
     expect(looks.looks.map((l) => l.name), ['Street', 'Daido']);
     expect(looks.photoOf(street), isNotNull);
+    await app.dispose();
+  });
+
+  testWidgets("the camera's Looks has Settings in its top bar, which leaves "
+      'as the page scrolls down and comes back when it scrolls up; the '
+      "phone's Looks keeps Settings beside its title", (tester) async {
+    final app = await _inLooks(tester);
+    await pumpUntilFound(tester, _inSlot(1, 'Tokyo Night'));
+    // Short enough for the page to scroll.
+    tester.view.physicalSize = const Size(1170, 900);
+    await tester.pump();
+    const bar = ['camera-back', 'camera-pill', 'camera-settings'];
+    Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+    void expectBar({required bool shown}) {
+      for (final key in bar) {
+        expect(
+          find.byKey(Key(key)).hitTestable(),
+          shown ? findsOne : findsNothing,
+          reason: key,
+        );
+      }
+    }
+
+    final title = find.descendant(
+      of: find.byType(PageTitle),
+      matching: find.text('Looks'),
+    );
+    final page = find.byKey(const Key('looks'));
+    final scrolled = tester
+        .state<ScrollableState>(
+          find.descendant(of: page, matching: find.byType(Scrollable)).first,
+        )
+        .position;
+    Future<void> scroll(double dy) async {
+      await tester.drag(page, Offset(0, dy));
+      // The bar finishes sliding once the finger is up.
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+    }
+
+    expectBar(shown: true);
+    expect(rect('camera-settings').center.dy, rect('camera-back').center.dy);
+    expect(
+      rect('camera-settings').left,
+      greaterThan(rect('camera-pill').right),
+    );
+    expect(rect('camera-back').bottom, lessThan(tester.getRect(title).top));
+    expect(rect('looks-new').center.dy, tester.getRect(title).center.dy);
+
+    await scroll(-250);
+    expectBar(shown: false);
+
+    await scroll(60);
+    expectBar(shown: true);
+    // Only the bar came back: the page is still where it was scrolled to.
+    expect(scrolled.pixels, greaterThan(150));
+    expect(title.hitTestable(), findsNothing);
+
+    await scroll(-60);
+    expectBar(shown: false);
+
+    await scroll(60);
+    await tapWhenReady(tester, find.byKey(const Key('camera-back')));
+    await pumpUntil(
+      tester,
+      () => find.byType(CameraPages, skipOffstage: false).evaluate().isEmpty,
+      reason: 'camera pages closed',
+    );
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+    await pumpUntilFound(tester, title);
+    expect(find.byKey(const Key('camera-back')), findsNothing);
+    expect(
+      rect('camera-settings').center.dy,
+      moreOrLessEquals(tester.getRect(title).center.dy, epsilon: 1),
+    );
+    expect(rect('camera-settings').left, greaterThan(rect('looks-new').right));
     await app.dispose();
   });
 

@@ -18,9 +18,9 @@ import 'package:grlab/src/library/viewer.dart';
 import 'package:grlab/src/theme/tokens.dart';
 import 'package:grlab/src/widgets/group.dart';
 
-/// The camera's photos (mocks `b-library-ios` / `b-library-android`): camera
-/// pill and settings, filter chips, a grid by day, selection with a
-/// download bar, and the download mini bar.
+/// The camera's photos (mocks `b-library-ios` / `b-library-android`): the
+/// top bar with the camera pill and settings, filter chips, a grid by day,
+/// selection with a download bar, and the download mini bar.
 class LibraryScreen extends StatelessWidget {
   const new({super.key});
 
@@ -162,10 +162,15 @@ class _LibraryViewState extends State<_LibraryView> {
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
+                  const SliverCameraTopBar(),
                   SliverSafeArea(
+                    top: false,
                     bottom: false,
                     sliver: SliverToBoxAdapter(
-                      child: _Header(progress: progress),
+                      child: PageTitle(
+                        l10n.libraryTitle,
+                        status: _Progress(progress),
+                      ),
                     ),
                   ),
                   if (showsFailure)
@@ -314,28 +319,6 @@ Future<void> showPermissionGuidance(BuildContext context) {
       ],
     ),
   );
-}
-
-class _Header extends StatelessWidget {
-  const new({required this.progress});
-
-  /// What the listing waits for (Updating…, Connecting…), if anything.
-  final String? progress;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const CameraTopBar(showSettings: false),
-        PageTitle(
-          context.l10n.libraryTitle,
-          status: _Progress(progress),
-          actions: const [SettingsButton()],
-        ),
-      ],
-    );
-  }
 }
 
 /// A spinner and what it waits for, beside the title: there it comes and
