@@ -2510,6 +2510,10 @@
   "@privacyLicensesRow": {
     "description": "Settings › About: row that opens the licenses of the software GR Lab ships."
   },
+  "privacyNotAffiliated": "GR Lab is an independent app. It is not affiliated with or endorsed by Ricoh. Ricoh and GR are trademarks of their owner.",
+  "@privacyNotAffiliated": {
+    "description": "Settings › About: note under the section saying that GR Lab does not come from Ricoh, the maker of the GR cameras, and that the names Ricoh and GR belong to their trademark owner. Keep Ricoh and GR as they are."
+  },
   "privacyPolicyLoadFailed": "The privacy policy could not be shown.",
   "@privacyPolicyLoadFailed": {
     "description": "Privacy policy screen: shown instead of the policy when the text bundled with the app cannot be read."

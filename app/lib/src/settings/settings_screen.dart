@@ -13,7 +13,8 @@ import 'package:grlab/src/widgets/pressable.dart';
 
 /// App settings (subset of mock `b-settings`): appearance and language,
 /// connecting to the camera when the app opens, leaving its Wi-Fi when the
-/// app is not used, the debug log, licenses and the privacy policy.
+/// app is not used, the debug log, licenses, the privacy policy and the note
+/// that GR Lab is not Ricoh's.
 class SettingsScreen extends StatelessWidget {
   const new({super.key});
 
@@ -104,6 +105,17 @@ class SettingsScreen extends StatelessWidget {
                   onTap: () => unawaited(PrivacyPolicyScreen.push(context)),
                 ),
               ],
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
+              child: Text(
+                l10n.privacyNotAffiliated,
+                key: const Key('setting-not-affiliated'),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: GrColors.of(context).t2,
+                ),
+              ),
             ),
           ],
         ),

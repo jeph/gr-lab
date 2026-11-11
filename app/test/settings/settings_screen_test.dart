@@ -44,6 +44,13 @@ void main() {
       await tester.scrollUntilVisible(find.text('Licenses'), 200);
       expect(find.text('Licenses'), findsOneWidget);
 
+      final notAffiliated = find.byKey(const Key('setting-not-affiliated'));
+      await tester.scrollUntilVisible(notAffiliated, 200);
+      expect(
+        tester.widget<Text>(notAffiliated).data,
+        contains('not affiliated with or endorsed by Ricoh'),
+      );
+
       // The writes started in fake time, so they finish by pumping, not
       // inside runAsync.
       var flushed = false;

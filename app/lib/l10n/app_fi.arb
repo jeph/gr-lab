@@ -466,6 +466,7 @@
   "pairingTryAgain": "Yritä uudelleen",
   "privacyAboutSection": "Tietoja",
   "privacyLicensesRow": "Lisenssit",
+  "privacyNotAffiliated": "GR Lab on itsenäinen sovellus. Sillä ei ole yhteyttä Ricohiin, eikä Ricoh ole hyväksynyt sitä. Ricoh ja GR ovat omistajansa tavaramerkkejä.",
   "privacyPolicyLoadFailed": "Tietosuojakäytäntöä ei voitu näyttää.",
   "privacyPolicyRow": "Tietosuojakäytäntö",
   "privacyPolicyTitle": "Tietosuojakäytäntö",
