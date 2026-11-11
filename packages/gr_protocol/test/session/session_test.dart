@@ -50,6 +50,13 @@ final class BondedCamera implements BleTransport {
   /// While set, an Operation Mode write waits for it before it lands.
   Completer<void>? holdModeWrite;
 
+  /// While set, an Operation Mode write that has landed waits for it
+  /// before it is answered.
+  Completer<void>? holdModeAnswer;
+
+  /// What a subscription to Camera Power delivers; nothing when null.
+  StreamController<Uint8List>? cameraPower;
+
   /// While set, a WLAN write waits for it before it lands.
   Completer<void>? holdWlanWrite;
 
@@ -215,6 +222,7 @@ final class _Link implements BleConnection {
     if (uuid == GrBleCatalog.operationMode.uuid) {
       camera.ops.add('write mode ${value.single}');
       camera.operationMode = value.single;
+      await camera.holdModeAnswer?.future;
     }
     if (uuid == GrBleCatalog.networkType.uuid) {
       camera.ops.add('write wlan ${value.single}');
@@ -225,8 +233,12 @@ final class _Link implements BleConnection {
   }
 
   @override
-  Stream<Uint8List> subscribe(String serviceUuid, String characteristicUuid) =>
-      const Stream.empty();
+  Stream<Uint8List> subscribe(String serviceUuid, String characteristicUuid) {
+    final power = camera.cameraPower;
+    final isPower =
+        canonicalUuid(characteristicUuid) == GrBleCatalog.cameraPower.uuid;
+    return isPower && power != null ? power.stream : const Stream.empty();
+  }
 }
 
 /// Ends every session at the join, after the BLE part under test.
@@ -1237,6 +1249,29 @@ void main() {
       await t.powerOffIfWoken();
       expect(on.ops.where((o) => o.startsWith('write power')), isEmpty);
       await t.close();
+    });
+
+    test('a camera that reports being on before it answers the wake write '
+        'ends the wake at that answer, long before wakeSettle', () async {
+      final camera = BondedCamera(operationMode: 2)
+        ..cameraPower = StreamController<Uint8List>.broadcast()
+        ..holdModeAnswer = Completer<void>();
+      final s = withSettle(camera, const Duration(seconds: 20));
+      final events = <GrSessionEvent>[];
+      s.events.listen(events.add);
+      await s.connectBluetooth(deviceId: 'cam');
+
+      final woke = s.wake(BleOperationMode.capture);
+      await until(() => modeWrites(camera).isNotEmpty);
+      camera.cameraPower!.add(Uint8List.fromList([BleCameraPower.on.wire]));
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      camera.holdModeAnswer!.complete();
+      await woke.timeout(const Duration(seconds: 2));
+      await Future<void>.delayed(Duration.zero);
+      expect(s.cameraOff, isFalse);
+      final linked = events.singleWhere((e) => e.kind == 'power.onLinked');
+      expect(linked.fields['reportedOn'], isTrue);
+      await s.close();
     });
 
     test('powerOffIfWoken cuts a wake short and turns the camera off once '

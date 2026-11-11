@@ -1296,23 +1296,32 @@ final class GrSession {
       // The camera may drop the link while it boots; that drop belongs to
       // the wake, not to the BLE reconnect.
       _relinking = true;
-      await _step(
-        GrSessionPhase.waking,
-        'operation mode write',
-        () => client.setOperationMode(mode),
-      );
-      _wokeCamera = true;
-      // Stopped or closed while that write was in flight: the caller
-      // decides about power from [wokeCamera]; nothing more is written.
-      check();
       // Reachable by stopWifi and close, which end the watch early.
       // A Wi-Fi start's watch runs its full time: it ends with WLAN-on
-      // written once more ([_settleAfterWake]).
+      // written once more ([_settleAfterWake]). The watch is there before
+      // the write, so that a camera reporting that it is on before the
+      // write is answered is heard; its time runs from the answer.
       final settle = _wakeSettle = _WakeSettle(
         client,
         options.wakeSettle,
         endsWhenOn: afterWrite == null,
       );
+      try {
+        await _step(
+          GrSessionPhase.waking,
+          'operation mode write',
+          () => client.setOperationMode(mode),
+        );
+        _wokeCamera = true;
+        // Stopped or closed while that write was in flight: the caller
+        // decides about power from [wokeCamera]; nothing more is written.
+        check();
+      } on Object {
+        settle.cancel();
+        if (identical(_wakeSettle, settle)) _wakeSettle = null;
+        rethrow;
+      }
+      settle.start();
       if (afterWrite != null && await afterWrite(settle)) return;
       final dropped = await settle.ended;
       if (identical(_wakeSettle, settle)) _wakeSettle = null;
@@ -1929,10 +1938,11 @@ final class GrSession {
   }
 }
 
-/// Watches a link for [GrSessionOptions.wakeSettle] after a wake write.
+/// Watches a link after a wake write: from its creation for a drop and for
+/// the camera reporting that it is on, and for
+/// [GrSessionOptions.wakeSettle] from [start].
 final class _WakeSettle {
-  new(GrBleClient client, Duration settle, {this.endsWhenOn = false}) {
-    _timer = Timer(settle, _end);
+  new(GrBleClient client, this._settle, {this.endsWhenOn = false}) {
     unawaited(
       client.connection.disconnected.then((_) {
         dropped = true;
@@ -1941,9 +1951,11 @@ final class _WakeSettle {
     );
   }
 
+  final Duration _settle;
+
   /// Whether [cameraOn] ends the watch.
   final bool endsWhenOn;
-  late final Timer _timer;
+  Timer? _timer;
   final Completer<bool> _ended = Completer<bool>();
 
   /// Whether the link has dropped since the wake, also after [ended].
@@ -1955,6 +1967,12 @@ final class _WakeSettle {
   /// Completes with [dropped] at a drop, after the settle time, when the
   /// camera reports being on ([cameraOn]), or when cancelled.
   Future<bool> get ended => _ended.future;
+
+  /// The wake write was answered: the settle time runs from now.
+  void start() {
+    if (_ended.isCompleted) return;
+    _timer = Timer(_settle, _end);
+  }
 
   void cancel() => _end();
 
@@ -1970,7 +1988,7 @@ final class _WakeSettle {
   }
 
   void _end() {
-    _timer.cancel();
+    _timer?.cancel();
     if (!_ended.isCompleted) _ended.complete(dropped);
   }
 }
