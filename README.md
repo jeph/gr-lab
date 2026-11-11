@@ -1,22 +1,149 @@
-# GR Lab
+<p align="center">
+  <img src="docs/icon.png" alt="GR Lab icon" width="128" height="128">
+</p>
 
-Companion app for Ricoh GR cameras (GR III, GR IIIx, GR IV) on iOS and Android, built with Flutter on a pure-Dart protocol package. The protocol was reverse-engineered from Ricoh's GR WORLD and Image Sync apps and the camera firmware; the findings are in [`research/`](research/README.md).
+<h1 align="center">GR Lab</h1>
 
-Current scope: pairing cameras over Bluetooth and keeping several of them on a Cameras screen (switch, rename, forget), connecting (Bluetooth first, waking the camera and joining its Wi-Fi when the Library opens), browsing the photos and videos on the camera, viewing them, downloading them to the phone's photo library, and shooting (a Bluetooth remote, and live view over Wi-Fi). Image Control, location sync, firmware update and Ricoh account services are not implemented.
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey" alt="Platforms: iOS and Android">
+</p>
 
-The app opens on the Cameras screen. With a camera paired, the one used last is on a card with a chip that says how it is linked, a line drawing of the camera, a power button and large Library, Shoot and Looks buttons, and the app links to it over Bluetooth by itself if it is nearby when the app opens (unless Connect when nearby is turned off in Settings); other cameras are listed below it. The chip says Not connected with a crossed-out Bluetooth sign while the camera is not linked (and whether it is nearby), its icon pulses while Bluetooth is being linked and turns green once it is; from the moment the camera's Wi-Fi is being joined it shows a Wi-Fi sign instead, pulsing until the Wi-Fi is up and green after, with the camera's battery. While Bluetooth is being linked, a × beside the chip cancels. It has a place of its own that is empty the rest of the time, and nothing else on the card moves or changes into another control as the connection changes, so a tap lands on what it was aimed at. Tapping the chip, or the camera pill on the camera's pages, opens the camera sheet, which has a row each for Bluetooth and Wi-Fi saying what the link is doing, with Connect, Cancel or Disconnect. Connect on the Wi-Fi row joins the camera's Wi-Fi ahead of the Library. Disconnect on the Bluetooth row disconnects the camera altogether, its Wi-Fi included, and it stays disconnected until you connect it again or open one of its pages; Disconnect on the Wi-Fi row keeps Bluetooth. When connecting failed, the chip says so and the sheet says what to check, with Try again. Linking over Bluetooth never turns a camera on. The power button turns the camera on or off over Bluetooth the way GR WORLD's does, linking it first when needed; a camera turned on with it stays on when GR Lab leaves it, and one turned off with it stays linked over Bluetooth. The card's Library, Shoot and Looks buttons open the camera's pages on that page; a floating tab bar at the bottom of the pages switches between them. The pages slide in over the Cameras screen. Unless you join it from the camera sheet, the camera's Wi-Fi is joined only for the Library and for live view, and opening either turns the camera on first if it is off. While joining, the page lists two steps, Bluetooth and Wi-Fi; if joining fails, it says why and what to check, with Try again. Joining takes a while, so once the Wi-Fi is up it stays up when you move to a page that does not need it or go back to the Cameras screen, whose chip then shows the Wi-Fi in green: the Library and live view open without joining again, and a download carries on. Auto-disconnect (below) or Disconnect on the camera sheet's Wi-Fi row leaves the Wi-Fi, with Bluetooth still linked. Going back while the Wi-Fi is still being joined stops the join. A camera GR Lab turned on for a page is turned back off when you go back from the camera's pages or, if its Wi-Fi stayed up, when the Wi-Fi is left on the Cameras screen. If the Wi-Fi is lost while it is in use (the Library or live view is open, or a download, movie copy or playback is running), the page stays and the app gets it back by itself, shown as reconnecting; a camera switched off at its power button shows a red "Camera off" pill and is turned back on over Bluetooth. If the Wi-Fi does not come back, the app returns to the Cameras screen with Bluetooth still linked and the chip saying so; if the camera is gone with its Bluetooth too (switched fully off, or out of range), it returns there with the chip saying the connection was lost. If the Wi-Fi is lost while nothing uses it, GR Lab lets it go without a word instead, and a camera switched off then stays off. On Android the loss is noticed as soon as the phone reports it; elsewhere, when the camera stops answering a Library request or its liveness polling. One camera is connected at a time.
+**GR Lab** is a companion app for Ricoh GR cameras (GR III, GR IIIx and GR IV) on iOS and Android.
+It browses and downloads the photos on your camera, works as a remote shutter with live view, and
+keeps your Image Control looks in one place. It is built to be fast and easy to use, and to manage
+the camera's colour profiles properly: save the look a photo was taken with, edit it against a
+preview, and load it into the camera's Custom slots.
 
-A Bluetooth link that drops is linked again by itself, shown as reconnecting on the camera's pages and by the pulsing icon on the card's chip. While only Bluetooth linked the camera, also when the Library or live view was opened meanwhile and is waiting for that link, one that is not back after 40 seconds counts as gone (switched fully off, or out of range): the app returns to the Cameras screen, whose chip says the connection was lost. The saved looks on the home dock stay in front when that happens while they are shown.
+GR Lab is an independent project and is not affiliated with Ricoh. It talks to the camera with a
+protocol that was reverse-engineered from Ricoh's own apps and the camera firmware; the findings are
+written up in [`research/`](research/README.md).
 
-Shoot opens in the mode used last, Remote the first time. Remote works over Bluetooth alone: it turns the camera on in shooting mode (or switches a camera in playback to shooting), shows the mode dial, shots left and battery, and has a large shutter, the self-timer (off, 2 s, 10 s) and the drive mode. A running self-timer turns the shutter into a countdown ring; tapping it cancels. On Android the volume buttons fire the shutter too. Live view joins the camera's Wi-Fi and shows the camera's picture, dark and without the tab bar: tapping the picture focuses there, the aperture, shutter, ISO and EV readouts open a dial of the values the camera offers in its current mode, and the chips change the drive, self-timer, metering and Image Control. The picture is shown whole and as large as the window allows, on phones, foldables and tablets alike; the controls go above and below it, and lie over its edges where the window leaves them no room of their own. In a window as short as a phone on its side they go in a rail on each side of the picture, which stays in the middle of the screen: ×, the camera and the chips on one side, the readouts, the shutter and the last shot on the other, with the dial along the bottom of the picture; × is then the way back to Remote. Switching back to Remote (or ×) keeps the camera on and its Wi-Fi up, so live view starts at once the next time; it only stops a join that is still under way.
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/library-dark.png">
+    <img src="docs/screenshots/library-light.png" alt="The Library: the camera's photos by day, with filters for JPEG, RAW and video" height="400">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/looks-dark.png">
+    <img src="docs/screenshots/looks-light.png" alt="The Looks page: the camera's three Custom slots above the looks saved on the phone" height="400">
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/look-editor-dark.png">
+    <img src="docs/screenshots/look-editor-light.png" alt="The look editor: a before and after preview above the Image Control sliders" height="400">
+  </picture>
+  <img src="docs/screenshots/live-view.png" alt="Live view: the camera's picture with exposure readouts and the shutter" height="400">
+</p>
 
-Auto-disconnect (Settings: 1, 5, 10 or 15 minutes, or Never; 5 by default) leaves the camera's Wi-Fi when GR Lab has not been used for that long, whichever screen is showing. With the Library or live view open it returns to the Cameras screen, the same way as disconnecting the Wi-Fi on the camera sheet; Shoot's Remote and Looks stay open on Bluetooth; and on the Cameras screen, whose chip says the Wi-Fi was left, a camera GR Lab turned on is turned back off. Touches, scrolls, key presses and moving between screens count as use, and so does a running download, movie copy, movie playback or live view. Time with the app in the background counts towards the limit. With Never, the Wi-Fi stays up until it is disconnected on the camera sheet, or the power button or switching cameras ends it.
+<p align="center">
+  <sub>Library, Looks, the look editor and live view, in demo mode with the simulated camera.</sub>
+</p>
 
-On Android, the first Wi-Fi join of each camera is explained before Android's own network list asks you to approve it. Android shows that list again for an approved camera after its network was disconnected by hand in Wi-Fi settings. When that happens, a short message names the network to choose, and if the join fails, GR Lab explains why the list came back and offers Try again.
+## Contents
 
-Joining is timed around the camera's access point, which comes up a varying time after its Wi-Fi is turned on. When the camera is off, GR Lab turns its Wi-Fi on right after waking it instead of first waiting 8 seconds to see whether the wake drops the Bluetooth link. If that early write fails, it waits for the link as before; if it goes through and the join is still looking for the network 8 seconds after the wake, GR Lab turns the Wi-Fi on once more (linking again first if the link dropped). On Android, Android looks for the network when asked and then only every 10-20 seconds, so for an approved camera GR Lab asks again every 7 seconds until Android starts connecting. It does not ask again while Android's network list is open, or on phones that join camera networks on a second Wi-Fi connection.
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Development](#development)
+- [Contributing](#contributing)
+- [Acknowledgements](#acknowledgements)
+- [License](#license)
 
-## Layout
+## Features
+
+GR Lab puts three things first: getting to your photos quickly, staying out of your way, and
+treating Image Control looks as something worth managing.
+
+- **Fast.** GR Lab links to your camera over Bluetooth when it opens, if the camera is nearby.
+  Opening the Library wakes the camera, turns on its Wi-Fi and joins it in one go, and the Wi-Fi
+  then stays up while you move between pages, so nothing joins twice and a download carries on. File
+  lists, thumbnails and previews are cached on the phone so the Library opens quickly. On a GR IV HDF
+  with an Android phone, a switched-off camera reached its Library in about 13 seconds.
+- **Easy to use.** One screen holds your cameras, and Library, Shoot and Looks are one tap from it.
+  GR Lab turns the camera on, switches on its Wi-Fi and joins it for you, so there is nothing to set
+  on the camera after pairing. When something fails, it says why and what to check, with Try again.
+  A link that drops comes back by itself.
+- **Looks you can manage.** Every photo in the Library shows the Image Control it was taken with,
+  and one tap saves that as a look. Looks live on your phone, whichever camera they came from, with
+  their settings, the photo they came from and a tag for the Custom slot that holds them.
+- **A look editor with a preview.** Change the base image and every parameter it has, grouped as
+  Tone, Colour, Detail and Effects, and see the result on your own photo or a sample: slide a
+  divider across before and after, put them side by side, or tap to swap. The preview approximates
+  the camera's rendering, worked out from its firmware
+  ([`research/image-control-processing.md`](research/image-control-processing.md)).
+- **Load looks into the camera.** The Looks page shows what the camera's Custom slots C1 to C3 hold.
+  Drag a saved look onto a slot, or pick Load from its menu, and the camera has it. Reading and
+  loading the slots works over Bluetooth alone, without joining the camera's Wi-Fi.
+- **Library.** Browse the camera's photos and videos by day, filter by JPEG, RAW, video or not yet
+  downloaded, and open any shot full screen with its details. Download one shot or a selection, as
+  JPEG, RAW or both, into a GR Lab album in your phone's photo library. Videos play in the app.
+- **Remote shutter.** A large shutter button over Bluetooth alone, with the self-timer, the drive
+  mode, the mode dial, shots left and battery. On Android the volume buttons fire the shutter too.
+- **Live view.** The camera's picture over Wi-Fi: tap to focus, set aperture, shutter speed, ISO and
+  exposure compensation on a dial of the values the camera offers, and change drive, self-timer,
+  metering and Image Control.
+- **Several cameras.** Pair as many as you own and switch between them; rename or forget each one.
+- **Themes and languages.** Light, Dark, Darkroom, Paper and Cyanotype themes, and the 21 languages
+  of the camera's own menus.
+- **Private.** No accounts, analytics, advertising or crash reporting. GR Lab talks only to your
+  camera; see the [privacy policy](app/assets/privacy.md).
+
+## Requirements
+
+- A Ricoh GR III, GR IIIx or GR IV, including the HDF bodies and the GR IV Monochrome.
+- Looks need a GR IV on firmware 1.04 or later, a GR IV HDF or a GR IV Monochrome. The GR III and
+  GR IIIx firmware offers no way to read or write Image Control settings from a phone.
+- Android 12 or newer, or iOS 15 or newer.
+
+GR Lab is young. The hardware log records runs with a GR IV HDF on firmware 1.20: pairing,
+connecting, waking the camera, browsing, downloading, live view, focus and exposure changes. GR III
+and GR IIIx support comes from the protocol research and has not been tested on a camera yet. See
+[`research/hardware-validation.md`](research/hardware-validation.md) for what has been observed.
+
+## Installation
+
+There are no packaged releases yet, so GR Lab is installed by building it from source. The build
+needs [Flutter](https://flutter.dev) 3.47 or newer with the Android SDK or Xcode set up.
+
+```sh
+git clone https://github.com/jeph/gr-lab.git
+cd gr-lab/app
+flutter run --flavor prod --release
+```
+
+`flutter run` installs on the phone that is connected to your computer. iOS builds need your own
+signing team with the Hotspot Configuration and Access Wi-Fi Information capabilities.
+
+To try the app without a camera, run it in demo mode, which uses a simulated GR IV with sample
+photos and works on the Android emulator and the iOS simulator:
+
+```sh
+flutter run --dart-define=GR_DEMO=true
+```
+
+## Usage
+
+1. **Pair your camera.** Tap Add a camera and follow the guide. On the camera, pairing is under
+   MENU, Wireless Connection, Wireless Communication: set Action Mode to On, open Pairing and choose
+   Execute Pairing, then confirm the code on the phone and press OK on the camera. The camera is
+   then on the Cameras screen, and GR Lab links to it by itself when it opens with the camera nearby.
+2. **Open the Library.** GR Lab turns the camera on if it is off and joins its Wi-Fi. Android asks
+   you to approve the camera's network once. Tap a shot to view it, press and hold to select
+   several, and download what you want to keep.
+3. **Shoot.** Remote is a shutter over Bluetooth. Live view joins the camera's Wi-Fi and shows its
+   picture, with focus and exposure controls.
+4. **Save a look.** Open a photo in the Library and tap Save look, or make one from scratch with +
+   on the Looks page. Tap a look to edit it, and drag it onto C1, C2 or C3 to load it into the
+   camera.
+
+Auto-disconnect in Settings leaves the camera's Wi-Fi after GR Lab has gone unused for a while (5
+minutes by default). [How GR Lab behaves](docs/behaviour.md) describes each screen and every
+connection state in detail.
+
+## Development
+
+### Layout
 
 | Path | Contents |
 |---|---|
@@ -27,7 +154,7 @@ Joining is timed around the camera's access point, which comes up a varying time
 | `research` | Protocol research: how each route and characteristic was found, firmware evidence, hardware results, open questions |
 | `tool` | `check.sh`, every code-quality check; `testflight.sh`, the iOS upload |
 
-## Running
+### Running
 
 ```sh
 cd app
@@ -37,34 +164,30 @@ flutter run --flavor prod --release          # the build users get
 flutter run --dart-define=GR_DEMO=true       # simulated camera, works on the Android emulator and iOS simulator
 ```
 
-There are two builds. `dev` (`io.jeph.grlab.dev`, named "GR Lab Dev") installs beside `prod` (`io.jeph.grlab`, "GR Lab"). Without `--flavor`, `flutter run` and `flutter build` build `dev`.
+There are two builds. `dev` (`io.jeph.grlab.dev`, named "GR Lab Dev") installs beside `prod`
+(`io.jeph.grlab`, "GR Lab"). Without `--flavor`, `flutter run` and `flutter build` build `dev`.
 
-`flutter run` alone makes a debug build, which builds each frame several times slower than a profile or release build (3 to 4 times in the Library on an Android emulator, 2026-11-10). Judge how smooth a screen is with `--profile` or `--release`.
+`flutter run` alone makes a debug build, which builds each frame several times slower than a profile
+or release build (3 to 4 times in the Library on an Android emulator, 2026-11-10). Judge how smooth a
+screen is with `--profile` or `--release`.
 
-Demo mode keeps its data in a separate `demo/` folder. On first launch, Add a camera finds the simulated camera and it confirms pairing by itself; later launches start with the camera off, which stays off until you open the Library (waking it is part of joining its Wi-Fi) or press the card's power button. Demo RAW files are JPEG bytes with a `.DNG` name.
+Demo mode keeps its data in a separate `demo/` folder. On first launch, Add a camera finds the
+simulated camera and it confirms pairing by itself; later launches start with the camera off, which
+stays off until you open the Library (waking it is part of joining its Wi-Fi) or press the card's
+power button. Demo RAW files are JPEG bytes with a `.DNG` name.
 
-### Debug log
-
-GR Lab keeps debug logs while Settings > Enable debug logging is on: everything it sends to and receives from the camera (Bluetooth scans, reads, writes and notifications, every HTTP request and answer, WebSocket messages, live-view frame sizes, and the Wi-Fi joining steps), every line the app prints, uncaught errors, and the native Wi-Fi code's lines. The setting is on by default in `dev` and off in `prod`. While it is off nothing is logged, not even to logcat or the console, with one exception: the Flutter engine still reports uncaught errors there itself, so crashes stay visible. Settings > Debug log exports the log through the share sheet as JSON Lines files and clears it. The log keeps about 50 MB. It contains the camera's Wi-Fi password.
-
-### TestFlight
-
-```sh
-tool/testflight.sh       # builds the prod iOS app and uploads it to TestFlight
-```
-
-The script builds the `prod` flavor with the upload's time as its build number and sends it to App Store Connect, where it appears under TestFlight once processed. Internal testers install it from the TestFlight app, without a cable. Xcode signs and uploads the build with an App Store Connect API key, so the setup on a Mac is the key's `AuthKey_<key id>.p8` file in `~/.appstoreconnect/private_keys`, and `ASC_KEY_ID` and `ASC_ISSUER_ID` in `~/.appstoreconnect/gr-lab.env`. The key needs the Admin role: Apple doesn't let an App Manager key use the team's distribution certificate. The archive is built unsigned and signed for the App Store on export (`app/ios/ExportOptions.plist`), because signing the archive itself would need a registered test device on the team.
-
-## Checks
+### Checks
 
 ```sh
-tool/check.sh            # formatter, analyzer, camera layer boundary, all test suites
+tool/check.sh            # formatter, analyzer, camera layer boundary, translations, all test suites
 tool/check.sh --static   # without the tests
 ```
 
-The analyzer uses `very_good_analysis` with infos treated as errors. Android and iOS builds run `tool/check.sh --static` first and stop if it fails. Kotlin and Swift warnings are errors. See `AGENTS.md` for the rules.
+The analyzer uses `very_good_analysis` with infos treated as errors. Android and iOS builds run
+`tool/check.sh --static` first and stop if it fails. Kotlin and Swift warnings are errors. See
+[`AGENTS.md`](AGENTS.md) for the rules.
 
-## Tests
+### Tests
 
 ```sh
 (cd packages/gr_protocol && dart test)
@@ -75,9 +198,16 @@ The analyzer uses `very_good_analysis` with infos treated as errors. Android and
 (cd app && flutter test integration_test --flavor dev --dart-define=GR_DEMO=true -d <device>)
 ```
 
-The integration test runs the whole demo flow (pair, connect, browse, download two shots) on a device, emulator or simulator. A debug build needs about 400 MB free on the emulator. On Android, `flutter test` takes neither the default flavor nor the app's ID from the project, so it needs `--flavor dev` and an APK built beforehand; without them it stops with "No application found".
+The integration test runs the whole demo flow (pair, connect, browse, download two shots) on a
+device, emulator or simulator. A debug build needs about 400 MB free on the emulator. On Android,
+`flutter test` takes neither the default flavor nor the app's ID from the project, so it needs
+`--flavor dev` and an APK built beforehand; without them it stops with "No application found".
 
-On the iOS simulator, the app must be installed when Photos access is granted, and `flutter test` uninstalls it afterwards, which deletes the grant. GR Lab asks for full access, to keep its album, and on the iOS 26.3 simulator `simctl privacy grant photos` alone did not stop iOS from asking: the grant it records has `auth_version` 1, and iOS takes it as full access only at 2. Grant it and set that before every run:
+On the iOS simulator, the app must be installed when Photos access is granted, and `flutter test`
+uninstalls it afterwards, which deletes the grant. GR Lab asks for full access, to keep its album,
+and on the iOS 26.3 simulator `simctl privacy grant photos` alone did not stop iOS from asking: the
+grant it records has `auth_version` 1, and iOS takes it as full access only at 2. Grant it and set
+that before every run:
 
 ```sh
 cd app
@@ -89,6 +219,61 @@ sqlite3 "$(xcrun simctl getenv booted HOME)/Library/TCC/TCC.db" \
 flutter test integration_test --dart-define=GR_DEMO=true -d <simulator>
 ```
 
-## Not verified on hardware yet
+### Debug log
 
-Everything above runs against the simulated camera. On a GR IV HDF with an Android phone, pairing, connecting, browsing and downloading worked, and so did waking an off camera and joining its Wi-Fi with Android asked again every 7 seconds (about 13 seconds from waking to the Library in five runs with the camera off, 2-13 seconds in two with it on). Still untested on hardware: Shoot (Remote and live view), the tab bar between the camera's pages, auto-disconnect, the Cameras screen (nearby detection from the advertisement, the automatic connect, switching between two real cameras), the explanation before Android's Wi-Fi approval and whether the approval is then remembered, the message and Try again question when Android's network list comes back for an approved camera, getting the Wi-Fi back in place when it is lost, the red Camera off pill and turning the camera back on after it is switched off, returning to the Cameras screen when the Wi-Fi does not come back or the camera is gone with its Bluetooth, turning the camera back off when leaving the Library, portrait orientation of the camera's thumbnails (based on its per-photo info), the image retries, timeouts and sharper sizes in the Library, iOS hotspot joining, saving RAW+JPEG pairs to Photos, and movie playback from a downloaded file. iOS device builds need the Hotspot Configuration and Access Wi-Fi Information capabilities on the signing team.
+GR Lab keeps debug logs while Settings > Enable debug logging is on: everything it sends to and
+receives from the camera (Bluetooth scans, reads, writes and notifications, every HTTP request and
+answer, WebSocket messages, live-view frame sizes, and the Wi-Fi joining steps), every line the app
+prints, uncaught errors, and the native Wi-Fi code's lines. The setting is on by default in `dev`
+and off in `prod`. While it is off nothing is logged, not even to logcat or the console, with one
+exception: the Flutter engine still reports uncaught errors there itself, so crashes stay visible.
+Settings > Debug log exports the log through the share sheet as JSON Lines files and clears it. The
+log keeps about 50 MB. It contains the camera's Wi-Fi password.
+
+### TestFlight
+
+```sh
+tool/testflight.sh       # builds the prod iOS app and uploads it to TestFlight
+```
+
+The script builds the `prod` flavor with the upload's time as its build number and sends it to App
+Store Connect, where it appears under TestFlight once processed. Internal testers install it from
+the TestFlight app, without a cable. Xcode signs and uploads the build with an App Store Connect API
+key, so the setup on a Mac is the key's `AuthKey_<key id>.p8` file in
+`~/.appstoreconnect/private_keys`, and `ASC_KEY_ID` and `ASC_ISSUER_ID` in
+`~/.appstoreconnect/gr-lab.env`. The key needs the Admin role: Apple doesn't let an App Manager key
+use the team's distribution certificate. The archive is built unsigned and signed for the App Store
+on export (`app/ios/ExportOptions.plist`), because signing the archive itself would need a
+registered test device on the team.
+
+## Contributing
+
+Bug reports and pull requests are welcome. Most bugs show up only on real hardware, so when you
+[open an issue](https://github.com/jeph/gr-lab/issues), please include your camera model and
+firmware version, your phone model and its Android or iOS version, and what you did. An exported
+debug log (Settings, Debug log, Export log) usually shows what happened, but it contains your
+camera's serial number and Wi-Fi password, so attach it only if you are comfortable sharing those.
+
+Before sending a change, run `tool/check.sh`; every check has to pass. [`AGENTS.md`](AGENTS.md)
+describes how the code is organised and the rules it follows.
+
+## Acknowledgements
+
+GR Lab is built with [Flutter](https://flutter.dev) and uses
+[universal_ble](https://pub.dev/packages/universal_ble) for Bluetooth,
+[image](https://pub.dev/packages/image), [video_player](https://pub.dev/packages/video_player),
+[share_plus](https://pub.dev/packages/share_plus) and
+[path_provider](https://pub.dev/packages/path_provider). Its text is set in
+[Inter](https://rsms.me/inter/) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/).
+
+The protocol research rests on Ricoh's GR WORLD and Image Sync apps and the GR firmware, and on the
+[Ricoh3x](https://github.com/Trimz/Ricoh3x) project's notes on the GR IIIx's Image Control settings.
+
+## License
+
+GR Lab is released under the [MIT License](LICENSE). Third-party packages and fonts that GR Lab
+includes keep their own licenses. The app lists them under **Settings › About › Licenses**, and the
+fonts' license texts are in [`app/assets/fonts/`](app/assets/fonts/).
+
+Ricoh's apps and firmware, which the research cites, belong to Ricoh and are not part of this
+repository.
