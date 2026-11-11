@@ -53,7 +53,7 @@ GR Lab keeps debug logs while Settings > Enable debug logging is on: everything 
 tool/testflight.sh       # builds the prod iOS app and uploads it to TestFlight
 ```
 
-The script builds the `prod` flavor with the upload's time as its build number and sends it to App Store Connect, where it appears under TestFlight once processed. Internal testers install it from the TestFlight app, without a cable. Xcode signs and uploads the build, so the only setup on a Mac is adding the development team's Apple account in Xcode > Settings > Accounts. The archive is built unsigned and signed for the App Store on export (`app/ios/ExportOptions.plist`), because signing the archive itself would need a registered test device on the team.
+The script builds the `prod` flavor with the upload's time as its build number and sends it to App Store Connect, where it appears under TestFlight once processed. Internal testers install it from the TestFlight app, without a cable. Xcode signs and uploads the build with an App Store Connect API key, so the setup on a Mac is the key's `AuthKey_<key id>.p8` file in `~/.appstoreconnect/private_keys`, and `ASC_KEY_ID` and `ASC_ISSUER_ID` in `~/.appstoreconnect/gr-lab.env`. The key needs the Admin role: Apple doesn't let an App Manager key use the team's distribution certificate. The archive is built unsigned and signed for the App Store on export (`app/ios/ExportOptions.plist`), because signing the archive itself would need a registered test device on the team.
 
 ## Checks
 
