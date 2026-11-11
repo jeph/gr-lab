@@ -9,9 +9,10 @@ import 'package:grlab/src/services.dart';
 /// The shot is sent as `{album, files: [{path, name, kind, mimeType}]}`
 /// with the JPEG before the DNG, because iOS makes the first file of a pair
 /// the primary photo and the second its RAW alternate. Android writes each
-/// file as its own MediaStore entry under `Pictures/<album>` or
-/// `Movies/<album>`; iOS asks only for add-only Photos access, which cannot
-/// create or look up albums, so the album is ignored there.
+/// file as its own MediaStore entry under `Pictures/<album>`, the folder
+/// gallery apps show as the album. iOS adds the shot to the Photos album of
+/// that title, which takes full access to Photos; with limited or add-only
+/// access it saves the shot outside the album.
 final class PlatformMediaSaver implements MediaSaver {
   new({this._channel = const MethodChannel('io.jeph.grlab/media')});
 

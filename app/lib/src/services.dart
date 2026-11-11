@@ -4,11 +4,13 @@ import 'package:gr_camera/gr_camera.dart';
 
 /// Saves downloaded camera files into the device photo library.
 abstract interface class MediaSaver {
-  /// Saves the files of one shot. [files] holds a JPEG, a DNG, both halves
-  /// of a RAW+JPEG pair (same base name), or one movie. iOS stores a pair as
-  /// one Photos asset (JPEG primary, DNG alternate); Android writes one
-  /// MediaStore entry per file under `Pictures/<album>` or
-  /// `Movies/<album>`. Throws [MediaSaveException].
+  /// Saves the files of one shot into the album named [album], creating the
+  /// album when the photo library has none of that name. [files] holds a
+  /// JPEG, a DNG, both halves of a RAW+JPEG pair (same base name), or one
+  /// movie. iOS stores a pair as one Photos asset (JPEG primary, DNG
+  /// alternate) and leaves the shot out of the album unless GR Lab has full
+  /// access to Photos; Android writes one MediaStore entry per file under
+  /// `Pictures/<album>`. Throws [MediaSaveException].
   Future<void> saveShot(List<File> files, {required String album});
 }
 

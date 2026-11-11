@@ -17,7 +17,7 @@ GR Lab keeps the following in its own app storage on your phone:
 
 GR Lab reads your camera's Wi-Fi password from the camera over Bluetooth each time it connects and passes it to your phone's Wi-Fi system to join the camera's network. The password is not saved with your paired cameras. While debug logging is on, though, the password is written to the debug log on your phone, like the rest of the exchange with the camera (see below).
 
-Photos and videos you download are saved to your phone's photo library: on iOS in Photos, on Android in the GR folders under Pictures and Movies. From then on they are yours and are managed by your photo app; GR Lab does not change or delete them.
+Photos and videos you download are saved to your phone's photo library, in an album called GR Lab: on iOS an album in Photos, on Android the GR Lab folder under Pictures. From then on they are yours and are managed by your photo app; GR Lab does not change or delete them.
 
 The demo version of GR Lab uses a simulated camera with sample photos included in the app. It keeps its data apart from that of real cameras.
 
@@ -48,13 +48,13 @@ On Android, GR Lab asks for or uses:
 - Wi-Fi and network access, to join the camera's Wi-Fi network, which Android asks you to approve, to check that the phone is on it and to send the camera's traffic over it.
 - Internet, which Android requires for any network connection. GR Lab uses it only to talk to the camera.
 
-Saving photos and videos to Pictures and Movies needs no permission on the Android versions GR Lab runs on.
+Saving photos and videos to Pictures needs no permission on the Android versions GR Lab runs on.
 
 On iOS, GR Lab asks for:
 
 - Bluetooth, to find, pair with, wake and control your camera.
 - Local network, to talk to the camera over its Wi-Fi network.
-- Adding to Photos, to save the photos and videos you download. This lets GR Lab add to your library but not see it.
+- Photos, to save the photos and videos you download to the GR Lab album. iOS lets an app keep an album only with full access to your library, so that is what GR Lab asks for. It uses the access only to add what you download and to find the album named GR Lab; it does not look at, change or delete your other photos and videos. If you allow limited access or Add Photos Only instead, GR Lab still saves what you download, outside the album.
 - Joining the camera's Wi-Fi network, which iOS asks you to approve. GR Lab also reads the name of the Wi-Fi network your phone is on, only to check that it has joined the camera.
 
 GR Lab does not use your location, camera, microphone, contacts or notifications.

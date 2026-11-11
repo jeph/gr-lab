@@ -77,13 +77,15 @@ The analyzer uses `very_good_analysis` with infos treated as errors. Android and
 
 The integration test runs the whole demo flow (pair, connect, browse, download two shots) on a device, emulator or simulator. A debug build needs about 400 MB free on the emulator. On Android, `flutter test` takes neither the default flavor nor the app's ID from the project, so it needs `--flavor dev` and an APK built beforehand; without them it stops with "No application found".
 
-On the iOS simulator, the app must be installed when Photos access is granted, and `flutter test` uninstalls it afterwards, which deletes the grant. Grant it before every run:
+On the iOS simulator, the app must be installed when Photos access is granted, and `flutter test` uninstalls it afterwards, which deletes the grant. GR Lab asks for full access, to keep its album, and on the iOS 26.3 simulator `simctl privacy grant photos` alone did not stop iOS from asking: the grant it records has `auth_version` 1, and iOS takes it as full access only at 2. Grant it and set that before every run:
 
 ```sh
 cd app
 flutter build ios --simulator --debug --dart-define=GR_DEMO=true
 xcrun simctl install booted build/ios/iphonesimulator/Runner.app
-xcrun simctl privacy booted grant photos-add io.jeph.grlab.dev
+xcrun simctl privacy booted grant photos io.jeph.grlab.dev
+sqlite3 "$(xcrun simctl getenv booted HOME)/Library/TCC/TCC.db" \
+  "UPDATE access SET auth_version = 2 WHERE service = 'kTCCServicePhotos' AND client = 'io.jeph.grlab.dev'"
 flutter test integration_test --dart-define=GR_DEMO=true -d <simulator>
 ```
 

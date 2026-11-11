@@ -39,6 +39,10 @@
 	<string>GR Lab connects to your camera over its own Wi-Fi network to browse and download photos and videos and to show its live view.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>GR Lab saves the photos and videos you download from your camera to your library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>GR Lab saves the photos and videos you download from your camera to a GR Lab album in your library, which takes full access. It doesn't look at your other photos and videos.</string>
+	<key>PHPhotoLibraryPreventAutomaticLimitedAccessAlert</key>
+	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

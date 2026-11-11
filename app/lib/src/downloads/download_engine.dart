@@ -252,7 +252,7 @@ final class DownloadEngine extends ChangeNotifier {
     required this.cacheDir,
     required this.media,
     required this.link,
-    this.album = 'GR',
+    this.album = 'GR Lab',
     this.transportGrace = const Duration(seconds: 3),
     this.progressInterval = const Duration(milliseconds: 100),
   }) {

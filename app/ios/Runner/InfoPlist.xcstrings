@@ -393,6 +393,137 @@
           }
         }
       }
+    },
+    "NSPhotoLibraryUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab ukládá fotky a videa stažené z fotoaparátu do alba GR Lab ve vaší knihovně fotek, k čemuž potřebuje plný přístup. Na vaše ostatní fotky a videa se nedívá."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab gemmer de billeder og videoer, du downloader fra dit kamera, i et album med navnet GR Lab i dit fotobibliotek, hvilket kræver fuld adgang. Appen ser ikke på dine andre billeder og videoer."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab speichert die Fotos und Videos, die du von deiner Kamera herunterlädst, im Album „GR Lab“ in deiner Fotomediathek. Dafür ist voller Zugriff nötig. Deine anderen Fotos und Videos sieht sich GR Lab nicht an."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το GR Lab αποθηκεύει τις φωτογραφίες και τα βίντεο που κατεβάζετε από την κάμερα σε ένα άλμπουμ «GR Lab» στη βιβλιοθήκη σας, κάτι που απαιτεί πλήρη πρόσβαση. Δεν εξετάζει τις υπόλοιπες φωτογραφίες και τα βίντεό σας."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab saves the photos and videos you download from your camera to a GR Lab album in your library, which takes full access. It doesn't look at your other photos and videos."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab guarda las fotos y los vídeos que descargas de la cámara en un álbum «GR Lab» de tu fototeca, para lo que necesita acceso total. No mira tus demás fotos y vídeos."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab tallentaa kamerasta lataamasi kuvat ja videot kuvakirjastosi GR Lab ‑albumiin, mikä edellyttää täyttä pääsyä. Se ei katso muita kuviasi tai videoitasi."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab enregistre les photos et vidéos que vous téléchargez depuis votre appareil photo dans un album « GR Lab » de votre photothèque, ce qui nécessite un accès complet. L’app ne consulte pas vos autres photos et vidéos."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A GR Lab a kameráról letöltött fotókat és videókat a fotókönyvtár GR Lab nevű albumába menti, amihez teljes hozzáférés szükséges. A többi fotót és videót nem nézi meg."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab salva le foto e i video che scarichi dalla fotocamera in un album “GR Lab” nella tua libreria, e per farlo serve l’accesso completo. Non guarda le altre tue foto e i tuoi altri video."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Labは、カメラからダウンロードした写真や動画を写真ライブラリの「GR Lab」アルバムに保存します。これにはフルアクセスが必要です。ほかの写真や動画を見ることはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab은 카메라에서 다운로드한 사진과 동영상을 사진 보관함의 ‘GR Lab’ 앨범에 저장하며, 이를 위해 전체 접근 권한이 필요합니다. 다른 사진과 동영상은 살펴보지 않습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab bewaart de foto's en video's die je van je camera downloadt in een album 'GR Lab' in je fotobibliotheek. Daarvoor is volledige toegang nodig. GR Lab bekijkt je andere foto's en video's niet."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab zapisuje zdjęcia i filmy pobrane z aparatu w albumie „GR Lab” w bibliotece zdjęć, do czego potrzebuje pełnego dostępu. Nie przegląda pozostałych zdjęć ani filmów."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O GR Lab guarda as fotos e os vídeos que transfere da câmara num álbum “GR Lab” na sua biblioteca de fotografias, o que requer acesso total. Não vê as suas outras fotos e vídeos."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab сохраняет фото и видео, загруженные с камеры, в альбом «GR Lab» в медиатеке. Для этого нужен полный доступ. Другие ваши фото и видео GR Lab не просматривает."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab sparar de bilder och videor du hämtar från kameran i ett album som heter GR Lab i ditt bildbibliotek, vilket kräver full åtkomst. Appen tittar inte på dina andra bilder och videor."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab บันทึกภาพและวิดีโอที่คุณดาวน์โหลดจากกล้องลงในอัลบั้ม “GR Lab” ในคลังรูปภาพของคุณ ซึ่งต้องใช้สิทธิ์เข้าถึงแบบเต็ม และจะไม่ดูรูปภาพและวิดีโออื่นๆ ของคุณ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab, kameranızdan indirdiğiniz fotoğrafları ve videoları fotoğraf arşivinizdeki “GR Lab” albümüne kaydeder; bunun için tam erişim gerekir. Diğer fotoğraflarınıza ve videolarınıza bakmaz."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab 会把你从相机下载的照片和影片存入照片图库中的“GR Lab”相簿，这需要完全访问权限。它不会查看你的其他照片和影片。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Lab 會將你從相機下載的照片和影片儲存到照片圖庫中的「GR Lab」相簿，這需要完整取用權限。它不會查看你的其他照片和影片。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

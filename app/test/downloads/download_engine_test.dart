@@ -167,7 +167,7 @@ void main() {
         expect(await engine.enqueue(serial, [pair], kinds: {kind}), 1);
         await engine.whenIdle();
         expect(h.saved, [expected]);
-        expect(h.media.shots.single.album, 'GR');
+        expect(h.media.shots.single.album, 'GR Lab');
         expect(engine.jobs, isEmpty);
         expect(engine.isShotDownloaded(serial, pair), isTrue);
       });

@@ -12,8 +12,8 @@ import 'package:integration_test/integration_test.dart';
 /// shots into the photo library.
 ///
 /// Run with `flutter test integration_test --dart-define=GR_DEMO=true`.
-/// On the iOS simulator grant Photos access first:
-/// `xcrun simctl privacy booted grant photos-add io.jeph.grlab`.
+/// On the iOS simulator grant full Photos access first, as `README.md`
+/// describes under Tests.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 

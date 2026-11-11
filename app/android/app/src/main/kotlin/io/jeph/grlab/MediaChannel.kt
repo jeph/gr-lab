@@ -18,9 +18,11 @@ import java.util.concurrent.Executors
 
 /**
  * `io.jeph.grlab/media`: copies downloaded camera files into MediaStore,
- * one entry per file, under `Pictures/<album>` (JPEG, DNG) or
- * `Movies/<album>` (MOV). Apps may insert their own media on Android 10+
- * without any storage permission.
+ * one entry per file, under `Pictures/<album>`. Gallery apps show a folder
+ * as an album under the folder's name, so movies go there too rather than
+ * to `Movies/<album>`, which would be a second album of the same name.
+ * Apps may insert their own media on Android 10+ without any storage
+ * permission.
  */
 class MediaChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.MethodCallHandler {
     private val resolver: ContentResolver = context.contentResolver
@@ -97,14 +99,14 @@ class MediaChannel(context: Context, messenger: BinaryMessenger) : MethodChannel
         } else {
             MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
         }
-        val root = if (video) Environment.DIRECTORY_MOVIES else Environment.DIRECTORY_PICTURES
+        val albumPath = "${Environment.DIRECTORY_PICTURES}/$album"
         val source = File(file.path)
         if (!source.isFile) throw IOException("${file.name} is missing")
 
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, file.name)
             put(MediaStore.MediaColumns.MIME_TYPE, file.mimeType)
-            put(MediaStore.MediaColumns.RELATIVE_PATH, "$root/$album")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, albumPath)
             // Hidden from other apps until the copy is complete.
             put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
