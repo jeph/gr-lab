@@ -560,7 +560,9 @@ void main() {
   });
 
   testWidgets('a camera says whether the scan sees it, and its details show '
-      'its identity and pairing date', (tester) async {
+      'its identity and pairing date, without a Connect of their own', (
+    tester,
+  ) async {
     final app = await _start(tester, config: _unreachable, withOther: true);
     // The GR IIIx in the list with its model; the card's chip without.
     await pumpUntilFound(tester, find.text('GR IIIx · looking…'));
@@ -570,6 +572,14 @@ void main() {
     await pumpUntilFound(tester, find.byKey(const Key('camera-details')));
     expect(find.text('GR IIIx · No. 1111111'), findsOneWidget);
     expect(find.text('Jan 1, 2026'), findsOneWidget);
+    // Connecting is on the Cameras screen, which is still under the details.
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('camera-details')),
+        matching: find.text('Connect'),
+      ),
+      findsNothing,
+    );
 
     await app.dispose();
   });
