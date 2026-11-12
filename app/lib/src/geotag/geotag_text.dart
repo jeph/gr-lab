@@ -2,9 +2,8 @@ import 'package:gr_camera/gr_camera.dart';
 import 'package:grphoto/l10n/l10n.dart';
 import 'package:grphoto/src/geotag/geotag_need.dart';
 
-/// What live geotagging is doing, in words: the line under its switch on
-/// the camera's card and the text of the phone's notice while it runs.
-/// While it is off, the line says what the switch does.
+/// What live geotagging is doing, in words: the text of the phone's notice
+/// while it runs.
 String geotagStatusText(AppLocalizations l10n, GeotagStatus status) =>
     switch (status) {
       GeotagStatus.off => l10n.geotagLiveSubtitle,
@@ -18,6 +17,25 @@ String geotagStatusText(AppLocalizations l10n, GeotagStatus status) =>
       GeotagStatus.offOnCamera => l10n.geotagStatusOffOnCamera,
       GeotagStatus.waitingForLocation => l10n.geotagStatusWaitingForLocation,
       GeotagStatus.sending => l10n.geotagStatusSending,
+    };
+
+/// What holds live geotagging up that the user can put right, in words:
+/// shown under its switch on the camera's card, below the line that says
+/// what the switch does. Null while it runs or only waits (for the camera
+/// to be on and in reach, or for a position).
+String? geotagProblemText(AppLocalizations l10n, GeotagStatus status) =>
+    switch (status) {
+      GeotagStatus.permissionDenied ||
+      GeotagStatus.preciseNeeded ||
+      GeotagStatus.locationOff ||
+      GeotagStatus.stopped ||
+      GeotagStatus.needsApp ||
+      GeotagStatus.offOnCamera => geotagStatusText(l10n, status),
+      GeotagStatus.off ||
+      GeotagStatus.unsupported ||
+      GeotagStatus.waitingForCamera ||
+      GeotagStatus.waitingForLocation ||
+      GeotagStatus.sending => null,
     };
 
 /// What the phone still has to allow, in words: shown where a location

@@ -4,6 +4,7 @@ import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:grphoto/src/cameras/camera_details.dart';
 import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/widgets/group.dart';
 
 import '../support/test_app.dart';
 
@@ -27,10 +28,13 @@ const _explain = Key('background-geotag-explain');
 const _clockRow = Key('camera-details-clock');
 const _clockSwitch = Key('camera-details-clock-switch');
 
-const _subtitle = 'Adds a location to photos when you download them';
+const _subtitle =
+    "Records this phone's location in the background and geotags photos "
+    "when they're downloaded";
 const _needsAlways = 'Location has to be allowed all the time';
-const _clockSubtitle = "Keeps the camera's clock on this phone's time";
-const _clockLocked = 'Stays on while background geotagging is on';
+const _clockSubtitle =
+    "Keeps the camera's clock in sync with this phone. Stays on while "
+    'background geotagging is on.';
 
 /// A phone-sized screen with the details of the saved camera [serial]
 /// (the current one by default); nothing connects by itself. With [other],
@@ -153,6 +157,18 @@ void main() {
     expect(_in(_row, _subtitle), findsOneWidget);
     expect(_switchOf(tester, _switch).value, isFalse);
     expect(_in(_clockRow, 'Sync camera clock'), findsOneWidget);
+    // In a section of its own, not with the location rows.
+    expect(find.text('CLOCK'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.ancestor(
+          of: find.byKey(_row),
+          matching: find.byType(GroupBox),
+        ),
+        matching: find.byKey(_clockRow),
+      ),
+      findsNothing,
+    );
     expect(_in(_clockRow, _clockSubtitle), findsOneWidget);
     expect(_switchOf(tester, _clockSwitch).value, isTrue);
     expect(_switchOf(tester, _clockSwitch).onChanged, isNotNull);
@@ -198,7 +214,7 @@ void main() {
     expect(_saved(app).syncClock, isFalse);
     expect(_switchOf(tester, _clockSwitch).value, isTrue);
     expect(_switchOf(tester, _clockSwitch).onChanged, isNull);
-    expect(_in(_clockRow, _clockLocked), findsOneWidget);
+    expect(_in(_clockRow, _clockSubtitle), findsOneWidget);
     await tester.tap(find.byKey(_clockRow), warnIfMissed: false);
     await pumpRounds(tester, 5);
     expect(_switchOf(tester, _clockSwitch).value, isTrue);
@@ -312,7 +328,7 @@ void main() {
     );
     expect(_saved(app).backgroundGeotagging, isFalse);
     expect(location.historyEnabled, isTrue);
-    expect(_in(_clockRow, _clockLocked), findsOneWidget);
+    expect(_in(_clockRow, _clockSubtitle), findsOneWidget);
 
     // The current camera's details, saved without its model: the section
     // is there, with its own switches.

@@ -33,11 +33,10 @@ const _switch = Key('camera-card-geotag-switch');
 const _settings = Key('camera-card-geotag-settings');
 const _store = Key('camera-card-geotag-store');
 const _resume = Key('camera-card-geotag-resume');
+const _problem = Key('camera-card-geotag-problem');
 
 const _whatItDoes =
-    "Sends this phone's location to the camera while the camera is on";
-const _waitingForLocation = "Waiting for this phone's location";
-const _sending = "Sending this phone's location to the camera";
+    "Geotags photos on the camera while it's connected to GR Photo";
 const _notAllowed = "GR Photo isn't allowed to use this phone's location";
 const _phoneLocationOff = 'Location is turned off on this phone';
 const _offOnCamera = 'Store Location Info is off on the camera';
@@ -93,15 +92,34 @@ Future<void> _tap(WidgetTester tester, Key key) =>
 Finder _said(String text) =>
     find.descendant(of: find.byKey(_card), matching: find.textContaining(text));
 
+Future<void> _untilStatus(
+  WidgetTester tester,
+  TestApp app,
+  GeotagStatus status,
+) => pumpUntil(
+  tester,
+  () => app.models.geotag.status == status,
+  reason: 'live geotagging ${status.name}',
+);
+
+/// Until the card says only what the switch does: nothing is in the way.
+Future<void> _untilNoProblem(WidgetTester tester) async {
+  await pumpUntil(
+    tester,
+    () => find.byKey(_problem).evaluate().isEmpty,
+    reason: 'nothing in the way',
+  );
+  expect(_said(_whatItDoes), findsOneWidget);
+}
+
 Switch _switchOf(WidgetTester tester) =>
     tester.widget<Switch>(find.byKey(_switch));
 
 void main() {
   testWidgets('Live geotagging is a switch on the camera card under '
       'Library, Shoot and Looks, off until the user turns it on: nothing '
-      'is asked or offered before, and its line says what it is doing', (
-    tester,
-  ) async {
+      'is asked or offered before, and its line says what it does whether '
+      'it is on or off', (tester) async {
     final location = FakePhoneLocation(access: _denied)
       ..whileInUseAnswer = FakePhoneLocation.whileInUse;
     final app = await _start(tester, location: location);
@@ -142,12 +160,14 @@ void main() {
       () => app.camera.storeLocationInfo,
       reason: 'Store Location Info on',
     );
-    await pumpUntilFound(tester, _said(_waitingForLocation));
+    await _untilStatus(tester, app, GeotagStatus.waitingForLocation);
+    await _untilNoProblem(tester);
     expect(_switchOf(tester).value, isTrue);
     await pumpUntil(tester, () {
       location.emitFix(_fix());
-      return _said(_sending).evaluate().isNotEmpty;
+      return app.models.geotag.status == GeotagStatus.sending;
     }, reason: 'sending');
+    await _untilNoProblem(tester);
     expect(app.camera.location, isNotNull);
     // Background geotagging is another switch, in the camera's details.
     expect(cameras.current!.backgroundGeotagging, isFalse);
@@ -196,7 +216,8 @@ void main() {
       location: location,
       live: true,
     );
-    await pumpUntilFound(tester, _said(_waitingForLocation));
+    await _untilStatus(tester, app, GeotagStatus.waitingForLocation);
+    await _untilNoProblem(tester);
     expect(find.byKey(_settings), findsNothing);
 
     for (final (access, text, page) in [
@@ -206,6 +227,7 @@ void main() {
     ]) {
       location.setAccess(access);
       await pumpUntilFound(tester, _said(text));
+      expect(_said(_whatItDoes), findsOneWidget);
       await _tap(tester, _settings);
       expect(location.settingsOpened.last, page);
       // It stays on: only the phone holds it up.
@@ -214,7 +236,8 @@ void main() {
 
     // Allowed again in the phone's settings.
     location.setAccess(FakePhoneLocation.whileInUse);
-    await pumpUntilFound(tester, _said(_waitingForLocation));
+    await _untilStatus(tester, app, GeotagStatus.waitingForLocation);
+    await _untilNoProblem(tester);
     expect(find.byKey(_settings), findsNothing);
 
     await app.dispose();
@@ -227,6 +250,7 @@ void main() {
 
     await _tap(tester, _switch);
     await pumpUntilFound(tester, _said(_notAllowed));
+    expect(_said(_whatItDoes), findsOneWidget);
     expect(location.whileInUseRequests, 1);
     expect(app.models.cameras.current!.liveGeotagging, isFalse);
     expect(_switchOf(tester).value, isFalse);
@@ -234,7 +258,7 @@ void main() {
     expect(location.settingsOpened, [LocationSettingsPage.app]);
 
     location.setAccess(FakePhoneLocation.whileInUse);
-    await pumpUntilFound(tester, _said(_whatItDoes));
+    await _untilNoProblem(tester);
     expect(find.byKey(_settings), findsNothing);
     expect(_switchOf(tester).value, isFalse);
 
@@ -250,12 +274,14 @@ void main() {
       location: location,
       live: true,
     );
-    await pumpUntilFound(tester, _said(_waitingForLocation));
+    await _untilStatus(tester, app, GeotagStatus.waitingForLocation);
+    await _untilNoProblem(tester);
     expect(find.byKey(_store), findsNothing);
 
     // In the camera's menu.
     app.camera.storeLocationInfo = false;
     await pumpUntilFound(tester, _said(_offOnCamera));
+    expect(_said(_whatItDoes), findsOneWidget);
     await pumpRounds(tester, 20);
     expect(app.camera.storeLocationInfo, isFalse);
     expect(
@@ -269,7 +295,8 @@ void main() {
       () => app.camera.storeLocationInfo,
       reason: 'Store Location Info on',
     );
-    await pumpUntilFound(tester, _said(_waitingForLocation));
+    await _untilStatus(tester, app, GeotagStatus.waitingForLocation);
+    await _untilNoProblem(tester);
     expect(find.byKey(_store), findsNothing);
 
     await app.dispose();
@@ -296,7 +323,8 @@ void main() {
     expect(_switchOf(tester).value, isTrue);
 
     await _tap(tester, _resume);
-    await pumpUntilFound(tester, _said(_waitingForLocation));
+    await _untilStatus(tester, app, GeotagStatus.waitingForLocation);
+    await _untilNoProblem(tester);
     expect(find.byKey(_resume), findsNothing);
     await pumpUntil(tester, () => location.runHeld, reason: 'the run again');
 

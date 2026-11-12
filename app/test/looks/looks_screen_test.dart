@@ -370,7 +370,11 @@ void main() {
       reason: 'camera pages closed',
     );
     await tapWhenReady(tester, find.byKey(const Key('camera-card-more')));
-    await tapWhenReady(tester, find.byKey(const Key('camera-forget')));
+    // Below the fold: the details are taller than this screen.
+    await tapWhenReady(
+      tester,
+      find.byKey(const Key('camera-forget'), skipOffstage: false),
+    );
     await tapWhenReady(tester, find.byKey(const Key('camera-forget-confirm')));
     await pumpUntilFound(tester, find.byKey(const Key('cameras-welcome')));
 

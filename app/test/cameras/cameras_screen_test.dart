@@ -436,7 +436,17 @@ void main() {
       await pumpRounds(tester, 20);
       expect(app.ble.connects, 0);
       expect(find.byKey(const Key('camera-card-link-away')), findsOneWidget);
-      expect(find.text('Not connected  Not nearby'), findsOneWidget);
+      // The crossed-out Bluetooth icon alone; the words are for screen
+      // readers only.
+      expect(find.byIcon(Icons.bluetooth_disabled_rounded), findsOneWidget);
+      expect(find.byKey(const Key('camera-card-link-words')), findsNothing);
+      expect(find.text('Not connected'), findsNothing);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is Semantics && w.properties.label == 'Not connected',
+        ),
+        findsOneWidget,
+      );
       final before = _controlRects(tester);
       await _tap(tester, const Key('camera-card-power'));
       await _untilStatus(tester, app, ConnectionStatus.failed);
@@ -683,7 +693,11 @@ void main() {
     await _untilStatus(tester, app, ConnectionStatus.connecting);
 
     await _tap(tester, const Key('camera-card-more'));
-    await _tap(tester, const Key('camera-forget'));
+    // Below the fold: the details are taller than this screen.
+    await tapWhenReady(
+      tester,
+      find.byKey(const Key('camera-forget'), skipOffstage: false),
+    );
     await pumpUntilFound(tester, find.text('Forget GR IV?'));
     await _tap(tester, const Key('camera-forget-confirm'));
 
@@ -725,7 +739,11 @@ void main() {
 
     await _tap(tester, const Key('camera-back'));
     await _tap(tester, const Key('camera-card-more'));
-    await _tap(tester, const Key('camera-forget'));
+    // Below the fold: the details are taller than this screen.
+    await tapWhenReady(
+      tester,
+      find.byKey(const Key('camera-forget'), skipOffstage: false),
+    );
     await _tap(tester, const Key('camera-forget-confirm'));
 
     await pumpUntilFound(tester, find.byKey(const Key('cameras-welcome')));
@@ -1082,7 +1100,14 @@ void main() {
       tester,
       find.byKey(const Key('camera-card-link-nearby')),
     );
-    expect(find.text('Not connected  Nearby'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('camera-card-link-nearby')),
+        matching: find.text('Nearby'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Not connected'), findsNothing);
     await pumpRounds(tester, 30);
     expect(app.ble.connects, 0);
     expect(app.models.connection.status, ConnectionStatus.offline);

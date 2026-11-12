@@ -17,12 +17,12 @@ import 'package:grphoto/src/widgets/group.dart';
 /// which is when the phone asks for its location \[design\]: nothing asks
 /// before.
 ///
-/// The line under the title says what the switch does while it is off and
-/// what live geotagging is doing while it is on. Where the user can help,
-/// a button comes under it: turn the camera's Store Location Info back
-/// on, resume after Stop on the phone's notice, or open the page of the
-/// phone's settings that allows what is missing. A refusal when turning
-/// it on leaves the switch off and says what is needed in that line.
+/// The line under the title says what the switch does, on or off: the
+/// switch says which. What holds live geotagging up, where the user can
+/// help, is said under the row with a button: turn the camera's Store
+/// Location Info back on, resume after Stop on the phone's notice, or open
+/// the page of the phone's settings that allows what is missing. A refusal
+/// when turning it on leaves the switch off and says what is needed there.
 class LiveGeotagSwitch extends StatefulWidget {
   const new({required this.camera, super.key});
 
@@ -79,6 +79,11 @@ class _LiveGeotagSwitchState extends State<LiveGeotagSwitch> {
           ? refusal.need
           : null;
       final missing = live ? GeotagController.needOf(status) : refused;
+      final problem = refused != null
+          ? geotagNeedText(l10n, refused)
+          : live
+          ? geotagProblemText(l10n, status)
+          : null;
       final action = missing != null
           ? _Action(
               key: const Key('camera-card-geotag-settings'),
@@ -116,9 +121,7 @@ class _LiveGeotagSwitchState extends State<LiveGeotagSwitch> {
               GroupRow(
                 icon: Icons.location_on_outlined,
                 title: l10n.geotagSwitch,
-                subtitle: refused != null
-                    ? geotagNeedText(l10n, refused)
-                    : geotagStatusText(l10n, status),
+                subtitle: l10n.geotagLiveSubtitle,
                 trailing: Switch(
                   key: const Key('camera-card-geotag-switch'),
                   value: live,
@@ -126,15 +129,29 @@ class _LiveGeotagSwitchState extends State<LiveGeotagSwitch> {
                 ),
                 onTap: _asking ? null : () => unawaited(_set(on: !live)),
               ),
-              if (action != null)
+              if (problem != null)
                 Padding(
                   // Under the row's text, past its icon.
                   padding: const EdgeInsetsDirectional.fromSTEB(60, 0, 14, 12),
-                  child: OutlinedButton(
-                    key: action.key,
-                    style: smallOutlinedStyle,
-                    onPressed: action.onPressed,
-                    child: Text(action.label),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        problem,
+                        key: const Key('camera-card-geotag-problem'),
+                        style: TextStyle(fontSize: 12.5, color: c.t1),
+                      ),
+                      if (action != null) ...[
+                        const SizedBox(height: 8),
+                        OutlinedButton(
+                          key: action.key,
+                          style: smallOutlinedStyle,
+                          onPressed: action.onPressed,
+                          child: Text(action.label),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
             ],
@@ -145,7 +162,7 @@ class _LiveGeotagSwitchState extends State<LiveGeotagSwitch> {
   );
 }
 
-/// The button under the switch's line.
+/// The button under what holds live geotagging up.
 final class _Action {
   const new({required this.key, required this.label, required this.onPressed});
 

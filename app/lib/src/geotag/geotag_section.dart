@@ -13,7 +13,7 @@ import 'package:grphoto/src/geotag/geotagging_explained_screen.dart';
 import 'package:grphoto/src/pairing/pairing_widgets.dart';
 import 'package:grphoto/src/widgets/group.dart';
 
-/// The location section of a camera's details:
+/// The Location and Clock sections of a camera's details. Location:
 ///
 /// - Background geotagging: the switch for this camera, and under it what
 ///   keeps it from recording (a refusal when it was turned on, or a
@@ -21,8 +21,10 @@ import 'package:grphoto/src/widgets/group.dart';
 ///   button to the phone's settings.
 /// - Learn more: the two ways of geotagging and what each costs, on a
 ///   screen of its own ([GeotaggingExplainedScreen]).
-/// - Sync camera clock: on unless the user turns it off, and held on while
-///   background geotagging is on ([SavedCamera.keepsClock]).
+///
+/// Clock: Sync camera clock, on unless the user turns it off, and held on
+/// while background geotagging is on ([SavedCamera.keepsClock]). Each
+/// switch's line says what it does, whatever its state.
 ///
 /// Live geotagging's switch is on the camera card (`LiveGeotagSwitch`).
 class GeotagSection extends StatefulWidget {
@@ -131,9 +133,10 @@ class _GeotagSectionState extends State<GeotagSection> {
                 chevron: true,
                 onTap: () => unawaited(GeotaggingExplainedScreen.push(context)),
               ),
-              _clockRow(l10n, locked: background),
             ],
           ),
+          SectionLabel(l10n.geotagClockSection),
+          GroupBox(children: [_clockRow(l10n, locked: background)]),
         ],
       );
     },
@@ -149,9 +152,7 @@ class _GeotagSectionState extends State<GeotagSection> {
       key: const Key('camera-details-clock'),
       icon: Icons.schedule_rounded,
       title: l10n.geotagSyncClock,
-      subtitle: locked
-          ? l10n.geotagSyncClockForced
-          : l10n.geotagSyncClockSubtitle,
+      subtitle: l10n.geotagSyncClockSubtitle,
       trailing: Switch(
         key: const Key('camera-details-clock-switch'),
         value: on,

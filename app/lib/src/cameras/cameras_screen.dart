@@ -562,7 +562,8 @@ class _CameraCard extends StatelessWidget {
   /// The link as the chip words it: that the camera is being turned on or
   /// off, why the last attempt failed, that the Wi-Fi was left for lack of
   /// use (until the next join), or the link's state in the camera pill's
-  /// words.
+  /// words. A camera that is not linked and not seen nearby has no words:
+  /// the crossed-out Bluetooth icon says it \[design\].
   Widget _chip(BuildContext context, Presence seen) {
     final l10n = context.l10n;
     void openSheet() => unawaited(showCameraSheet(context));
@@ -600,15 +601,13 @@ class _CameraCard extends StatelessWidget {
     return _LinkChip(
       link: link,
       label: switch (link) {
-        _Link.away || _Link.nearby => l10n.connectionPillNotConnected,
+        _Link.away => null,
+        _Link.nearby => l10n.camerasLinkNearby,
         _ => state.label.text(l10n),
       },
-      detail: switch (link) {
-        _Link.away => l10n.camerasLinkAway,
-        _Link.nearby => l10n.camerasLinkNearby,
-        _Link.wifi when battery != null => formatBattery(context, battery),
-        _ => null,
-      },
+      detail: link == _Link.wifi && battery != null
+          ? formatBattery(context, battery)
+          : null,
       onTap: openSheet,
     );
   }
@@ -801,8 +800,9 @@ enum _Link {
   bool get pulsing => this == bluetoothConnecting || this == wifiConnecting;
 }
 
-/// The card's link in words, with [detail] (whether the camera is nearby,
-/// its battery) in small type after them; a tap opens the camera sheet.
+/// The card's link in words, with [detail] (the camera's battery) in small
+/// type after them, or as its icon alone while there is nothing to say (no
+/// [label]); a tap opens the camera sheet.
 /// As tall as the round buttons beside it, and never wider than the room
 /// they leave: the words are cut short instead. The icon fades out and in
 /// while the link is being made ([_Link.pulsing]), and is still when the
@@ -816,7 +816,10 @@ class _LinkChip extends StatefulWidget {
   });
 
   final _Link link;
-  final String label;
+
+  /// Null for a camera that is not linked and not seen nearby, which the
+  /// icon says by itself; screen readers are told it is not connected.
+  final String? label;
   final String? detail;
   final VoidCallback onTap;
 
@@ -873,9 +876,16 @@ class _LinkChipState extends State<_LinkChip>
       _Link.idle => c.accent,
       _ => null,
     };
+    final label = widget.label;
     final detail = widget.detail;
+    final words = TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w500,
+      color: link == _Link.failed ? c.danger : c.t1,
+    );
     return Semantics(
       button: true,
+      label: label == null ? context.l10n.connectionPillNotConnected : null,
       child: Material(
         key: Key('camera-card-link-${link.name}'),
         color: tint == null
@@ -899,29 +909,30 @@ class _LinkChipState extends State<_LinkChip>
                     opacity: _opacity,
                     child: Icon(link.icon, size: 17, color: link.iconColor(c)),
                   ),
-                  const SizedBox(width: 7),
-                  Flexible(
-                    child: Text.rich(
-                      TextSpan(
-                        text: widget.label,
-                        children: [
-                          if (detail != null)
-                            TextSpan(
-                              text: '  $detail',
-                              style: GrFonts.monoStyle(context, size: 11.5),
-                            ),
-                        ],
-                      ),
-                      key: const Key('camera-card-link-words'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: link == _Link.failed ? c.danger : c.t1,
+                  if (label != null) ...[
+                    const SizedBox(width: 7),
+                    Flexible(
+                      child: Text.rich(
+                        TextSpan(
+                          text: label,
+                          children: [
+                            if (detail != null)
+                              TextSpan(
+                                text: '  $detail',
+                                style: GrFonts.monoStyle(context, size: 11.5),
+                              ),
+                          ],
+                        ),
+                        key: const Key('camera-card-link-words'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: words,
                       ),
                     ),
-                  ),
+                  ] else
+                    // An empty line: the chip stays as tall as one with
+                    // words, so nothing on the card moves when words come.
+                    Text('', style: words),
                   const SizedBox(width: 2),
                   Icon(Icons.chevron_right_rounded, size: 18, color: c.t3),
                 ],
