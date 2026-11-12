@@ -2735,13 +2735,9 @@
   "@settingsAutoDisconnectSubtitle": {
     "description": "Settings: explanation under Auto-disconnect."
   },
-  "settingsBackgroundContinue": "Continue",
-  "@settingsBackgroundContinue": {
-    "description": "Button of the background geotagging dialog that goes on to the phone's permission prompt."
-  },
   "settingsBackgroundExplain90Days": "Photos downloaded more than {days} days after they were taken get no location from background geotagging.",
   "@settingsBackgroundExplain90Days": {
-    "description": "Paragraph of the background geotagging dialog, and note under the Location group in Settings: the limit of the location history.",
+    "description": "Paragraph of the screen that explains geotagging: the limit of the location history.",
     "placeholders": {
       "days": {
         "type": "int",
@@ -2750,13 +2746,13 @@
       }
     }
   },
-  "settingsBackgroundExplainAsk": "If you continue, your phone asks you to allow location all the time.",
+  "settingsBackgroundExplainAsk": "When you turn background geotagging on, your phone asks you to allow location all the time.",
   "@settingsBackgroundExplainAsk": {
-    "description": "Last paragraph of the background geotagging dialog: the phone's permission prompt or settings page comes next. Name the choice as the phone's settings do (Android: Allow all the time; iOS: Always)."
+    "description": "Last paragraph of the screen that explains geotagging: turning the Background geotagging switch on brings up the phone's permission prompt or settings page. Name the choice as the phone's settings do (Android: Allow all the time; iOS: Always)."
   },
   "settingsBackgroundExplainBackground": "Background geotagging is the hands-free way. This phone keeps a history of where it has been for {days} days, also while GR Photo is closed. When you download a photo, GR Photo adds the place recorded closest to the time it was taken. It is less accurate: the phone records a place only now and then, so it can be some way from where you stood.",
   "@settingsBackgroundExplainBackground": {
-    "description": "Paragraph of the background geotagging dialog: what background geotagging is and its trade-off.",
+    "description": "Paragraph of the screen that explains geotagging: what background geotagging is and its trade-off.",
     "placeholders": {
       "days": {
         "type": "int",
@@ -2767,39 +2763,35 @@
   },
   "settingsBackgroundExplainLive": "Live geotagging is the accurate way. While a camera is on, this phone sends it its location over Bluetooth, and the camera saves it in each photo. It needs the camera connected over Bluetooth and switched on, and is turned on for each camera.",
   "@settingsBackgroundExplainLive": {
-    "description": "Paragraph of the background geotagging dialog: what live geotagging is and what it needs."
+    "description": "Paragraph of the screen that explains geotagging: what live geotagging is and what it needs."
   },
-  "settingsBackgroundExplainLiveWins": "With both on, live geotagging wins: a location the camera saved is never replaced.",
+  "settingsBackgroundExplainLiveWins": "You can have both on. A photo that already has a location from the camera keeps it.",
   "@settingsBackgroundExplainLiveWins": {
-    "description": "Paragraph of the background geotagging dialog, and note under the Location group in Settings."
+    "description": "Paragraph of the screen that explains geotagging: live and background geotagging can both be on, and background geotagging never changes a location the camera saved in a photo. Two short, plain sentences."
   },
   "settingsBackgroundExplainPrivate": "The history stays on this phone, and you can delete it in Settings at any time.",
   "@settingsBackgroundExplainPrivate": {
-    "description": "Paragraph of the background geotagging dialog: where the location history is kept."
+    "description": "Paragraph of the screen that explains geotagging: where the location history is kept."
   },
   "settingsBackgroundExplainTitle": "Two ways to add locations",
   "@settingsBackgroundExplainTitle": {
-    "description": "Title of the dialog shown when Background geotagging is turned on, before the phone asks for location all the time. It explains live and background geotagging."
+    "description": "Heading of the screen that Learn more under the Background geotagging switch opens. It explains live and background geotagging."
   },
   "settingsBackgroundGeotagging": "Background geotagging",
   "@settingsBackgroundGeotagging": {
     "description": "Title of the Settings switch that has the phone keep a history of where it has been, from which GR Photo adds a location to photos when they are downloaded."
   },
-  "settingsBackgroundGeotaggingOff": "Adds a location to photos when you download them",
-  "@settingsBackgroundGeotaggingOff": {
-    "description": "Subtitle of the Background geotagging switch while it is off."
-  },
-  "settingsBackgroundGeotaggingOn": "On. This phone keeps a history of where it has been.",
-  "@settingsBackgroundGeotaggingOn": {
-    "description": "Subtitle of the Background geotagging switch while it is on and recording."
-  },
   "settingsBackgroundGeotaggingPaused": "Paused",
   "@settingsBackgroundGeotaggingPaused": {
-    "description": "Subtitle of the Background geotagging switch while it is on but cannot record, because a permission was taken away later. The row under it says what is missing."
+    "description": "Title of the row under the Background geotagging switch while it is on but cannot record, because a permission was taken away later. What is missing is under it."
   },
-  "settingsBackgroundNotNow": "Not now",
-  "@settingsBackgroundNotNow": {
-    "description": "Button of the background geotagging dialog that leaves background geotagging off."
+  "settingsBackgroundGeotaggingSubtitle": "Adds a location to photos when you download them",
+  "@settingsBackgroundGeotaggingSubtitle": {
+    "description": "Subtitle of the Background geotagging switch, the same whether it is on or off: what the setting does."
+  },
+  "settingsBackgroundLearnMore": "Learn more",
+  "@settingsBackgroundLearnMore": {
+    "description": "Row under the Background geotagging switch in Settings that opens the screen explaining live and background geotagging. Keep it short."
   },
   "settingsCamera": "Camera",
   "@settingsCamera": {

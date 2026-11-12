@@ -8,15 +8,15 @@ import 'package:grphoto/src/geotag/geotag_controller.dart';
 import 'package:grphoto/src/geotag/geotag_need.dart';
 import 'package:grphoto/src/geotag/geotag_text.dart';
 import 'package:grphoto/src/pairing/pairing_widgets.dart';
+import 'package:grphoto/src/settings/geotagging_explained_screen.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/group.dart';
 
-/// Settings' Location group: the Background geotagging switch, what keeps
-/// it from recording (a refusal when it was turned on, or a permission
-/// taken away since, which leaves it on and paused) with a button to the
-/// phone's settings, and Delete location history. Turning the switch on
-/// first explains the two ways of geotagging and what each costs, before
-/// the phone asks for location at all times.
+/// Settings' Location group: the Background geotagging switch, Learn more
+/// (the two ways of geotagging and what each costs, on a screen of its
+/// own), what keeps the switch from recording (a refusal when it was turned
+/// on, or a permission taken away since, which leaves it on and paused)
+/// with a button to the phone's settings, and Delete location history.
 class LocationGroup extends StatefulWidget {
   const new({required this.geotag, super.key});
 
@@ -44,11 +44,6 @@ class _LocationGroupState extends State<LocationGroup> {
       await _geotag.turnBackgroundOff();
       return;
     }
-    final go = await showDialog<bool>(
-      context: context,
-      builder: (_) => const _ExplainDialog(),
-    );
-    if (go != true || !mounted) return;
     setState(() {
       _asking = true;
       _refused = null;
@@ -106,7 +101,6 @@ class _LocationGroupState extends State<LocationGroup> {
     listenable: _geotag,
     builder: (context, _) {
       final l10n = context.l10n;
-      final c = GrColors.of(context);
       final on = _geotag.settings.backgroundGeotagging;
       final paused = _geotag.backgroundPausedBy;
       final refused = _refused;
@@ -115,108 +109,54 @@ class _LocationGroupState extends State<LocationGroup> {
           (refused != null && refused.access == _geotag.access
               ? refused.need
               : null);
-      final days = GeotagController.historyKept.inDays;
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      return GroupBox(
         children: [
-          GroupBox(
-            children: [
-              GroupRow(
-                key: const Key('setting-background-geotag'),
-                icon: Icons.share_location_rounded,
-                title: l10n.settingsBackgroundGeotagging,
-                subtitle: !on
-                    ? l10n.settingsBackgroundGeotaggingOff
-                    : paused != null
-                    ? l10n.settingsBackgroundGeotaggingPaused
-                    : l10n.settingsBackgroundGeotaggingOn,
-                trailing: Switch(
-                  key: const Key('setting-background-geotag-switch'),
-                  value: on,
-                  onChanged: _asking ? null : (on) => unawaited(_set(on: on)),
-                ),
-                onTap: _asking ? null : () => unawaited(_set(on: !on)),
-              ),
-              if (need != null)
-                GroupRow(
-                  key: const Key('setting-background-geotag-need'),
-                  icon: Icons.error_outline_rounded,
-                  title: geotagNeedText(l10n, need),
-                  trailing: TrailingFit(
-                    child: OutlinedButton(
-                      key: const Key('setting-background-geotag-settings'),
-                      style: smallOutlinedStyle,
-                      onPressed: () => unawaited(_geotag.openSettings(need)),
-                      child: Text(l10n.geotagOpenSettings),
-                    ),
-                  ),
-                ),
-              GroupRow(
-                key: const Key('setting-location-history-delete'),
-                icon: Icons.delete_outline_rounded,
-                title: l10n.settingsDeleteHistory,
-                onTap: () => unawaited(_delete()),
-              ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 12, 22, 0),
-            child: Text(
-              [
-                l10n.settingsBackgroundExplain90Days(days),
-                l10n.settingsBackgroundExplainLiveWins,
-              ].join('\n\n'),
-              key: const Key('setting-background-geotag-note'),
-              style: TextStyle(fontSize: 12.5, color: c.t2),
+          GroupRow(
+            key: const Key('setting-background-geotag'),
+            icon: Icons.share_location_rounded,
+            title: l10n.settingsBackgroundGeotagging,
+            // What the setting does, whatever its state: the switch says
+            // whether it is on.
+            subtitle: l10n.settingsBackgroundGeotaggingSubtitle,
+            trailing: Switch(
+              key: const Key('setting-background-geotag-switch'),
+              value: on,
+              onChanged: _asking ? null : (on) => unawaited(_set(on: on)),
             ),
+            onTap: _asking ? null : () => unawaited(_set(on: !on)),
+          ),
+          GroupRow(
+            key: const Key('setting-background-geotag-learn-more'),
+            icon: Icons.help_outline_rounded,
+            title: l10n.settingsBackgroundLearnMore,
+            chevron: true,
+            onTap: () => unawaited(GeotaggingExplainedScreen.push(context)),
+          ),
+          if (need != null)
+            GroupRow(
+              key: const Key('setting-background-geotag-need'),
+              icon: Icons.error_outline_rounded,
+              title: paused == null
+                  ? geotagNeedText(l10n, need)
+                  : l10n.settingsBackgroundGeotaggingPaused,
+              subtitle: paused == null ? null : geotagNeedText(l10n, paused),
+              trailing: TrailingFit(
+                child: OutlinedButton(
+                  key: const Key('setting-background-geotag-settings'),
+                  style: smallOutlinedStyle,
+                  onPressed: () => unawaited(_geotag.openSettings(need)),
+                  child: Text(l10n.geotagOpenSettings),
+                ),
+              ),
+            ),
+          GroupRow(
+            key: const Key('setting-location-history-delete'),
+            icon: Icons.delete_outline_rounded,
+            title: l10n.settingsDeleteHistory,
+            onTap: () => unawaited(_delete()),
           ),
         ],
       );
     },
   );
-}
-
-/// What live and background geotagging each do and cost, shown before the
-/// phone asks for location at all times. Pops true for Continue and false
-/// for Not now.
-class _ExplainDialog extends StatelessWidget {
-  const new();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final days = GeotagController.historyKept.inDays;
-    return AlertDialog(
-      key: const Key('background-geotag-explain'),
-      title: Text(l10n.settingsBackgroundExplainTitle),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 10,
-          children: [
-            Text(l10n.settingsBackgroundExplainLive),
-            Text(l10n.settingsBackgroundExplainBackground(days)),
-            Text(l10n.settingsBackgroundExplainLiveWins),
-            Text(l10n.settingsBackgroundExplain90Days(days)),
-            Text(l10n.settingsBackgroundExplainPrivate),
-            Text(l10n.settingsBackgroundExplainAsk),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          key: const Key('background-geotag-later'),
-          onPressed: () => Navigator.of(context).pop(false),
-          child: Text(l10n.settingsBackgroundNotNow),
-        ),
-        FilledButton(
-          key: const Key('background-geotag-continue'),
-          onPressed: () => Navigator.of(context).pop(true),
-          child: Text(l10n.settingsBackgroundContinue),
-        ),
-      ],
-    );
-  }
 }

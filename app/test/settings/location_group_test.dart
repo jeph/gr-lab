@@ -12,13 +12,12 @@ import '../support/test_app.dart';
 const _row = Key('setting-background-geotag');
 const _switch = Key('setting-background-geotag-switch');
 const _explain = Key('background-geotag-explain');
-const _continue = Key('background-geotag-continue');
+const _learnMore = Key('setting-background-geotag-learn-more');
 const _need = Key('setting-background-geotag-need');
 const _openSettings = Key('setting-background-geotag-settings');
 const _delete = Key('setting-location-history-delete');
 
-const _offLine = 'Adds a location to photos when you download them';
-const _onLine = 'On. This phone keeps a history of where it has been.';
+const _subtitle = 'Adds a location to photos when you download them';
 const _needsAlways = 'Location has to be allowed all the time';
 
 const _denied = LocationAccess(
@@ -64,9 +63,56 @@ Switch _switchOf(WidgetTester tester) =>
     tester.widget<Switch>(find.byKey(_switch));
 
 void main() {
-  testWidgets('Background geotagging explains the two ways before the '
-      'phone asks, turns on with location allowed all the time, and '
-      'shows as paused when that is taken away', (tester) async {
+  testWidgets('Learn more opens a screen that explains the two ways of '
+      'geotagging, and Back returns to Settings with nothing asked of the '
+      'phone', (tester) async {
+    final location = FakePhoneLocation(access: _denied);
+    final app = await _start(tester, location);
+
+    // The group itself carries no explanation.
+    expect(find.textContaining('90 days'), findsNothing);
+
+    await _tap(tester, _learnMore);
+    await pumpUntilFound(tester, find.byKey(_explain));
+    expect(find.byType(AlertDialog), findsNothing);
+    Finder said(String text) => find.descendant(
+      of: find.byKey(_explain),
+      matching: find.textContaining(text),
+    );
+    expect(said('Two ways to add locations'), findsOneWidget);
+    expect(said('Live geotagging is the accurate way'), findsOneWidget);
+    expect(said('connected over Bluetooth and switched on'), findsOneWidget);
+    expect(said('Background geotagging is the hands-free way'), findsOneWidget);
+    expect(said('history of where it has been for 90 days'), findsOneWidget);
+    expect(said('It is less accurate'), findsOneWidget);
+    expect(
+      said(
+        'You can have both on. A photo that already has a location from '
+        'the camera keeps it.',
+      ),
+      findsOneWidget,
+    );
+    expect(said('more than 90 days after they were taken'), findsOneWidget);
+    expect(said('allow location all the time'), findsOneWidget);
+
+    // Once the screen has slid in.
+    await tapWhenReady(tester, find.byType(BackButton));
+    await pumpUntil(
+      tester,
+      () => find.byKey(_explain).evaluate().isEmpty,
+      reason: 'the explanation closed',
+    );
+    expect(find.byKey(_switch), findsOneWidget);
+    expect(app.models.settings.backgroundGeotagging, isFalse);
+    expect(location.whileInUseRequests, 0);
+    expect(location.alwaysRequests, 0);
+
+    await app.dispose();
+  });
+
+  testWidgets('Background geotagging turns on with location allowed all '
+      'the time and shows as paused when that is taken away, under a line '
+      'that says the same whether it is on or off', (tester) async {
     final location = FakePhoneLocation(access: _denied)
       ..whileInUseAnswer = FakePhoneLocation.whileInUse
       ..alwaysAnswer = FakePhoneLocation.always;
@@ -75,66 +121,37 @@ void main() {
 
     expect(find.text('LOCATION'), findsOneWidget);
     expect(_inRow('Background geotagging'), findsOneWidget);
-    expect(_inRow(_offLine), findsOneWidget);
+    expect(_inRow(_subtitle), findsOneWidget);
     expect(_switchOf(tester).value, isFalse);
-    // What it cannot do is said without opening anything.
-    final note = tester.widget<Text>(
-      find.byKey(const Key('setting-background-geotag-note')),
-    );
-    expect(
-      note.data,
-      contains(
-        'Photos downloaded more than 90 days after they were taken get no '
-        'location from background geotagging.',
-      ),
-    );
-    expect(note.data, contains('live geotagging wins'));
 
-    // Not now: nothing was asked of the phone.
+    // The phone's own prompt comes straight away.
     await _tap(tester, _switch);
-    await pumpUntilFound(tester, find.byKey(_explain));
-    Finder said(String text) => find.descendant(
-      of: find.byKey(_explain),
-      matching: find.textContaining(text),
-    );
-    expect(said('Live geotagging is the accurate way'), findsOneWidget);
-    expect(said('connected over Bluetooth and switched on'), findsOneWidget);
-    expect(said('Background geotagging is the hands-free way'), findsOneWidget);
-    expect(said('history of where it has been for 90 days'), findsOneWidget);
-    expect(said('It is less accurate'), findsOneWidget);
-    expect(said('live geotagging wins'), findsOneWidget);
-    expect(said('more than 90 days after they were taken'), findsOneWidget);
-    expect(said('allow location all the time'), findsOneWidget);
-    expect(location.whileInUseRequests, 0);
-    await _tap(tester, const Key('background-geotag-later'));
-    await pumpUntil(
-      tester,
-      () => find.byKey(_explain).evaluate().isEmpty,
-      reason: 'the explanation closed',
-    );
-    expect(settings.backgroundGeotagging, isFalse);
-    expect(location.whileInUseRequests, 0);
-    expect(location.alwaysRequests, 0);
-
-    await _tap(tester, _switch);
-    await _tap(tester, _continue);
     await pumpUntil(
       tester,
       () => settings.backgroundGeotagging,
       reason: 'background geotagging on',
     );
+    expect(find.byKey(_explain), findsNothing);
     expect(location.whileInUseRequests, 1);
     expect(location.alwaysRequests, 1);
     expect(location.historyEnabled, isTrue);
-    await pumpUntilFound(tester, _inRow(_onLine));
-    expect(_switchOf(tester).value, isTrue);
+    await pumpUntil(
+      tester,
+      () => _switchOf(tester).value,
+      reason: 'the switch on',
+    );
+    expect(_inRow(_subtitle), findsOneWidget);
     expect(find.byKey(_need), findsNothing);
 
     // Reduced in the phone's settings: still on, and paused.
     location.setAccess(FakePhoneLocation.whileInUse);
-    await pumpUntilFound(tester, _inRow('Paused'));
+    await pumpUntilFound(
+      tester,
+      find.descendant(of: find.byKey(_need), matching: find.text('Paused')),
+    );
     expect(settings.backgroundGeotagging, isTrue);
     expect(_switchOf(tester).value, isTrue);
+    expect(_inRow(_subtitle), findsOneWidget);
     expect(
       find.descendant(of: find.byKey(_need), matching: find.text(_needsAlways)),
       findsOneWidget,
@@ -144,19 +161,26 @@ void main() {
 
     // Allowed again: it carries on by itself.
     location.setAccess(FakePhoneLocation.always);
-    await pumpUntilFound(tester, _inRow(_onLine));
-    expect(find.byKey(_need), findsNothing);
+    await pumpUntil(
+      tester,
+      () => find.byKey(_need).evaluate().isEmpty,
+      reason: 'no longer paused',
+    );
+    expect(_switchOf(tester).value, isTrue);
 
-    // Off needs no explanation.
     await _tap(tester, _switch);
     await pumpUntil(
       tester,
       () => !settings.backgroundGeotagging,
       reason: 'background geotagging off',
     );
-    expect(find.byKey(_explain), findsNothing);
     expect(location.historyEnabled, isFalse);
-    await pumpUntilFound(tester, _inRow(_offLine));
+    await pumpUntil(
+      tester,
+      () => !_switchOf(tester).value,
+      reason: 'the switch off',
+    );
+    expect(_inRow(_subtitle), findsOneWidget);
 
     await app.dispose();
   });
@@ -167,7 +191,6 @@ void main() {
     final app = await _start(tester, location);
 
     await _tap(tester, _switch);
-    await _tap(tester, _continue);
     await pumpUntilFound(tester, find.byKey(_need));
     expect(location.alwaysRequests, 1);
     expect(app.models.settings.backgroundGeotagging, isFalse);

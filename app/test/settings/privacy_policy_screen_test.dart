@@ -19,7 +19,8 @@ void main() {
     final row = find.byKey(const Key('setting-privacy-policy'));
     await tester.scrollUntilVisible(row, 200);
     expect(find.text('Privacy policy'), findsOneWidget);
-    await tester.tap(row);
+    // The row can come into view only in part: bring all of it in.
+    await tapWhenReady(tester, row);
     await pumpUntilFound(tester, find.text('GR Photo privacy policy'));
     await tester.pumpAndSettle();
 
