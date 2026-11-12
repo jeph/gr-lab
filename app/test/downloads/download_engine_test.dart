@@ -116,6 +116,7 @@ final class Harness {
       cacheDir: cache,
       media: media,
       link: link,
+      album: 'GR Photo',
       transportGrace: transportGrace,
       progressInterval: Duration.zero,
     );
@@ -699,6 +700,7 @@ void main() {
         cacheDir: h.cache,
         media: crashing,
         link: h.link,
+        album: 'GR Photo',
         progressInterval: Duration.zero,
       );
       await first.enqueue(serial, [h.shot('R0000002')]);
@@ -715,6 +717,7 @@ void main() {
         cacheDir: h.cache,
         media: h.media,
         link: h.link,
+        album: 'GR Photo',
         progressInterval: Duration.zero,
       );
       h._engines.add(second);

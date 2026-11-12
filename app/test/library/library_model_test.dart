@@ -385,6 +385,7 @@ void main() {
         cacheDir: cache,
         media: RecordingMediaSaver(),
         link: link,
+        album: 'GR Photo',
         transportGrace: Duration.zero,
       );
       images = CameraImages(cacheDir: cache, link: link, queue: queue);

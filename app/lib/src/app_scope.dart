@@ -70,6 +70,7 @@ final class AppModels {
       cacheDir: services.cacheDir,
       media: services.media,
       link: link,
+      album: DownloadEngine.albumFor(appFlavor),
       // Background geotagging: a photo the camera gave no location gets
       // one from the phone's history before it reaches the photo library.
       beforeSave: geotag.geotagger.tag,

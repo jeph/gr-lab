@@ -254,8 +254,8 @@ final class DownloadEngine extends ChangeNotifier {
     required this.cacheDir,
     required this.media,
     required this.link,
+    required this.album,
     this.beforeSave,
-    this.album = 'GR Photo',
     this.transportGrace = const Duration(seconds: 3),
     this.progressInterval = const Duration(milliseconds: 100),
   }) {
@@ -280,7 +280,16 @@ final class DownloadEngine extends ChangeNotifier {
   /// get the same copies again, when a save that failed is retried.
   final Future<void> Function(List<File> files)? beforeSave;
 
+  /// The photo library album shots are saved to; the app passes
+  /// [albumFor] its flavor.
   final String album;
+
+  /// The album a build saves to. The dev build has its own, so what it
+  /// downloads while testing stays out of the album of the released app
+  /// installed next to it. An unflavored build (`flutter test`) counts as
+  /// dev. Pass `appFlavor` from `package:flutter/services.dart`.
+  static String albumFor(String? flavor) =>
+      flavor == 'prod' ? 'GR Photo' : 'GR Photo Dev';
 
   /// After a network error, how long to wait for the connection to report
   /// it lost before the job counts as failed instead of paused.
