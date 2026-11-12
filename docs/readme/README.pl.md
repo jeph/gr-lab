@@ -115,10 +115,6 @@ użytkownikowi i traktowanie stylów Sterowania obrazem jako czegoś, czym warto
 - **Podgląd na żywo.** Obraz z aparatu przez Wi-Fi: dotknij, aby ustawić ostrość, ustaw przysłonę,
   czas otwarcia migawki, ISO i kompensację ekspozycji na tarczy z wartościami, które oferuje
   aparat, oraz zmieniaj ustawienia Rejestracja, Samowyzwalacz, Pomiar i Sterowanie obrazem.
-- **Geotagowanie.** Gdy aparat jest włączony i połączony, GR Photo wysyła do niego lokalizację
-  telefonu, a aparat zapisuje ją w każdym zrobionym zdjęciu. Działa to także z telefonem
-  zablokowanym w kieszeni, korzysta z lokalizacji telefonu tylko wtedy, gdy aparat jest włączony, i
-  utrzymuje w zegarze aparatu czas telefonu.
 - **Kilka aparatów.** Sparuj wszystkie, które masz, i przełączaj się między nimi; każdemu możesz
   zmienić nazwę albo go zapomnieć.
 - **Motywy i języki.** Motywy Jasny, Ciemny, Ciemnia, Papier i Cyjanotypia oraz 21 języków,
@@ -188,10 +184,6 @@ flutter run --dart-define=GR_DEMO=true
 4. **Zapisz styl.** Otwórz zdjęcie w Bibliotece i dotknij Zapisz styl albo utwórz styl od zera
    przyciskiem + na stronie Style. Dotknij stylu, aby go edytować, i przeciągnij go na C1, C2 albo
    C3, aby wczytać go do aparatu.
-5. **Geotaguj zdjęcia.** Gdy aparat połączy się po raz pierwszy, GR Photo proponuje dodawanie
-   lokalizacji do zdjęć: wybierz Zezwól na lokalizację i pozwól korzystać z lokalizacji telefonu.
-   Geotagowanie i Synchronizuj czas można później zmienić w panelu, który otwiera się po dotknięciu
-   stanu połączenia aparatu.
 
 Automatyczne rozłączanie w Ustawieniach rozłącza Wi-Fi aparatu, gdy GR Photo nie jest używane przez
 pewien czas (domyślnie 5 minut). Dokument [Jak zachowuje się GR Photo](../behaviour.md) szczegółowo

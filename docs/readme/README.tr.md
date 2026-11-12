@@ -118,10 +118,6 @@ Görüntü Kontrolü stillerini yönetilmeye değer bir şey olarak görmek.
 - **Canlı görüntü.** Wi-Fi üzerinden kameranın görüntüsü: odaklamak için dokunun; açıklığı,
   obtüratör hızını, ISO’yu ve pozlama telafisini kameranın sunduğu değerlerden oluşan bir kadranla
   ayarlayın; geçiş modunu, zamanlayıcıyı, ölçmeyi ve Görüntü Kontrolü’nü değiştirin.
-- **Coğrafi etiketleme.** Kameranız açık ve bağlıyken GR Photo ona telefonunuzun konumunu gönderir,
-  kamera da bu konumu çektiğiniz her fotoğrafa kaydeder. Telefon kilitli halde cebinizdeyken de
-  sürer, telefonun konumunu yalnızca kamera açıkken kullanır ve kameranın saatini telefonunuzun
-  saatine göre ayarlı tutar.
 - **Birden çok kamera.** Sahip olduğunuz kadar kamerayı eşleştirin ve aralarında geçiş yapın; her
   birini yeniden adlandırın ya da unutun.
 - **Temalar ve diller.** Açık, Koyu, Karanlık oda, Kâğıt ve Siyanotip temaları ile kameranın kendi
@@ -192,10 +188,6 @@ flutter run --dart-define=GR_DEMO=true
 4. **Bir stil kaydedin.** Arşiv’de bir fotoğrafı açıp Stili kaydet’e dokunun ya da Stiller
    sayfasındaki + ile sıfırdan bir stil oluşturun. Düzenlemek için bir stile dokunun; kameraya
    yüklemek için de onu C1, C2 veya C3’e sürükleyin.
-5. **Fotoğraflarınıza konum ekleyin.** Bir kamera ilk kez bağlandığında GR Photo, fotoğraflarınıza
-   konum eklemeyi önerir: Konuma izin ver’i seçin ve telefonun konumunu kullanmasına izin verin.
-   Coğrafi etiketleme ve Saati eşitle, kameranın bağlantı durumuna dokunduğunuzda açılan panelden
-   sonradan değiştirilebilir.
 
 Ayarlar’daki Otomatik bağlantı kesme, GR Photo bir süre (varsayılan olarak 5 dakika)
 kullanılmadığında kameranın Wi-Fi ağından çıkar. [GR Photo nasıl davranır](../behaviour.md) belgesi,

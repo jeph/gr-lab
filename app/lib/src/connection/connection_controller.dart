@@ -173,7 +173,6 @@ final class ConnectionController extends ChangeNotifier {
   new({required this.services, required this.cameras}) {
     cameras.addListener(_onCamerasChanged);
     _cameraSerial = cameras.current?.serial;
-    services.camera.geotagging.addListener(_lookAgainIfLost);
   }
 
   final AppServices services;
@@ -220,10 +219,6 @@ final class ConnectionController extends ChangeNotifier {
   int _redials = 0;
   Timer? _redialTimer;
   bool _redialOnResume = false;
-
-  /// Set while the camera is linked again for live geotagging
-  /// ([_lookAgainIfLost]).
-  Timer? _lookAgain;
 
   WifiConsentRequest? _consent;
   Completer<bool>? _consentAnswer;
@@ -447,7 +442,6 @@ final class ConnectionController extends ChangeNotifier {
     if (_foreground == value) return;
     _foreground = value;
     notifyListeners();
-    _lookAgainIfLost();
     if (!value) return;
     if (_redialOnResume) {
       _redialOnResume = false;
@@ -641,36 +635,9 @@ final class ConnectionController extends ChangeNotifier {
     if (answer != null && !answer.isCompleted) answer.complete(join);
   }
 
-  /// With the app not in front and live geotagging waiting for the camera
-  /// (`CameraGeotagging.keepsLooking`), a camera that could not be reached
-  /// over Bluetooth is linked again after [AppServices.lookAgainDelay],
-  /// and again for as long as geotagging waits: the user turning the
-  /// camera on, or walking back to it, starts the location without opening
-  /// the app. In front, the failure is shown instead and the user links it.
-  /// \[design\]
-  void _lookAgainIfLost() {
-    final lost =
-        _status == ConnectionStatus.failed &&
-        _failure?.kind == ConnectFailureKind.unreachable;
-    if (_disposed ||
-        _foreground ||
-        !lost ||
-        !services.camera.geotagging.keepsLooking) {
-      _lookAgain?.cancel();
-      _lookAgain = null;
-      return;
-    }
-    _lookAgain ??= Timer(services.lookAgainDelay, () {
-      _lookAgain = null;
-      unawaited(connect());
-    });
-  }
-
   Future<void> _connectBluetooth() async {
     final target = camera;
     if (target == null) return;
-    _lookAgain?.cancel();
-    _lookAgain = null;
     final generation = ++_generation;
     _failure = null;
     _quietRejoin = false;
@@ -783,8 +750,6 @@ final class ConnectionController extends ChangeNotifier {
     _quietRejoin = false;
     _failure = null;
     _idleClosedAfter = null;
-    _lookAgain?.cancel();
-    _lookAgain = null;
     _declineConsent();
     final closing = _endSession();
     notifyListeners();
@@ -1008,7 +973,6 @@ final class ConnectionController extends ChangeNotifier {
     );
     notifyListeners();
     await _endSession();
-    _lookAgainIfLost();
   }
 
   /// Shows a quiet rejoin as pending; false when the tries are used up.
@@ -1052,7 +1016,6 @@ final class ConnectionController extends ChangeNotifier {
     _step = null;
     _quietRejoin = false;
     notifyListeners();
-    _lookAgainIfLost();
   }
 
   Future<void> _closeSession() async {
@@ -1091,8 +1054,6 @@ final class ConnectionController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    _lookAgain?.cancel();
-    services.camera.geotagging.removeListener(_lookAgainIfLost);
     cameras.removeListener(_onCamerasChanged);
     _generation++;
     _cancelRedial();

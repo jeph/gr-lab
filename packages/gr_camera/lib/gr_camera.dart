@@ -50,9 +50,6 @@ export 'package:gr_protocol/gr_protocol.dart'
         GrUnparsedChange,
         JpegDimensions,
         LiveViewFrame,
-        LocationAccess,
-        LocationNotice,
-        PhoneFix,
         TraceChannel,
         TraceDirection,
         TraceEvent,
@@ -61,9 +58,6 @@ export 'package:gr_protocol/gr_protocol.dart'
 
 export 'src/camera_features.dart' show CameraBody, CameraFeature;
 export 'src/environment.dart' show GrCameraEnvironment;
-export 'src/geotag/camera_clock.dart' show CameraClock;
-export 'src/geotag/camera_geotagging.dart' show CameraGeotagging, GeotagStatus;
-export 'src/geotag/geotag_options.dart' show GeotagOptions;
 export 'src/library/camera_file.dart' show CameraFile, FileInfo;
 export 'src/library/camera_images.dart'
     show CameraImages, ImageRequest, NotAnImageException;

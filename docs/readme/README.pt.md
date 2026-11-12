@@ -115,10 +115,6 @@ estilos de Controlo de Imagem como algo que merece ser gerido.
   velocidade de obturação, o ISO e a compensação da exposição num seletor com os valores que a
   câmara oferece, e altere o modo de fotografar, o temporizador automático, a medição e o Controlo
   de Imagem.
-- **Georreferenciação.** Enquanto a câmara estiver ligada e com ligação estabelecida, o GR Photo
-  envia-lhe a localização do telemóvel, e a câmara guarda-a em cada foto que tirar. Continua a
-  funcionar com o telemóvel bloqueado no bolso, utiliza a localização do telemóvel apenas enquanto a
-  câmara está ligada e mantém o relógio da câmara na hora do telemóvel.
 - **Várias câmaras.** Emparelhe todas as que tiver e alterne entre elas; mude o nome ou esqueça
   cada uma.
 - **Temas e idiomas.** Temas Claro, Escuro, Câmara escura, Papel e Cianotipia, e os 21 idiomas dos
@@ -190,10 +186,6 @@ flutter run --dart-define=GR_DEMO=true
 4. **Guarde um estilo.** Abra uma foto na Biblioteca e toque em Guardar estilo, ou crie um de raiz
    com + na página Estilos. Toque num estilo para o editar e arraste-o para C1, C2 ou C3 para o
    carregar na câmara.
-5. **Georreferencie as suas fotos.** Da primeira vez que uma câmara estabelece ligação, o GR Photo
-   propõe adicionar a localização às suas fotos: escolha Permitir localização e autorize a
-   utilização da localização do telemóvel. Georreferenciação e Sincronizar hora podem ser alteradas
-   mais tarde no painel que se abre quando toca no estado da ligação da câmara.
 
 Desligar automaticamente, nas Definições, sai do Wi-Fi da câmara depois de o GR Photo estar algum
 tempo sem ser utilizado (5 minutos por predefinição). [Como se comporta o GR Photo](../behaviour.md)

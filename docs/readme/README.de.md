@@ -120,11 +120,6 @@ zu stehen und Looks für die Bildsteuerung als etwas zu behandeln, das Verwaltun
 - **Live-View.** Das Bild der Kamera über WLAN: Tippe zum Fokussieren, stelle Blende,
   Verschlusszeit, ISO und Belichtungskorrektur auf einem Wählrad mit den Werten ein, die die Kamera
   anbietet, und ändere Aufnahmemodus, Selbstauslöser, Belichtungsmessung und Bildsteuerung.
-- **Geotagging.** Solange deine Kamera eingeschaltet und verbunden ist, sendet GR Photo ihr den
-  Standort deines Smartphones, und die Kamera speichert ihn in jedem Foto, das du aufnimmst. Das
-  läuft weiter, wenn das Smartphone gesperrt in deiner Tasche steckt, nutzt den Standort des
-  Smartphones nur, solange die Kamera eingeschaltet ist, und hält die Uhr der Kamera auf der Uhrzeit
-  deines Smartphones.
 - **Mehrere Kameras.** Kopple so viele, wie du besitzt, und wechsle zwischen ihnen; jede lässt sich
   umbenennen oder entfernen.
 - **Designs und Sprachen.** Die Designs Hell, Dunkel, Dunkelkammer, Papier und Cyanotypie sowie die
@@ -196,10 +191,6 @@ flutter run --dart-define=GR_DEMO=true
 4. **Speichere einen Look.** Öffne ein Foto in der Mediathek und tippe auf „Look speichern“, oder
    erstelle mit + auf der Seite „Looks“ einen ganz neuen. Tippe auf einen Look, um ihn zu
    bearbeiten, und ziehe ihn auf C1, C2 oder C3, um ihn in die Kamera zu laden.
-5. **Versieh deine Fotos mit Geotags.** Wenn sich eine Kamera zum ersten Mal verbindet, bietet GR
-   Photo an, deinen Fotos Standorte hinzuzufügen: Wähle „Standort erlauben“ und erlaube den Zugriff
-   auf den Standort des Smartphones. „Geotagging“ und „Uhrzeit synchronisieren“ lassen sich später
-   in dem Bereich ändern, der sich öffnet, wenn du auf den Verbindungsstatus der Kamera tippst.
 
 „Automatisch trennen“ in den Einstellungen verlässt das WLAN der Kamera, nachdem GR Photo eine Weile
 nicht verwendet wurde (standardmäßig 5 Minuten). [So verhält sich GR Photo](../behaviour.md)

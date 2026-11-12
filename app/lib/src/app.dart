@@ -9,7 +9,6 @@ import 'package:grphoto/src/connection/connection_controller.dart';
 import 'package:grphoto/src/connection/idle_disconnect.dart';
 import 'package:grphoto/src/connection/wifi_consent_dialog.dart';
 import 'package:grphoto/src/downloads/download_background.dart';
-import 'package:grphoto/src/geotag/geotag_host.dart';
 import 'package:grphoto/src/home/home_pages.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 
@@ -40,7 +39,7 @@ class GrPhotoApp extends StatelessWidget {
           navigatorObservers: [models.routes, models.idle.observer],
           builder: (context, child) => IdleInput(
             idle: models.idle,
-            child: DownloadBackground(child: GeotagHost(child: child!)),
+            child: DownloadBackground(child: child!),
           ),
           home: const RootScreen(),
         );
@@ -135,7 +134,6 @@ class _RootScreenState extends State<RootScreen> {
 
   void _openCamera() {
     final route = _cameraRoute = MaterialPageRoute<void>(
-      settings: const RouteSettings(name: CameraPages.routeName),
       builder: (_) => const CameraPages(),
     );
     unawaited(

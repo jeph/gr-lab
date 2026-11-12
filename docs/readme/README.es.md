@@ -116,10 +116,6 @@ Control de imagen como algo que merece la pena gestionar.
   velocidad de obturación, el ISO y la compensación de exposición en un dial con los valores que
   ofrece la cámara, y cambia el modo Fotografiar, el autodisparador, la medición y el Control de
   imagen.
-- **Geoetiquetado.** Mientras tu cámara está encendida y conectada, GR Photo le envía la ubicación
-  de tu teléfono, y la cámara la guarda en cada foto que haces. Sigue funcionando con el teléfono
-  bloqueado en el bolsillo, usa la ubicación del teléfono solo mientras la cámara está encendida y
-  mantiene el reloj de la cámara en la hora de tu teléfono.
 - **Varias cámaras.** Empareja todas las que tengas y cambia de una a otra; renombra u olvida cada
   una.
 - **Temas e idiomas.** Temas Claro, Oscuro, Cuarto oscuro, Papel y Cianotipia, y los 21 idiomas de
@@ -191,10 +187,6 @@ flutter run --dart-define=GR_DEMO=true
 4. **Guarda un estilo.** Abre una foto en la Biblioteca y toca Guardar estilo, o crea uno desde
    cero con + en la página Estilos. Toca un estilo para editarlo y arrástralo a C1, C2 o C3 para
    cargarlo en la cámara.
-5. **Geoetiqueta tus fotos.** La primera vez que se conecta una cámara, GR Photo te ofrece añadir la
-   ubicación a tus fotos: elige Permitir ubicación y deja que use la ubicación del teléfono.
-   Geoetiquetado y Sincronizar hora se pueden cambiar más adelante en el panel que se abre al tocar
-   el estado de conexión de la cámara.
 
 Desconexión automática, en Ajustes, sale del Wi-Fi de la cámara cuando GR Photo lleva un rato sin
 usarse (5 minutos de forma predeterminada). [Cómo se comporta GR Photo](../behaviour.md) describe en

@@ -29,10 +29,6 @@ enum CameraFeature {
   /// The Monochrome's finish: a matte black body whose GR logo is black
   /// too; the camera's drawing shows it.
   blackFinish,
-
-  /// Taking the phone's location over Bluetooth and recording it in
-  /// pictures (`CameraGeotagging`).
-  geotagging,
 }
 
 /// For each feature, the oldest firmware version of each model that has
@@ -68,23 +64,6 @@ const _minimumFirmware = <CameraFeature, Map<GrModel, String>>{
     GrModel.gr4Hdf: '0.00',
   },
   CameraFeature.blackFinish: {GrModel.gr4Monochrome: '0.00'},
-  // The GR III 2.20 and GR IV 1.20 firmware take a written location the
-  // same way, and GR WORLD sends one to every body of both families on any
-  // version (its model gate 0xd48578, observed in GR WORLD 2.0.0's code;
-  // research/protocol/geotagging.md §1.5, §2.1). The GR IIIx firmware was
-  // not read: its bodies are [inferred] from sharing the GR III's
-  // Bluetooth binaries (research/camera-models.md). The GR IVx is not
-  // announced: [inferred] from its family.
-  CameraFeature.geotagging: {
-    GrModel.gr3: '0.00',
-    GrModel.gr3x: '0.00',
-    GrModel.gr3Hdf: '0.00',
-    GrModel.gr3xHdf: '0.00',
-    GrModel.gr4: '0.00',
-    GrModel.gr4Hdf: '0.00',
-    GrModel.gr4Monochrome: '0.00',
-    GrModel.gr4x: '0.00',
-  },
 };
 
 /// A camera as far as what it supports goes: its model and the firmware

@@ -23,10 +23,6 @@ enum TraceChannel {
   /// The phone joining and leaving the camera network, including the
   /// native Wi-Fi code's own log lines.
   wifi,
-
-  /// The phone's own position, read to geotag a camera's pictures: every
-  /// platform call, fix and change of permission.
-  location,
 }
 
 /// Direction of a traced exchange.

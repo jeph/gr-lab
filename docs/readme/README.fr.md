@@ -122,11 +122,6 @@ Contrôle de l'image comme quelque chose qui mérite d'être géré.
   réglez l'ouverture, la vitesse, la sensibilité ISO et la correction d'exposition sur une molette
   qui reprend les valeurs proposées par l'appareil photo, et changez le déclenchement, le
   retardateur, la mesure et le Contrôle de l'image.
-- **Géomarquage.** Tant que votre appareil photo est allumé et connecté, GR Photo lui envoie la
-  position de votre téléphone, et l'appareil photo l'enregistre dans chaque photo que vous prenez.
-  Cela continue lorsque le téléphone est verrouillé dans votre poche, la position du téléphone n'est
-  utilisée que lorsque l'appareil photo est allumé, et l'horloge de l'appareil photo reste à l'heure
-  de votre téléphone.
 - **Plusieurs appareils photo.** Jumelez tous ceux que vous possédez et passez de l'un à l'autre ;
   renommez ou oubliez chacun d'eux.
 - **Thèmes et langues.** Les thèmes Clair, Sombre, Chambre noire, Papier et Cyanotype, et les
@@ -202,10 +197,6 @@ flutter run --dart-define=GR_DEMO=true
 4. **Enregistrez un style.** Ouvrez une photo dans la Bibliothèque et touchez Enregistrer le style,
    ou créez-en un de toutes pièces avec + sur la page Styles. Touchez un style pour le modifier, et
    faites-le glisser sur C1, C2 ou C3 pour le charger dans l'appareil photo.
-5. **Géomarquez vos photos.** La première fois qu'un appareil photo se connecte, GR Photo propose
-   d'ajouter la position à vos photos : choisissez Autoriser la position et autorisez l'accès à la
-   position du téléphone. Géomarquage et Synchroniser l'heure peuvent être modifiés plus tard dans
-   le panneau qui s'ouvre lorsque vous touchez l'état de connexion de l'appareil photo.
 
 L'option Déconnexion automatique des Réglages quitte le Wi-Fi de l'appareil photo lorsque GR Photo
 est resté inutilisé un certain temps (5 minutes par défaut). [Le comportement de

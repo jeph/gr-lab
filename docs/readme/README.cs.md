@@ -115,10 +115,6 @@ Ovládání obrazu jako něco, o co stojí za to se starat.
 - **Živý náhled.** Obraz z fotoaparátu přes Wi-Fi: klepnutím zaostřete, na voliči s hodnotami,
   které fotoaparát nabízí, nastavte clonu, čas závěrky, ISO a korekci expozice a měňte exponování,
   samospoušť, měření a Ovládání obrazu.
-- **Geotagování.** Dokud je fotoaparát zapnutý a připojený, GR Photo mu posílá polohu telefonu a
-  fotoaparát ji ukládá do každé fotky, kterou pořídíte. Funguje to i se zamčeným telefonem v kapse,
-  polohu telefonu využívá jen tehdy, když je fotoaparát zapnutý, a hodiny fotoaparátu udržuje podle
-  času telefonu.
 - **Více fotoaparátů.** Spárujte všechny, které máte, a přepínejte mezi nimi; každý můžete
   přejmenovat nebo zapomenout.
 - **Motivy a jazyky.** Motivy Světlý, Tmavý, Temná komora, Papír a Kyanotypie a 21 jazyků, které
@@ -187,9 +183,6 @@ flutter run --dart-define=GR_DEMO=true
 4. **Uložte vzhled.** Otevřete fotku v Knihovně a klepněte na Uložit vzhled, nebo vytvořte vzhled
    úplně nový tlačítkem + na stránce Vzhledy. Klepnutím vzhled upravíte a přetažením na C1, C2 nebo
    C3 ho načtete do fotoaparátu.
-5. **Přidejte k fotkám polohu.** Při prvním připojení fotoaparátu GR Photo nabídne přidávání polohy
-   k fotkám: zvolte Povolit polohu a povolte přístup k poloze telefonu. Geotagování a Synchronizovat
-   čas můžete později změnit na panelu, který se otevře po klepnutí na stav připojení fotoaparátu.
 
 Automatické odpojení v Nastavení ukončí připojení k Wi-Fi fotoaparátu, když se GR Photo nějakou dobu
 nepoužívá (ve výchozím nastavení 5 minut). Dokument [Jak se GR Photo chová](../behaviour.md)

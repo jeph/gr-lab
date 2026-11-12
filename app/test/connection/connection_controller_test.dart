@@ -19,7 +19,6 @@ import 'package:gr_protocol/gr_protocol.dart'
 import 'package:grphoto/src/connection/connection_controller.dart';
 import 'package:grphoto/src/connection/link_state.dart';
 import 'package:grphoto/src/data/cameras.dart';
-import 'package:grphoto/src/geotag/geotag_model.dart';
 
 import '../support/test_app.dart';
 
@@ -72,81 +71,6 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 500));
       expect(connection.status, ConnectionStatus.failed);
       expect(connection.failure?.kind, ConnectFailureKind.unreachable);
-    });
-
-    group('live geotagging waiting for the camera', () {
-      const texts = GeotagTexts(
-        sendingTitle: _title,
-        sendingText: 'sending',
-        waitingTitle: _title,
-        waitingText: 'waiting',
-        stopLabel: 'Stop',
-        channelName: 'Geotagging',
-      );
-
-      Future<TestApp> linked({required bool liveGeotagging}) async {
-        final app = await createTestApp(
-          config: const FakeCameraConfig(bonded: true, storeLocationInfo: true),
-          saveCamera: true,
-          liveGeotagging: liveGeotagging,
-          sessionOptions: const GrSessionOptions(
-            bleReconnectDelays: [Duration(milliseconds: 50)],
-            maxBleReconnectAttempts: 1000,
-            bleLostAfter: Duration(milliseconds: 300),
-            scanTimeout: Duration(milliseconds: 300),
-            bleConnectTimeout: Duration(seconds: 2),
-          ),
-        );
-        addTearDown(app.dispose);
-        // The app's widgets give the notification its texts.
-        app.models.geotag.setTexts(texts);
-        await app.models.connection.connect();
-        return app;
-      }
-
-      test('with the app not in front, a camera that went out of reach is '
-          'linked again by itself once it is back', () async {
-        final app = await linked(liveGeotagging: true);
-        final connection = app.models.connection;
-        await _until(() => app.phone.running);
-
-        connection.foreground = false;
-        app.camera.powerOffFully();
-        await _until(
-          () => connection.status == ConnectionStatus.failed,
-          timeout: const Duration(seconds: 5),
-        );
-        expect(connection.failure?.kind, ConnectFailureKind.unreachable);
-        // Tried again and again while the camera stays away.
-        await Future<void>.delayed(const Duration(seconds: 1));
-        expect(connection.bleLinked, isFalse);
-        expect(app.phone.running, isTrue);
-
-        app.camera.poweredOn = true;
-        await _until(() => connection.status == ConnectionStatus.bluetooth);
-        await _until(
-          () => app.models.geotag.status == GeotagStatus.waitingForLocation,
-        );
-      });
-
-      test('in front, or with live geotagging off, the camera is not linked '
-          'again by itself', () async {
-        for (final (live, foreground) in [(true, true), (false, false)]) {
-          final app = await linked(liveGeotagging: live);
-          if (live) await _until(() => app.phone.running);
-          final connection = app.models.connection..foreground = foreground;
-          app.camera.powerOffFully();
-          await _until(
-            () => connection.status == ConnectionStatus.failed,
-            timeout: const Duration(seconds: 5),
-          );
-          final connects = app.ble.connects;
-          app.camera.poweredOn = true;
-          await Future<void>.delayed(const Duration(seconds: 1));
-          expect(app.ble.connects, connects);
-          expect(connection.status, ConnectionStatus.failed);
-        }
-      });
     });
 
     test('opening the Library joins Wi-Fi over the existing link; closing '
@@ -1286,8 +1210,6 @@ final class _JoinInBackground implements Exception {
   @override
   String toString() => 'the OS joins networks only for the app in front';
 }
-
-String _title(String cameraName) => cameraName;
 
 Future<void> _until(
   bool Function() condition, {

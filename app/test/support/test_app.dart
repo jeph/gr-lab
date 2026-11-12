@@ -34,7 +34,6 @@ final class TestApp {
   new _({
     required this.models,
     required this.camera,
-    required this.phone,
     required this.ble,
     required this.media,
     required this.background,
@@ -44,9 +43,6 @@ final class TestApp {
 
   final AppModels models;
   final FakeGrCamera camera;
-
-  /// The phone's own location, as the camera layer reads it.
-  final FakePhoneLocation phone;
 
   /// The transport the app uses: the camera's, with call counts.
   final CountingTransport ble;
@@ -108,10 +104,7 @@ final class TestApp {
       await pumpUntil(tester, () => flushed, reason: 'library flush');
       models.library.dispose();
       models.idle.dispose();
-      models.geotag.dispose();
       models.connection.dispose();
-      models.services.camera.close();
-      phone.dispose();
       await tester.runAsync(camera.close);
       // Lets timers the camera or session started run out.
       await tester.pump(const Duration(minutes: 2));
@@ -126,10 +119,7 @@ final class TestApp {
       await _flushLibrary();
       models.library.dispose();
       models.idle.dispose();
-      models.geotag.dispose();
       models.connection.dispose();
-      models.services.camera.close();
-      phone.dispose();
       await camera.close();
       await models.debugLog.close();
       await _deleteRoot();
@@ -158,13 +148,8 @@ final class TestApp {
 /// or without it for one that needs pairing again). [sessionOptions]
 /// shortens session timeouts for failure tests. [transport] wraps the
 /// camera's BLE transport, e.g. to add a second camera; [wifi] wraps its
-/// Wi-Fi control. [liveGeotagging] is the saved camera's live geotagging
-/// choice: off unless given, and null for a camera whose user was never
-/// asked, which gets the offer once it is linked. [location] is what the
-/// phone allows of its location, and [locationAfterRequest] what it allows
-/// once asked. [wifiApprovalShown] goes to the [GrCameraEnvironment],
-/// [askBeforeWifiJoin], [redialDelays] and [lookAgainDelay] to
-/// [AppServices].
+/// Wi-Fi control. [wifiApprovalShown] goes to the [GrCameraEnvironment],
+/// [askBeforeWifiJoin] and [redialDelays] to [AppServices].
 /// [debugLogBlocked] puts a file where the debug log's folder goes, so the
 /// log cannot open. [saveModel] false saves the camera without its model,
 /// as when pairing could not read it.
@@ -172,16 +157,12 @@ Future<TestApp> createTestApp({
   FakeCameraConfig config = const FakeCameraConfig(),
   bool saveCamera = false,
   bool saveModel = true,
-  bool? liveGeotagging = false,
-  LocationAccess location = LocationAccess.precise,
-  LocationAccess? locationAfterRequest,
   GrSessionOptions sessionOptions = const GrSessionOptions(),
   BleTransport Function(BleTransport camera)? transport,
   WifiNetworkControl Function(WifiNetworkControl camera)? wifi,
   bool askBeforeWifiJoin = false,
   Stream<void> wifiApprovalShown = const Stream.empty(),
   List<Duration> redialDelays = const [Duration(milliseconds: 20)],
-  Duration lookAgainDelay = const Duration(milliseconds: 20),
   bool debugLogBlocked = false,
   FakeMediaSource? media,
 }) async {
@@ -209,15 +190,10 @@ Future<TestApp> createTestApp({
         paired: paired,
         name: SavedCamera.defaultName(paired),
         pairedAt: DateTime(2026, 11, 7, 9, 41),
-        liveGeotagging: liveGeotagging,
       ),
     );
   }
   final permission = _Permission();
-  final phone = FakePhoneLocation(
-    access: location,
-    accessAfterRequest: locationAfterRequest,
-  );
   final ble = CountingTransport(
     transport == null ? camera.transport : transport(camera.transport),
   );
@@ -233,7 +209,6 @@ Future<TestApp> createTestApp({
       sessionOptions: sessionOptions,
       wifiApprovalShown: wifiApprovalShown,
       ensureBluetoothPermission: () async => permission.granted,
-      location: phone,
     ),
     trace: trace,
     media: saver,
@@ -244,12 +219,10 @@ Future<TestApp> createTestApp({
     debugLogDir: debugLogDir,
     askBeforeWifiJoin: askBeforeWifiJoin,
     redialDelays: redialDelays,
-    lookAgainDelay: lookAgainDelay,
   );
   return TestApp._(
     models: await AppModels.load(services),
     camera: camera,
-    phone: phone,
     ble: ble,
     media: saver,
     background: background,

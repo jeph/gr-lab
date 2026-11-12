@@ -161,7 +161,6 @@ final class AppServices {
       Duration(seconds: 5),
       Duration(seconds: 15),
     ],
-    this.lookAgainDelay = const Duration(seconds: 20),
     this.askBeforeWifiJoin = false,
     this.isDemo = false,
   });
@@ -193,11 +192,6 @@ final class AppServices {
   /// the app was in the background; its length is the number of tries
   /// before the failure is shown.
   final List<Duration> redialDelays;
-
-  /// With the app not in front and live geotagging waiting for the camera,
-  /// the pause before a camera that could not be reached over Bluetooth is
-  /// linked again (`ConnectionController`). \[design\]
-  final Duration lookAgainDelay;
 
   /// Explain the camera network before the first join of each camera.
   /// Android's approval screen names only the network, and on some phones

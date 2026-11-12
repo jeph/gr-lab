@@ -359,10 +359,6 @@ final class FakeCameraConfig {
     this.announcesDialChanges = true,
     this.selfTimerScale = 1.0,
     this.lookSlots,
-    this.storeLocationInfo = false,
-    this.locationValidity = const Duration(seconds: 600),
-    this.clockOffset = Duration.zero,
-    this.clockChangeClearsAfter = const Duration(seconds: 1),
   });
 
   /// `/v1/props` `model` and the Camera Information model name; must be a
@@ -528,23 +524,4 @@ final class FakeCameraConfig {
   /// What Custom slots C1–C3 hold (GR IV family); null means the first
   /// three [FakeLook.presets].
   final List<FakeLook>? lookSlots;
-
-  /// Initial value of the camera's Store Location Info menu item (BLE GEO
-  /// Tag); Off is the camera's default (geotagging.md §1.6).
-  /// [FakeGrCamera.storeLocationInfo] changes it.
-  final bool storeLocationInfo;
-
-  /// How long the camera keeps a location it accepted over GPS
-  /// Information, counted from its receipt: 600 s in the GR IV 1.20 and
-  /// GR III 2.20 firmware (geotagging.md §1.3). Tests pass small values.
-  final Duration locationValidity;
-
-  /// How far the camera's clock is ahead of the phone's (negative: behind)
-  /// until a Date Time write sets it ([FakeGrCamera.clock]).
-  final Duration clockOffset;
-
-  /// On a GR IV family body a Date Time write clears the camera's location
-  /// this long afterwards: 1 s in the GR IV 1.20 firmware (geotagging.md
-  /// §1.3). Tests pass small values.
-  final Duration clockChangeClearsAfter;
 }

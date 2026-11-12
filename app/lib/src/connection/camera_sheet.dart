@@ -11,8 +11,6 @@ import 'package:grphoto/src/connection/connect_failure_view.dart';
 import 'package:grphoto/src/connection/connection_controller.dart';
 import 'package:grphoto/src/connection/storage_counts.dart';
 import 'package:grphoto/src/data/cameras.dart';
-import 'package:grphoto/src/geotag/geotag_model.dart';
-import 'package:grphoto/src/geotag/geotag_rows.dart';
 import 'package:grphoto/src/pairing/pairing_flow.dart';
 import 'package:grphoto/src/pairing/pairing_widgets.dart';
 import 'package:grphoto/src/theme/tokens.dart';
@@ -34,10 +32,6 @@ Future<void> showCameraSheet(BuildContext context) =>
 /// and connects or disconnects it. Disconnecting Bluetooth ends the
 /// session, Wi-Fi included; disconnecting Wi-Fi keeps Bluetooth. Either
 /// one returns to the Cameras screen from the camera's pages.
-///
-/// Below them, for a camera that can take a location from a phone, the
-/// switches for live geotagging and for keeping its clock on the phone's
-/// time.
 class CameraSheet extends StatelessWidget {
   const new({super.key});
 
@@ -45,11 +39,7 @@ class CameraSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final models = AppScope.of(context);
     return ListenableBuilder(
-      listenable: Listenable.merge([
-        models.cameras,
-        models.connection,
-        models.geotag,
-      ]),
+      listenable: Listenable.merge([models.cameras, models.connection]),
       builder: (context, _) {
         final camera = models.cameras.current;
         if (camera == null) return const SizedBox(height: 120);
@@ -92,39 +82,11 @@ class CameraSheet extends StatelessWidget {
                   _wifiRow(l10n, connection),
                 ],
               ),
-              if (models.geotag.supported) ...[
-                SectionLabel(l10n.geotagSection),
-                GroupBox(children: _geotagRows(context, models.geotag)),
-              ],
             ],
           ),
         );
       },
     );
-  }
-
-  /// The Geotagging and Sync time rows, for a camera that can take a
-  /// location from a phone.
-  static List<Widget> _geotagRows(BuildContext context, GeotagModel geotag) {
-    // A refusal of the phone's location shows in the row itself.
-    void turnOn() => unawaited(geotag.turnOnLive());
-    return [
-      GeotagRow(
-        key: const Key('camera-sheet-geotag'),
-        live: geotag.live,
-        refused: geotag.refused,
-        status: geotag.status,
-        onChanged: (on) => on ? turnOn() : unawaited(geotag.turnOffLive()),
-        onOpenSettings: () => unawaited(geotag.openLocationSettings()),
-        onTurnOnCamera: turnOn,
-      ),
-      SyncTimeRow(
-        key: const Key('camera-sheet-sync-time'),
-        live: geotag.live,
-        syncTime: geotag.syncTime,
-        onChanged: (on) => unawaited(geotag.setSyncTime(on: on)),
-      ),
-    ];
   }
 
   static _LinkRow _bluetoothRow(

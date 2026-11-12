@@ -110,10 +110,6 @@ treating Image Control looks as something worth managing.
 - **Live view.** The camera's picture over Wi-Fi: tap to focus, set aperture, shutter speed, ISO and
   exposure compensation on a dial of the values the camera offers, and change drive, self-timer,
   metering and Image Control.
-- **Geotagging.** While your camera is on and connected, GR Photo sends it your phone's location,
-  and the camera saves it in each photo you take. It carries on with the phone locked in your
-  pocket, uses the phone's location only while the camera is on, and keeps the camera's clock on
-  your phone's time.
 - **Several cameras.** Pair as many as you own and switch between them; rename or forget each one.
 - **Themes and languages.** Light, Dark, Darkroom, Paper and Cyanotype themes, and the 21 languages
   of the camera's own menus.
@@ -178,9 +174,6 @@ flutter run --dart-define=GR_DEMO=true
 4. **Save a look.** Open a photo in the Library and tap Save look, or make one from scratch with +
    on the Looks page. Tap a look to edit it, and drag it onto C1, C2 or C3 to load it into the
    camera.
-5. **Geotag your photos.** The first time a camera connects, GR Photo offers to add locations to
-   your photos: choose Allow location and let it use the phone's location. Geotagging and Sync time
-   can be changed later on the sheet that opens when you tap the camera's connection status.
 
 Auto-disconnect in Settings leaves the camera's Wi-Fi after GR Photo has gone unused for a while (5
 minutes by default). [How GR Photo behaves](docs/behaviour.md) describes each screen and every
