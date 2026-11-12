@@ -114,6 +114,10 @@ og at looks til Billedkontrol er noget, det er værd at holde styr på.
 - **Live view.** Kameraets billede via Wi-Fi: Tryk for at fokusere, indstil blænde, lukkertid, ISO
   og eksponeringskompensation på en drejeskive med de værdier, kameraet tilbyder, og skift Motor,
   Selvudløser, Lysmåling og Billedkontrol.
+- **Geotagging.** Mens dit kamera er tændt og forbundet, sender GR Photo din telefons lokalitet til
+  det, og kameraet gemmer den i hvert billede, du tager. Det fortsætter med telefonen låst i lommen,
+  bruger kun telefonens lokalitet, mens kameraet er tændt, og holder kameraets ur på din telefons
+  tid.
 - **Flere kameraer.** Par alle dem, du ejer, og skift mellem dem; hvert kamera kan omdøbes eller
   glemmes.
 - **Temaer og sprog.** Temaerne Lyst, Mørkt, Mørkekammer, Papir og Cyanotypi og de 21 sprog fra
@@ -183,6 +187,10 @@ flutter run --dart-define=GR_DEMO=true
 4. **Gem et look.** Åbn et billede i Bibliotek, og tryk på Gem look, eller opret et fra bunden med +
    på siden Looks. Tryk på et look for at redigere det, og træk det til C1, C2 eller C3 for at
    indlæse det i kameraet.
+5. **Geotag dine billeder.** Første gang et kamera opretter forbindelse, tilbyder GR Photo at føje
+   lokaliteter til dine billeder: Vælg Tillad lokalitet, og giv appen lov til at bruge telefonens
+   lokalitet. Geotagging og Synkroniser tid kan ændres senere i det panel, der åbnes, når du trykker
+   på kameraets forbindelsesstatus.
 
 Afbryd automatisk i Indstillinger afbryder kameraets Wi-Fi, når GR Photo ikke har været i brug et
 stykke tid (som standard 5 minutter). [Sådan opfører GR Photo sig](../behaviour.md) beskriver hvert

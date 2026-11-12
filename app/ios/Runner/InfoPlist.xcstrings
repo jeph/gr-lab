@@ -263,6 +263,137 @@
         }
       }
     },
+    "NSLocationWhenInUseUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Photo odesílá polohu tohoto telefonu do vašeho fotoaparátu, dokud je fotoaparát zapnutý, aby ji fotoaparát mohl ukládat do vašich fotek."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Photo sender denne telefons lokalitet til dit kamera, mens kameraet er tændt, så kameraet kan gemme den i dine billeder."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Photo sendet den Standort dieses Smartphones an deine Kamera, solange sie eingeschaltet ist, damit die Kamera ihn in deinen Fotos speichern kann."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το GR Photo στέλνει την τοποθεσία αυτού του τηλεφώνου στην κάμερά σας όσο η κάμερα είναι ενεργοποιημένη, ώστε η κάμερα να την αποθηκεύει στις φωτογραφίες σας."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Photo sends this phone's location to your camera while the camera is on, so the camera can save it in your photos."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Photo envía la ubicación de este teléfono a tu cámara mientras la cámara está encendida, para que pueda guardarla en tus fotos."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Photo lähettää tämän puhelimen sijainnin kameraasi, kun kamera on päällä, jotta kamera voi tallentaa sen kuviisi."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Photo envoie la position de ce téléphone à votre appareil photo tant qu’il est allumé, afin que l’appareil photo puisse l’enregistrer dans vos photos."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A GR Photo elküldi a telefon helyzetét a kamerának, amíg a kamera be van kapcsolva, hogy a kamera elmenthesse a fotóiba."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Photo invia la posizione di questo telefono alla fotocamera mentre è accesa, così la fotocamera può salvarla nelle tue foto."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Photoは、カメラの電源が入っている間、このスマートフォンの位置情報をカメラに送信します。カメラはその位置情報を写真に記録できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Photo는 카메라의 전원이 켜져 있는 동안 이 휴대전화의 위치를 카메라로 보내며, 카메라는 이 위치를 사진에 저장할 수 있습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Photo stuurt de locatie van deze telefoon naar je camera zolang de camera aanstaat, zodat de camera die in je foto's kan opslaan."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Photo wysyła lokalizację tego telefonu do aparatu, gdy aparat jest włączony, aby aparat mógł zapisywać ją w zdjęciach."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O GR Photo envia a localização deste telemóvel para a sua câmara enquanto esta estiver ligada, para que a câmara a possa guardar nas suas fotos."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Photo передает геопозицию этого телефона на вашу камеру, пока камера включена, чтобы камера могла сохранять ее в ваших снимках."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Photo skickar telefonens plats till din kamera medan kameran är på, så att kameran kan spara den i dina bilder."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Photo ส่งตำแหน่งของโทรศัพท์เครื่องนี้ไปยังกล้องของคุณขณะที่กล้องเปิดอยู่ เพื่อให้กล้องบันทึกตำแหน่งลงในภาพของคุณได้"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GR Photo, kamera açıkken bu telefonun konumunu kameranıza gönderir; böylece kamera konumu fotoğraflarınıza kaydedebilir."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "相机开机期间，GR Photo 会把这部手机的位置发送到你的相机，让相机能将位置存入你的照片。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "相機開機期間，GR Photo 會將這支手機的位置傳送到你的相機，讓相機能把位置儲存在你的照片中。"
+          }
+        }
+      }
+    },
     "NSPhotoLibraryAddUsageDescription" : {
       "extractionState" : "manual",
       "localizations" : {

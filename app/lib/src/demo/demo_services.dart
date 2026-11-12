@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:gr_camera/gr_camera.dart';
@@ -17,8 +18,11 @@ import 'package:grphoto/src/services.dart';
 /// run nothing is paired: when the pairing screen scans, the simulated user
 /// turns the camera on and opens Execute Pairing, and presses OK two
 /// seconds into the bonding. Later runs find the bond in place (a phone
-/// keeps it across launches). Demo data lives in its own `demo/` folders
-/// so demo and real cameras never mix.
+/// keeps it across launches). The simulated phone has not been asked for
+/// its location yet and allows precise location when asked, so the demo
+/// shows the geotagging offer and the permission step, and then a phone
+/// that moves. Demo data lives in its own `demo/` folders so demo and real
+/// cameras never mix.
 Future<AppServices> buildDemoServices() async {
   final dirs = await appDirectories();
   final data = Directory('${dirs.data.path}/demo');
@@ -61,6 +65,11 @@ Future<AppServices> buildDemoServices() async {
       wifi: camera.wifi,
       trace: trace.call,
       httpFactory: camera.httpClient,
+      location: FakePhoneLocation(
+        access: LocationAccess.undetermined,
+        accessAfterRequest: LocationAccess.precise,
+        source: _strollingPhone(),
+      ),
     ),
     trace: trace,
     media: PlatformMediaSaver(),
@@ -77,6 +86,33 @@ Future<AppServices> buildDemoServices() async {
 
 /// Length of `assets/demo/clip.mov`, which every demo movie plays.
 const _clipLength = Duration(seconds: 3);
+
+/// Where the demo's phone says it is: a made-up stroll round a circle of
+/// 60 m about made-up coordinates, 6 m further with each fix, so the
+/// camera is sent a new location as it is from a phone being carried.
+PhoneFix Function(DateTime now) _strollingPhone() {
+  var fixes = 0;
+  return (now) {
+    final angle = fixes++ * _strollStep;
+    return PhoneFix(
+      latitude: 35 + _strollRadius * math.sin(angle),
+      longitude: 135 + _strollRadius * math.cos(angle) / _cosLatitude,
+      altitude: 40,
+      accuracy: 8,
+      time: now,
+    );
+  };
+}
+
+/// 60 m in degrees of latitude.
+const double _strollRadius = 60 / 111320;
+
+/// 6 m of a 60 m circle, in radians.
+const _strollStep = 0.1;
+
+/// The cosine of 35° north, where a degree of longitude is that much
+/// shorter than one of latitude.
+const _cosLatitude = 0.8192;
 
 /// Twelve scenes (nine landscape, three portrait), each as a ~160 px
 /// thumbnail, a ~1280 px view and a ~2000 px full JPEG, plus one movie.

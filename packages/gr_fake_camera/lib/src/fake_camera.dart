@@ -43,7 +43,11 @@ final class FakeWifiException implements Exception {
 /// * in capture mode it takes pictures on a BLE Operation Request or an
 ///   HTTP shoot, after the drive mode's self-timer, streams live view and
 ///   takes exposure settings from the lists `/v1/props` offers
-///   (remote-shooting.md).
+///   (remote-shooting.md);
+/// * it takes a location over BLE GPS Information only while Store
+///   Location Info (GEO Tag) is on, keeps it for
+///   [FakeCameraConfig.locationValidity], and has a clock of its own that
+///   Date Time reads and sets (geotagging.md §1).
 ///
 /// The HTTP server stands in for the camera's network: it answers while
 /// the camera is on and its access point has not gone down, so HTTP-only
@@ -69,6 +73,8 @@ final class FakeGrCamera {
       _battery = config.battery,
       _exposureMode = config.exposureMode,
       _remaining = config.remainingPictures,
+      _storeLocationInfo = config.storeLocationInfo,
+      _clockOffset = config.clockOffset,
       _photos = List.of(config.photos ?? FakePhoto.defaultCard()) {
     _initValues();
   }
@@ -135,6 +141,19 @@ final class FakeGrCamera {
   Timer? _releaseTimer;
   int _captureIds = 0;
   GrCameraOrientation _orientation = GrCameraOrientation.positive;
+
+  // Geotagging and the clock (ble_side.dart; geotagging.md §1).
+  bool _storeLocationInfo;
+  BleGpsInformation? _location;
+  final _acceptedLocations = <BleGpsInformation>[];
+
+  /// Clears [_location] when its validity runs out.
+  Timer? _locationExpiry;
+
+  /// Clears [_location] after a clock change (GR IV family).
+  Timer? _clockChangeClear;
+  Duration _clockOffset;
+  int _clockWrites = 0;
 
   /// Ends when the running focus does (see `_focus`).
   Future<void> _focusEnd = Future.value();
@@ -279,6 +298,35 @@ final class FakeGrCamera {
     _orientation = value;
     _pushCameraDirect();
   }
+
+  /// The camera's Store Location Info menu item, which BLE GEO Tag reads
+  /// and writes. Setting it is the user changing the menu: a change
+  /// notifies GEO Tag, and turning it off clears [location] at once
+  /// (geotagging.md §1.3).
+  bool get storeLocationInfo => _storeLocationInfo;
+  set storeLocationInfo(bool on) => _setStoreLocationInfo(on: on);
+
+  /// The location the camera holds for its pictures: the last record it
+  /// accepted over GPS Information, until
+  /// [FakeCameraConfig.locationValidity] after its receipt. Null when it
+  /// holds none: nothing accepted yet, the validity ran out, Store
+  /// Location Info was turned off, or the clock of a GR IV family body was
+  /// set. A Bluetooth drop and a power cycle leave it alone
+  /// (geotagging.md §1.3).
+  BleGpsInformation? get location => _location;
+
+  /// Every record the camera accepted over GPS Information, oldest first.
+  List<BleGpsInformation> get acceptedLocations =>
+      List.unmodifiable(_acceptedLocations);
+
+  /// The camera's own clock, in local time as Date Time carries it: the
+  /// phone's clock plus an offset that starts at
+  /// [FakeCameraConfig.clockOffset] and that an accepted Date Time write
+  /// sets, so the clock reads what was written.
+  DateTime get clock => DateTime.now().add(_clockOffset);
+
+  /// Date Time writes the camera accepted.
+  int get clockWrites => _clockWrites;
 
   /// The card, in insertion order.
   List<FakePhoto> get photos => List.unmodifiable(_photos);
@@ -451,7 +499,6 @@ final class FakeGrCamera {
       GrBleCatalog.bleEnableCondition,
       BleEnableCondition.enableAnytime.wire,
     );
-    byte(GrBleCatalog.geoTag, 0);
     final looks = config.lookSlots ?? FakeLook.presets.sublist(0, 3);
     for (var i = 0; i < GrBleCatalog.imageControlSlots.length; i++) {
       final slot = GrBleCatalog.imageControlSlots[i];

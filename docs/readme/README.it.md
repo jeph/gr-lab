@@ -117,6 +117,10 @@ trattare gli stili di Controllo immagine come qualcosa che vale la pena gestire.
 - **Live view.** L'immagine della fotocamera tramite Wi-Fi: tocca per mettere a fuoco, imposta
   diaframma, tempo di posa, ISO e compensazione dell'esposizione su una ghiera con i valori che la
   fotocamera offre, e cambia Scatto, Autoscatto, Misurazione e Controllo immagine.
+- **Geotagging.** Finché la fotocamera è accesa e connessa, GR Photo le invia la posizione del
+  telefono, e la fotocamera la salva in ogni foto che scatti. Continua anche con il telefono
+  bloccato in tasca, usa la posizione del telefono solo mentre la fotocamera è accesa e mantiene
+  l'orologio della fotocamera sull'ora del telefono.
 - **Più fotocamere.** Accoppia tutte quelle che possiedi e passa dall'una all'altra; puoi
   rinominarle o dimenticarle una per una.
 - **Temi e lingue.** I temi Chiaro, Scuro, Camera oscura, Carta e Cianotipia, e le 21 lingue dei
@@ -188,6 +192,10 @@ flutter run --dart-define=GR_DEMO=true
 4. **Salva uno stile.** Apri una foto nella Libreria e tocca Salva stile, oppure creane uno da zero
    con + nella pagina Stili. Tocca uno stile per modificarlo e trascinalo su C1, C2 o C3 per
    caricarlo nella fotocamera.
+5. **Aggiungi la posizione alle foto.** La prima volta che una fotocamera si connette, GR Photo
+   propone di aggiungere la posizione alle tue foto: scegli Consenti posizione e consenti l'uso
+   della posizione del telefono. Geotagging e Sincronizza ora si possono modificare in seguito nel
+   pannello che si apre quando tocchi lo stato della connessione della fotocamera.
 
 Disconnessione automatica, in Impostazioni, esce dal Wi-Fi della fotocamera dopo che GR Photo è
 rimasta inutilizzata per un po' (5 minuti per impostazione predefinita).

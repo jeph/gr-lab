@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:gr_camera/src/camera_features.dart';
 import 'package:gr_camera/src/environment.dart';
+import 'package:gr_camera/src/geotag/camera_clock.dart';
+import 'package:gr_camera/src/geotag/camera_geotagging.dart';
 import 'package:gr_camera/src/library/camera_library.dart';
 import 'package:gr_camera/src/looks/camera_looks.dart';
 import 'package:gr_camera/src/platform/wifi_control.dart';
@@ -102,6 +104,8 @@ final class CameraSession {
         httpFactory: _environment.httpFactory,
       ) {
     status = createCameraStatus(_session, _environment);
+    clock = createCameraClock(_session, _environment);
+    _environment.geotagging.attach(_session, clock: clock, body: () => body);
   }
 
   final GrSession _session;
@@ -110,6 +114,9 @@ final class CameraSession {
 
   /// The camera's battery and storages, for the whole session.
   late final CameraStatus status;
+
+  /// Keeps the camera's clock on the phone's time, for the whole session.
+  late final CameraClock clock;
 
   /// The paired camera's serial number, which [connectBluetooth] links to.
   String? _serial;
@@ -235,6 +242,8 @@ final class CameraSession {
   /// separate from the phone's Wi-Fi.
   Future<void> close({bool powerOffIfWoken = false}) {
     status.close();
+    _environment.geotagging.detach(_session);
+    clock.close();
     _remote?.close();
     _looks?.close();
     _liveView?.close();

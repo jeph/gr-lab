@@ -116,6 +116,10 @@ tieltäsi, ja Kuvansäätö-tyylejä kohdellaan asiana, jota kannattaa hallita.
 - **Live-kuva.** Kameran kuva Wi-Fin kautta: tarkenna napauttamalla, aseta aukko, suljinaika, ISO
   ja valotuksen korjaus valitsimella, jossa ovat kameran tarjoamat arvot, ja vaihda kuvaustapaa,
   ajastinta, mittausta ja Kuvansäätöä.
+- **Sijaintitunnisteet.** Kun kamera on päällä ja yhdistetty, GR Photo lähettää sille puhelimen
+  sijainnin, ja kamera tallentaa sen jokaiseen ottamaasi kuvaan. Toiminto jatkuu, vaikka puhelin
+  olisi lukittuna taskussa, käyttää puhelimen sijaintia vain kameran ollessa päällä ja pitää kameran
+  kellon puhelimen ajassa.
 - **Useita kameroita.** Muodosta pari niin monen kameran kanssa kuin omistat ja vaihda niiden
   välillä; voit nimetä jokaisen uudelleen tai unohtaa sen.
 - **Teemat ja kielet.** Teemat Vaalea, Tumma, Pimiö, Paperi ja Sinikopio sekä kameran omien
@@ -185,6 +189,10 @@ flutter run --dart-define=GR_DEMO=true
 4. **Tallenna tyyli.** Avaa kuva Kirjastossa ja napauta Tallenna tyyli, tai luo tyyli alusta alkaen
    Tyylit-sivun painikkeella +. Muokkaa tyyliä napauttamalla sitä ja siirrä se kameraan vetämällä se
    paikan C1, C2 tai C3 päälle.
+5. **Lisää kuviin sijainti.** Kun kamera yhdistetään ensimmäisen kerran, GR Photo ehdottaa
+   sijaintien lisäämistä kuviin: valitse Salli sijainti ja anna sovelluksen käyttää puhelimen
+   sijaintia. Sijaintitunnisteet- ja Synkronoi aika -asetuksia voi muuttaa myöhemmin paneelissa,
+   joka avautuu, kun napautat kameran yhteyden tilaa.
 
 Asetusten Automaattinen katkaisu poistuu kameran Wi-Fi-verkosta, kun GR Photo on ollut jonkin aikaa
 käyttämättä (oletuksena 5 minuuttia). [Näin GR Photo toimii](../behaviour.md) kuvaa jokaisen näytön

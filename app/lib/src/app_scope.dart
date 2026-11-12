@@ -9,6 +9,7 @@ import 'package:grphoto/src/data/cameras.dart';
 import 'package:grphoto/src/data/settings.dart';
 import 'package:grphoto/src/debug/debug_log.dart';
 import 'package:grphoto/src/downloads/download_engine.dart';
+import 'package:grphoto/src/geotag/geotag_model.dart';
 import 'package:grphoto/src/library/camera_link.dart';
 import 'package:grphoto/src/library/library_scope.dart';
 import 'package:grphoto/src/looks/looks_store.dart';
@@ -22,6 +23,7 @@ final class AppModels {
     required this.settings,
     required this.cameras,
     required this.connection,
+    required this.geotag,
     required this.debugLog,
     required this.looks,
     required this.idle,
@@ -68,6 +70,11 @@ final class AppModels {
       settings: settings,
       cameras: cameras,
       connection: connection,
+      geotag: GeotagModel(
+        services: services,
+        cameras: cameras,
+        connection: connection,
+      ),
       debugLog: debugLog,
       looks: looks,
       idle: idle,
@@ -86,6 +93,9 @@ final class AppModels {
   final SettingsController settings;
   final CameraStore cameras;
   final ConnectionController connection;
+
+  /// Live geotagging and the clock of the current camera.
+  final GeotagModel geotag;
 
   /// The app's debug log, camera traffic included, for bug reports
   /// (Settings).

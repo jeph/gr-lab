@@ -115,6 +115,9 @@ att stilar för Bildkontroll är något värt att hålla ordning på.
 - **Livevisning.** Kamerans bild via Wi-Fi: tryck för att fokusera, ställ in bländare, slutartid,
   ISO och exponeringskompensation på en ratt med de värden kameran erbjuder, och ändra Exponering,
   Självutlösare, Exponeringsmätning och Bildkontroll.
+- **Geotaggning.** När kameran är på och ansluten skickar GR Photo telefonens plats till den, och
+  kameran sparar platsen i varje bild du tar. Det fortsätter med telefonen låst i fickan, använder
+  telefonens plats bara medan kameran är på och håller kamerans klocka på telefonens tid.
 - **Flera kameror.** Parkoppla så många du äger och växla mellan dem; byt namn på eller glöm var
   och en.
 - **Teman och språk.** Temana Ljust, Mörkt, Mörkrum, Papper och Cyanotypi, och de 21 språken i
@@ -184,6 +187,10 @@ flutter run --dart-define=GR_DEMO=true
 4. **Spara en stil.** Öppna en bild i Bibliotek och tryck på Spara stil, eller skapa en från
    grunden med + på sidan Stilar. Tryck på en stil för att redigera den, och dra den till C1, C2
    eller C3 för att lägga in den i kameran.
+5. **Geotagga dina bilder.** Första gången en kamera ansluter erbjuder GR Photo att lägga till
+   platser i dina bilder: välj Tillåt plats och låt appen använda telefonens plats. Geotaggning och
+   Synkronisera tid kan ändras senare i panelen som öppnas när du trycker på kamerans
+   anslutningsstatus.
 
 Med Koppla från automatiskt i Inställningar lämnar GR Photo kamerans Wi-Fi när appen inte har
 använts på ett tag (5 minuter som standard). [Så beter sig GR Photo](../behaviour.md) beskriver

@@ -118,6 +118,10 @@ Beeldregeling-looks behandelen als iets wat het beheren waard is.
 - **Live view.** Het beeld van de camera via Wi-Fi: tik om scherp te stellen, stel diafragma,
   sluitertijd, ISO en belichtingscorrectie in op een draaischijf met de waarden die de camera
   aanbiedt, en wijzig opnametransport, zelfontspanner, lichtmeting en Beeldregeling.
+- **Geotagging.** Zolang je camera aanstaat en verbonden is, stuurt GR Photo de locatie van je
+  telefoon naar de camera, en de camera slaat die op in elke foto die je maakt. Het gaat door met de
+  telefoon vergrendeld in je zak, gebruikt de locatie van de telefoon alleen zolang de camera
+  aanstaat en houdt de klok van de camera gelijk met de tijd van je telefoon.
 - **Meerdere camera's.** Koppel er zoveel als je hebt en wissel ertussen; geef elke camera een
   andere naam of vergeet hem.
 - **Thema's en talen.** De thema's Licht, Donker, Doka, Papier en Cyanotypie, en de 21 talen van de
@@ -190,6 +194,10 @@ flutter run --dart-define=GR_DEMO=true
 4. **Sla een look op.** Open een foto in de Bibliotheek en tik op Look opslaan, of maak er zelf een
    vanaf nul met + op de pagina Looks. Tik op een look om hem te bewerken en sleep hem naar C1, C2
    of C3 om hem in de camera te laden.
+5. **Geotag je foto's.** De eerste keer dat een camera verbinding maakt, biedt GR Photo aan om
+   locaties aan je foto's toe te voegen: kies Locatie toestaan en sta het gebruik van de locatie van
+   de telefoon toe. Geotagging en Tijd synchroniseren kun je later wijzigen in het paneel dat opent
+   wanneer je op de verbindingsstatus van de camera tikt.
 
 Automatisch verbreken in Instellingen verlaat de Wi-Fi van de camera nadat GR Photo een tijd niet is
 gebruikt (standaard 5 minuten). [Hoe GR Photo zich gedraagt](../behaviour.md) beschrijft elk scherm

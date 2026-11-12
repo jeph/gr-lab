@@ -118,6 +118,10 @@ ne legyen útban, és hogy a Képvezérlés stílusait érdemes legyen benne kez
 - **Élőkép.** A kamera képe Wi-Fi-kapcsolaton: koppintson a fókuszáláshoz, állítsa be a rekeszt, a
   záridőt, az ISO-értéket és az expozíciókompenzációt egy tárcsán, amely a kamera által kínált
   értékeket mutatja, és módosítsa a meghajtást, az önkioldót, a fénymérést és a Képvezérlést.
+- **Geocímkézés.** Amíg a kamera be van kapcsolva és csatlakozik, a GR Photo elküldi neki a telefon
+  helyadatait, a kamera pedig minden elkészített fotóba elmenti őket. Akkor is működik, ha a telefon
+  lezárva a zsebében van, a telefon helyadatait csak addig használja, amíg a kamera be van
+  kapcsolva, és a kamera óráját a telefon idejéhez igazítja.
 - **Több kamera.** Annyi kamerát párosíthat, ahány van, és válthat közöttük; mindegyiket
   átnevezheti vagy elfelejtetheti.
 - **Témák és nyelvek.** Világos, Sötét, Sötétkamra, Papír és Cianotípia téma, valamint a kamera
@@ -190,6 +194,11 @@ flutter run --dart-define=GR_DEMO=true
 4. **Mentsen egy stílust.** Nyisson meg egy fotót a Könyvtárban, és koppintson a Stílus mentése
    gombra, vagy készítsen egyet a nulláról a Stílusok oldal + gombjával. Koppintson egy stílusra a
    szerkesztéséhez, és húzza a C1, C2 vagy C3 helyre, ha be szeretné tölteni a kamerába.
+5. **Lássa el helyadatokkal a fotóit.** Amikor egy kamera először csatlakozik, a GR Photo
+   felajánlja, hogy helyadatokat ad a fotóihoz: válassza a Helyadatok engedélyezése lehetőséget, és
+   engedélyezze a telefon helyadatainak használatát. A Geocímkézés és az Idő szinkronizálása
+   beállítás később is módosítható azon a panelen, amely a kamera kapcsolati állapotára koppintva
+   nyílik meg.
 
 A Beállítások Automatikus leválasztás funkciója kilép a kamera Wi-Fi-hálózatából, ha a GR Photo egy
 ideje nincs használatban (alapértelmezés szerint 5 perc után). [A GR Photo

@@ -18,6 +18,10 @@ import 'package:grphoto/src/widgets/dock.dart';
 class CameraPages extends StatefulWidget {
   const new({super.key});
 
+  /// The name of the route that shows the pages, for code that needs to
+  /// know whether they are what is in front.
+  static const routeName = 'camera';
+
   @override
   State<CameraPages> createState() => _CameraPagesState();
 }

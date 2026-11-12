@@ -324,11 +324,19 @@ extension on FakeGrCamera {
     );
   }
 
-  /// The Custom slots are served by the camera's main firmware, not by the
-  /// Bluetooth-only state of a camera that is off \[inferred\]
-  /// (firmware-bonding.md §6).
+  /// What the camera's main firmware serves is refused in the
+  /// Bluetooth-only state of a camera that is off: the Custom slots
+  /// \[inferred\] (firmware-bonding.md §6), and GPS Information and Date
+  /// Time, reads and writes alike \[design\]. What an off camera does with
+  /// a location record is \[unknown\] (geotagging.md §7, test 7), as is
+  /// what it does with its clock.
   void _requireMainFirmware(GrBleCharacteristic<Object> c) {
-    if (_poweredOn || !_isLookSlot(c)) return;
+    if (_poweredOn) return;
+    if (!_isLookSlot(c) &&
+        c != GrBleCatalog.gpsInformation &&
+        c != GrBleCatalog.dateTime) {
+      return;
+    }
     throw BleException(BleErrorCode.gatt, '${c.key}: camera is off');
   }
 
@@ -344,6 +352,7 @@ extension on FakeGrCamera {
       GrBleCatalog.networkType =>
         _wlanEnabled ? BleNetworkType.ap.wire : BleNetworkType.off.wire,
       GrBleCatalog.driveMode => _driveMode,
+      GrBleCatalog.geoTag => _storeLocationInfo ? 1 : 0,
       _ => null,
     };
     if (live != null) return Uint8List.fromList([live]);
@@ -352,6 +361,9 @@ extension on FakeGrCamera {
       GrBleCatalog.shootingMode => [_exposureMode.wire, _userMode.wire],
       GrBleCatalog.captureStatus => _captureStatus,
       GrBleCatalog.storageInformation => _storageInformation(),
+      GrBleCatalog.dateTime => GrBleCatalog.dateTime.codec.encode(
+        BleDateTime.fromDateTime(clock),
+      ),
       _ => null,
     };
     if (record != null) return Uint8List.fromList(record);
@@ -440,9 +452,145 @@ extension on FakeGrCamera {
           throw BleException(BleErrorCode.gatt, '${c.key}: invalid value');
         }
         _values[c.uuid] = v;
+      // `bled` takes only `00` or `01` (geotagging.md §1.1); a value of
+      // another length is refused too \[design\]. When the main firmware
+      // refuses the change is \[unknown\]: the fake always takes it.
+      case GrBleCatalog.geoTag:
+        if (v.length != 1 || first > 1) {
+          throw BleException(BleErrorCode.gatt, '${c.key}: invalid value');
+        }
+        _setStoreLocationInfo(on: first == 1);
+      case GrBleCatalog.gpsInformation:
+        _takeLocation(c, v);
+      case GrBleCatalog.dateTime:
+        _setClock(c, v);
       default:
         _values[c.uuid] = v;
     }
+  }
+
+  /// Store Location Info changes, from the camera's menu or a GEO Tag
+  /// write. Turning it off clears the location at once (geotagging.md
+  /// §1.3: found for the menu, \[inferred\] for the write). A change
+  /// notifies GEO Tag; that a write notifies as the menu does is
+  /// \[design\].
+  void _setStoreLocationInfo({required bool on}) {
+    if (on == _storeLocationInfo) return;
+    _storeLocationInfo = on;
+    _notify(GrBleCatalog.geoTag, [if (on) 1 else 0]);
+    if (!on) _clearLocation();
+  }
+
+  /// A GPS Information write, judged as the main firmware's property
+  /// setter judges the record (geotagging.md §1.2): refused while Store
+  /// Location Info is off, and unless latitude is within ±90, longitude
+  /// within ±180, altitude within ±9999 and the fix time a real calendar
+  /// date and time. An accepted record is the camera's location for
+  /// [FakeCameraConfig.locationValidity] from now, and each one restarts
+  /// that time (§1.3). Nothing is notified (§1.1).
+  ///
+  /// Where the fake departs from the firmware, or goes past what is known:
+  /// * the firmware also wants the year within 50 years of a base year
+  ///   that is \[unknown\], so the year is not checked;
+  /// * a record shorter than 32 bytes is refused \[design\]: `bled` reads
+  ///   31 bytes whatever the length. A longer one is taken, and the datum
+  ///   byte is not looked at, as in `bled` (§1.1);
+  /// * the ATT error of a refusal is \[unknown\]: a GATT error
+  ///   \[design\];
+  /// * what a read of GPS Information answers is \[unknown\]: an accepted
+  ///   record is not kept for one.
+  void _takeLocation(GrBleCharacteristic<Object> c, Uint8List v) {
+    if (!_storeLocationInfo) {
+      throw BleException(
+        BleErrorCode.gatt,
+        '${c.key}: Store Location Info is off',
+      );
+    }
+    final record = GrBleCatalog.gpsInformation.codec.decode(v).value;
+    if (record == null ||
+        !_isWithin(record.latitude, 90) ||
+        !_isWithin(record.longitude, 180) ||
+        !_isWithin(record.altitude, 9999) ||
+        !_isRealDateTime(
+          record.year,
+          record.month,
+          record.day,
+          record.hour,
+          record.minute,
+          record.second,
+        )) {
+      throw BleException(BleErrorCode.gatt, '${c.key}: invalid value');
+    }
+    _location = record;
+    _acceptedLocations.add(record);
+    _cancel(_locationExpiry);
+    _locationExpiry = _after(config.locationValidity, _clearLocation);
+  }
+
+  /// The camera has no location any more. The clear after a clock change
+  /// stays armed: it is the clock's, not the location's.
+  void _clearLocation() {
+    _cancel(_locationExpiry);
+    _locationExpiry = null;
+    _location = null;
+  }
+
+  /// A Date Time write sets the camera's clock. One that is not a real
+  /// calendar date and time is refused \[design\]: what the camera does
+  /// with one is \[unknown\], and trailing bytes are taken \[design\].
+  ///
+  /// On a GR IV family body the location is cleared
+  /// [FakeCameraConfig.clockChangeClearsAfter] after the write
+  /// (geotagging.md §1.3), with any record taken in between \[inferred\].
+  /// Every accepted write counts as a change of the clock, and a second one
+  /// inside that time starts it again \[design\]. No such clear was found
+  /// in the GR III firmware (§1.5).
+  void _setClock(GrBleCharacteristic<Object> c, Uint8List v) {
+    final written = GrBleCatalog.dateTime.codec.decode(v).value;
+    if (written == null ||
+        !_isRealDateTime(
+          written.year,
+          written.month,
+          written.day,
+          written.hour,
+          written.minute,
+          written.second,
+        )) {
+      throw BleException(BleErrorCode.gatt, '${c.key}: invalid value');
+    }
+    _clockOffset = DateTime(
+      written.year,
+      written.month,
+      written.day,
+      written.hour,
+      written.minute,
+      written.second,
+    ).difference(DateTime.now());
+    _clockWrites++;
+    if (model.family != GrModelFamily.gr4) return;
+    _cancel(_clockChangeClear);
+    _clockChangeClear = _after(config.clockChangeClearsAfter, _clearLocation);
+  }
+
+  /// Not NaN, and no further from zero than [limit].
+  static bool _isWithin(double value, double limit) => value.abs() <= limit;
+
+  /// Whether the fields name a date and time that exists: the month has
+  /// that day, and so on. The year is free.
+  static bool _isRealDateTime(
+    int year,
+    int month,
+    int day,
+    int hour,
+    int minute,
+    int second,
+  ) {
+    final normalized = DateTime.utc(year, month, day, hour, minute, second);
+    return normalized.month == month &&
+        normalized.day == day &&
+        normalized.hour == hour &&
+        normalized.minute == minute &&
+        normalized.second == second;
   }
 
   void _notify(GrBleCharacteristic<Object> c, List<int> value) {

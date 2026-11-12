@@ -213,12 +213,24 @@ void main() {
       reason: 'linked after pairing',
     );
 
+    // The geotagging offer for the new camera waits for the flow to close.
+    await pumpRounds(tester, 20);
+    expect(find.byKey(const Key('geotag-offer')), findsNothing);
+
     await tapWhenReady(tester, find.byKey(const Key('pairing-done-button')));
     await pumpUntil(tester, () => find.byKey(_done).evaluate().isEmpty);
     expect(find.byType(PairingFlow), findsNothing);
     expect(find.byKey(const Key('cameras')), findsOneWidget);
     expect(find.byType(LibraryScreen), findsNothing);
     expect(app.camera.wlanOn, isFalse);
+
+    await pumpUntilFound(tester, find.byKey(const Key('geotag-offer')));
+    await tapWhenReady(tester, find.byKey(const Key('geotag-offer-not-now')));
+    await pumpUntil(
+      tester,
+      () => find.byKey(const Key('geotag-offer')).evaluate().isEmpty,
+      reason: 'offer closed',
+    );
 
     await tapWhenReady(tester, find.byKey(const Key('camera-card-library')));
     await pumpUntilFound(tester, find.byType(LibraryScreen));

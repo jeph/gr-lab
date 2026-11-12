@@ -41,6 +41,8 @@
 	<string>GR Photo uses Bluetooth to pair with your Ricoh GR, find it nearby, wake it, turn on its Wi-Fi and act as its remote shutter.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>GR Photo connects to your camera over its own Wi-Fi network to browse and download photos and videos and to show its live view.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>GR Photo sends this phone's location to your camera while the camera is on, so the camera can save it in your photos.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>GR Photo saves the photos and videos you download from your camera to your library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -70,6 +72,14 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Live geotagging keeps sending the phone's location to the camera
+	     with the app not in front. It only carries on there: it starts
+	     while the app is in front, so "While Using the App" access is
+	     enough, and GR Photo never asks for location "Always". -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

@@ -13,6 +13,8 @@ final class SavedCamera {
     required this.name,
     required this.pairedAt,
     this.wifiApproved = false,
+    this.liveGeotagging,
+    this.syncTime = true,
   });
 
   factory fromJson(Map<String, Object?> json) => SavedCamera(
@@ -20,6 +22,11 @@ final class SavedCamera {
     name: json['name']! as String,
     pairedAt: DateTime.parse(json['pairedAt']! as String),
     wifiApproved: json['wifiApproved'] == true,
+    liveGeotagging: switch (json['liveGeotagging']) {
+      final bool on => on,
+      _ => null,
+    },
+    syncTime: json['syncTime'] != false,
   );
 
   final GrPairedCamera paired;
@@ -31,6 +38,16 @@ final class SavedCamera {
   /// The phone has joined this camera's Wi-Fi through GR Photo, so the OS
   /// approval is in place and joins need no explanation first.
   final bool wifiApproved;
+
+  /// Sending the phone's location to this camera while it is on. Null
+  /// until the user has been asked: it is offered once, the first time the
+  /// camera is linked, and is on from then if the phone's location is
+  /// allowed.
+  final bool? liveGeotagging;
+
+  /// Keeping this camera's clock on the phone's time. On unless the user
+  /// turned it off; live geotagging keeps the clock in step either way.
+  final bool syncTime;
 
   String get serial => paired.serialNumber;
 
@@ -58,11 +75,15 @@ final class SavedCamera {
     String? name,
     bool? wifiApproved,
     GrPairedCamera? paired,
+    bool? liveGeotagging,
+    bool? syncTime,
   }) => SavedCamera(
     paired: paired ?? this.paired,
     name: name ?? this.name,
     pairedAt: pairedAt,
     wifiApproved: wifiApproved ?? this.wifiApproved,
+    liveGeotagging: liveGeotagging ?? this.liveGeotagging,
+    syncTime: syncTime ?? this.syncTime,
   );
 
   Map<String, Object?> toJson() => {
@@ -70,6 +91,8 @@ final class SavedCamera {
     'name': name,
     'pairedAt': pairedAt.toUtc().toIso8601String(),
     if (wifiApproved) 'wifiApproved': true,
+    'liveGeotagging': ?liveGeotagging,
+    if (!syncTime) 'syncTime': false,
   };
 }
 
@@ -133,6 +156,23 @@ final class CameraStore extends ChangeNotifier {
     final i = _cameras.indexWhere((c) => c.serial == serial);
     if (i < 0 || _cameras[i].wifiApproved) return Future.value();
     _cameras[i] = _cameras[i].copyWith(wifiApproved: true);
+    return _save();
+  }
+
+  /// Records the user's choice about sending the phone's location to
+  /// [serial].
+  Future<void> setLiveGeotagging(String serial, {required bool on}) {
+    final i = _cameras.indexWhere((c) => c.serial == serial);
+    if (i < 0 || _cameras[i].liveGeotagging == on) return Future.value();
+    _cameras[i] = _cameras[i].copyWith(liveGeotagging: on);
+    return _save();
+  }
+
+  /// Records whether [serial]'s clock is kept on the phone's time.
+  Future<void> setSyncTime(String serial, {required bool on}) {
+    final i = _cameras.indexWhere((c) => c.serial == serial);
+    if (i < 0 || _cameras[i].syncTime == on) return Future.value();
+    _cameras[i] = _cameras[i].copyWith(syncTime: on);
     return _save();
   }
 

@@ -4,4 +4,32 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <!-- Geotagging (LocationChannel). Android only lets an app ask for
+         precise location together with approximate, and the user may
+         grant just the approximate one. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- The phone's position, precise enough to record in a picture. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- GeotagService keeps a geotagging run going while the app is not in
+         front; a service of the location type needs both. Background
+         location is not asked for: the run starts while the app is in
+         front and the service carries its while-in-use access on. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- The run's notification, with its Stop button. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Keeps the processor on for a run with the screen off, so the
+         camera can be relinked and positions written to it. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <application>
+        <!-- Stops with the task: the Dart code driving a geotagging run
+             lives in the activity's Flutter engine, which a swiped-away
+             task takes with it. -->
+        <service
+            android:name="io.jeph.grphoto.gr_camera.GeotagService"
+            android:exported="false"
+            android:foregroundServiceType="location"
+            android:stopWithTask="true" />
+    </application>
 </manifest>

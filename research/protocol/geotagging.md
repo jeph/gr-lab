@@ -14,6 +14,7 @@ The wire format of the record is in [ble.md §GPS push](ble.md#gps-push); the se
 4. [Other apps](#4-other-apps)
 5. [What the camera writes into a file](#5-what-the-camera-writes-into-a-file)
 6. [Consequences for a client](#6-consequences-for-a-client)
+   - [What GR Photo does](#61-what-gr-photo-does)
 7. [Hardware tests](#7-hardware-tests)
 8. [Evidence](#8-evidence)
 
@@ -139,6 +140,26 @@ Observed 2026-11-12 in files a GR IV and a GR IV HDF (firmware 1.20) had saved w
 - A refused write means the setting is off or the camera could not take it; it is not a lost link.
 - After the link drops, or the phone stops writing, the camera tags with the last position for up to 600 s more. Only turning Store Location Info off clears it sooner.
 
+### 6.1 What GR Photo does
+
+All of this is GR Photo's choice **[design]** (2026-11-12), built from §1 and tested against the simulated camera only. No value has been tuned on hardware; the values are in `packages/gr_camera/lib/src/geotag/geotag_options.dart`.
+
+**When the phone is located.** Live geotagging is a per-camera switch, offered once when a camera is first linked. With it on, the phone's precise location is requested only while that camera is linked, on, and has Store Location Info on. A camera linked in its off state takes no record and is not woken; the location starts when it reports Camera Power on. Ricoh's apps locate the phone whenever their service runs (§2.1, §3).
+
+**The run.** A location run (on Android a foreground service of the location type with a notification and a wake lock, on iOS background location updates under "While Using" access) begins as soon as the camera is linked, on or off, and idles without a location request while the camera is off. It begins then because neither Android nor iOS lets it begin later with the app not in front. On iOS an idle run cannot be held without any location request, so it asks for the coarsest one (3 km accuracy, 3 km distance filter); those positions are never sent to the camera. With the camera out of reach and the app not in front, GR Photo links it again every 20 s for as long as the run lasts. The run ends after 1 hour without a camera that is on, when the user stops it from the Android notification, or when the app is closed.
+
+**What is written.** One fix is requested every 5 s. A fix is written when it is at most 60 s old and accurate to 100 m or better, and either the phone moved more than 5 m (or more than the fix's own accuracy, when that is larger) since the last write, with at least 5 s between writes, or 180 s have passed since the last write. At the 180 s write a coarser fix that agrees with the better one already sent re-sends the better position with the new fix time. When fixes stop arriving nothing is written, and the camera lets its location run out after 600 s rather than keep a position that is no longer known to be right. Ricoh's apps rewrite their last position with no check of its age (§2.2, §3).
+
+**Store Location Info.** Turning geotagging on writes GEO Tag `01`; turning it off writes `00`, which clears the camera's location at once (§1.3). GR Photo follows the characteristic's notifications: when the user turns the setting off in the camera's menu, GR Photo stops locating the phone and does not turn it back on until the user asks.
+
+**Clock.** The fix time is written in UTC, as both of Ricoh's apps do (§2.5). The camera's clock is local time with no zone ([ble.md §Date/time sync](ble.md#datetime-sync)). GR Photo reads Date Time when the camera is linked and on, every hour while it stays so, and when the phone's time zone changes, and writes the phone's local time only when the two differ by 2 s or more. GR WORLD writes on every connect; GR Photo does not, because a GR IV clears its location 1 s after any clock change (§1.3). After a clock write GR Photo writes the next fix whether or not the phone moved. The write is made as a new second begins, since the camera takes whole seconds. This runs while live geotagging is on, and otherwise while the camera's Sync time option is on (the default).
+
+**Not in front.** On Android the foreground service keeps the process and its Bluetooth link working. On iOS the app declares the `location` background mode only, not `bluetooth-central`: the location updates keep it running, and whether Core Bluetooth then delivers the held link's notifications (Camera Power on) and lets a camera that went out of reach be linked again is **[unknown]** until tried on an iPhone (§7 test 10).
+
+**Platforms.** Android reads fixes from `LocationManager` (the fused provider where the phone has one, GPS otherwise), so no Google Play services library is needed. iOS reads them from `CLLocationManager` and shows its own indicator instead of a notification; it has no Stop button and no way to open the phone-wide location switch.
+
+**Run on an emulator.** Observed on an Android 16 emulator (API 36, 2026-11-12) with the simulated camera and the phone's real location code: the permission prompt, the foreground service (type `location`) with its wake lock, a fused-provider request every 5 s, fixes written to the camera, and the notification's Stop ending the run until the app is opened again. A notification the service posts before the user allows notifications is dropped and does not appear when they are allowed, so GR Photo posts it again when the prompt is answered. The iOS code has been compiled but not run.
+
 ## 7. Hardware tests
 
 None run yet.
@@ -152,6 +173,9 @@ None run yet.
 7. A record written while the camera is in its off state (Bluetooth only): accepted, refused, or does the link drop first?
 8. How long after power-on a phone in a pocket has linked and written its first record, on Android and iOS.
 9. GR III and IIIx: all of the above, and whether a clock change clears the location.
+10. GR Photo's run (§6.1) with the phone in a pocket and the screen off, on Android and on iOS: whether the camera turning on starts the location, how long that takes, and what the idle run (wake lock on Android, coarse updates on iOS) costs the phone's battery over an hour.
+11. GR Photo's thresholds (§6.1) on a walk and indoors: how many writes an hour, how far the recorded position is from where each picture was taken, and how often pictures go untagged.
+12. Date Time read and write on a GR IV and a GR III: the offset GR Photo measures just after its own write, and whether a write that changes nothing still clears the location.
 
 ## 8. Evidence
 
