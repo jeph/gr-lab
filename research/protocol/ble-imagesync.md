@@ -379,4 +379,4 @@ Capture settings: `BleCaptureSettingConverter` + `capture_ricoh_gr_iii_ble.yaml`
    | Company-ID check | yes | no |
 
 7. **Model coverage:** Image Sync 2.1.32 BLE supports only GR III/IIIx (+HDF) and K-3 III (+Mono). Unknown model codes (GR IV 7–10) make the advert unparseable. For GR IV, GR WORLD remains the only reference for wlanFreq/security/cameraName/firmware characteristics.
-8. **GPS time is UTC in Image Sync**; GR WORLD's timezone is unknown. Date Time is local in both.
+8. **GPS time is the fix time in UTC** in Image Sync and in GR WORLD ([geotagging.md](geotagging.md)). Date Time is local in both.

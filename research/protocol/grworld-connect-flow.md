@@ -169,7 +169,7 @@ The object pool contains these FBP method-channel names and no others: `connect`
 7. **Operation-mode power-on check 0xd403b8** (at 0xd2f60c). See §4.
 8. Pending camera-name write 0xd3fdf8 (0xd2f66c). Refresh WLAN / Camera Information into the DB (0xd3f640, 0xd3e874, 0xd3e248).
 9. Firmware fetch and check (0xd38644 at 0xd2f878; 0x54b6c0 at 0xd2fa60). Errors are logged only.
-10. Subscribe notifications 0xd30c30 (0xd2fb28). Start the location push 0xd46f20 (0xd2fc9c). Analytics `success` (0xd2fde0). Time sync 0xd30254 if `is_time_sync` (0xd2ff7c).
+10. Subscribe notifications 0xd30c30 (0xd2fb28). Analytics `success` (0xd2fde0). Time sync 0xd30254 if `is_time_sync` (0xd2ff7c). The location push 0xd46f20 is **not** started here on success: its call at 0xd2fc9c is in the exception handler entered at 0xd2fb40, which the success path jumps past (0xd2fb3c → 0xd2fe64; re-read 2026-11-12, correcting this step). What does start it is in [geotagging.md §2.1](geotagging.md#21-acquiring-location).
 
 ### 2.3 Failure handling and bond loss (Q3)
 

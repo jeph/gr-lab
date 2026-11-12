@@ -10,7 +10,7 @@ Source: RICOH GR WORLD for Android, `com.ricohimaging.grworld` 2.0.0 (versionCod
 - Turn the camera's Wi-Fi AP on: write `01` to `9111CDD0-9F01-45C4-A2D4-E09E8FB0424D`; read SSID `90638E5A-…` and passphrase `0F38279C-…`; join the AP. Off: write `00`.
 - Remote shutter: write `01 01` to `559644B8-E0BC-4011-929B-5CF9199851E7`. To cancel a running 10 s self-timer countdown, write `01` to `009A8E70-B306-4451-B943-7F54392EB971`.
 - Clock sync: write 7 bytes `yearLE16, month, day, hour, minute, second` (phone local time) to `FA46BBDD-8A8F-4796-8CF3-AA58949B130A`.
-- GPS: write a 32-byte record to `28F59D60-8B8E-4FCD-A81F-61BDB46595A9` every 5, 30 or 180 s.
+- GPS: write a 32-byte record to `28F59D60-8B8E-4FCD-A81F-61BDB46595A9` every 5, 30 or 180 s. The camera takes it only while GEO Tag `A36AFDCF` is on and keeps it for 600 s ([geotagging.md](geotagging.md)).
 - Camera power off: write `00` to `B58CE84C-0666-4DE9-BEC8-2D27B27B3211`. The app never writes `01` there. **Power on (GR WORLD):** connect directly to the bonded camera while it is off, read Operation Mode `1452335A-EC7F-4877-B8AB-0F72E18BB295`, and if it reads `02` (bleStartup) write `01` (playback) or `00` (capture), then continue on the same link. On hardware the **first** link drops about 5.5 s after opening while the camera wakes; reconnect at once (GR WORLD's connect retry) and do the mode check on the second link. See [GR WORLD power-on](power-on-grworld.md). Image Sync (GR III/IIIx) uses a bare connection instead: [Image Sync BLE §2](ble-imagesync.md#2-camera-power-on--wake-from-off--definitive-answer).
 - **Exposure, focus status and more:** Image Sync documents 27 further characteristics (shutter, aperture, ISO, EV, WB, metering, file type, focus mode/AF status, shot count, setting lists, three aggregate-notification characteristics, BLE Enable Condition, WLAN channel). See [ble-imagesync.md](ble-imagesync.md).
 - **Firmware comparison:** all 46 app-known custom UUID constants occur in the analyzed GR IV `bled`; 32 occur in GR III's, with 25 additional shared UUID-shaped candidates not used by this app. These byte matches do not establish active GATT registration or permissions. The GR IV WLAN-write handler separately corroborates `byte0 == 1` versus other values for the on/off request. See [firmware inventory](../firmware-protocol-inventory.md#gatt-uuid-inventory-versus-the-app) for model hashes, exact matches and native evidence.
@@ -479,9 +479,9 @@ Write 0xe608e8 to `28F59D60-…`, 32 bytes:
 | 30 | 1 | second | |
 | 31 | 1 | datum | constant 0 (0xe60b70) |
 
-Whether the timestamp is UTC or local is **[unknown]**: it comes from geolocator's `Position.timestamp`, and the conversion was not traced.
+The timestamp is the **fix time in UTC**: it is geolocator's `Position.timestamp`, built with `isUtc: true` (0xc28bd4) and encoded without conversion ([geotagging.md §2.5](geotagging.md#25-timestamp)). The camera firmware never reads the datum byte ([geotagging.md §1.1](geotagging.md#11-bluetooth-daemon-bled)).
 
-Timing: the location service (0xd46f20) reads the SharedPreferences int `locationFreqNum` [pp+0x2a890] (default 0) and maps it to a periodic timer: 0 → 5 s, 1 → 30 s, 2 → 180 s (0xd482f0/0xd48360; Smi 0xa/0x3c/0x168). Each tick (0xd47664) takes the last known position and writes it (0xd47794 → 0xd47b00 → 0xd47c6c). The preconditions in 0xd47794 (provider checks, presumably geotag enabled and camera connected) are **[inferred]**.
+Timing: the location service (0xd46f20) reads the SharedPreferences int `locationFreqNum` [pp+0x2a890] (default 0) and maps it to a periodic timer: 0 → 5 s, 1 → 30 s, 2 → 180 s (0xd482f0/0xd48360; Smi 0xa/0x3c/0x168). Each tick (0xd47664) takes the last stored position and writes it (0xd47794 → 0xd47b00 → 0xd47c6c) when a camera is connected and its GEO Tag is on, with no check that the position is new. The service's start and stop conditions, the background limit and what the camera does with a record are in [geotagging.md](geotagging.md).
 
 ## Evidence
 
@@ -618,6 +618,5 @@ Working notes with more detail: `research/notes/ble/{CamSvcChars,WfbChars,WlanCh
     - whether File Type (`95BFA8CA`) byte 3 follows the GR IV's Shooting Memory Setting: read it with the setting on Internal Memory Priority and on Memory Card Priority (see [Storage information](#storage-information))
     - Storage Information with no card inserted: one entry or two, and the count byte (GR IV `bled` always writes `02`)
     - Image Control blob byte 1 and version differences
-    - GPS `datum` byte
-13. GPS timestamp: UTC or local? Does the camera ignore GPS writes when geotag is off?
+13. GPS on hardware: the firmware reads the timestamp as UTC, ignores the datum byte and refuses a record while GEO Tag is off, all from code. The tests that confirm it are in [geotagging.md §7](geotagging.md#7-hardware-tests).
 14. Camera Information MAC string format (colons, case). Exact DIS `2A24` model number for GR IV Monochrome / HDF: GR WORLD's firmware gate needs exactly "GR IV"/"GR IIIx"/"GR III"/"GR II"; `bled` has no DIS implementation, so the DIS server and strings are unknown. The custom model-name characteristic returns the firmware model property (e.g. `RICOH GR IV Monochrome` **[inferred]**).
