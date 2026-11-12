@@ -134,8 +134,11 @@ final class Harness {
 
   Future<void> close() async {
     for (final e in _engines) {
-      await e.flush();
       e.dispose();
+      // A job in its last steps still deletes its copies and writes the
+      // queue, into the folders deleted below.
+      await e.whenIdle();
+      await e.flush();
     }
     link.dispose();
     http.close(force: true);
