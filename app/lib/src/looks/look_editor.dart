@@ -175,7 +175,7 @@ class _LookEditorState extends State<LookEditor>
       PreviewPhoto(
         image: _previewSized(AssetImage(sample.asset)),
         rerender: LookRerender(_renderer, source: sample.look),
-        before: sample.look == null ? null : Look.onBase(LookBase.standard),
+        before: Look.onBase(LookBase.standard),
       ),
   ];
 

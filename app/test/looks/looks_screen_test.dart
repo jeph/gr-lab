@@ -712,23 +712,12 @@ void main() {
     expect(previews().last.look.base, LookBase.standard);
     expect(note, findsNothing);
 
-    // The last sample is scrolled to; its file does not say which look it
-    // was taken with.
-    final unknown = samplePhotos.indexWhere((p) => p.base == null);
-    expect(unknown, samplePhotos.length - 1);
-    await pick(unknown);
-    expect(preview().rerender.source, isNull);
-    expect(previews(), hasLength(1), reason: 'before: no look to undo');
-    expect(
-      find.descendant(
-        of: note,
-        matching: find.text(
-          "GR Lab doesn't know which look this photo was taken with, so the "
-          'preview treats it as Standard.',
-        ),
-      ),
-      findsOneWidget,
-    );
+    // The last sample is scrolled to.
+    final last = samplePhotos.length - 1;
+    await pick(last);
+    expect(preview().rerender.source?.base, samplePhotos[last].base);
+    expect(previews(), hasLength(2), reason: 'before: its look undone');
+    expect(note, findsNothing);
     await app.dispose();
   });
 

@@ -13,22 +13,19 @@ final class SamplePhoto {
 
   /// The base image the camera developed the photo with, as the maker
   /// note of the camera's file names it
-  /// (research/image-control-processing.md §10.1); null for a photo whose
-  /// file no longer says.
-  final LookBase? base;
+  /// (research/image-control-processing.md §10.1). A photo whose file does
+  /// not say is not a sample: its look could not be undone.
+  final LookBase base;
 
   /// The look the photo was developed with: [base] with every adjustment
   /// at 0 \[inferred\], as the file does not say what they were in a form
-  /// GR Lab reads. Null when the base is not known either.
-  Look? get look => switch (base) {
-    null => null,
-    final base => Look.onBase(base),
-  };
+  /// GR Lab reads.
+  Look get look => Look.onBase(base);
 }
 
 /// GR Lab's own photos, taken with a GR IV and a GR IV HDF, in the order
 /// the welcome screen shows them and the look editor offers them. The
-/// first is taller than wide, and its look is known.
+/// first is taller than wide.
 const List<SamplePhoto> samplePhotos = [
   SamplePhoto('assets/samples/sample01.jpg', LookBase.positiveFilm),
   SamplePhoto('assets/samples/sample02.jpg', LookBase.positiveFilm),
@@ -36,6 +33,4 @@ const List<SamplePhoto> samplePhotos = [
   SamplePhoto('assets/samples/sample04.jpg', LookBase.negativeFilm),
   SamplePhoto('assets/samples/sample05.jpg', LookBase.positiveFilm),
   SamplePhoto('assets/samples/sample06.jpg', LookBase.positiveFilm),
-  // Saved again by a photo editor, which dropped the maker note.
-  SamplePhoto('assets/samples/sample07.jpg', null),
 ];

@@ -11,8 +11,7 @@ The photos of the welcome screen, which are also the look editor's sample
 photos, are GR Lab's own. Jeph took them with a GR IV and a GR IV HDF, and they
 are under GR Lab's MIT License like the rest of the app:
 assets/samples/sample01, assets/samples/sample02, assets/samples/sample03,
-assets/samples/sample04, assets/samples/sample05, assets/samples/sample06 and
-assets/samples/sample07.
+assets/samples/sample04, assets/samples/sample05 and assets/samples/sample06.
 
 assets/demo/tall02: Daniel Genser,
 https://unsplash.com/photos/PzPbh-faPgU
