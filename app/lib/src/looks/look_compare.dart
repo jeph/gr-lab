@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
@@ -415,7 +416,40 @@ class _Divider extends StatelessWidget {
   );
 }
 
-/// The choice of [LookCompareMode], one sign each (mock `.segc`).
+/// The ground of a control that lies over a picture (mock `look-photos`
+/// A): the app's surface, with the picture showing through it blurred, so
+/// that the control reads as lying on the picture \[design\].
+class OverPicture extends StatelessWidget {
+  const new({required this.child, super.key, this.padding = EdgeInsets.zero});
+
+  static const double radius = 12;
+
+  final EdgeInsets padding;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = GrColors.of(context);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            color: c.s2.withValues(alpha: .82),
+            borderRadius: BorderRadius.circular(radius),
+            border: Border.all(color: c.line2),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+/// The choice of [LookCompareMode], one sign each (mock `.segc`), on the
+/// ground of a control over a picture ([OverPicture]).
 class LookCompareModeSwitch extends StatelessWidget {
   const new({required this.selected, required this.onSelect, super.key});
 
@@ -426,13 +460,8 @@ class LookCompareModeSwitch extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
-    return Container(
+    return OverPicture(
       padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: c.s2,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: c.line),
-      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -454,8 +483,8 @@ class LookCompareModeSwitch extends StatelessWidget {
                   ),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 160),
-                    width: 44,
-                    height: 34,
+                    width: 36,
+                    height: 30,
                     decoration: BoxDecoration(
                       color: mode == selected ? c.s4 : Colors.transparent,
                       borderRadius: BorderRadius.circular(9),
@@ -463,7 +492,7 @@ class LookCompareModeSwitch extends StatelessWidget {
                     alignment: Alignment.center,
                     child: IconTheme(
                       data: IconThemeData(
-                        size: 20,
+                        size: 18,
                         color: mode == selected ? c.t1 : c.t2,
                       ),
                       child: switch (mode) {
@@ -490,7 +519,11 @@ class LookCompareModeSwitch extends StatelessWidget {
   }
 }
 
-/// The photos a look can be previewed on, as small pictures to pick from.
+/// The photos a look can be previewed on, as small pictures to pick from
+/// (mock `look-photos` A). They share the length of [axis] between them,
+/// each up to a largest size, so that every photo is in view and none of
+/// them scrolls \[design\]. With [ownFirst] the first is the look's own
+/// photo: it carries a mark, and a line sets it apart from the others.
 class PreviewPhotoSwitch extends StatelessWidget {
   const new({
     required this.photos,
@@ -498,6 +531,8 @@ class PreviewPhotoSwitch extends StatelessWidget {
     required this.selected,
     required this.onSelect,
     super.key,
+    this.axis = Axis.horizontal,
+    this.ownFirst = false,
   });
 
   final List<PreviewPhoto> photos;
@@ -507,60 +542,114 @@ class PreviewPhotoSwitch extends StatelessWidget {
   final int selected;
   final ValueChanged<int> onSelect;
 
+  /// Across, as a row, or down, as a column.
+  final Axis axis;
+  final bool ownFirst;
+
+  /// The most a small picture takes in a row and in a column; it gives up
+  /// length along [axis] when the photos have less than that each.
+  static const Size _largestAcross = Size(58, 40);
+  static const Size _largestDown = Size(52, 52);
+
+  static const double _gap = 2;
+
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    return Row(
+    final down = axis == Axis.vertical;
+    final ownApart = ownFirst && photos.length > 1;
+    return Flex(
+      direction: axis,
       mainAxisSize: MainAxisSize.min,
       children: [
-        for (var i = 0; i < photos.length; i++)
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Tooltip(
-              message: labels[i],
-              child: Semantics(
-                button: true,
-                selected: i == selected,
-                child: Pressable(
-                  key: ValueKey('look-photo:$i'),
-                  onTap: () => onSelect(i),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(11),
-                      border: Border.all(
-                        width: 2,
-                        color: i == selected ? c.accent : Colors.transparent,
-                      ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(7),
-                      child: ExifOrientation(
-                        orientation: photos[i].orientation ?? 1,
-                        child: Image(
-                          image: _small(photos[i].image),
-                          fit: BoxFit.cover,
-                          excludeFromSemantics: true,
-                        ),
-                      ),
-                    ),
+        for (var i = 0; i < photos.length; i++) ...[
+          if (i > (ownApart ? 1 : 0)) const SizedBox.square(dimension: _gap),
+          Flexible(
+            child: SizedBox.fromSize(
+              size: down ? _largestDown : _largestAcross,
+              child: _small(c, i),
+            ),
+          ),
+          if (i == 0 && ownApart)
+            Container(
+              key: const Key('look-photo-own-line'),
+              width: down ? 22 : 1,
+              height: down ? 1 : 22,
+              margin: down
+                  ? const EdgeInsets.symmetric(vertical: 4)
+                  : const EdgeInsets.symmetric(horizontal: 4),
+              color: c.line2,
+            ),
+        ],
+      ],
+    );
+  }
+
+  /// The small picture of photo [i], which picks it; ringed when it is the
+  /// one picked.
+  Widget _small(GrColors c, int i) => Tooltip(
+    message: labels[i],
+    child: Semantics(
+      button: true,
+      selected: i == selected,
+      child: Stack(
+        fit: StackFit.expand,
+        clipBehavior: Clip.none,
+        children: [
+          Pressable(
+            key: ValueKey('look-photo:$i'),
+            onTap: () => onSelect(i),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(11),
+                border: Border.all(
+                  width: 2,
+                  color: i == selected ? c.accent : Colors.transparent,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(7),
+                child: ExifOrientation(
+                  orientation: photos[i].orientation ?? 1,
+                  child: Image(
+                    image: _decodedSmall(photos[i].image),
+                    fit: BoxFit.cover,
+                    excludeFromSemantics: true,
                   ),
                 ),
               ),
             ),
           ),
-      ],
-    );
-  }
+          if (i == 0 && ownFirst)
+            Positioned(
+              right: -4,
+              bottom: -4,
+              child: IgnorePointer(
+                child: Container(
+                  key: const Key('look-photo-own'),
+                  width: 19,
+                  height: 19,
+                  decoration: BoxDecoration(
+                    color: c.bg,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: c.line2),
+                  ),
+                  child: Icon(Icons.bookmark_rounded, size: 11, color: c.t1),
+                ),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
 
   /// [photo] decoded no larger than a small picture needs, however large
   /// the preview asks for it: there may be several of them.
-  static ImageProvider _small(ImageProvider photo) => ResizeImage(
+  static ImageProvider _decodedSmall(ImageProvider photo) => ResizeImage(
     switch (photo) {
       ResizeImage(:final imageProvider) => imageProvider,
       _ => photo,

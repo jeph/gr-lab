@@ -495,4 +495,121 @@ void main() {
     expect(picked, [0, 1, 2]);
     expect(find.byTooltip('Sample'), findsOneWidget);
   });
+
+  /// Seven photos, the first the look's own when [ownFirst], in a strip
+  /// along [axis] that has [length] to share between them.
+  Future<void> showStrip(
+    WidgetTester tester, {
+    required double length,
+    Axis axis = Axis.horizontal,
+    bool ownFirst = true,
+  }) async {
+    final photo = await photoOf(tester);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: grTheme(GrColors.light),
+        home: Center(
+          child: SizedBox(
+            width: axis == Axis.horizontal ? length : null,
+            height: axis == Axis.vertical ? length : null,
+            child: PreviewPhotoSwitch(
+              photos: [for (var i = 0; i < 7; i++) photo],
+              labels: [for (var i = 0; i < 7; i++) 'Photo $i'],
+              selected: 2,
+              onSelect: (_) {},
+              axis: axis,
+              ownFirst: ownFirst,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Rect> smallPictures(WidgetTester tester) => [
+    for (var i = 0; i < 7; i++)
+      tester.getRect(find.byKey(ValueKey('look-photo:$i'))),
+  ];
+
+  testWidgets('the small pictures share the width they are given, so all '
+      'of them are in view however narrow it is, and grow no larger than '
+      'they need where it is wide', (tester) async {
+    // What is under the picture on a phone 344 pt wide, the narrowest.
+    await showStrip(tester, length: 312);
+    final strip = tester.getRect(find.byType(PreviewPhotoSwitch));
+    var pictures = smallPictures(tester);
+    expect(tester.takeException(), isNull);
+    for (final (i, picture) in pictures.indexed) {
+      expect(
+        strip.expandToInclude(picture),
+        rectMoreOrLessEquals(strip),
+        reason: 'photo $i',
+      );
+      expect(picture.width, closeTo(pictures.first.width, .01));
+      expect(picture.height, 40);
+      if (i > 0) expect(picture.left, greaterThan(pictures[i - 1].right));
+    }
+    expect(pictures.first.width, inInclusiveRange(40, 44));
+    expect(pictures.last.right, closeTo(strip.right, .01));
+
+    await showStrip(tester, length: 700);
+    pictures = smallPictures(tester);
+    expect(pictures.first.width, 58);
+    expect(pictures.last.right, lessThan(500), reason: 'they stay together');
+  });
+
+  testWidgets('down the side of a picture the small pictures share the '
+      'height instead', (tester) async {
+    await showStrip(tester, length: 300, axis: Axis.vertical);
+    final strip = tester.getRect(find.byType(PreviewPhotoSwitch));
+    final pictures = smallPictures(tester);
+    expect(tester.takeException(), isNull);
+    for (final (i, picture) in pictures.indexed) {
+      expect(
+        strip.expandToInclude(picture),
+        rectMoreOrLessEquals(strip),
+        reason: 'photo $i',
+      );
+      expect(picture.width, 52);
+      expect(picture.height, closeTo(pictures.first.height, .01));
+      if (i > 0) expect(picture.top, greaterThan(pictures[i - 1].bottom));
+    }
+    expect(pictures.first.height, inInclusiveRange(36, 42));
+
+    await showStrip(tester, length: 600, axis: Axis.vertical);
+    expect(smallPictures(tester).first.height, 52);
+  });
+
+  testWidgets("the look's own photo carries a mark and a line sets it apart "
+      'from the others; without one of its own no photo is marked', (
+    tester,
+  ) async {
+    final mark = find.byKey(const Key('look-photo-own'));
+    final line = find.byKey(const Key('look-photo-own-line'));
+    for (final axis in Axis.values) {
+      await showStrip(tester, length: 320, axis: axis);
+      final pictures = smallPictures(tester);
+      expect(
+        pictures.first.inflate(5).contains(tester.getCenter(mark)),
+        isTrue,
+        reason: 'on the first photo, $axis',
+      );
+      expect(
+        pictures[1].contains(tester.getCenter(mark)),
+        isFalse,
+        reason: 'not on the second, $axis',
+      );
+      final between = tester.getCenter(line);
+      final (after, before, at) = axis == Axis.horizontal
+          ? (pictures.first.right, pictures[1].left, between.dx)
+          : (pictures.first.bottom, pictures[1].top, between.dy);
+      expect(at, inExclusiveRange(after, before), reason: '$axis');
+      // The mark is no button of its own: its photo takes the tap.
+      expect(mark.hitTestable(), findsNothing);
+    }
+
+    await showStrip(tester, length: 320, ownFirst: false);
+    expect(mark, findsNothing);
+    expect(line, findsNothing);
+  });
 }

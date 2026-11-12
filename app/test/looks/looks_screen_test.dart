@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -115,6 +116,22 @@ Finder _inBases(String text) => find.descendant(
   of: find.byKey(const Key('look-bases')),
   matching: find.text(text),
 );
+
+/// The fold of a foldable at [bounds] of the window, flat unless
+/// [halfOpen].
+DisplayFeature _fold(Rect bounds, {bool halfOpen = false}) => DisplayFeature(
+  bounds: bounds,
+  type: DisplayFeatureType.fold,
+  state: halfOpen
+      ? DisplayFeatureState.postureHalfOpened
+      : DisplayFeatureState.postureFlat,
+);
+
+/// The small picture of each photo the editor can preview on.
+List<Rect> _smallPictures(WidgetTester tester, int count) => [
+  for (var i = 0; i < count; i++)
+    tester.getRect(find.byKey(ValueKey('look-photo:$i'))),
+];
 
 Look _slotLook(TestApp app, int number) =>
     Look.fromBytes(Uint8List.fromList(app.camera.lookSlot(number).data))!;
@@ -561,6 +578,14 @@ void main() {
     await open(plain);
     expect(note, findsNothing);
     expect(previewed(), isNot(isA<AssetImage>()));
+    // Its own photo is the first of them, and is marked as its own.
+    expect(
+      tester
+          .getRect(ownPhoto)
+          .inflate(5)
+          .contains(tester.getCenter(find.byKey(const Key('look-photo-own')))),
+      isTrue,
+    );
     await _pickBase(tester, LookBase.vivid);
     expect(note, findsNothing, reason: 'a Standard photo suits every look');
     expect(preview().look.base, LookBase.vivid);
@@ -820,6 +845,28 @@ void main() {
       expect(preview.width, closeTo(size.width, .01));
       expect(preview.height, greaterThan(60));
       expect(preview.bottom, lessThanOrEqualTo(list.top));
+      // Every photo to preview on is in view under the picture, none
+      // smaller than a finger needs, and the picture's two controls lie
+      // over its place.
+      final strip = tester.getRect(find.byType(PreviewPhotoSwitch));
+      expect(strip.top, greaterThanOrEqualTo(preview.bottom));
+      expect(strip.bottom, lessThanOrEqualTo(list.top));
+      for (final photo in _smallPictures(tester, samplePhotos.length)) {
+        expect(screen.expandToInclude(photo), screen);
+        expect(photo.width, greaterThanOrEqualTo(40));
+      }
+      for (final control in [
+        find.byType(LookCompareModeSwitch),
+        find.byKey(const Key('look-preview-fullscreen')),
+      ]) {
+        expect(preview.expandToInclude(tester.getRect(control)), preview);
+        expect(control.hitTestable(), findsOneWidget);
+      }
+      expect(
+        find.byKey(const Key('look-photo-own')),
+        findsNothing,
+        reason: 'a new look has no photo of its own',
+      );
       expect(list.height, greaterThan(60), reason: 'room for a parameter');
       expect(screen.contains(save.topLeft), isTrue);
       expect(screen.contains(save.bottomRight - const Offset(1, 1)), isTrue);
@@ -836,10 +883,10 @@ void main() {
     });
   }
 
-  for (final (name, size) in const [
-    ('a small phone', Size(320, 568)),
-    ('half a phone, as in split screen', Size(360, 330)),
-    ('a phone held on its side', Size(844, 390)),
+  for (final (name, size, photosAtSide) in const [
+    ('a small phone', Size(320, 568), false),
+    ('half a phone, as in split screen', Size(360, 330), false),
+    ('a phone held on its side', Size(844, 390), true),
   ]) {
     testWidgets("on $name the preview's button grows it to the whole screen, "
         'with the choice of photo and of comparison and nothing else, and '
@@ -890,7 +937,9 @@ void main() {
         await tester.pump();
       }
 
-      await tester.drag(list, const Offset(0, -60));
+      // Not so far that the preview's button, at its top, is under the app
+      // bar where the preview scrolls with the controls.
+      await tester.drag(list, const Offset(0, -40));
       await tester.pump();
       final scrolled = scroll().pixels;
       expect(scrolled, greaterThan(0));
@@ -925,16 +974,27 @@ void main() {
       expect(find.byType(AppBar), findsNothing);
       expect(save.hitTestable(), findsNothing);
       expect(tester.state(compare), same(state), reason: 'its picture kept');
-      expect(tester.getSize(compare).width, size.width);
+      // The photos lie under the picture, or stand at its side in a window
+      // that is short and wide.
+      final strip = tester.getRect(find.byType(PreviewPhotoSwitch));
+      if (photosAtSide) {
+        expect(strip.right, lessThanOrEqualTo(tester.getRect(compare).left));
+        expect(tester.getSize(compare).width, greaterThan(size.width - 80));
+      } else {
+        expect(strip.top, greaterThanOrEqualTo(tester.getRect(compare).bottom));
+        expect(tester.getSize(compare).width, size.width);
+      }
       expect(tester.getSize(compare).height, greaterThan(midway));
       expect(tester.getSize(compare).height, greaterThan(size.height - 100));
       expect(find.byTooltip('Exit full screen'), findsOneWidget);
       expect(find.byTooltip('Full screen'), findsNothing);
-      // The photos scroll; the first ones are in reach.
-      expect(
-        find.byKey(const ValueKey('look-photo:0')).hitTestable(),
-        findsOneWidget,
-      );
+      // Every photo is in reach: the look's own and the samples.
+      for (var i = 0; i <= samplePhotos.length; i++) {
+        expect(
+          find.byKey(ValueKey('look-photo:$i')).hitTestable(),
+          findsOneWidget,
+        );
+      }
       expect(find.byType(LookCompareModeSwitch).hitTestable(), findsOneWidget);
 
       // There too a tap on the picture is the comparison's own.
@@ -1087,9 +1147,9 @@ void main() {
     });
   }
 
-  for (final (name, size) in const [
-    ('a phone held on its side', Size(844, 390)),
-    ('a tablet held on its side', Size(1180, 820)),
+  for (final (name, size, photosAtSide) in const [
+    ('a phone held on its side', Size(844, 390), true),
+    ('a tablet held on its side', Size(1180, 820), false),
   ]) {
     testWidgets('on $name the editor puts the preview beside the controls, '
         'and turning the screen keeps what the editor holds', (tester) async {
@@ -1107,11 +1167,30 @@ void main() {
       final compare = find.byType(LookCompare);
       final bases = find.byKey(const Key('look-bases'));
       final save = find.byKey(const Key('look-save'));
+      final strip = find.byType(PreviewPhotoSwitch);
       expect(
-        tester.getRect(find.byType(LookCompareModeSwitch)).bottom,
+        tester.getRect(strip).bottom,
         lessThanOrEqualTo(size.height - bar),
-        reason: "the switches keep clear of the system's bar",
+        reason: "the photos keep clear of the system's bar",
       );
+      // In a short and wide window the photos stand at the picture's
+      // side, where they cost it no height; otherwise they lie under it.
+      if (photosAtSide) {
+        expect(
+          tester.getRect(strip).right,
+          lessThanOrEqualTo(tester.getRect(compare).left),
+        );
+        expect(tester.getRect(compare).bottom, closeTo(size.height - bar, .01));
+      } else {
+        expect(
+          tester.getRect(strip).top,
+          greaterThanOrEqualTo(tester.getRect(compare).bottom),
+        );
+      }
+      for (final photo in _smallPictures(tester, samplePhotos.length)) {
+        expect((Offset.zero & size).expandToInclude(photo), Offset.zero & size);
+        expect(photo.shortestSide, greaterThanOrEqualTo(36));
+      }
       expect(
         tester.getRect(compare).right,
         lessThanOrEqualTo(tester.getRect(bases).left),
@@ -1135,6 +1214,11 @@ void main() {
       );
       expect(tester.state(compare), same(state));
       expect(
+        tester.getRect(strip).top,
+        greaterThanOrEqualTo(tester.getRect(compare).bottom),
+        reason: 'upright, the photos lie under the picture',
+      );
+      expect(
         tester.widget<LookCompare>(compare).mode,
         LookCompareMode.sideBySide,
       );
@@ -1142,6 +1226,193 @@ void main() {
       await app.dispose();
     });
   }
+
+  testWidgets('on a foldable unfolded with its hinge upright the preview '
+      'has one side of the hinge and the controls the other, though the '
+      'window is taller than it is wide; without a hinge such a window '
+      'keeps the preview above the controls', (tester) async {
+    const size = Size(750, 830);
+    final app = await _start(tester, saveCamera: false);
+    tester.view
+      ..physicalSize = size
+      ..devicePixelRatio = 1
+      ..displayFeatures = [_fold(const Rect.fromLTWH(365, 0, 20, 830))];
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+    await tapWhenReady(tester, find.byKey(const Key('looks-new')));
+    await _editorOpen(tester);
+    final compare = find.byType(LookCompare);
+    final strip = find.byType(PreviewPhotoSwitch);
+    final bases = find.byKey(const Key('look-bases'));
+    final save = find.byKey(const Key('look-save'));
+    expect(tester.getRect(compare).left, 0);
+    expect(tester.getRect(compare).right, 365);
+    expect(tester.getRect(strip).right, lessThanOrEqualTo(365));
+    expect(
+      tester.getRect(strip).top,
+      greaterThanOrEqualTo(tester.getRect(compare).bottom),
+    );
+    expect(tester.getRect(bases).left, greaterThanOrEqualTo(385));
+    expect(tester.getRect(save).left, greaterThanOrEqualTo(385));
+    expect((Offset.zero & size).contains(tester.getRect(save).center), true);
+
+    final state = tester.state(compare);
+    tester.view.displayFeatures = const [];
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(tester.getRect(compare).width, size.width);
+    expect(
+      tester.getRect(compare).bottom,
+      lessThanOrEqualTo(tester.getRect(bases).top),
+    );
+    expect(tester.state(compare), same(state));
+    await app.dispose();
+  });
+
+  testWidgets('on a foldable half-open on a table the picture and its two '
+      'controls have the upright half, and the photos and every other '
+      'control the flat half, in two columns; full screen keeps to the '
+      'halves, and opened flat the editor is as on any wide screen', (
+    tester,
+  ) async {
+    const size = Size(830, 750);
+    const fold = Rect.fromLTWH(0, 375, 830, 0);
+    final app = await _start(tester, saveCamera: false);
+    tester.view
+      ..physicalSize = size
+      ..devicePixelRatio = 1
+      ..displayFeatures = [_fold(fold, halfOpen: true)];
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+    await tapWhenReady(tester, find.byKey(const Key('looks-new')));
+    await _editorOpen(tester);
+    final compare = find.byType(LookCompare);
+    final strip = find.byType(PreviewPhotoSwitch);
+    final bases = find.byKey(const Key('look-bases'));
+    final groups = find.byKey(const Key('look-groups'));
+    final save = find.byKey(const Key('look-save'));
+    final button = find.byKey(const Key('look-preview-fullscreen'));
+    final bar = tester.getRect(find.byType(AppBar));
+
+    final upright = Rect.fromLTRB(0, bar.bottom, size.width, fold.top);
+    expect(tester.getRect(compare), upright);
+    for (final control in [find.byType(LookCompareModeSwitch), button]) {
+      expect(upright.expandToInclude(tester.getRect(control)), upright);
+    }
+    expect(tester.getRect(strip).top, greaterThanOrEqualTo(fold.bottom));
+    expect(
+      tester.getRect(bases).top,
+      greaterThanOrEqualTo(tester.getRect(strip).bottom),
+    );
+    expect(
+      tester.getRect(groups).left,
+      greaterThanOrEqualTo(tester.getRect(bases).right),
+      reason: 'the groups and their parameters in a column of their own',
+    );
+    expect(tester.getRect(groups).top, greaterThanOrEqualTo(fold.bottom));
+    expect(
+      find.byKey(const ValueKey('look-param:contrast')).hitTestable(),
+      findsOneWidget,
+      reason: 'more than one parameter in view',
+    );
+    expect(tester.getRect(save).right, lessThan(tester.getRect(groups).left));
+    expect((Offset.zero & size).contains(tester.getRect(save).center), true);
+    expect(tester.getRect(save).top, greaterThan(fold.bottom));
+
+    // Another photo is picked on the flat half.
+    final state = tester.state(compare);
+    final first = tester.widget<LookCompare>(compare).photo;
+    await tester.tap(find.byKey(const ValueKey('look-photo:1')));
+    await tester.pump();
+    expect(tester.widget<LookCompare>(compare).photo, isNot(same(first)));
+    expect(tester.state(compare), same(state));
+
+    // Full screen: the picture has all of the upright half, and the
+    // photos are still on the flat one.
+    await tester.tap(button);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.byType(AppBar), findsNothing);
+    expect(save.hitTestable(), findsNothing);
+    expect(tester.getRect(compare), Rect.fromLTRB(0, 0, size.width, fold.top));
+    expect(tester.state(compare), same(state));
+    final firstPhoto = find.byKey(const ValueKey('look-photo:0')).hitTestable();
+    expect(firstPhoto, findsOneWidget);
+    expect(tester.getRect(firstPhoto).top, greaterThanOrEqualTo(fold.bottom));
+    await tester.tap(firstPhoto);
+    await tester.pump();
+    expect(tester.widget<LookCompare>(compare).photo, same(first));
+    await tester.tap(button);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump();
+    expect(tester.getRect(compare), upright);
+
+    // Opened flat, the fold no longer divides the editor.
+    tester.view.displayFeatures = [_fold(fold)];
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(tester.state(compare), same(state));
+    expect(
+      tester.getRect(compare).right,
+      lessThanOrEqualTo(tester.getRect(bases).left),
+    );
+    expect(tester.getRect(compare).bottom, greaterThan(fold.bottom));
+    expect(
+      tester.getRect(strip).top,
+      greaterThanOrEqualTo(tester.getRect(compare).bottom),
+    );
+    await app.dispose();
+  });
+
+  testWidgets('a flip phone half-open on a table has the photos and the '
+      'controls in one column on its flat half, and a window with too '
+      'little on either side of the fold is not divided at it', (tester) async {
+    const size = Size(360, 800);
+    final app = await _start(tester, saveCamera: false);
+    tester.view
+      ..physicalSize = size
+      ..devicePixelRatio = 1
+      ..displayFeatures = [
+        _fold(const Rect.fromLTWH(0, 400, 360, 0), halfOpen: true),
+      ];
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+    await tapWhenReady(tester, find.byKey(const Key('looks-new')));
+    await _editorOpen(tester);
+    final compare = find.byType(LookCompare);
+    final strip = find.byType(PreviewPhotoSwitch);
+    final bases = find.byKey(const Key('look-bases'));
+    final save = find.byKey(const Key('look-save'));
+    expect(tester.getRect(compare).bottom, 400);
+    expect(tester.getRect(compare).width, size.width);
+    expect(tester.getRect(strip).top, greaterThanOrEqualTo(400));
+    expect(
+      tester.getRect(bases).top,
+      greaterThanOrEqualTo(tester.getRect(strip).bottom),
+    );
+    expect(tester.getRect(bases).width, greaterThan(300));
+    expect((Offset.zero & size).contains(tester.getRect(save).center), true);
+
+    // Half a phone's height: 124 pt under the app bar is no place for a
+    // picture.
+    tester.view
+      ..physicalSize = const Size(360, 360)
+      ..displayFeatures = [
+        _fold(const Rect.fromLTWH(0, 180, 360, 0), halfOpen: true),
+      ];
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(
+      find.descendant(of: find.byType(ListView), matching: compare),
+      findsOneWidget,
+      reason: 'the preview scrolls with the controls, as without a fold',
+    );
+    expect(
+      tester.getRect(strip).top,
+      greaterThanOrEqualTo(tester.getRect(compare).bottom),
+    );
+    await app.dispose();
+  });
 
   testWidgets("the look's base image is stepped through with the arrows, "
       'as far as the first and the last; their list marks it, and closing '
