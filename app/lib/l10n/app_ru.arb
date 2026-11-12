@@ -341,7 +341,7 @@
   "looksParamToning": "Тонирование",
   "looksParamWhitePoint": "Точка белого",
   "looksPhotoOwn": "Фото этого стиля",
-  "looksPhotoSample": "Образец фото",
+  "looksPhotoSample": "Образец фото {number}",
   "looksPreview": "Примерно",
   "looksPreviewAsTaken": "Собственный стиль этого фото нельзя отменить для показа нового стиля, поэтому фото показано таким, каким снято.",
   "looksPreviewExitFullScreen": "Выйти из полноэкранного режима",

@@ -41,7 +41,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/demo/
-    - assets/welcome.jpg
+    - assets/samples/
     - assets/fonts/Inter-OFL.txt
     - assets/fonts/JetBrainsMono-OFL.txt
     - assets/photo-credits.txt

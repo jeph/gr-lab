@@ -1853,9 +1853,15 @@
   "@looksPhotoOwn": {
     "description": "Tooltip and accessibility label of the small picture in the look editor that puts the preview on the photo the look was saved from."
   },
-  "looksPhotoSample": "Sample photo",
+  "looksPhotoSample": "Sample photo {number}",
   "@looksPhotoSample": {
-    "description": "Tooltip and accessibility label of the small picture in the look editor that puts the preview on GR Lab's own sample photo."
+    "description": "Tooltip and accessibility label of a small picture in the look editor that puts the preview on one of GR Lab's own sample photos.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "description": "Which of the sample photos, counted from 1."
+      }
+    }
   },
   "looksPreview": "Approximate",
   "@looksPreview": {

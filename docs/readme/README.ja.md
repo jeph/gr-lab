@@ -212,6 +212,6 @@ GR Labは[Flutter](https://flutter.dev)で作られており、Bluetoothには[u
 
 GR Labは[MITライセンス](../../LICENSE)のもとで公開されています。GR Labに含まれるサードパーティのパッケージとフォントには、それぞれのライセンスが適用されます。アプリでは**設定 › このアプリについて › ライセンス**に一覧があり、フォントのライセンス文は[`app/assets/fonts/`](../../app/assets/fonts/)にあります。
 
-サンプル写真は[Unsplash](https://unsplash.com)のもので、MITライセンスではなく[Unsplashライセンス](https://unsplash.com/license)のもとで使用しています。写真と撮影者の一覧は[`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt)にあります。
+デモモードのサンプル写真は[Unsplash](https://unsplash.com)のもので、MITライセンスではなく[Unsplashライセンス](https://unsplash.com/license)のもとで使用しています。写真と撮影者の一覧は[`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt)にあります。
 
 Ricohのアプリとファームウェアは、この調査で引用していますが、Ricohに帰属するものであり、このリポジトリには含まれていません。

@@ -341,7 +341,7 @@
   "looksParamToning": "Τονισμός",
   "looksParamWhitePoint": "Λευκό Σημείο",
   "looksPhotoOwn": "Η φωτογραφία αυτού του στιλ",
-  "looksPhotoSample": "Δείγμα φωτογραφίας",
+  "looksPhotoSample": "Δείγμα φωτογραφίας {number}",
   "looksPreview": "Κατά προσέγγιση",
   "looksPreviewAsTaken": "Το στιλ με το οποίο τραβήχτηκε αυτή η φωτογραφία δεν μπορεί να αναιρεθεί για αυτό το στιλ, οπότε η φωτογραφία εμφανίζεται όπως τραβήχτηκε.",
   "looksPreviewExitFullScreen": "Έξοδος από πλήρη οθόνη",

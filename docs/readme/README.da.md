@@ -318,7 +318,7 @@ GR Lab er udgivet under [MIT-licensen](../../LICENSE). Tredjepartspakker og skri
 indeholder, beholder deres egne licenser. Appen viser dem under **Indstillinger › Om › Licenser**, og
 skrifttypernes licenstekster ligger i [`app/assets/fonts/`](../../app/assets/fonts/).
 
-Eksempelbillederne kommer fra [Unsplash](https://unsplash.com) og bruges under
+Demotilstandens eksempelbilleder kommer fra [Unsplash](https://unsplash.com) og bruges under
 [Unsplash-licensen](https://unsplash.com/license), ikke MIT-licensen;
 [`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) viser dem med deres fotografer.
 

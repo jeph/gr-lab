@@ -341,7 +341,7 @@
   "looksParamToning": "Színezés",
   "looksParamWhitePoint": "Fehér pont",
   "looksPhotoOwn": "A stílus fotója",
-  "looksPhotoSample": "Mintafotó",
+  "looksPhotoSample": "{number}. mintafotó",
   "looksPreview": "Közelítő",
   "looksPreviewAsTaken": "A fotó saját stílusa nem vonható vissza ehhez a stílushoz, ezért a fotó úgy látható, ahogy készült.",
   "looksPreviewExitFullScreen": "Kilépés a teljes képernyőből",

@@ -341,7 +341,7 @@
   "looksParamToning": "Sävytys",
   "looksParamWhitePoint": "Valkoinen piste",
   "looksPhotoOwn": "Tämän tyylin kuva",
-  "looksPhotoSample": "Esimerkkikuva",
+  "looksPhotoSample": "Esimerkkikuva {number}",
   "looksPreview": "Suuntaa antava",
   "looksPreviewAsTaken": "Tämän kuvan omaa tyyliä ei voi purkaa tätä tyyliä varten, joten kuva näytetään sellaisena kuin se otettiin.",
   "looksPreviewExitFullScreen": "Poistu koko näytön tilasta",

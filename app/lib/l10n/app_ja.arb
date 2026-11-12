@@ -341,7 +341,7 @@
   "looksParamToning": "調色",
   "looksParamWhitePoint": "白ポイント",
   "looksPhotoOwn": "このルックの写真",
-  "looksPhotoSample": "サンプル写真",
+  "looksPhotoSample": "サンプル写真{number}",
   "looksPreview": "近似表示",
   "looksPreviewAsTaken": "この写真自体のルックを取り消せないため、撮影時のまま表示しています。",
   "looksPreviewExitFullScreen": "全画面表示を終了",

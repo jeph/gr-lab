@@ -341,7 +341,7 @@
   "looksParamToning": "Farbanpassung",
   "looksParamWhitePoint": "Weißpunkt",
   "looksPhotoOwn": "Foto dieses Looks",
-  "looksPhotoSample": "Beispielfoto",
+  "looksPhotoSample": "Beispielfoto {number}",
   "looksPreview": "Annäherung",
   "looksPreviewAsTaken": "Der eigene Look dieses Fotos lässt sich für diesen Look nicht herausrechnen, daher wird das Foto so gezeigt, wie es aufgenommen wurde.",
   "looksPreviewExitFullScreen": "Vollbild beenden",

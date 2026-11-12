@@ -371,6 +371,52 @@ void main() {
     expect(tester.getRect(before).right, lessThan(tester.getRect(look).left));
   });
 
+  testWidgets('a photo with a look to be compared from is shown under it as '
+      'the before picture, and as it is where it cannot be shown under the '
+      'look it is compared with', (tester) async {
+    final plain = await photoOf(tester);
+    final photo = PreviewPhoto(
+      image: plain.image,
+      rerender: plain.rerender,
+      before: _monotone,
+    );
+
+    await show(
+      tester,
+      photo,
+      mode: LookCompareMode.sideBySide,
+      width: 302,
+      height: 100,
+    );
+    await pumpRounds(tester, 5);
+    expect(await colourAt(tester, across: .1, down: .3), grey);
+    expect(await colourAt(tester, across: .4, down: .3), grey);
+    expect(await colourAt(tester, across: .6, down: .3), near(_red));
+    expect(await colourAt(tester, across: .9, down: .3), near(_blue));
+
+    // The divider is in the middle: before on its left.
+    await show(tester, photo, mode: LookCompareMode.slide, height: 80);
+    await pumpRounds(tester, 5);
+    expect(await colourAt(tester, across: .25, down: .3), grey);
+    expect(await colourAt(tester, across: .75, down: .3), near(_blue));
+
+    // A base image GR Lab does not know: the look's picture is the photo
+    // as it is, and so is the one before.
+    await show(
+      tester,
+      photo,
+      mode: LookCompareMode.sideBySide,
+      look: Look.fromBytes(Uint8List.fromList([1, 0, 0x7f, 0])),
+      width: 302,
+      height: 100,
+    );
+    await pumpRounds(tester, 5);
+    expect(await colourAt(tester, across: .1, down: .3), near(_red));
+    expect(await colourAt(tester, across: .4, down: .3), near(_blue));
+    expect(await colourAt(tester, across: .6, down: .3), near(_red));
+    expect(await colourAt(tester, across: .9, down: .3), near(_blue));
+  });
+
   testWidgets('another way of comparing keeps the picture already worked '
       'out, and another photo of another shape takes its own', (tester) async {
     final preview = find.byType(LookPreview);

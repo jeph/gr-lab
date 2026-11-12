@@ -328,7 +328,7 @@ incluye GR Lab conservan sus propias licencias. La app los enumera en **Ajustes 
 Licencias**, y los textos de las licencias de las fuentes están en
 [`app/assets/fonts/`](../../app/assets/fonts/).
 
-Las fotos de muestra proceden de [Unsplash](https://unsplash.com) y se usan bajo la
+Las fotos de muestra del modo demo proceden de [Unsplash](https://unsplash.com) y se usan bajo la
 [licencia de Unsplash](https://unsplash.com/license), no bajo la licencia MIT;
 [`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) las enumera junto con sus
 fotógrafos.

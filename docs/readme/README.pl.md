@@ -325,7 +325,8 @@ w GR Lab zachowują własne licencje. Aplikacja wymienia je w sekcji
 **Ustawienia › Informacje › Licencje**, a teksty licencji czcionek znajdują się
 w [`app/assets/fonts/`](../../app/assets/fonts/).
 
-Przykładowe zdjęcia pochodzą z serwisu [Unsplash](https://unsplash.com) i są używane na
+Przykładowe zdjęcia trybu demonstracyjnego pochodzą z serwisu [Unsplash](https://unsplash.com)
+i są używane na
 [licencji Unsplash](https://unsplash.com/license), a nie na licencji MIT; plik
 [`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) wymienia je wraz z autorami.
 

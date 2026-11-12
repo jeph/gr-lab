@@ -212,6 +212,6 @@ GR Lab 以 [Flutter](https://flutter.dev) 建置，Bluetooth 部分使用 [unive
 
 GR Lab 以 [MIT License](../../LICENSE) 釋出。GR Lab 內含的第三方套件和字型各自沿用其原有的授權。App 將它們列在**設定 › 關於 › 授權**底下，字型的授權條款全文則位於 [`app/assets/fonts/`](../../app/assets/fonts/)。
 
-範例照片來自 [Unsplash](https://unsplash.com)，依 [Unsplash 授權](https://unsplash.com/license)使用，不適用 MIT License；[`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) 列出了這些照片及其攝影者。
+示範模式的範例照片來自 [Unsplash](https://unsplash.com)，依 [Unsplash 授權](https://unsplash.com/license)使用，不適用 MIT License；[`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) 列出了這些照片及其攝影者。
 
 研究中引用的 Ricoh App 和韌體屬於 Ricoh 所有，不包含在這個儲存庫中。

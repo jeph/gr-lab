@@ -341,7 +341,7 @@
   "looksParamToning": "Tónování",
   "looksParamWhitePoint": "Bílý bod",
   "looksPhotoOwn": "Fotka tohoto vzhledu",
-  "looksPhotoSample": "Ukázková fotka",
+  "looksPhotoSample": "Ukázková fotka {number}",
   "looksPreview": "Přibližné",
   "looksPreviewAsTaken": "Vlastní vzhled této fotky nelze pro tento vzhled odstranit, proto se fotka zobrazuje tak, jak byla pořízena.",
   "looksPreviewExitFullScreen": "Ukončit celou obrazovku",

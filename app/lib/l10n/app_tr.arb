@@ -341,7 +341,7 @@
   "looksParamToning": "Tonlama",
   "looksParamWhitePoint": "Beyaz Nokta",
   "looksPhotoOwn": "Bu stilin fotoğrafı",
-  "looksPhotoSample": "Örnek fotoğraf",
+  "looksPhotoSample": "Örnek fotoğraf {number}",
   "looksPreview": "Yaklaşık",
   "looksPreviewAsTaken": "Bu fotoğrafın kendi stili bu stil için geri alınamıyor; bu yüzden fotoğraf çekildiği hâliyle gösteriliyor.",
   "looksPreviewExitFullScreen": "Tam ekrandan çık",

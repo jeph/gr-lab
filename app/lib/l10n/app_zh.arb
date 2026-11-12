@@ -341,7 +341,7 @@
   "looksParamToning": "色调",
   "looksParamWhitePoint": "白点",
   "looksPhotoOwn": "此风格的照片",
-  "looksPhotoSample": "示例照片",
+  "looksPhotoSample": "示例照片 {number}",
   "looksPreview": "近似效果",
   "looksPreviewAsTaken": "无法在此风格下还原这张照片原有的风格，因此按拍摄时的原样显示。",
   "looksPreviewExitFullScreen": "退出全屏",

@@ -341,7 +341,7 @@
   "looksParamToning": "ปรับโทน",
   "looksParamWhitePoint": "จุดขาว",
   "looksPhotoOwn": "ภาพของลุคนี้",
-  "looksPhotoSample": "ภาพตัวอย่าง",
+  "looksPhotoSample": "ภาพตัวอย่าง {number}",
   "looksPreview": "โดยประมาณ",
   "looksPreviewAsTaken": "ลุคเดิมของภาพนี้ย้อนกลับเพื่อใช้กับลุคนี้ไม่ได้ จึงแสดงภาพตามที่ถ่ายไว้",
   "looksPreviewExitFullScreen": "ออกจากเต็มหน้าจอ",

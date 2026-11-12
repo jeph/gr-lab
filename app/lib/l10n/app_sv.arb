@@ -341,7 +341,7 @@
   "looksParamToning": "Toning",
   "looksParamWhitePoint": "Vitpunkt",
   "looksPhotoOwn": "Stilens egen bild",
-  "looksPhotoSample": "Exempelbild",
+  "looksPhotoSample": "Exempelbild {number}",
   "looksPreview": "Ungefärlig",
   "looksPreviewAsTaken": "Bildens egen stil går inte att räkna bort för den här stilen, så bilden visas som den togs.",
   "looksPreviewExitFullScreen": "Avsluta helskärm",

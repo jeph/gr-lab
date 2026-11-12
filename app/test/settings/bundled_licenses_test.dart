@@ -24,7 +24,10 @@ void main() {
         )
         .toSet();
 
-    expect(scenes, containsAll(['assets/welcome', 'assets/demo/clip']));
+    expect(
+      scenes,
+      containsAll(['assets/samples/sample01', 'assets/demo/clip']),
+    );
     for (final scene in scenes) {
       expect(text, contains(scene), reason: '$scene has no credit');
     }

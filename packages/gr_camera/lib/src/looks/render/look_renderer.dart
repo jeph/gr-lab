@@ -210,7 +210,7 @@ final class LookRerender {
   /// Whether the photo can be shown under [target]: not when its own look
   /// cannot be undone for it ([LookSourceFit.unusable]) or the renderer
   /// does not know [target]'s base image.
-  bool _shows(Look target) =>
+  bool shows(Look target) =>
       _decoder != null &&
       renderer.encoder(target) != null &&
       fitFor(target) != LookSourceFit.unusable;
@@ -219,7 +219,7 @@ final class LookRerender {
   /// [lutFor]'s table: [target], or the photo's own look, does something
   /// to the picture as a whole, which only [render] shows.
   bool filters(Look target) =>
-      _shows(target) &&
+      shows(target) &&
       (renderer.unfilter(_source) != null ||
           renderer.filter(target, source: _source) != null);
 
@@ -234,7 +234,7 @@ final class LookRerender {
     required int height,
     required Look target,
   }) {
-    if (!_shows(target)) return rgba;
+    if (!shows(target)) return rgba;
     final lut = lutFor(target);
     final before = renderer.unfilter(_source);
     final after = renderer.filter(target, source: _source);
@@ -265,7 +265,7 @@ final class LookRerender {
   /// the renderer does not know [target]'s base image.
   LookLut lutFor(Look target) {
     final encoder = renderer.encoder(target);
-    if (encoder == null || !_shows(target)) {
+    if (encoder == null || !shows(target)) {
       return LookLut.identity(size: size);
     }
     final scene = _scene ??= _decodeGrid();

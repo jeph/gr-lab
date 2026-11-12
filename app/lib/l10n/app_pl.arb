@@ -341,7 +341,7 @@
   "looksParamToning": "Tonowanie",
   "looksParamWhitePoint": "Punkt bieli",
   "looksPhotoOwn": "Zdjęcie tego stylu",
-  "looksPhotoSample": "Zdjęcie przykładowe",
+  "looksPhotoSample": "Zdjęcie przykładowe {number}",
   "looksPreview": "W przybliżeniu",
   "looksPreviewAsTaken": "Własnego stylu tego zdjęcia nie da się cofnąć na potrzeby tego stylu, dlatego zdjęcie jest pokazane tak, jak zostało zrobione.",
   "looksPreviewExitFullScreen": "Zamknij pełny ekran",

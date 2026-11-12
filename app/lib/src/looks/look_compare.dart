@@ -13,10 +13,20 @@ import 'package:intl/intl.dart';
 /// A photo looks are previewed on, with what undoes its own rendering.
 @immutable
 final class PreviewPhoto {
-  const new({required this.image, required this.rerender, this.orientation});
+  const new({
+    required this.image,
+    required this.rerender,
+    this.before,
+    this.orientation,
+  });
 
   final ImageProvider image;
   final LookRerender rerender;
+
+  /// The look a comparison shows the photo under as its "before", so that
+  /// the look the photo was developed with is not part of what it is
+  /// compared from; null sets the comparison against the photo as it is.
+  final Look? before;
 
   /// The EXIF orientation (1–8) that shows [image] upright; null shows it
   /// as it is.
@@ -35,9 +45,10 @@ enum LookCompareMode {
   single,
 }
 
-/// [photo] as it is and as it would look under [look], whole and upright,
+/// [photo] before and as it would look under [look], whole and upright,
 /// as large as the box allows and set against each other as [mode] says
-/// \[design\]. Without a [look] it is the photo as it is, alone.
+/// \[design\]. Before is the photo as it is, or under its
+/// [PreviewPhoto.before]. Without a [look] it is the photo as it is, alone.
 ///
 /// A tap on a picture is the mode's own: it brings the divider of
 /// [LookCompareMode.slide] there, and swaps the pictures of
@@ -68,9 +79,11 @@ class _LookCompareState extends State<LookCompare> {
   /// How far a step of the divider goes for assistive technology.
   static const double _step = .1;
 
-  /// The photo under the look keeps what it worked out when
-  /// [LookCompare.mode] moves it to another place.
+  /// The photo under the look, and the one under its
+  /// [PreviewPhoto.before], keep what they worked out when
+  /// [LookCompare.mode] moves them to another place.
   final GlobalKey _lookKey = GlobalKey();
+  final GlobalKey _beforeKey = GlobalKey();
 
   ImageStream? _stream;
   late final ImageStreamListener _listener = ImageStreamListener(
@@ -136,17 +149,25 @@ class _LookCompareState extends State<LookCompare> {
   void _swap() => setState(() => _before = !_before);
 
   /// The photo upright, as it is or under [look].
-  Widget _picture({Look? look}) => ExifOrientation(
+  Widget _picture({Look? look, Key? key}) => ExifOrientation(
     orientation: widget.photo.orientation ?? 1,
     // The box has the photo's shape, so filling it shows the whole photo.
     child: look == null
         ? Image(image: widget.photo.image, fit: BoxFit.fill)
         : LookPreview(
-            key: _lookKey,
+            key: key ?? _lookKey,
             image: widget.photo.image,
             rerender: widget.photo.rerender,
             look: look,
           ),
+  );
+
+  /// What [look] is compared with: the photo under its
+  /// [PreviewPhoto.before], or as it is when it has none or cannot be shown
+  /// under [look] either, so that both pictures are the photo as taken.
+  Widget _beforePicture(Look look) => _picture(
+    look: widget.photo.rerender.shows(look) ? widget.photo.before : null,
+    key: _beforeKey,
   );
 
   /// A picture with its [tag] in a bottom corner.
@@ -226,7 +247,10 @@ class _LookCompareState extends State<LookCompare> {
                       ),
                       ClipRect(
                         clipper: _LeftPart(_split),
-                        child: _tagged(_picture(), PhotoTag(beforeTag)),
+                        child: _tagged(
+                          _beforePicture(look),
+                          PhotoTag(beforeTag),
+                        ),
                       ),
                       Positioned(
                         left: _split * box.maxWidth - _Divider.width / 2,
@@ -265,7 +289,7 @@ class _LookCompareState extends State<LookCompare> {
                   SizedBox.fromSize(
                     key: const Key('look-compare-before'),
                     size: size,
-                    child: _tagged(_picture(), PhotoTag(beforeTag)),
+                    child: _tagged(_beforePicture(look), PhotoTag(beforeTag)),
                   ),
                   const SizedBox.square(dimension: _gap),
                   SizedBox.fromSize(
@@ -283,7 +307,7 @@ class _LookCompareState extends State<LookCompare> {
           fit: StackFit.expand,
           children: [
             _picture(look: look),
-            if (_before) _picture(),
+            if (_before) _beforePicture(look),
           ],
         );
         return Center(
@@ -519,7 +543,7 @@ class PreviewPhotoSwitch extends StatelessWidget {
                       child: ExifOrientation(
                         orientation: photos[i].orientation ?? 1,
                         child: Image(
-                          image: photos[i].image,
+                          image: _small(photos[i].image),
                           fit: BoxFit.cover,
                           excludeFromSemantics: true,
                         ),
@@ -533,4 +557,20 @@ class PreviewPhotoSwitch extends StatelessWidget {
       ],
     );
   }
+
+  /// [photo] decoded no larger than a small picture needs, however large
+  /// the preview asks for it: there may be several of them.
+  static ImageProvider _small(ImageProvider photo) => ResizeImage(
+    switch (photo) {
+      ResizeImage(:final imageProvider) => imageProvider,
+      _ => photo,
+    },
+    width: _longSide,
+    height: _longSide,
+    policy: ResizeImagePolicy.fit,
+  );
+
+  /// Pixels on the long side of a small picture: enough for the short
+  /// side of a 3:2 photo to fill it at four device pixels to one.
+  static const int _longSide = 240;
 }

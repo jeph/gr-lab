@@ -341,7 +341,8 @@ intègre conservent leurs propres licences. L'application les répertorie sous
 **Réglages › À propos › Licences**, et les textes des licences des polices se trouvent dans
 [`app/assets/fonts/`](../../app/assets/fonts/).
 
-Les photos d'exemple proviennent d'[Unsplash](https://unsplash.com) et sont utilisées sous
+Les photos d'exemple du mode démo proviennent d'[Unsplash](https://unsplash.com) et sont utilisées
+sous
 [licence Unsplash](https://unsplash.com/license), et non sous licence MIT ;
 [`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) les répertorie avec leurs
 photographes.

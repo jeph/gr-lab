@@ -341,7 +341,7 @@
   "looksParamToning": "Toning",
   "looksParamWhitePoint": "Hvidpunkt",
   "looksPhotoOwn": "Billedet til dette look",
-  "looksPhotoSample": "Eksempelbillede",
+  "looksPhotoSample": "Eksempelbillede {number}",
   "looksPreview": "Omtrentlig",
   "looksPreviewAsTaken": "Billedets eget look kan ikke fjernes til fordel for dette look, så billedet vises, som det blev taget.",
   "looksPreviewExitFullScreen": "Afslut fuld skærm",

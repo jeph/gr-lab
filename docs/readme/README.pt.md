@@ -326,7 +326,8 @@ letra de terceiros que o GR Lab inclui mantêm as suas próprias licenças. A ap
 **Definições › Acerca › Licenças**, e os textos das licenças dos tipos de letra estão em
 [`app/assets/fonts/`](../../app/assets/fonts/).
 
-As fotos de exemplo provêm do [Unsplash](https://unsplash.com) e são utilizadas ao abrigo da
+As fotos de exemplo do modo de demonstração provêm do [Unsplash](https://unsplash.com) e são
+utilizadas ao abrigo da
 [Licença Unsplash](https://unsplash.com/license), e não da Licença MIT;
 [`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) enumera-as com os respetivos
 fotógrafos.

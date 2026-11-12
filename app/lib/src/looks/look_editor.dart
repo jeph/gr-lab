@@ -13,6 +13,7 @@ import 'package:grlab/src/looks/look_spec.dart';
 import 'package:grlab/src/looks/look_widgets.dart';
 import 'package:grlab/src/looks/looks_model.dart';
 import 'package:grlab/src/looks/looks_store.dart';
+import 'package:grlab/src/sample_photos.dart';
 import 'package:grlab/src/shoot/shoot_widgets.dart';
 import 'package:grlab/src/theme/tokens.dart';
 
@@ -161,18 +162,26 @@ class _LookEditorState extends State<LookEditor>
   late final LookRenderer _renderer = lookRendererFor(_model.body);
 
   /// The photos the look can be previewed on: the one it was saved from,
-  /// when it has one, then the sample photo.
-  late final List<PreviewPhoto> _photos = [?_findOwnPhoto(), _samplePhoto];
+  /// when it has one, then GR Lab's sample photos, each with the look its
+  /// camera developed it with ([SamplePhoto.look]).
+  ///
+  /// A sample's own look has nothing to do with the look being edited, so
+  /// the comparison starts from the sample under Standard instead
+  /// \[design\], and shows all of what the look does. The look's own photo
+  /// is compared as it was taken, which is where the look came from.
+  late final List<PreviewPhoto> _photos = [
+    ?_findOwnPhoto(),
+    for (final sample in samplePhotos)
+      PreviewPhoto(
+        image: _previewSized(AssetImage(sample.asset)),
+        rerender: LookRerender(_renderer, source: sample.look),
+        before: sample.look == null ? null : Look.onBase(LookBase.standard),
+      ),
+  ];
 
-  /// Whether the first of [_photos] is the look's own.
-  late final bool _hasOwnPhoto = _photos.length > 1;
-
-  /// The sample photo, which GR Lab takes for a Standard photo with every
-  /// adjustment at 0 \[design\].
-  late final PreviewPhoto _samplePhoto = PreviewPhoto(
-    image: _previewSized(const AssetImage('assets/welcome.jpg')),
-    rerender: LookRerender(_renderer, source: Look.onBase(LookBase.standard)),
-  );
+  /// Whether the first of [_photos] is the look's own; the samples come
+  /// after it.
+  late final bool _hasOwnPhoto = _photos.length > samplePhotos.length;
 
   /// Which of [_photos] the user picked for the preview; null until they
   /// pick one, and the editor chooses ([_preview]).
@@ -531,18 +540,19 @@ class _LookEditorState extends State<LookEditor>
   Widget _preview(BuildContext context) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
-    final sample = _photos.length - 1;
+    final firstSample = _hasOwnPhoto ? 1 : 0;
     // Until the user picks, the look's own photo when the look it was
-    // taken with can be undone without a rougher result, and the sample
-    // photo otherwise \[design\]. Either can always be picked.
+    // taken with can be undone without a rougher result, and the first
+    // sample photo otherwise \[design\]. Any of them can always be picked.
     final ownFit = _hasOwnPhoto ? _photos.first.rerender.fitFor(_look) : null;
     final startsOnOwn =
         ownFit == LookSourceFit.good || ownFit == LookSourceFit.unknown;
-    final shown = _picked ?? (startsOnOwn ? 0 : sample);
+    final shown = _picked ?? (startsOnOwn ? 0 : firstSample);
     final fit = _photos[shown].rerender.fitFor(_look);
     final note = switch (fit) {
-      _ when shown == sample =>
-        _hasOwnPhoto && _picked == null ? l10n.looksPreviewSample : null,
+      // Why the editor did not start on the look's own photo.
+      _ when _hasOwnPhoto && _picked == null && shown == firstSample =>
+        l10n.looksPreviewSample,
       LookSourceFit.rough => l10n.looksPreviewRough,
       LookSourceFit.unknown => l10n.looksPreviewUnknownLook,
       LookSourceFit.unusable => l10n.looksPreviewAsTaken,
@@ -574,14 +584,23 @@ class _LookEditorState extends State<LookEditor>
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: Row(
             children: [
-              if (_hasOwnPhoto)
-                PreviewPhotoSwitch(
-                  photos: _photos,
-                  labels: [l10n.looksPhotoOwn, l10n.looksPhotoSample],
-                  selected: shown,
-                  onSelect: (i) => setState(() => _picked = i),
+              // More photos than a phone is wide: they scroll, and the
+              // switches beside them stay where they are.
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: PreviewPhotoSwitch(
+                    photos: _photos,
+                    labels: [
+                      if (_hasOwnPhoto) l10n.looksPhotoOwn,
+                      for (var n = 1; n <= samplePhotos.length; n++)
+                        l10n.looksPhotoSample(n),
+                    ],
+                    selected: shown,
+                    onSelect: (i) => setState(() => _picked = i),
+                  ),
                 ),
-              const Spacer(),
+              ),
               LookCompareModeSwitch(
                 selected: _mode,
                 onSelect: (m) => setState(() => _mode = m),

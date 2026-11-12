@@ -341,7 +341,7 @@
   "looksParamToning": "조색",
   "looksParamWhitePoint": "화이트 포인트",
   "looksPhotoOwn": "이 룩의 사진",
-  "looksPhotoSample": "샘플 사진",
+  "looksPhotoSample": "샘플 사진 {number}",
   "looksPreview": "근사치",
   "looksPreviewAsTaken": "이 사진에 적용된 룩은 이 룩에 맞게 되돌릴 수 없어 촬영된 그대로 표시합니다.",
   "looksPreviewExitFullScreen": "전체 화면 종료",

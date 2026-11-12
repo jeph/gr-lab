@@ -336,7 +336,8 @@ féltől származó csomagokra és betűtípusokra a saját licencük vonatkozik
 **Beállítások › Névjegy › Licencek** alatt sorolja fel, a betűtípusok licencszövegei pedig az
 [`app/assets/fonts/`](../../app/assets/fonts/) mappában találhatók.
 
-A mintafotók az [Unsplash](https://unsplash.com) oldalról származnak, és nem az MIT-licenc, hanem az
+A demó mód mintafotói az [Unsplash](https://unsplash.com) oldalról származnak, és nem az
+MIT-licenc, hanem az
 [Unsplash-licenc](https://unsplash.com/license) vonatkozik rájuk; az
 [`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) fájl sorolja fel őket
 a fotósaikkal együtt.

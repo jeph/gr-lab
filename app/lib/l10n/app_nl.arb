@@ -341,7 +341,7 @@
   "looksParamToning": "Kleur aanpassen",
   "looksParamWhitePoint": "Wit punt",
   "looksPhotoOwn": "Foto van deze look",
-  "looksPhotoSample": "Voorbeeldfoto",
+  "looksPhotoSample": "Voorbeeldfoto {number}",
   "looksPreview": "Bij benadering",
   "looksPreviewAsTaken": "De eigen look van deze foto kan voor deze look niet ongedaan worden gemaakt; de foto wordt daarom getoond zoals hij is gemaakt.",
   "looksPreviewExitFullScreen": "Volledig scherm sluiten",

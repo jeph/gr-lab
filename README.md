@@ -305,7 +305,7 @@ GR Lab is released under the [MIT License](LICENSE). Third-party packages and fo
 includes keep their own licenses. The app lists them under **Settings › About › Licenses**, and the
 fonts' license texts are in [`app/assets/fonts/`](app/assets/fonts/).
 
-The sample photos are from [Unsplash](https://unsplash.com) and are used under the
+The demo mode's sample photos are from [Unsplash](https://unsplash.com) and are used under the
 [Unsplash License](https://unsplash.com/license), not the MIT License;
 [`app/assets/photo-credits.txt`](app/assets/photo-credits.txt) lists them and their photographers.
 

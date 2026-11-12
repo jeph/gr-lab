@@ -328,7 +328,7 @@ GR Lab, сохраняют собственные лицензии. Прилож
 **Настройки › О приложении › Лицензии**, а тексты лицензий шрифтов находятся в
 [`app/assets/fonts/`](../../app/assets/fonts/).
 
-Образцы фото взяты с [Unsplash](https://unsplash.com) и используются по
+Образцы фото демонстрационного режима взяты с [Unsplash](https://unsplash.com) и используются по
 [лицензии Unsplash](https://unsplash.com/license), а не по лицензии MIT; файл
 [`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) перечисляет их вместе
 с фотографами.

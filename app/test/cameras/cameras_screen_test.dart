@@ -14,6 +14,7 @@ import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/library/library_screen.dart';
 import 'package:grlab/src/looks/looks_screen.dart';
 import 'package:grlab/src/pairing/pairing_flow.dart';
+import 'package:grlab/src/sample_photos.dart';
 import 'package:grlab/src/shoot/shoot_screen.dart';
 
 import '../support/test_app.dart';
@@ -181,6 +182,66 @@ void main() {
     await _tap(tester, const Key('pairing-close'));
     await pumpUntil(tester, () => find.byType(PairingFlow).evaluate().isEmpty);
     expect(find.byKey(const Key('cameras-welcome')), findsOneWidget);
+
+    await app.dispose();
+  });
+
+  testWidgets("Welcome shows GR Lab's photos one after another, each fading "
+      'in over the one before, and taking its place at once where the '
+      'phone asks for less motion', (tester) async {
+    tester.view
+      ..physicalSize = const Size(1170, 2532)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final app = (await tester.runAsync(createTestApp))!;
+    await app.pumpApp(tester);
+
+    final photos = find.byKey(const Key('cameras-welcome-photos'));
+    List<String> shown() => [
+      for (final image in tester.widgetList<Image>(
+        find.descendant(of: photos, matching: find.byType(Image)),
+      ))
+        (image.image as AssetImage).assetName,
+    ];
+    double opacity() => tester
+        .widget<FadeTransition>(
+          find.descendant(of: photos, matching: find.byType(FadeTransition)),
+        )
+        .opacity
+        .value;
+    final assets = [for (final photo in samplePhotos) photo.asset];
+    expect(assets.toSet(), hasLength(assets.length));
+    const perPhoto = Duration(seconds: 6);
+    const halfFade = Duration(milliseconds: 600);
+    // The fade ends on the first frame after its time is up.
+    const lastFrame = Duration(milliseconds: 16);
+    final untilNext = perPhoto - halfFade * 2 - lastFrame;
+
+    expect(shown(), [assets.first]);
+    expect(opacity(), 1);
+    // Every photo in turn, and round to the first again.
+    for (var turn = 1; turn <= assets.length; turn++) {
+      final from = assets[turn - 1];
+      final to = assets[turn % assets.length];
+      await tester.pump(turn == 1 ? perPhoto : untilNext);
+      expect(shown(), [from, to], reason: 'turn $turn, fading in');
+      expect(opacity(), 0);
+      await tester.pump(halfFade);
+      expect(shown(), [from, to]);
+      expect(opacity(), closeTo(.5, .01));
+      await tester.pump(halfFade);
+      await tester.pump(lastFrame);
+      expect(shown(), [to], reason: 'turn $turn, faded in');
+      expect(opacity(), 1);
+    }
+
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    await tester.pump();
+    await tester.pump(untilNext);
+    expect(shown(), [assets[1]]);
+    expect(opacity(), 1);
 
     await app.dispose();
   });

@@ -329,7 +329,8 @@ in GR Lab mantengono le rispettive licenze. L'app li elenca in **Impostazioni ‚Ä
 Licenze**, e i testi delle licenze dei font si trovano in
 [`app/assets/fonts/`](../../app/assets/fonts/).
 
-Le foto di esempio provengono da [Unsplash](https://unsplash.com) e sono utilizzate con
+Le foto di esempio della modalit√† demo provengono da [Unsplash](https://unsplash.com) e sono
+utilizzate con
 [licenza Unsplash](https://unsplash.com/license), non con licenza MIT;
 [`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) le elenca con i rispettivi
 fotografi.

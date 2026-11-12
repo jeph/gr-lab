@@ -341,7 +341,7 @@
   "looksParamToning": "Tonalidade",
   "looksParamWhitePoint": "Ponto Branco",
   "looksPhotoOwn": "Foto deste estilo",
-  "looksPhotoSample": "Foto de exemplo",
+  "looksPhotoSample": "Foto de exemplo {number}",
   "looksPreview": "Aproximado",
   "looksPreviewAsTaken": "O estilo original desta foto não pode ser anulado para aplicar este estilo, por isso a foto é mostrada tal como foi tirada.",
   "looksPreviewExitFullScreen": "Sair do ecrã inteiro",

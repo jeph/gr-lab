@@ -212,6 +212,6 @@ GR Lab สร้างด้วย [Flutter](https://flutter.dev) และใ�
 
 GR Lab เผยแพร่ภายใต้[ใบอนุญาต MIT](../../LICENSE) แพ็กเกจและแบบอักษรของบุคคลที่สามที่รวมอยู่ใน GR Lab ยังคงใช้ใบอนุญาตของตนเอง แอปแสดงรายการเหล่านี้ไว้ที่ **การตั้งค่า › เกี่ยวกับ › ใบอนุญาต** และข้อความใบอนุญาตของแบบอักษรอยู่ใน [`app/assets/fonts/`](../../app/assets/fonts/)
 
-ภาพตัวอย่างมาจาก [Unsplash](https://unsplash.com) และใช้ภายใต้[ใบอนุญาต Unsplash](https://unsplash.com/license) ไม่ใช่ใบอนุญาต MIT โดย [`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) แสดงรายการภาพพร้อมชื่อช่างภาพ
+ภาพตัวอย่างของโหมดสาธิตมาจาก [Unsplash](https://unsplash.com) และใช้ภายใต้[ใบอนุญาต Unsplash](https://unsplash.com/license) ไม่ใช่ใบอนุญาต MIT โดย [`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) แสดงรายการภาพพร้อมชื่อช่างภาพ
 
 แอปและเฟิร์มแวร์ของ Ricoh ที่งานวิจัยอ้างถึงเป็นของ Ricoh และไม่ได้เป็นส่วนหนึ่งของ repository นี้

@@ -341,7 +341,7 @@
   "looksParamToning": "Harmonisation",
   "looksParamWhitePoint": "Point blanc",
   "looksPhotoOwn": "Photo de ce style",
-  "looksPhotoSample": "Photo d'exemple",
+  "looksPhotoSample": "Photo d'exemple {number}",
   "looksPreview": "Approximatif",
   "looksPreviewAsTaken": "Le style d'origine de cette photo ne peut pas être annulé pour ce style : la photo est donc affichée telle qu'elle a été prise.",
   "looksPreviewExitFullScreen": "Quitter le plein écran",

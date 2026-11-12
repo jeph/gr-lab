@@ -12,6 +12,7 @@ import 'package:grlab/src/library/image_orientation.dart';
 import 'package:grlab/src/looks/look_compare.dart';
 import 'package:grlab/src/looks/look_preview.dart';
 import 'package:grlab/src/looks/looks_store.dart';
+import 'package:grlab/src/sample_photos.dart';
 import 'package:grlab/src/widgets/skeleton.dart';
 
 import '../support/test_app.dart';
@@ -487,12 +488,12 @@ void main() {
 
   testWidgets('the editor previews a look on the photo it was saved from '
       "when that photo's own look can be undone or is not known, and "
-      'starts on the sample photo when it can only be undone roughly or '
-      'not at all; either photo can be picked, and a photo with nothing to '
+      'starts on the first sample photo when it can only be undone roughly '
+      'or not at all; any photo can be picked, and a photo with nothing to '
       'offer the look is shown as it was taken', (tester) async {
     final app = await _start(tester, saveCamera: false);
     final looks = app.models.looks;
-    final jpeg = File('assets/welcome.jpg').readAsBytesSync();
+    final jpeg = File(samplePhotos.first.asset).readAsBytesSync();
     final (plain, grey, older) = (await tester.runAsync(() async {
       final plain = await looks.add(
         name: 'Plain',
@@ -525,8 +526,11 @@ void main() {
     final note = find.byKey(const Key('look-preview-note'));
     Finder noteSaying(String text) =>
         find.descendant(of: note, matching: find.text(text));
-    LookPreview preview() =>
-        tester.widget<LookPreview>(find.byType(LookPreview));
+    // The picture under the look, then the one it is compared with when
+    // that is the photo under a look too rather than as it is.
+    List<LookPreview> previews() =>
+        tester.widgetList<LookPreview>(find.byType(LookPreview)).toList();
+    LookPreview preview() => previews().first;
     // The photo itself, under the size the preview asks for it in; null
     // while a photo just picked is still loading.
     ImageProvider? previewed() => switch (tester
@@ -560,6 +564,7 @@ void main() {
     await _pickBase(tester, LookBase.vivid);
     expect(note, findsNothing, reason: 'a Standard photo suits every look');
     expect(preview().look.base, LookBase.vivid);
+    expect(previews(), hasLength(1), reason: 'before: the photo as taken');
     expect(
       preview().rerender.source?.settings,
       Look.onBase(LookBase.standard).settings,
@@ -573,6 +578,14 @@ void main() {
       reason: 'the preview on the sample photo',
     );
     expect(preview().look.base, LookBase.vivid);
+    // A sample was developed with a look of its own, so what Vivid is
+    // compared with is the sample under Standard, not as it is.
+    expect(previews(), hasLength(2));
+    expect(
+      previews().last.look.settings,
+      Look.onBase(LookBase.standard).settings,
+    );
+    expect(previews().last.rerender, same(preview().rerender));
     expect(note, findsNothing);
     await tapWhenReady(tester, ownPhoto);
     await pumpUntil(
@@ -653,22 +666,69 @@ void main() {
     await app.dispose();
   });
 
-  testWidgets('a look with no photo of its own is previewed on the sample '
-      'photo, with no photos to pick from', (tester) async {
+  testWidgets('a look with no photo of its own is previewed on the first '
+      'sample photo, and on any other sample that is picked, each with the '
+      'look it was taken with', (tester) async {
     final app = await _start(tester, saveCamera: false);
     await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
     await tapWhenReady(tester, find.byKey(const Key('looks-new')));
     await pumpUntilFound(tester, find.byType(LookPreview));
-    expect(
-      tester.widget<LookPreview>(find.byType(LookPreview)).image,
-      isA<ResizeImage>().having(
-        (i) => i.imageProvider,
-        'photo',
-        isA<AssetImage>(),
-      ),
+    final note = find.byKey(const Key('look-preview-note'));
+    // The picture under the look, then the one it is compared with when
+    // that is the photo under a look too rather than as it is.
+    List<LookPreview> previews() =>
+        tester.widgetList<LookPreview>(find.byType(LookPreview)).toList();
+    LookPreview preview() => previews().first;
+    // Null while a photo just picked is still loading.
+    String? previewed() => switch (tester
+        .widgetList<LookPreview>(find.byType(LookPreview))
+        .firstOrNull
+        ?.image) {
+      ResizeImage(imageProvider: AssetImage(:final assetName)) => assetName,
+      _ => null,
+    };
+    Future<void> pick(int sample) async {
+      await tapWhenReady(tester, find.byKey(ValueKey('look-photo:$sample')));
+      await pumpUntil(
+        tester,
+        () => previewed() == samplePhotos[sample].asset,
+        reason: 'the preview on sample ${sample + 1}',
+      );
+    }
+
+    expect(previewed(), samplePhotos.first.asset);
+    expect(preview().rerender.source?.base, samplePhotos.first.base);
+    expect(note, findsNothing);
+    for (var n = 1; n <= samplePhotos.length; n++) {
+      expect(find.byTooltip('Sample photo $n'), findsOneWidget);
+    }
+
+    final negative = samplePhotos.indexWhere(
+      (p) => p.base == LookBase.negativeFilm,
     );
-    expect(find.byType(PreviewPhotoSwitch), findsNothing);
-    expect(find.byKey(const Key('look-preview-note')), findsNothing);
+    await pick(negative);
+    expect(preview().rerender.source?.base, LookBase.negativeFilm);
+    expect(previews(), hasLength(2), reason: 'before: its look undone');
+    expect(previews().last.look.base, LookBase.standard);
+    expect(note, findsNothing);
+
+    // The last sample is scrolled to; its file does not say which look it
+    // was taken with.
+    final unknown = samplePhotos.indexWhere((p) => p.base == null);
+    expect(unknown, samplePhotos.length - 1);
+    await pick(unknown);
+    expect(preview().rerender.source, isNull);
+    expect(previews(), hasLength(1), reason: 'before: no look to undo');
+    expect(
+      find.descendant(
+        of: note,
+        matching: find.text(
+          "GR Lab doesn't know which look this photo was taken with, so the "
+          'preview treats it as Standard.',
+        ),
+      ),
+      findsOneWidget,
+    );
     await app.dispose();
   });
 
@@ -676,9 +736,9 @@ void main() {
       'upright, in the list and in the editor', (tester) async {
     final app = await _start(tester, saveCamera: false);
     final looks = app.models.looks;
-    // The sample is 600 by 900 as stored; orientation 6 lays it on its
-    // side, so upright it is wider than tall.
-    final jpeg = File('assets/welcome.jpg').readAsBytesSync();
+    // The first sample is two wide by three tall as stored; orientation 6
+    // lays it on its side, so upright it is wider than tall.
+    final jpeg = File(samplePhotos.first.asset).readAsBytesSync();
     final (turned, asStored) = (await tester.runAsync(() async {
       final turned = await looks.add(
         name: 'Turned',
@@ -713,7 +773,7 @@ void main() {
       matching: find.byType(ExifOrientation),
     );
     expect(tester.widget<ExifOrientation>(picture).orientation, 6);
-    expect(tester.getSize(picture).aspectRatio, closeTo(900 / 600, .01));
+    expect(tester.getSize(picture).aspectRatio, closeTo(3 / 2, .01));
     expect(orientationIn(find.byKey(const ValueKey('look-photo:0'))), 6);
     await tester.pageBack();
     await pumpUntil(
@@ -724,7 +784,7 @@ void main() {
 
     await tapWhenReady(tester, storedRow);
     await pumpUntilFound(tester, find.byType(LookPreview));
-    expect(tester.getSize(picture).aspectRatio, closeTo(600 / 900, .01));
+    expect(tester.getSize(picture).aspectRatio, closeTo(2 / 3, .01));
     await app.dispose();
   });
 
@@ -735,7 +795,7 @@ void main() {
       () => app.models.looks.add(
         name: 'Turned',
         data: Uint8List.fromList(app.camera.lookSlot(2).data),
-        photo: File('assets/welcome.jpg').readAsBytesSync(),
+        photo: File(samplePhotos.first.asset).readAsBytesSync(),
         photoOrientation: 6,
       ),
     ))!;
@@ -779,8 +839,8 @@ void main() {
           tester,
           find.byKey(ValueKey('look-compare:${mode.name}')),
         );
-        final picture = tester.getRect(find.byType(LookPreview));
-        expect(picture.size.aspectRatio, closeTo(600 / 900, .02));
+        final picture = tester.getRect(find.byType(LookPreview).first);
+        expect(picture.size.aspectRatio, closeTo(2 / 3, .02));
         expect(preview.expandToInclude(picture), preview, reason: mode.name);
       }
       await app.dispose();
@@ -811,7 +871,7 @@ void main() {
       tester.view
         ..physicalSize = size
         ..devicePixelRatio = 1;
-      final jpeg = File('assets/welcome.jpg').readAsBytesSync();
+      final jpeg = File(samplePhotos.first.asset).readAsBytesSync();
       final saved = (await tester.runAsync(
         () => app.models.looks.add(
           name: 'Plain',
@@ -881,7 +941,11 @@ void main() {
       expect(tester.getSize(compare).height, greaterThan(size.height - 100));
       expect(find.byTooltip('Exit full screen'), findsOneWidget);
       expect(find.byTooltip('Full screen'), findsNothing);
-      expect(find.byType(PreviewPhotoSwitch).hitTestable(), findsOneWidget);
+      // The photos scroll; the first ones are in reach.
+      expect(
+        find.byKey(const ValueKey('look-photo:0')).hitTestable(),
+        findsOneWidget,
+      );
       expect(find.byType(LookCompareModeSwitch).hitTestable(), findsOneWidget);
 
       // There too a tap on the picture is the comparison's own.
@@ -955,8 +1019,6 @@ void main() {
     await tester.tap(find.byKey(const Key('look-preview-fullscreen')));
     await tester.pump();
     expect(modes, ['SystemUiMode.immersiveSticky']);
-    // A look without a photo of its own has nothing to pick between.
-    expect(find.byType(PreviewPhotoSwitch), findsNothing);
     expect(find.byType(LookCompareModeSwitch).hitTestable(), findsOneWidget);
     await app.dispose();
     expect(modes, ['SystemUiMode.immersiveSticky', 'SystemUiMode.edgeToEdge']);

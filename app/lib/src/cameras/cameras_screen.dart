@@ -17,6 +17,7 @@ import 'package:grlab/src/connection/link_state.dart';
 import 'package:grlab/src/data/cameras.dart';
 import 'package:grlab/src/pairing/pairing_flow.dart';
 import 'package:grlab/src/pairing/pairing_widgets.dart';
+import 'package:grlab/src/sample_photos.dart';
 import 'package:grlab/src/settings/settings_screen.dart';
 import 'package:grlab/src/theme/tokens.dart';
 import 'package:grlab/src/widgets/group.dart';
@@ -233,11 +234,7 @@ class _Welcome extends StatelessWidget {
               left: 0,
               right: 0,
               height: photo,
-              child: Image.asset(
-                'assets/welcome.jpg',
-                fit: BoxFit.cover,
-                excludeFromSemantics: true,
-              ),
+              child: const _WelcomePhotos(),
             ),
             Positioned(
               top: photo * .53,
@@ -323,6 +320,107 @@ class _Welcome extends StatelessWidget {
       },
     );
   }
+}
+
+/// GR Lab's own photos ([samplePhotos]) one after another, each fading in
+/// over the one before \[design\]. Where the phone asks for less motion
+/// the next photo takes its place at once.
+class _WelcomePhotos extends StatefulWidget {
+  const new();
+
+  @override
+  State<_WelcomePhotos> createState() => _WelcomePhotosState();
+}
+
+class _WelcomePhotosState extends State<_WelcomePhotos>
+    with SingleTickerProviderStateMixin {
+  /// From one photo starting to fade in to the next doing so, and how
+  /// long fading in takes.
+  static const Duration _perPhoto = Duration(seconds: 6);
+  static const Duration _fadeIn = Duration(milliseconds: 1200);
+
+  /// How far the photo shown has faded in: 1 once it is there alone. The
+  /// photos are rebuilt then, which takes away the one underneath.
+  late final AnimationController _arrival =
+      AnimationController(vsync: this, duration: _fadeIn, value: 1)
+        ..addStatusListener((status) {
+          if (status.isCompleted) setState(() {});
+        });
+  late final CurvedAnimation _opacity = CurvedAnimation(
+    parent: _arrival,
+    curve: Curves.easeInOut,
+  );
+  late final Timer _turns;
+
+  /// Which of [samplePhotos] is shown, and which one it is fading in over.
+  int _shown = 0;
+  int _under = 0;
+
+  bool _decodingAhead = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _turns = Timer.periodic(_perPhoto, (_) => _showNext());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_decodingAhead) return;
+    _decodingAhead = true;
+    _decodeNext();
+  }
+
+  /// Decodes the photo after the one shown before its turn, so it fades in
+  /// from its start rather than appearing partway through. One at a time:
+  /// each is some 11 MB decoded.
+  void _decodeNext() {
+    final next = samplePhotos[(_shown + 1) % samplePhotos.length];
+    unawaited(precacheImage(AssetImage(next.asset), context));
+  }
+
+  @override
+  void dispose() {
+    _turns.cancel();
+    _opacity.dispose();
+    _arrival.dispose();
+    super.dispose();
+  }
+
+  void _showNext() {
+    setState(() {
+      _under = _shown;
+      _shown = (_shown + 1) % samplePhotos.length;
+    });
+    _decodeNext();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _arrival.value = 1;
+    } else {
+      _arrival.forward(from: 0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    key: const Key('cameras-welcome-photos'),
+    fit: StackFit.expand,
+    children: [
+      if (!_arrival.isCompleted)
+        KeyedSubtree(key: const ValueKey('under'), child: _photo(_under)),
+      FadeTransition(
+        key: const ValueKey('shown'),
+        opacity: _opacity,
+        child: _photo(_shown),
+      ),
+    ],
+  );
+
+  static Widget _photo(int index) => Image.asset(
+    samplePhotos[index].asset,
+    fit: BoxFit.cover,
+    excludeFromSemantics: true,
+  );
 }
 
 class _ModelChip extends StatelessWidget {
