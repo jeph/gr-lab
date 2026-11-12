@@ -194,9 +194,11 @@ void main() {
     );
     await pumpUntilFound(tester, _downloadedBadge(jpeg));
 
-    // The viewer's Download asks which half of the pair, again.
+    // The viewer's Download asks which half of the pair, again. Info
+    // shows the pair's details.
     await tester.tap(_cell(pair));
     await pumpUntilFound(tester, find.text('R0000268.JPG'));
+    await tapWhenReady(tester, _inViewer('viewer-info'));
     expect(
       find.descendant(
         of: find.byType(ShotViewer),
@@ -205,8 +207,8 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('R0000268.JPG + R0000268.DNG'), findsOneWidget);
-    await pumpUntilFound(tester, find.text('Download again'));
-    await tapWhenReady(tester, find.text('Download again'));
+    await pumpUntilFound(tester, find.byTooltip('Download again'));
+    await tapWhenReady(tester, find.byTooltip('Download again'));
     await tapWhenReady(
       tester,
       find.byKey(const Key('viewer-download-choice:raw')),

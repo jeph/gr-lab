@@ -27,13 +27,14 @@ import 'package:grphoto/src/widgets/group.dart';
 import 'package:grphoto/src/widgets/skeleton.dart';
 import 'package:video_player/video_player.dart';
 
-/// Full-screen viewer (mock `b-viewer`): swipe between [shots], pinch to
-/// zoom, file details, and Download, which asks a RAW+JPEG pair whether to
-/// download its JPEG, its RAW or both. A photo shown larger than its
-/// preview, or zoomed, is replaced by the full JPEG once it arrives; a mark
-/// in its corner says so until then. A tap on a photo gives it the whole
-/// screen. There, a tap shows a button that brings the bars and the details
-/// back, as Back does.
+/// Full-screen viewer: swipe between [shots] and pinch to zoom. A shot
+/// opens with the whole screen and the header over its top: Back to the
+/// Library, the shot's name, Info and Download, which asks a RAW+JPEG pair
+/// whether to download its JPEG, its RAW or both. A tap on a photo puts
+/// the header away and the next one brings it back. Info shows the file's
+/// details below the shot, and Info again or a tap on the photo puts them
+/// away. A photo shown larger than its preview, or zoomed, is replaced by
+/// the full JPEG once it arrives; a mark in its corner says so until then.
 ///
 /// The viewer follows the camera's listing: a shot that leaves it (deleted
 /// on the camera, or its card taken out) leaves the swipe list, a pair
@@ -51,8 +52,7 @@ class ShotViewer extends StatefulWidget {
   State<ShotViewer> createState() => _ShotViewerState();
 }
 
-class _ShotViewerState extends State<ShotViewer>
-    with SingleTickerProviderStateMixin {
+class _ShotViewerState extends State<ShotViewer> with TickerProviderStateMixin {
   late final LibraryContext _library = LibraryScope.of(context);
 
   /// The camera of [_shots]: the listing's camera when the viewer opened.
@@ -75,22 +75,33 @@ class _ShotViewerState extends State<ShotViewer>
   /// letting them swipe to another shot.
   bool _photoHeld = false;
 
-  /// The photo shown has the whole screen: the viewer's bars and details
-  /// and the system's bars are hidden. Only photos: a movie's page takes
-  /// taps for playback, so a tap there could not bring up the way back out.
-  bool _fullscreen = false;
+  /// The shot's details show below it, so it lies between them and the
+  /// header instead of having the whole screen.
+  bool _infoShown = false;
 
-  /// The button that leaves full screen shows over the photo.
-  bool _exitShown = false;
+  /// The header shows, and the system's bars with it. Always with the
+  /// details ([_infoShown]), which are reached from it, and on a movie:
+  /// its page takes taps for playback, so a tap there could not bring the
+  /// header back.
+  bool _headerShown = true;
 
-  /// 0 with the viewer's bars and details in place, 1 once the photo has
-  /// the whole screen ([_fullscreen]).
+  /// 0 with the details in place, 1 once the shot has the whole screen
+  /// (not [_infoShown]).
   late final AnimationController _immersion;
   late final CurvedAnimation _immersed;
+
+  /// 0 with the header away, 1 with it in place ([_headerShown]).
+  late final AnimationController _headerVisibility;
 
   /// Set once nothing is left to show: the route is on its way out and
   /// shows none of [_shots] any more.
   bool _closing = false;
+
+  /// The status bar's icons as the app's theme has them, to give back
+  /// when the viewer goes. The header has them white over a shot with the
+  /// whole screen, and they stay as the last screen to say had them: the
+  /// Library, which has no app bar, would not set them back.
+  late SystemUiOverlayStyle _appStatusBar;
 
   @override
   void initState() {
@@ -100,10 +111,30 @@ class _ShotViewerState extends State<ShotViewer>
     _immersion = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 250),
+      value: 1,
     );
     _immersed = CurvedAnimation(
       parent: _immersion,
       curve: Curves.easeInOutCubic,
+    );
+    _headerVisibility = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+      value: 1,
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final brightness = Theme.of(context).brightness;
+    _appStatusBar = SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarBrightness: brightness,
+      statusBarIconBrightness: brightness == Brightness.dark
+          ? Brightness.light
+          : Brightness.dark,
+      systemStatusBarContrastEnforced: false,
     );
   }
 
@@ -113,18 +144,20 @@ class _ShotViewerState extends State<ShotViewer>
     _pages.dispose();
     _immersed.dispose();
     _immersion.dispose();
-    if (_fullscreen) _showSystemBars();
+    _headerVisibility.dispose();
+    if (!_headerShown) _showSystemBars();
+    SystemChrome.setSystemUIOverlayStyle(_appStatusBar);
     super.dispose();
   }
 
-  /// A tap on the photo gives it the whole screen; there, the button out
-  /// of full screen comes and goes with each tap.
+  /// A tap on a photo puts its details away; without them, the header
+  /// goes and comes with each tap.
   void _onPhotoTap() {
-    if (!_fullscreen) {
-      _enterFullscreen();
-      return;
+    if (_infoShown) {
+      _setInfoShown(false);
+    } else {
+      _setHeaderShown(!_headerShown);
     }
-    setState(() => _exitShown = !_exitShown);
   }
 
   void _onPhotoHold(bool held) {
@@ -139,39 +172,42 @@ class _ShotViewerState extends State<ShotViewer>
     setState(() => _photoHeld = held);
   }
 
-  void _enterFullscreen() {
-    if (_fullscreen) return;
-    setState(() => _fullscreen = true);
-    _animateImmersion();
-    unawaited(
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
-    );
+  void _setInfoShown(bool shown) {
+    if (shown == _infoShown) return;
+    setState(() => _infoShown = shown);
+    _animate(_immersion, forward: !shown);
   }
 
-  void _leaveFullscreen() {
-    if (!_fullscreen) return;
-    setState(() {
-      _fullscreen = false;
-      _exitShown = false;
-    });
-    _animateImmersion();
-    _showSystemBars();
-  }
-
-  /// Moves the bars and details to where [_fullscreen] has them: over a
-  /// moment, or at once when the platform asks for less motion.
-  void _animateImmersion() {
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _immersion.value = _fullscreen ? 1 : 0;
-    } else if (_fullscreen) {
-      _immersion.forward();
+  /// Shows or hides the header and, with it, the status and navigation
+  /// bars: shown, they are as the rest of the app has them (Flutter's
+  /// default, edge to edge).
+  void _setHeaderShown(bool shown) {
+    if (shown == _headerShown) return;
+    setState(() => _headerShown = shown);
+    _animate(_headerVisibility, forward: shown);
+    if (shown) {
+      _showSystemBars();
     } else {
-      _immersion.reverse();
+      unawaited(
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
+      );
     }
   }
 
-  /// Brings back the status and navigation bars, as the rest of the app
-  /// has them (Flutter's default, edge to edge).
+  /// Takes [controller] to its end ([forward]) or back to its start: over
+  /// a moment, or at once when the platform asks for less motion. Its
+  /// status says which of the two it reached, which `animateTo` would not:
+  /// that one ends completed at either.
+  void _animate(AnimationController controller, {required bool forward}) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      controller.value = forward ? 1 : 0;
+    } else if (forward) {
+      controller.forward();
+    } else {
+      controller.reverse();
+    }
+  }
+
   void _showSystemBars() =>
       unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
 
@@ -214,13 +250,13 @@ class _ShotViewerState extends State<ShotViewer>
       if (kept[index] != shown) _photoHeld = false;
     });
     if (dropped && _pages.hasClients) _pages.jumpToPage(index);
-    if (kept[index].isVideo) _leaveFullscreen();
+    if (kept[index].isVideo) _setHeaderShown(true);
   }
 
   /// Closes the viewer's route, also when another route covers it.
   void _close() {
     setState(() => _closing = true);
-    _leaveFullscreen();
+    _setHeaderShown(true);
     final route = ModalRoute.of(context);
     if (route == null) return;
     final navigator = Navigator.of(context);
@@ -238,7 +274,7 @@ class _ShotViewerState extends State<ShotViewer>
       _index = index;
       _photoHeld = false;
     });
-    if (_shots[index].isVideo) _leaveFullscreen();
+    if (_shots[index].isVideo) _setHeaderShown(true);
   }
 
   @override
@@ -249,125 +285,206 @@ class _ShotViewerState extends State<ShotViewer>
     final library = _library;
     final serial = _serial;
     final shot = _shots[_index];
-    final fullscreen = _fullscreen;
-    return PopScope(
-      canPop: !fullscreen,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _leaveFullscreen();
-      },
-      child: ListenableBuilder(
-        listenable: Listenable.merge([library.model, library.engine]),
-        builder: (context, _) {
-          for (final f in shot.files) {
-            unawaited(library.model.ensureInfo(f));
-          }
-          final taken = library.model.info(shot.primary)?.taken;
-          return Scaffold(
-            body: AnimatedBuilder(
-              animation: _immersed,
-              // Black around a photo that has the whole screen.
-              builder: (context, child) => ColoredBox(
-                color: Colors.black.withValues(alpha: _immersed.value),
-                child: child,
-              ),
-              child: Stack(
-                children: [
-                  Column(
-                    children: [
-                      // In the body rather than the scaffold's app bar
-                      // slot, so that it can slide away.
-                      _Bar(
-                        immersed: _immersed,
-                        top: true,
-                        child: AppBar(
-                          leading: const BackButton(),
-                          title: Column(
-                            children: [
-                              Text(
-                                shot.primary.name,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              Text(
-                                [
-                                  if (taken != null)
-                                    formatDayTime(
-                                      context,
-                                      taken,
-                                      DateTime.now(),
-                                    ),
-                                  ?storageLabel(context, shot.storage),
-                                ].join(' · '),
-                                style: GrFonts.monoStyle(context, size: 11),
-                              ),
-                            ],
-                          ),
-                        ),
+    final headerHeight = MediaQuery.paddingOf(context).top + kToolbarHeight;
+    return ListenableBuilder(
+      listenable: Listenable.merge([library.model, library.engine]),
+      builder: (context, _) {
+        for (final f in shot.files) {
+          unawaited(library.model.ensureInfo(f));
+        }
+        return Scaffold(
+          body: AnimatedBuilder(
+            animation: _immersed,
+            // Black around a shot that has the whole screen.
+            builder: (context, child) => ColoredBox(
+              color: Colors.black.withValues(alpha: _immersed.value),
+              child: child,
+            ),
+            child: Stack(
+              children: [
+                Column(
+                  children: [
+                    // The header's room, which a shot with the whole
+                    // screen takes: the header lies over it then.
+                    AnimatedBuilder(
+                      animation: _immersed,
+                      builder: (context, _) => SizedBox(
+                        height: headerHeight * (1 - _immersed.value),
                       ),
-                      Expanded(
-                        child: serial == null
-                            ? const SizedBox.shrink()
-                            : PageView.builder(
-                                controller: _pages,
-                                physics: _photoHeld
-                                    ? const NeverScrollableScrollPhysics()
-                                    : const PageScrollPhysics(),
-                                itemCount: _shots.length,
-                                onPageChanged: _onPageChanged,
-                                // A page whose shot stays keeps its state
-                                // (zoom, playback) when shots before it
-                                // are dropped.
-                                findChildIndexCallback: (key) {
-                                  final i = _shots.indexWhere(
-                                    (s) => ValueKey(s) == key,
-                                  );
-                                  return i < 0 ? null : i;
-                                },
-                                itemBuilder: (context, i) {
-                                  final s = _shots[i];
-                                  return s.isVideo
-                                      ? _VideoPage(
-                                          key: ValueKey(s),
-                                          serial: serial,
-                                          shot: s,
-                                          active: i == _index,
-                                        )
-                                      : _PhotoPage(
-                                          key: ValueKey(s),
-                                          serial: serial,
-                                          shot: s,
-                                          immersed: _immersed,
-                                          onHold: _onPhotoHold,
-                                          onTap: _onPhotoTap,
-                                        );
-                                },
-                              ),
-                      ),
-                      _Bar(
-                        immersed: _immersed,
-                        top: false,
-                        child: Column(
-                          children: [
-                            _Details(shot: shot, model: library.model),
-                            if (serial != null)
-                              _ActionBar(
-                                serial: serial,
-                                shot: shot,
-                                engine: library.engine,
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  Positioned.fill(
-                    child: _ExitFullscreen(
-                      shown: fullscreen && _exitShown,
-                      onExit: _leaveFullscreen,
                     ),
+                    Expanded(
+                      child: serial == null
+                          ? const SizedBox.shrink()
+                          : PageView.builder(
+                              controller: _pages,
+                              physics: _photoHeld
+                                  ? const NeverScrollableScrollPhysics()
+                                  : const PageScrollPhysics(),
+                              itemCount: _shots.length,
+                              onPageChanged: _onPageChanged,
+                              // A page whose shot stays keeps its state
+                              // (zoom, playback) when shots before it
+                              // are dropped.
+                              findChildIndexCallback: (key) {
+                                final i = _shots.indexWhere(
+                                  (s) => ValueKey(s) == key,
+                                );
+                                return i < 0 ? null : i;
+                              },
+                              itemBuilder: (context, i) {
+                                final s = _shots[i];
+                                return s.isVideo
+                                    ? _VideoPage(
+                                        key: ValueKey(s),
+                                        serial: serial,
+                                        shot: s,
+                                        active: i == _index,
+                                        immersed: _immersed,
+                                      )
+                                    : _PhotoPage(
+                                        key: ValueKey(s),
+                                        serial: serial,
+                                        shot: s,
+                                        immersed: _immersed,
+                                        headerVisibility: _headerVisibility,
+                                        onHold: _onPhotoHold,
+                                        onTap: _onPhotoTap,
+                                      );
+                              },
+                            ),
+                    ),
+                    _DetailsBar(
+                      immersed: _immersed,
+                      child: _Details(shot: shot, model: library.model),
+                    ),
+                  ],
+                ),
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: _Header(
+                    shown: _headerShown,
+                    visibility: _headerVisibility,
+                    immersed: _immersed,
+                    shot: shot,
+                    model: library.model,
+                    infoShown: _infoShown,
+                    onInfo: () => _setInfoShown(!_infoShown),
+                    download: serial == null
+                        ? null
+                        : _DownloadAction(
+                            key: const ValueKey('viewer-download'),
+                            serial: serial,
+                            shot: shot,
+                            engine: library.engine,
+                          ),
                   ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The viewer's header: Back to the Library, the shot's name, when it was
+/// taken and where it is stored, Info, which shows and hides the shot's
+/// details, and [download]. Over the top of a shot that has the whole
+/// screen ([immersed] at 1) it is white on the scrim of the badges over
+/// photos, so it reads on a bright photo and a dark one, and fades away
+/// and back with [visibility]; above a shot with its details ([immersed]
+/// at 0) it is the app's bar.
+class _Header extends StatelessWidget {
+  const new({
+    required this.shown,
+    required this.visibility,
+    required this.immersed,
+    required this.shot,
+    required this.model,
+    required this.infoShown,
+    required this.onInfo,
+    required this.download,
+  });
+
+  /// Where [visibility] is heading: a header on its way out takes no taps.
+  final bool shown;
+
+  /// 0 with the header away, 1 with it in place.
+  final Animation<double> visibility;
+
+  /// 0 with the shot's details in place, 1 once the shot has the whole
+  /// screen.
+  final Animation<double> immersed;
+  final Shot shot;
+  final LibraryModel model;
+  final bool infoShown;
+  final VoidCallback onInfo;
+  final Widget? download;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = GrColors.of(context);
+    final taken = model.info(shot.primary)?.taken;
+    final subtitle = [
+      if (taken != null) formatDayTime(context, taken, DateTime.now()),
+      ?storageLabel(context, shot.storage),
+    ].join(' · ');
+    return IgnorePointer(
+      ignoring: !shown,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([visibility, immersed]),
+        builder: (context, _) {
+          final foreground = Color.lerp(c.t1, Colors.white, immersed.value);
+          return Offstage(
+            offstage: visibility.isDismissed,
+            child: Opacity(
+              opacity: visibility.value,
+              child: AppBar(
+                leading: const BackButton(),
+                foregroundColor: foreground,
+                backgroundColor: Color.lerp(
+                  c.bg,
+                  GrColors.photoBadgeScrim,
+                  immersed.value,
+                ),
+                title: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      shot.primary.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: foreground,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GrFonts.monoStyle(
+                        context,
+                        size: 11,
+                        color: Color.lerp(c.t2, Colors.white70, immersed.value),
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  IconButton(
+                    key: const Key('viewer-info'),
+                    tooltip: context.l10n.viewerInfo,
+                    isSelected: infoShown,
+                    onPressed: onInfo,
+                    icon: const Icon(Icons.info_outline_rounded),
+                    selectedIcon: const Icon(Icons.info_rounded),
+                  ),
+                  ?download,
                 ],
               ),
             ),
@@ -378,67 +495,26 @@ class _ShotViewerState extends State<ShotViewer>
   }
 }
 
-/// One of the viewer's bars, above ([top]) or below the photo. As the
-/// photo takes the whole screen ([immersed] going from 0 to 1) the bar
-/// slides off its edge of the screen and leaves its room to the photo.
-/// Away, it keeps its state: the details keep what they read from the
-/// camera.
-class _Bar extends StatelessWidget {
-  const new({required this.immersed, required this.top, required this.child});
+/// The shot's details, below it. As the shot takes the whole screen
+/// ([immersed] going from 0 to 1) they slide off the bottom of the screen
+/// and leave their room to it. Away, they are not built: they ask the
+/// camera for the photo's Image Control, which nothing shows then.
+class _DetailsBar extends StatelessWidget {
+  const new({required this.immersed, required this.child});
 
   final Animation<double> immersed;
-  final bool top;
   final Widget child;
 
   @override
   Widget build(BuildContext context) => SizeTransition(
     sizeFactor: ReverseAnimation(immersed),
-    // The edge next to the photo stays on the photo's.
-    alignment: top ? Alignment.bottomCenter : Alignment.topCenter,
+    // The edge next to the shot stays on the shot's.
+    alignment: Alignment.topCenter,
     child: AnimatedBuilder(
       animation: immersed,
       builder: (context, child) =>
-          Offstage(offstage: immersed.value == 1, child: child),
-      child: child,
-    ),
-  );
-}
-
-/// The button out of full screen, in a top corner over the photo. A tap
-/// on the photo shows it: with the system's bars hidden, the Back gesture
-/// takes a swipe to bring them up first.
-class _ExitFullscreen extends StatelessWidget {
-  const new({required this.shown, required this.onExit});
-
-  final bool shown;
-  final VoidCallback onExit;
-
-  @override
-  Widget build(BuildContext context) => IgnorePointer(
-    ignoring: !shown,
-    child: AnimatedOpacity(
-      opacity: shown ? 1 : 0,
-      duration: MediaQuery.disableAnimationsOf(context)
-          ? Duration.zero
-          : const Duration(milliseconds: 150),
-      child: SafeArea(
-        child: Align(
-          alignment: AlignmentDirectional.topStart,
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: IconButton(
-              key: const Key('viewer-exit-fullscreen'),
-              tooltip: context.l10n.viewerExitFullScreen,
-              style: IconButton.styleFrom(
-                backgroundColor: GrColors.photoBadgeScrim,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: onExit,
-              icon: const Icon(Icons.fullscreen_exit_rounded),
-            ),
-          ),
-        ),
-      ),
+          immersed.isCompleted ? const SizedBox.shrink() : child!,
+      child: SafeArea(top: false, child: child),
     ),
   );
 }
@@ -448,6 +524,7 @@ class _PhotoPage extends StatefulWidget {
     required this.serial,
     required this.shot,
     required this.immersed,
+    required this.headerVisibility,
     required this.onHold,
     required this.onTap,
     super.key,
@@ -456,9 +533,12 @@ class _PhotoPage extends StatefulWidget {
   final String serial;
   final Shot shot;
 
-  /// 0 with the viewer's bars in place, 1 once the photo has the whole
+  /// 0 with the shot's details in place, 1 once the photo has the whole
   /// screen.
   final Animation<double> immersed;
+
+  /// 0 with the viewer's header away, 1 with it in place.
+  final Animation<double> headerVisibility;
 
   /// Whether the photo keeps drags to itself: it is zoomed in, where a
   /// drag moves it, or two fingers are on it for a pinch.
@@ -577,6 +657,7 @@ class _PhotoPageState extends State<_PhotoPage> {
                         _Sharpening(
                           aspectRatio: aspectRatio,
                           immersed: widget.immersed,
+                          headerVisibility: widget.headerVisibility,
                         ),
                     ],
                   ),
@@ -591,13 +672,20 @@ class _PhotoPageState extends State<_PhotoPage> {
 /// page ([aspectRatio] is its width over its height; null takes the
 /// page's corner).
 class _Sharpening extends StatelessWidget {
-  const new({required this.aspectRatio, required this.immersed});
+  const new({
+    required this.aspectRatio,
+    required this.immersed,
+    required this.headerVisibility,
+  });
 
   final double? aspectRatio;
 
-  /// 0 with the viewer's bars in place, 1 once the photo has the whole
+  /// 0 with the shot's details in place, 1 once the photo has the whole
   /// screen.
   final Animation<double> immersed;
+
+  /// 0 with the viewer's header away, 1 with it in place.
+  final Animation<double> headerVisibility;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -609,16 +697,18 @@ class _Sharpening extends StatelessWidget {
           : applyBoxFit(BoxFit.contain, Size(ratio, 1), page).destination;
       final safe = MediaQuery.paddingOf(context);
       return AnimatedBuilder(
-        animation: immersed,
+        animation: Listenable.merge([immersed, headerVisibility]),
         builder: (context, mark) => Stack(
           children: [
             PositionedDirectional(
-              // Clear of the status bar and the camera cut-out, which the
-              // page reaches once the photo has the whole screen.
+              // Clear of what the page reaches under once the photo has
+              // the whole screen: the status bar and the camera cut-out,
+              // and the header while it shows.
               top:
                   max(
                     (page.height - photo.height) / 2,
-                    safe.top * immersed.value,
+                    (safe.top + kToolbarHeight * headerVisibility.value) *
+                        immersed.value,
                   ) +
                   12,
               end:
@@ -660,6 +750,7 @@ class _VideoPage extends StatefulWidget {
     required this.serial,
     required this.shot,
     required this.active,
+    required this.immersed,
     super.key,
   });
 
@@ -668,6 +759,10 @@ class _VideoPage extends StatefulWidget {
 
   /// Only the page on screen plays.
   final bool active;
+
+  /// 0 with the shot's details in place, 1 once the movie has the whole
+  /// screen.
+  final Animation<double> immersed;
 
   @override
   State<_VideoPage> createState() => _VideoPageState();
@@ -850,6 +945,7 @@ class _VideoPageState extends State<_VideoPage> {
                 : ValueListenableBuilder(
                     valueListenable: _library.link,
                     builder: (context, link, _) => _PlayPrompt(
+                      immersed: widget.immersed,
                       canPlay:
                           link?.serial == widget.serial ||
                           _library.movies.cached(
@@ -871,15 +967,21 @@ class _VideoPageState extends State<_VideoPage> {
 /// Why the movie is not playing.
 enum _MovieProblem { copyFailed, unplayable }
 
+/// Play, over the movie's still, and why it can't play. The reason is in
+/// the app's colour beside the still while the details show, and white
+/// once the movie has the whole screen ([immersed] at 1), where black
+/// surrounds it in every theme.
 class _PlayPrompt extends StatelessWidget {
   const new({
     required this.canPlay,
     required this.problem,
+    required this.immersed,
     required this.onPlay,
   });
 
   final bool canPlay;
   final _MovieProblem? problem;
+  final Animation<double> immersed;
   final VoidCallback onPlay;
 
   @override
@@ -904,10 +1006,15 @@ class _PlayPrompt extends StatelessWidget {
         ),
         if (note != null) ...[
           const SizedBox(height: 10),
-          Text(
-            note,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: c.t2),
+          AnimatedBuilder(
+            animation: immersed,
+            builder: (context, _) => Text(
+              note,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color.lerp(c.t2, Colors.white70, immersed.value),
+              ),
+            ),
           ),
         ],
       ],
@@ -1294,48 +1401,14 @@ class _ImageControlSkeleton extends StatelessWidget {
   );
 }
 
-/// The shot's Download (see [_DownloadAction]). Saved files can always be
-/// downloaded again: the app cannot see whether they are still on the
-/// phone.
-class _ActionBar extends StatelessWidget {
-  const new({required this.serial, required this.shot, required this.engine});
-
-  final String serial;
-  final Shot shot;
-  final DownloadEngine engine;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = GrColors.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: c.line)),
-      ),
-      child: SafeArea(
-        top: false,
-        // At least as tall as the mock's bar, and taller for a label at
-        // large text.
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 72),
-          child: Center(
-            child: _DownloadAction(
-              key: const ValueKey('viewer-download'),
-              serial: serial,
-              shot: shot,
-              engine: engine,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Downloads the shot: a RAW+JPEG pair asks whether to download its JPEG,
-/// its RAW or both, also after a failed download, so a failed JPEG never
-/// keeps its RAW from being chosen; any other shot starts at once, or
-/// retries its failed job. Shows that the shot's files are downloading or
-/// queued, or that their job failed.
+/// Downloads the shot, from the viewer's header: a RAW+JPEG pair asks
+/// whether to download its JPEG, its RAW or both, also after a failed
+/// download, so a failed JPEG never keeps its RAW from being chosen; any
+/// other shot starts at once, or retries its failed job. Its icon and its
+/// tooltip say that the shot's files are downloading (a ring fills as they
+/// do) or queued, that their job failed, or that they were downloaded.
+/// Saved files can always be downloaded again: the app cannot see whether
+/// they are still on the phone.
 class _DownloadAction extends StatelessWidget {
   const new({
     required this.serial,
@@ -1350,7 +1423,7 @@ class _DownloadAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = GrColors.of(context);
+    final color = IconTheme.of(context).color;
     final l10n = context.l10n;
     final files = shot.files;
     final jobs = [
@@ -1385,43 +1458,33 @@ class _DownloadAction extends StatelessWidget {
     } else {
       onTap = () => unawaited(engine.enqueueFiles(serial, shot, addable));
     }
-    return InkWell(
-      borderRadius: BorderRadius.circular(GrRadii.md),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: onTap == null ? c.t3 : c.t1),
-            const SizedBox(height: 4),
-            Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w500,
-                color: c.t1,
-              ),
-            ),
-            if (running)
-              ValueListenableBuilder(
-                valueListenable: engine.progress,
-                builder: (context, p, _) => SizedBox(
-                  width: 64,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: LinearProgressIndicator(
+    return IconButton(
+      tooltip: text,
+      // The header's colour: the app's own is dark over a photo in the
+      // light theme. Fainter, except while downloading: the ring is to be
+      // read, though nothing is left to tap for.
+      disabledColor: running ? color : color?.withValues(alpha: .38),
+      onPressed: onTap,
+      icon: running
+          ? Stack(
+              alignment: Alignment.center,
+              children: [
+                const Icon(Icons.arrow_downward_rounded, size: 14),
+                SizedBox.square(
+                  dimension: 24,
+                  child: ValueListenableBuilder(
+                    valueListenable: engine.progress,
+                    builder: (context, p, _) => CircularProgressIndicator(
                       value: p.fraction,
-                      minHeight: 2,
+                      strokeWidth: 2,
+                      color: color,
+                      backgroundColor: color?.withValues(alpha: .24),
                     ),
                   ),
                 ),
-              ),
-          ],
-        ),
-      ),
+              ],
+            )
+          : Icon(icon),
     );
   }
 

@@ -2953,10 +2953,6 @@
   "@viewerDownloading": {
     "description": "Viewer action while the file is being downloaded."
   },
-  "viewerExitFullScreen": "Exit full screen",
-  "@viewerExitFullScreen": {
-    "description": "Tooltip of the button over a photo that has the whole screen in the viewer; it brings back the viewer's bars and the photo's details."
-  },
   "viewerFormat": "Format",
   "@viewerFormat": {
     "description": "Label of the shot's format in the viewer details."
@@ -2964,6 +2960,10 @@
   "viewerImageControl": "Image Control",
   "@viewerImageControl": {
     "description": "Title of the viewer details row with the Image Control the photo was shot with."
+  },
+  "viewerInfo": "Info",
+  "@viewerInfo": {
+    "description": "Tooltip of the button in the viewer's header that shows the shot's details (format, size, when it was taken, its files and its Image Control) below it, and hides them again."
   },
   "viewerLength": "Length",
   "@viewerLength": {

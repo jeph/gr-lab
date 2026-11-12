@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -56,12 +58,14 @@ void _delete(TestApp app, String file) {
 }
 
 /// Opens the Library on a camera holding [photos] and the viewer on the
-/// shot keyed [shot].
+/// shot keyed [shot], with the shot's details when [info] is set: Info in
+/// the viewer's header shows them.
 Future<TestApp> _openViewer(
   WidgetTester tester,
   List<FakePhoto> photos,
   String shot, {
   FakeMediaSource? media,
+  bool info = false,
 }) async {
   final app = (await tester.runAsync(
     () => createTestApp(
@@ -74,6 +78,9 @@ Future<TestApp> _openViewer(
   await _openLibrary(tester);
   await tapWhenReady(tester, find.byKey(ValueKey(shot)));
   await pumpUntilFound(tester, _viewer);
+  if (info) {
+    await tapWhenReady(tester, _inViewer(find.byKey(const Key('viewer-info'))));
+  }
   return app;
 }
 
@@ -84,10 +91,15 @@ Future<void> _pairLoses(
   required String deleted,
   required String kept,
 }) async {
-  final app = await _openViewer(tester, [
-    FakePhoto('100RICOH', 'R0000001.JPG', _taken(1)),
-    FakePhoto('100RICOH', 'R0000001.DNG', _taken(1)),
-  ], 'sd1|100RICOH/R0000001');
+  final app = await _openViewer(
+    tester,
+    [
+      FakePhoto('100RICOH', 'R0000001.JPG', _taken(1)),
+      FakePhoto('100RICOH', 'R0000001.DNG', _taken(1)),
+    ],
+    'sd1|100RICOH/R0000001',
+    info: true,
+  );
   final download = _inViewer(find.byKey(const ValueKey('viewer-download')));
   final pairFormat = _inViewer(find.text('RAW+JPEG'));
   await pumpUntilFound(tester, pairFormat);
@@ -264,7 +276,7 @@ void main() {
 
     await tapWhenReady(tester, download);
     await tapWhenReady(tester, choice('jpeg'));
-    await pumpUntilFound(tester, _inViewer(find.text('Retry download')));
+    await pumpUntilFound(tester, _inViewer(find.byTooltip('Retry download')));
 
     app.media.failWith = null;
     await tapWhenReady(tester, download);
@@ -291,14 +303,19 @@ void main() {
 
   testWidgets("a photo's look that is already saved is not saved again: a "
       'dialog says so, and Save look can be used again', (tester) async {
-    final app = await _openViewer(tester, [
-      FakePhoto(
-        '100RICOH',
-        'R0000001.JPG',
-        _taken(1),
-        imageControl: FakeLook.presets[0].data,
-      ),
-    ], 'sd1|100RICOH/R0000001');
+    final app = await _openViewer(
+      tester,
+      [
+        FakePhoto(
+          '100RICOH',
+          'R0000001.JPG',
+          _taken(1),
+          imageControl: FakeLook.presets[0].data,
+        ),
+      ],
+      'sd1|100RICOH/R0000001',
+      info: true,
+    );
     final looks = app.models.looks;
     final save = _inViewer(find.byKey(const Key('viewer-save-look')));
     final nameField = find.byKey(const Key('looks-name-field'));
@@ -385,6 +402,7 @@ void main() {
         ),
       ],
       'sd1|100RICOH/R0000004',
+      info: true,
       media: (photo, size) async =>
           size == GrImageSize.full && photo.file == 'R0000004.JPG'
           ? largeJpeg
@@ -458,21 +476,26 @@ void main() {
     addTearDown(tester.view.reset);
     // Newest first: R0000003 (a summary of two lines), R0000002 (one
     // line), R0000001 (no Image Control).
-    final app = await _openViewer(tester, [
-      FakePhoto('100RICOH', 'R0000001.JPG', _taken(1)),
-      FakePhoto(
-        '100RICOH',
-        'R0000002.JPG',
-        _taken(2),
-        imageControl: FakeLook.presets[4].data,
-      ),
-      FakePhoto(
-        '100RICOH',
-        'R0000003.JPG',
-        _taken(3),
-        imageControl: FakeLook.presets[0].data,
-      ),
-    ], 'sd1|100RICOH/R0000003');
+    final app = await _openViewer(
+      tester,
+      [
+        FakePhoto('100RICOH', 'R0000001.JPG', _taken(1)),
+        FakePhoto(
+          '100RICOH',
+          'R0000002.JPG',
+          _taken(2),
+          imageControl: FakeLook.presets[4].data,
+        ),
+        FakePhoto(
+          '100RICOH',
+          'R0000003.JPG',
+          _taken(3),
+          imageControl: FakeLook.presets[0].data,
+        ),
+      ],
+      'sd1|100RICOH/R0000003',
+      info: true,
+    );
     final skeleton = _inViewer(
       find.byKey(const Key('viewer-image-control-loading')),
     );
@@ -524,10 +547,15 @@ void main() {
       ..devicePixelRatio = 3;
     addTearDown(tester.view.reset);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-    final app = await _openViewer(tester, [
-      FakePhoto('100RICOH', 'R0000001.JPG', DateTime(2020, 10, 10, 1, 1)),
-      FakePhoto('100RICOH', 'R0000001.DNG', DateTime(2020, 10, 10, 1, 1)),
-    ], 'sd1|100RICOH/R0000001');
+    final app = await _openViewer(
+      tester,
+      [
+        FakePhoto('100RICOH', 'R0000001.JPG', DateTime(2020, 10, 10, 1, 1)),
+        FakePhoto('100RICOH', 'R0000001.DNG', DateTime(2020, 10, 10, 1, 1)),
+      ],
+      'sd1|100RICOH/R0000001',
+      info: true,
+    );
     // The card, inside the margin around it.
     final details = _inViewer(
       find.descendant(
@@ -578,14 +606,22 @@ void main() {
     await app.dispose();
   });
 
-  testWidgets('a tap gives a photo the whole screen, where a pinch zooms it '
-      'in and back out; there a tap shows the way out, and it or Back brings '
-      'the bars and details back', (tester) async {
+  testWidgets('a photo opens with the whole screen under the header; a tap '
+      'puts the header away and the next one brings it back, and a pinch '
+      'zooms the photo in and back out; Info shows the details below the '
+      'photo, and Info again or a tap on the photo puts them away; Back '
+      'closes the viewer', (tester) async {
     final modes = <Object?>[];
+    // How the status bar's icons were last asked for.
+    Object? statusIcons;
     final messenger = tester.binding.defaultBinaryMessenger
       ..setMockMethodCallHandler(SystemChannels.platform, (call) async {
         if (call.method == 'SystemChrome.setEnabledSystemUIMode') {
           modes.add(call.arguments);
+        }
+        if (call.method == 'SystemChrome.setSystemUIOverlayStyle') {
+          final style = call.arguments as Map<Object?, Object?>;
+          statusIcons = style['statusBarIconBrightness'];
         }
         return null;
       });
@@ -598,7 +634,10 @@ void main() {
     ], 'sd1|100RICOH/R0000002');
     final pages = _inViewer(find.byType(PageView));
     final bar = _inViewer(find.byType(AppBar));
+    final back = _inViewer(find.byType(BackButton));
+    final info = _inViewer(find.byKey(const Key('viewer-info')));
     final download = _inViewer(find.byKey(const ValueKey('viewer-download')));
+    final details = _inViewer(find.byType(GroupBox));
     double zoom() => tester
         .widget<InteractiveViewer>(
           _inViewer(find.byType(InteractiveViewer)).first,
@@ -629,75 +668,158 @@ void main() {
       await pumpRounds(tester, 30);
     }
 
+    // The height of the pages part of the way through a change, and once
+    // it is done.
+    Future<(double, double)> slide() async {
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 120));
+      final onTheWay = tester.getSize(pages).height;
+      await pumpRounds(tester, 30);
+      return (onTheWay, tester.getSize(pages).height);
+    }
+
     // The route has finished sliding in.
     await pumpUntilFound(tester, download.hitTestable());
     await pumpRounds(tester, 30);
     final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
-    final withBars = tester.getSize(pages).height;
-    expect(withBars, lessThan(screen.height));
-    final exit = _inViewer(find.byKey(const Key('viewer-exit-fullscreen')))
-        .hitTestable();
-    // Part of the way between its two sizes: the bars slide, they don't
-    // jump.
-    Future<void> expectSliding() async {
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 120));
-      expect(
-        tester.getSize(pages).height,
-        inExclusiveRange(withBars, screen.height),
-      );
-      await pumpRounds(tester, 30);
-    }
+    expect(tester.getSize(pages), screen);
+    expect(back.hitTestable(), findsOneWidget);
+    expect(info.hitTestable(), findsOneWidget);
+    expect(details, findsNothing);
+    expect(modes, isEmpty);
+    expect(statusIcons, 'Brightness.light', reason: 'white over the photo');
 
     await tester.tap(pages);
-    await expectSliding();
+    await pumpRounds(tester, 30);
     expect(bar, findsNothing);
-    expect(download.hitTestable(), findsNothing);
     expect(tester.getSize(pages), screen);
     expect(modes, ['SystemUiMode.immersiveSticky']);
-    expect(exit, findsNothing);
 
+    // A pinch is not a tap: the header stays away.
     await pinch(10);
     expect(zoom(), greaterThan(2));
     expect(tester.widget<PageView>(pages).controller!.page, 0);
     await pinch(-10);
     expect(zoom(), 1);
-
-    // A tap shows the way out and the next one puts it away; the photo
-    // keeps the screen.
-    await tester.tap(pages);
-    await tester.pump();
-    expect(exit, findsOneWidget);
-    await tester.tap(pages);
-    await tester.pump();
-    expect(exit, findsNothing);
-    expect(tester.getSize(pages), screen);
-    expect(modes, ['SystemUiMode.immersiveSticky']);
+    expect(bar, findsNothing);
 
     await tester.tap(pages);
-    await tester.pump();
-    await tester.tap(exit);
-    await expectSliding();
-    expect(bar, findsOneWidget);
+    await pumpRounds(tester, 30);
+    expect(back.hitTestable(), findsOneWidget);
     expect(download.hitTestable(), findsOneWidget);
-    expect(tester.getSize(pages).height, withBars);
-    expect(exit, findsNothing);
-    expect(modes.last, 'SystemUiMode.edgeToEdge');
+    expect(tester.getSize(pages), screen);
+    expect(modes, ['SystemUiMode.immersiveSticky', 'SystemUiMode.edgeToEdge']);
 
+    // The details slide in below the photo, they don't jump; the photo
+    // lies between the header and them.
+    await tester.tap(info);
+    final (opening, withDetails) = await slide();
+    expect(withDetails, lessThan(screen.height));
+    expect(opening, inExclusiveRange(withDetails, screen.height));
+    expect(tester.getRect(pages).top, tester.getRect(bar).bottom);
+    expect(tester.getRect(details).top, greaterThan(tester.getRect(pages).top));
+    expect(tester.getRect(details).bottom, lessThanOrEqualTo(screen.height));
+    expect(download.hitTestable(), findsOneWidget);
+
+    // A tap on the photo puts them away and leaves the header.
+    await tester.tap(pages);
+    final (closing, _) = await slide();
+    expect(closing, inExclusiveRange(withDetails, screen.height));
+    expect(details, findsNothing);
+    expect(tester.getSize(pages), screen);
+    expect(back.hitTestable(), findsOneWidget);
+
+    await tester.tap(info);
+    await pumpRounds(tester, 30);
+    expect(tester.getSize(pages).height, withDetails);
+    await tester.tap(info);
+    await pumpRounds(tester, 30);
+    expect(details, findsNothing);
+    expect(tester.getSize(pages), screen);
+    expect(modes, hasLength(2));
+
+    // Back closes the viewer, with the details and without the header
+    // too, and brings the system's bars back.
     await tester.tap(pages);
     await pumpRounds(tester, 30);
     expect(bar, findsNothing);
+    expect(modes.last, 'SystemUiMode.immersiveSticky');
     await tester.binding.handlePopRoute();
-    await pumpRounds(tester, 30);
-    expect(_showing('R0000002.JPG'), findsOneWidget);
-    expect(download.hitTestable(), findsOneWidget);
+    await pumpUntil(
+      tester,
+      () => _viewer.evaluate().isEmpty,
+      reason: 'viewer closed',
+    );
+    expect(find.byType(LibraryScreen), findsOneWidget);
     expect(modes.last, 'SystemUiMode.edgeToEdge');
+    await tester.pump();
+    expect(statusIcons, 'Brightness.dark', reason: 'as the light theme has');
+
+    await tapWhenReady(
+      tester,
+      find.byKey(const ValueKey('sd1|100RICOH/R0000002')),
+    );
+    await tapWhenReady(tester, info);
+    await pumpUntilFound(tester, details);
+    await tester.binding.handlePopRoute();
+    await pumpUntil(
+      tester,
+      () => _viewer.evaluate().isEmpty,
+      reason: 'viewer closed from the details',
+    );
 
     await app.dispose();
   });
 
-  testWidgets('full screen comes at once when the phone asks for less '
-      'motion', (tester) async {
+  testWidgets('a swipe to a movie brings the header back: its page takes '
+      'taps for playback', (tester) async {
+    final modes = <Object?>[];
+    final messenger = tester.binding.defaultBinaryMessenger
+      ..setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'SystemChrome.setEnabledSystemUIMode') {
+          modes.add(call.arguments);
+        }
+        return null;
+      });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+    // Newest first: the photo, then the movie.
+    final app = await _openViewer(tester, [
+      FakePhoto(
+        '100RICOH',
+        'R0000001.MOV',
+        _taken(1),
+        videoLength: const Duration(seconds: 5),
+      ),
+      FakePhoto('100RICOH', 'R0000002.JPG', _taken(2)),
+    ], 'sd1|100RICOH/R0000002');
+    final pages = _inViewer(find.byType(PageView));
+    final bar = _inViewer(find.byType(AppBar));
+    final back = _inViewer(find.byType(BackButton));
+    await pumpUntilFound(tester, back.hitTestable());
+    await pumpRounds(tester, 30);
+
+    await tester.tap(pages);
+    await pumpRounds(tester, 30);
+    expect(bar, findsNothing);
+
+    await tester.fling(pages, const Offset(-600, 0), 1000);
+    await pumpUntilFound(tester, _showing('R0000001.MOV'));
+    await pumpRounds(tester, 30);
+    expect(back.hitTestable(), findsOneWidget);
+    expect(modes, ['SystemUiMode.immersiveSticky', 'SystemUiMode.edgeToEdge']);
+    // The movie has the whole screen too.
+    expect(
+      tester.getSize(pages),
+      tester.view.physicalSize / tester.view.devicePixelRatio,
+    );
+
+    await app.dispose();
+  });
+
+  testWidgets('the header and the details come and go at once when the '
+      'phone asks for less motion', (tester) async {
     tester.platformDispatcher.accessibilityFeaturesTestValue =
         const FakeAccessibilityFeatures(disableAnimations: true);
     addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
@@ -705,6 +827,9 @@ void main() {
       FakePhoto('100RICOH', 'R0000001.JPG', _taken(1)),
     ], 'sd1|100RICOH/R0000001');
     final pages = _inViewer(find.byType(PageView));
+    final bar = _inViewer(find.byType(AppBar));
+    final details = _inViewer(find.byType(GroupBox));
+    final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
     await pumpUntilFound(
       tester,
       _inViewer(find.byKey(const ValueKey('viewer-download'))).hitTestable(),
@@ -713,9 +838,83 @@ void main() {
 
     await tester.tap(pages);
     await tester.pump();
-    expect(
-      tester.getSize(pages),
-      tester.view.physicalSize / tester.view.devicePixelRatio,
+    expect(bar, findsNothing);
+    await tester.tap(pages);
+    await tester.pump();
+    expect(bar, findsOneWidget);
+
+    // On the way in, the details would reach below the screen.
+    await tester.tap(_inViewer(find.byKey(const Key('viewer-info'))));
+    await tester.pump();
+    expect(tester.getRect(details).bottom, lessThanOrEqualTo(screen.height));
+    expect(tester.getRect(pages).bottom, lessThan(screen.height));
+    await tester.tap(pages);
+    await tester.pump();
+    expect(details, findsNothing);
+    expect(tester.getSize(pages), screen);
+
+    await app.dispose();
+  });
+
+  testWidgets('the mark of a photo still loading keeps below the header '
+      'while the header lies over its corner', (tester) async {
+    final rest = syntheticMedia();
+    // The full JPEG stays on its way until the test lets it through. The
+    // photo's size is given, so the camera's `/info` doesn't wait for it.
+    final full = Completer<void>();
+    final app = await _openViewer(
+      tester,
+      [FakePhoto('100RICOH', 'R0000001.JPG', _taken(1), size: 4000)],
+      'sd1|100RICOH/R0000001',
+      media: (photo, size) async {
+        if (size == GrImageSize.full) await full.future;
+        return await rest(photo, size);
+      },
+    );
+    final pages = _inViewer(find.byType(PageView));
+    final bar = _inViewer(find.byType(AppBar));
+    final sharpening = _inViewer(find.byKey(const Key('viewer-sharpening')));
+    // The photo, 24 by 16, as it lies fitted to its page.
+    Rect photo() {
+      final page = tester.getRect(pages);
+      return Alignment.center.inscribe(
+        applyBoxFit(BoxFit.contain, const Size(24, 16), page.size).destination,
+        page,
+      );
+    }
+
+    double markTop() => tester.getRect(sharpening).top;
+    await pumpUntilFound(tester, sharpening);
+    // The route has finished sliding in.
+    await pumpUntilFound(tester, bar.hitTestable());
+    await pumpRounds(tester, 30);
+
+    // The test's screen is wider than tall: the photo reaches under the
+    // header.
+    final header = tester.getRect(bar);
+    expect(photo().top, lessThan(header.bottom));
+    expect(markTop(), closeTo(header.bottom + 12, .01));
+
+    await tester.tap(pages);
+    await pumpRounds(tester, 30);
+    expect(bar, findsNothing);
+    expect(markTop(), closeTo(photo().top + 12, .01));
+
+    await tester.tap(pages);
+    await pumpRounds(tester, 30);
+    expect(markTop(), closeTo(header.bottom + 12, .01));
+
+    // With the details, the page begins below the header.
+    await tester.tap(_inViewer(find.byKey(const Key('viewer-info'))));
+    await pumpRounds(tester, 30);
+    expect(tester.getRect(pages).top, header.bottom);
+    expect(markTop(), closeTo(photo().top + 12, .01));
+
+    full.complete();
+    await pumpUntil(
+      tester,
+      () => sharpening.evaluate().isEmpty,
+      reason: 'the mark gone once the full photo shows',
     );
 
     await app.dispose();
