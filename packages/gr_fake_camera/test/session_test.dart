@@ -484,7 +484,7 @@ void main() {
         expect(camera.poweredOn, isTrue);
       });
 
-      test('a link to an off camera that drops is linked again without '
+      test('a link to an off camera that drops is let go of without '
           'counting as a loss; one to a camera that is on counts', () async {
         camera = await startCamera(fastConfig(poweredOn: false, bonded: true));
         final events = <GrSessionEvent>[];
@@ -493,18 +493,18 @@ void main() {
         await s.connectBluetooth(deviceId: camera.config.deviceId);
         expect(s.cameraOff, isTrue);
 
-        var restored = s.events.firstWhere((e) => e.kind == 'ble.restored');
         camera.dropBluetooth();
-        await until(() => s.ble == null);
+        await until(() => s.parked);
+        expect(s.ble, isNull);
         expect(s.bleReconnecting, isFalse);
-        await restored.timeout(const Duration(seconds: 5));
-        await Future<void>.delayed(Duration.zero);
         final off = events.lastWhere((e) => e.kind == 'ble.lost');
         expect(off.fields['cameraOff'], isTrue);
         expect(off.fields, isNot(contains('afterPowerOff')));
+        expect(events.map((e) => e.kind), isNot(contains('ble.restored')));
 
         await s.powerOn();
-        restored = s.events.firstWhere((e) => e.kind == 'ble.restored');
+        expect(s.parked, isFalse);
+        final restored = s.events.firstWhere((e) => e.kind == 'ble.restored');
         camera.dropBluetooth();
         await until(() => s.ble == null);
         expect(s.bleReconnecting, isTrue);

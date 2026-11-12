@@ -120,12 +120,22 @@ zu stehen und Looks für die Bildsteuerung als etwas zu behandeln, das Verwaltun
 - **Live-View.** Das Bild der Kamera über WLAN: Tippe zum Fokussieren, stelle Blende,
   Verschlusszeit, ISO und Belichtungskorrektur auf einem Wählrad mit den Werten ein, die die Kamera
   anbietet, und ändere Aufnahmemodus, Selbstauslöser, Belichtungsmessung und Bildsteuerung.
+- **Geotagging.** GR-Kameras haben kein GPS. Ist Geotagging für eine Kamera eingeschaltet, sendet GR
+  Photo den Standort deines Smartphones über Bluetooth an sie, solange die Kamera eingeschaltet ist,
+  und die Kamera speichert ihn in jedem Foto. Es läuft weiter, während du eine andere App verwendest
+  oder das Smartphone sperrst, startet von selbst, wenn du die Kamera einschaltest, sofern du den
+  Standortzugriff immer erlaubst, und hält die Uhr der Kamera auf der Uhrzeit deines Smartphones.
+  Hintergrund-Geotagging ist die Alternative ohne eigenes Zutun: Das Smartphone führt einen
+  90-Tage-Verlauf seiner Aufenthaltsorte, und GR Photo fügt beim Herunterladen eines Fotos den Ort
+  hinzu, der zeitlich am nächsten an der Aufnahme aufgezeichnet wurde, bei JPEG- und RAW-Dateien
+  gleichermaßen.
 - **Mehrere Kameras.** Kopple so viele, wie du besitzt, und wechsle zwischen ihnen; jede lässt sich
   umbenennen oder entfernen.
 - **Designs und Sprachen.** Die Designs Hell, Dunkel, Dunkelkammer, Papier und Cyanotypie sowie die
   21 Sprachen der Kameramenüs.
 - **Privat.** Keine Konten, keine Analyse, keine Werbung, keine Absturzberichte. GR Photo spricht
-  nur mit deiner Kamera; siehe die [Datenschutzerklärung](../../app/assets/privacy.md).
+  nur mit deiner Kamera, und dein Standort geht nur an deine Kamera und in deine eigenen Fotos;
+  siehe die [Datenschutzerklärung](../../app/assets/privacy.md).
 
 ## Voraussetzungen
 
@@ -191,6 +201,11 @@ flutter run --dart-define=GR_DEMO=true
 4. **Speichere einen Look.** Öffne ein Foto in der Mediathek und tippe auf „Look speichern“, oder
    erstelle mit + auf der Seite „Looks“ einen ganz neuen. Tippe auf einen Look, um ihn zu
    bearbeiten, und ziehe ihn auf C1, C2 oder C3, um ihn in die Kamera zu laden.
+5. **Füge Standorte hinzu.** GR Photo bietet Geotagging für jede Kamera einmal an; du kannst es auch
+   später einschalten, indem du auf den Chip auf der Karte der Kamera tippst. Dein Smartphone fragt,
+   ob GR Photo seinen Standort verwenden darf. Von da an wird der Standort gesendet, wann immer die
+   Kamera eingeschaltet und in Reichweite ist. Hintergrund-Geotagging findest du in den
+   Einstellungen unter „Standort“; dafür muss der Standortzugriff immer erlaubt sein.
 
 „Automatisch trennen“ in den Einstellungen verlässt das WLAN der Kamera, nachdem GR Photo eine Weile
 nicht verwendet wurde (standardmäßig 5 Minuten). [So verhält sich GR Photo](../behaviour.md)

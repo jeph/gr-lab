@@ -63,7 +63,7 @@ extension on FakeGrCamera {
           return await _send(request, {
             'errCode': 200,
             'errMsg': 'OK',
-            'datetime': _stamp(DateTime.now()),
+            'datetime': _stamp(clockTime),
           });
         case ['photos']:
           return await _list(request);
@@ -150,7 +150,7 @@ extension on FakeGrCamera {
               .length,
         },
     ],
-    'datetime': _stamp(DateTime.now()),
+    'datetime': _stamp(clockTime),
     'operationMode': operationMode == BleOperationMode.playback
         ? 'playback'
         : 'capture',

@@ -238,20 +238,23 @@ final class DownloadProgress {
 /// what is already on the phone. A camera path can come back with another
 /// file, so each record keeps what the camera reported of the file saved,
 /// and the library's checks ([fileStale], [checkFile]) drop a record that
-/// no longer matches. Files go to `<cacheDir>/downloads/<job>/` first and
-/// are handed to [MediaSaver] per shot. A transfer interrupted by a pause
-/// restarts that file from the beginning (the camera has no ranged
-/// downloads) and keeps the shot's files finished before it; after a lost
-/// connection the whole shot is copied again, as the camera may hold other
-/// files at those paths by then. A shot the app stopped while saving comes
-/// back failed with [DownloadSaveInterrupted] instead of being saved again,
-/// as the photo library cannot be asked whether it took the shot.
+/// no longer matches. Files go to `<cacheDir>/downloads/<job>/` first; once
+/// a shot's files are all there [beforeSave] may change them (it gives
+/// them a location), and they are then handed to [MediaSaver] per shot. A
+/// transfer interrupted by a pause restarts that file from the beginning
+/// (the camera has no ranged downloads) and keeps the shot's files
+/// finished before it; after a lost connection the whole shot is copied
+/// again, as the camera may hold other files at those paths by then. A
+/// shot the app stopped while saving comes back failed with
+/// [DownloadSaveInterrupted] instead of being saved again, as the photo
+/// library cannot be asked whether it took the shot.
 final class DownloadEngine extends ChangeNotifier {
   new({
     required this.dataDir,
     required this.cacheDir,
     required this.media,
     required this.link,
+    this.beforeSave,
     this.album = 'GR Photo',
     this.transportGrace = const Duration(seconds: 3),
     this.progressInterval = const Duration(milliseconds: 100),
@@ -270,6 +273,13 @@ final class DownloadEngine extends ChangeNotifier {
   final Directory cacheDir;
   final MediaSaver media;
   final ValueListenable<CameraLibrary?> link;
+
+  /// Called with a shot's copies once they are all on the phone, before
+  /// the photo library gets them; it may rewrite them in place. Saving
+  /// waits for it, and a shot is saved as it is when this fails. It can
+  /// get the same copies again, when a save that failed is retried.
+  final Future<void> Function(List<File> files)? beforeSave;
+
   final String album;
 
   /// After a network error, how long to wait for the connection to report
@@ -698,6 +708,10 @@ final class DownloadEngine extends ChangeNotifier {
       job._copiedOn = current;
       final local = await _transfer(job, files, current);
       final identities = [for (final f in files) await _identify(f, current)];
+      // A pause or cancel that came while the camera was asked about the
+      // files stops the job before anything is done to them, and one that
+      // comes meanwhile stops it before the save.
+      if (_stop == null) await _prepare(job, local);
       if (_stop case final reason?) throw _StopSignal(reason);
       await _markSaving(job);
       try {
@@ -747,6 +761,18 @@ final class DownloadEngine extends ChangeNotifier {
       _setProgress(const DownloadProgress());
       _save();
       _notify();
+    }
+  }
+
+  /// Runs [beforeSave] on [job]'s copies. What it adds to them is an
+  /// extra, so its failure goes to the debug log and never fails the job.
+  Future<void> _prepare(DownloadJob job, List<File> local) async {
+    final prepare = beforeSave;
+    if (prepare == null) return;
+    try {
+      await prepare(local);
+    } on Object catch (e) {
+      debugPrint('Preparing ${job.shot} for saving failed: $e');
     }
   }
 

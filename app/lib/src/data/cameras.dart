@@ -13,14 +13,28 @@ final class SavedCamera {
     required this.name,
     required this.pairedAt,
     this.wifiApproved = false,
+    this.liveGeotagging = false,
+    this.geotagOffered = false,
+    this.syncClock = true,
+    this.storeLocationInfoPending,
   });
 
-  factory fromJson(Map<String, Object?> json) => SavedCamera(
-    paired: GrPairedCamera.fromJson(json['paired']! as Map<String, Object?>),
-    name: json['name']! as String,
-    pairedAt: DateTime.parse(json['pairedAt']! as String),
-    wifiApproved: json['wifiApproved'] == true,
-  );
+  /// Reads what [toJson] writes. The geotagging fields are missing from
+  /// files written before GR Photo had geotagging, and take their defaults
+  /// then.
+  factory fromJson(Map<String, Object?> json) {
+    final pending = json['storeLocationInfoPending'];
+    return SavedCamera(
+      paired: GrPairedCamera.fromJson(json['paired']! as Map<String, Object?>),
+      name: json['name']! as String,
+      pairedAt: DateTime.parse(json['pairedAt']! as String),
+      wifiApproved: json['wifiApproved'] == true,
+      liveGeotagging: json['liveGeotagging'] == true,
+      geotagOffered: json['geotagOffered'] == true,
+      syncClock: json['syncClock'] != false,
+      storeLocationInfoPending: pending is bool ? pending : null,
+    );
+  }
 
   final GrPairedCamera paired;
 
@@ -31,6 +45,29 @@ final class SavedCamera {
   /// The phone has joined this camera's Wi-Fi through GR Photo, so the OS
   /// approval is in place and joins need no explanation first.
   final bool wifiApproved;
+
+  /// Live geotagging is on for this camera: while it is on and linked, the
+  /// phone's location is sent to it. Off until the user accepts the offer
+  /// or flips the camera sheet's switch.
+  final bool liveGeotagging;
+
+  /// The one-time offer of live geotagging was shown for this camera,
+  /// whatever the answer.
+  final bool geotagOffered;
+
+  /// Keep the camera's clock on the phone's time. Live geotagging does so
+  /// whatever this says.
+  final bool syncClock;
+
+  /// The value of the camera's Store Location Info that GR Photo still has
+  /// to write, because the switch was flipped while the camera was off or
+  /// away; null when nothing is waiting.
+  final bool? storeLocationInfoPending;
+
+  /// Whether this camera can be sent a location at all
+  /// ([CameraFeature.geotagging]), by its model and firmware as last
+  /// recorded.
+  bool get supportsGeotagging => body.supports(CameraFeature.geotagging);
 
   String get serial => paired.serialNumber;
 
@@ -54,15 +91,27 @@ final class SavedCamera {
   static String? _modelOf(GrPairedCamera paired) =>
       stripRicohPrefix(paired.modelName)?.nonEmpty;
 
+  /// This camera with the given fields replaced. [storeLocationInfoPending]
+  /// is a function so that it can set the value to null.
   SavedCamera copyWith({
     String? name,
     bool? wifiApproved,
     GrPairedCamera? paired,
+    bool? liveGeotagging,
+    bool? geotagOffered,
+    bool? syncClock,
+    bool? Function()? storeLocationInfoPending,
   }) => SavedCamera(
     paired: paired ?? this.paired,
     name: name ?? this.name,
     pairedAt: pairedAt,
     wifiApproved: wifiApproved ?? this.wifiApproved,
+    liveGeotagging: liveGeotagging ?? this.liveGeotagging,
+    geotagOffered: geotagOffered ?? this.geotagOffered,
+    syncClock: syncClock ?? this.syncClock,
+    storeLocationInfoPending: storeLocationInfoPending == null
+        ? this.storeLocationInfoPending
+        : storeLocationInfoPending(),
   );
 
   Map<String, Object?> toJson() => {
@@ -70,6 +119,10 @@ final class SavedCamera {
     'name': name,
     'pairedAt': pairedAt.toUtc().toIso8601String(),
     if (wifiApproved) 'wifiApproved': true,
+    if (liveGeotagging) 'liveGeotagging': true,
+    if (geotagOffered) 'geotagOffered': true,
+    if (!syncClock) 'syncClock': false,
+    'storeLocationInfoPending': ?storeLocationInfoPending,
   };
 }
 
@@ -145,6 +198,60 @@ final class CameraStore extends ChangeNotifier {
     _cameras[i] = _cameras[i].copyWith(
       paired: _cameras[i].paired.withFirmwareRevision(firmware),
     );
+    return _save();
+  }
+
+  /// Turns live geotagging on or off for [serial]. Either way the camera's
+  /// Store Location Info is to follow
+  /// ([SavedCamera.storeLocationInfoPending]), and the offer of live
+  /// geotagging counts as made: the user has decided.
+  Future<void> setLiveGeotagging(String serial, {required bool on}) => _change(
+    serial,
+    (camera) => camera.copyWith(
+      liveGeotagging: on,
+      geotagOffered: true,
+      storeLocationInfoPending: () => on,
+    ),
+  );
+
+  /// Records that the offer of live geotagging was shown for [serial].
+  Future<void> markGeotagOffered(String serial) => _change(
+    serial,
+    (camera) =>
+        camera.geotagOffered ? camera : camera.copyWith(geotagOffered: true),
+  );
+
+  /// Turns keeping [serial]'s clock on the phone's time on or off.
+  Future<void> setSyncClock(String serial, {required bool on}) => _change(
+    serial,
+    (camera) =>
+        camera.syncClock == on ? camera : camera.copyWith(syncClock: on),
+  );
+
+  /// The camera took the Store Location Info value [written]: nothing is
+  /// waiting to be written any more, unless the user has flipped the
+  /// switch the other way since.
+  Future<void> storeLocationInfoWritten(
+    String serial, {
+    required bool written,
+  }) => _change(
+    serial,
+    (camera) => camera.storeLocationInfoPending == written
+        ? camera.copyWith(storeLocationInfoPending: () => null)
+        : camera,
+  );
+
+  /// Saves [serial]'s camera as [change] makes it. Nothing is saved when
+  /// the camera is not paired, or [change] returns it as it is.
+  Future<void> _change(
+    String serial,
+    SavedCamera Function(SavedCamera camera) change,
+  ) {
+    final i = _cameras.indexWhere((c) => c.serial == serial);
+    if (i < 0) return Future.value();
+    final changed = change(_cameras[i]);
+    if (identical(changed, _cameras[i])) return Future.value();
+    _cameras[i] = changed;
     return _save();
   }
 

@@ -115,12 +115,21 @@ użytkownikowi i traktowanie stylów Sterowania obrazem jako czegoś, czym warto
 - **Podgląd na żywo.** Obraz z aparatu przez Wi-Fi: dotknij, aby ustawić ostrość, ustaw przysłonę,
   czas otwarcia migawki, ISO i kompensację ekspozycji na tarczy z wartościami, które oferuje
   aparat, oraz zmieniaj ustawienia Rejestracja, Samowyzwalacz, Pomiar i Sterowanie obrazem.
+- **Geotagowanie.** Aparaty GR nie mają GPS. Gdy Geotagowanie jest włączone dla aparatu, GR Photo
+  wysyła do niego lokalizację Twojego telefonu przez Bluetooth, dopóki aparat jest włączony, a
+  aparat zapisuje ją w każdym zdjęciu. Działa dalej, gdy używasz innej aplikacji albo blokujesz
+  telefon, uruchamia się samo po włączeniu aparatu, jeśli zezwolisz na dostęp do lokalizacji zawsze,
+  i ustawia zegar aparatu według czasu Twojego telefonu. Geotagowanie w tle to bezobsługowa
+  alternatywa: telefon przechowuje 90-dniową historię miejsc, w których był, a GR Photo przy
+  pobieraniu zdjęcia dodaje miejsce zapisane najbliżej czasu jego zrobienia, zarówno do plików JPEG,
+  jak i RAW.
 - **Kilka aparatów.** Sparuj wszystkie, które masz, i przełączaj się między nimi; każdemu możesz
   zmienić nazwę albo go zapomnieć.
 - **Motywy i języki.** Motywy Jasny, Ciemny, Ciemnia, Papier i Cyjanotypia oraz 21 języków,
   w których dostępne jest menu samego aparatu.
 - **Prywatna.** Żadnych kont, analityki, reklam ani raportowania awarii. GR Photo komunikuje się
-  wyłącznie z Twoim aparatem; zobacz [politykę prywatności](../../app/assets/privacy.md).
+  wyłącznie z Twoim aparatem, a Twoja lokalizacja trafia tylko do Twojego aparatu i do Twoich
+  własnych zdjęć; zobacz [politykę prywatności](../../app/assets/privacy.md).
 
 ## Wymagania
 
@@ -184,6 +193,11 @@ flutter run --dart-define=GR_DEMO=true
 4. **Zapisz styl.** Otwórz zdjęcie w Bibliotece i dotknij Zapisz styl albo utwórz styl od zera
    przyciskiem + na stronie Style. Dotknij stylu, aby go edytować, i przeciągnij go na C1, C2 albo
    C3, aby wczytać go do aparatu.
+5. **Dodaj lokalizację.** GR Photo proponuje Geotagowanie raz dla każdego aparatu; możesz je też
+   włączyć później, dotykając etykiety na karcie aparatu. Telefon pyta, czy GR Photo może używać
+   jego lokalizacji. Od tej chwili lokalizacja jest wysyłana zawsze, gdy aparat jest włączony i w
+   zasięgu. Geotagowanie w tle znajduje się w Ustawieniach, w sekcji Lokalizacja, i wymaga
+   zezwolenia na dostęp do lokalizacji zawsze.
 
 Automatyczne rozłączanie w Ustawieniach rozłącza Wi-Fi aparatu, gdy GR Photo nie jest używane przez
 pewien czas (domyślnie 5 minut). Dokument [Jak zachowuje się GR Photo](../behaviour.md) szczegółowo

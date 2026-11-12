@@ -9,6 +9,7 @@ import 'package:grphoto/src/data/cameras.dart';
 import 'package:grphoto/src/data/settings.dart';
 import 'package:grphoto/src/debug/debug_log.dart';
 import 'package:grphoto/src/downloads/download_engine.dart';
+import 'package:grphoto/src/geotag/geotag_controller.dart';
 import 'package:grphoto/src/library/camera_link.dart';
 import 'package:grphoto/src/library/library_scope.dart';
 import 'package:grphoto/src/looks/looks_store.dart';
@@ -25,6 +26,7 @@ final class AppModels {
     required this.debugLog,
     required this.looks,
     required this.idle,
+    required this.geotag,
     required this.downloads,
     required this.library,
   });
@@ -54,6 +56,12 @@ final class AppModels {
       cameras: cameras,
     );
     final idle = IdleDisconnect(connection: connection, settings: settings);
+    final geotag = await GeotagController.open(
+      services: services,
+      connection: connection,
+      cameras: cameras,
+      settings: settings,
+    );
     // One link for the app: the Library and the download engine see the
     // same camera library.
     final link = ConnectionLink(connection);
@@ -62,8 +70,11 @@ final class AppModels {
       cacheDir: services.cacheDir,
       media: services.media,
       link: link,
+      // Background geotagging: a photo the camera gave no location gets
+      // one from the phone's history before it reaches the photo library.
+      beforeSave: geotag.geotagger.tag,
     );
-    return AppModels(
+    final models = AppModels(
       services: services,
       settings: settings,
       cameras: cameras,
@@ -71,6 +82,7 @@ final class AppModels {
       debugLog: debugLog,
       looks: looks,
       idle: idle,
+      geotag: geotag,
       downloads: downloads,
       library: LibraryContext.create(
         services: services,
@@ -80,6 +92,10 @@ final class AppModels {
         idle: idle,
       ),
     );
+    // Last, since a camera whose switching on started the app is connected
+    // from here.
+    await geotag.start();
+    return models;
   }
 
   final AppServices services;
@@ -96,6 +112,9 @@ final class AppModels {
 
   /// Leaves the camera's Wi-Fi after the app was not used for a while.
   final IdleDisconnect idle;
+
+  /// Live and background geotagging, run without a screen too.
+  final GeotagController geotag;
 
   /// The download queue, one engine for the app's lifetime so only it uses
   /// `downloads.json` and the job files: a photo-library save still running

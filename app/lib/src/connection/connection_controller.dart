@@ -256,14 +256,25 @@ final class ConnectionController extends ChangeNotifier {
   /// Bluetooth is being linked: for a new connection, or by the session
   /// after the camera dropped the link (as it does when it is turned off,
   /// and when it is woken for its Wi-Fi) and until its reconnect gives up.
+  /// Not while the session has let go of a camera that is off ([parked]).
   bool get bleLinking => switch (_status) {
     ConnectionStatus.connecting when _step == ConnectStep.bluetooth => true,
     ConnectionStatus.connecting ||
     ConnectionStatus.bluetooth ||
     ConnectionStatus.connected =>
-      !_bleGaveUp && !(_session?.bleLinked ?? false),
+      !_bleGaveUp && !parked && !(_session?.bleLinked ?? false),
     ConnectionStatus.offline || ConnectionStatus.failed => false,
   };
+
+  /// The camera is off and the session has let go of it: an off camera
+  /// drops a link that does not turn it on within seconds, so the session
+  /// only reads its advertisements and links it again when they say it is
+  /// on (`CameraSession.parked`). [powerOn] links it itself.
+  bool get parked => _session?.parked ?? false;
+
+  /// The camera can be asked to turn on: over its Bluetooth link, or, let
+  /// go of while off ([parked]), by the session linking it for the wake.
+  bool get canWake => bleLinked || parked;
 
   /// Why the last attempt failed. Set with [ConnectionStatus.failed] for
   /// Bluetooth, and next to [ConnectionStatus.bluetooth] when only the

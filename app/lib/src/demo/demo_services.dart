@@ -19,6 +19,11 @@ import 'package:grphoto/src/services.dart';
 /// seconds into the bonding. Later runs find the bond in place (a phone
 /// keeps it across launches). Demo data lives in its own `demo/` folders
 /// so demo and real cameras never mix.
+///
+/// The phone's location is the real one ([devicePhoneLocation]), so
+/// geotagging can be tried with its permission prompts: the simulated
+/// camera takes the positions as a GR IV does. Nothing watches for the
+/// simulated camera being switched on.
 Future<AppServices> buildDemoServices() async {
   final dirs = await appDirectories();
   final data = Directory('${dirs.data.path}/demo');
@@ -61,11 +66,12 @@ Future<AppServices> buildDemoServices() async {
       wifi: camera.wifi,
       trace: trace.call,
       httpFactory: camera.httpClient,
+      location: devicePhoneLocation(trace: trace.call),
     ),
     trace: trace,
     media: PlatformMediaSaver(),
     background: PlatformBackgroundDownloads(),
-    clientName: 'GR Photo',
+    clientName: () async => 'GR Photo',
     dataDir: data,
     cacheDir: cache,
     debugLogDir: Directory('${data.path}/debug-log'),

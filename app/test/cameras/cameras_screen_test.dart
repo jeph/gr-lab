@@ -961,7 +961,10 @@ void main() {
     await pumpUntilFound(tester, find.byType(ShootScreen));
     await pumpUntil(tester, () => connection.bleLinked, reason: 'linked');
 
-    app.camera.powerOffFully();
+    // Gone without saying it turned off: one that says so is waited for.
+    app.camera
+      ..dropBluetooth()
+      ..powerOffFully();
     await pumpUntilFound(
       tester,
       find.descendant(
@@ -1123,7 +1126,10 @@ void main() {
     );
     await _tap(tester, const Key('home-tab-looks'));
 
-    app.camera.powerOffFully();
+    // Gone without saying it turned off: one that says so is waited for.
+    app.camera
+      ..dropBluetooth()
+      ..powerOffFully();
     await _untilStatus(tester, app, ConnectionStatus.failed);
     await pumpRounds(tester, 20);
     expect(find.byType(LooksScreen).hitTestable(), findsOneWidget);

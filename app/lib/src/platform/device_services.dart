@@ -10,6 +10,12 @@ import 'package:grphoto/src/services.dart';
 
 /// Services for a real camera: the camera layer on the phone's Bluetooth
 /// and Wi-Fi, downloads saved to the photo library.
+///
+/// Android also starts the app with no screen, when a camera with live
+/// geotagging is switched on. Nothing here needs one: the channels that
+/// only exist with a screen are called when they are needed, and fall back
+/// when they are missing ([deviceClientName], `PlatformMediaSaver`,
+/// `PlatformBackgroundDownloads`).
 Future<AppServices> buildDeviceServices() async {
   final dirs = await appDirectories();
   final trace = TraceRelay();
@@ -18,7 +24,7 @@ Future<AppServices> buildDeviceServices() async {
     trace: trace,
     media: PlatformMediaSaver(),
     background: PlatformBackgroundDownloads(),
-    clientName: await deviceClientName(),
+    clientName: deviceClientName,
     dataDir: dirs.data,
     cacheDir: dirs.cache,
     debugLogDir: await DebugLog.platformDirectory(),

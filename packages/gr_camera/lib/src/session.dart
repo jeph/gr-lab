@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:gr_camera/src/camera_features.dart';
 import 'package:gr_camera/src/environment.dart';
+import 'package:gr_camera/src/geotag/geotagging.dart';
 import 'package:gr_camera/src/library/camera_library.dart';
 import 'package:gr_camera/src/looks/camera_looks.dart';
 import 'package:gr_camera/src/platform/wifi_control.dart';
@@ -102,6 +103,11 @@ final class CameraSession {
         httpFactory: _environment.httpFactory,
       ) {
     status = createCameraStatus(_session, _environment);
+    geotagging = createCameraGeotagging(
+      _session,
+      _environment,
+      body: () => body,
+    );
   }
 
   final GrSession _session;
@@ -110,6 +116,11 @@ final class CameraSession {
 
   /// The camera's battery and storages, for the whole session.
   late final CameraStatus status;
+
+  /// Live geotagging and clock sync for this camera, for the whole
+  /// session: it does nothing until the app gives it its settings
+  /// (`CameraGeotagging.configure`), and stops when the session closes.
+  late final CameraGeotagging geotagging;
 
   /// The paired camera's serial number, which [connectBluetooth] links to.
   String? _serial;
@@ -151,6 +162,16 @@ final class CameraSession {
   /// yet: until it is linked again in its off state, or the time for that
   /// runs out.
   bool get turningOff => _session.turningOff;
+
+  /// The session let go of a camera that is off and only reads its
+  /// advertisements, until one says the camera is on and it links again
+  /// (`ble.parked`, then `ble.seenOn`).
+  bool get parked => _session.parked;
+
+  /// The platform's power-on watch saw the camera advertise in its on
+  /// state (`PowerOnWatch.sightings`): a [parked] session links at once;
+  /// otherwise nothing happens.
+  void cameraSeenOn() => _session.cameraSeenOn();
 
   /// The camera's Wi-Fi was lost and the session is getting it back.
   bool get wifiRecovering => _session.wifiRecovering;
@@ -235,6 +256,7 @@ final class CameraSession {
   /// separate from the phone's Wi-Fi.
   Future<void> close({bool powerOffIfWoken = false}) {
     status.close();
+    geotagging.close();
     _remote?.close();
     _looks?.close();
     _liveView?.close();

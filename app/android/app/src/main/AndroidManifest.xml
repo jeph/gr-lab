@@ -24,7 +24,7 @@
 
     <application
         android:label="@string/app_name"
-        android:name="${applicationName}"
+        android:name=".GrPhotoApplication"
         android:icon="@mipmap/ic_launcher"
         android:networkSecurityConfig="@xml/network_security_config"
         android:allowBackup="false">
@@ -50,8 +50,10 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <!-- Stops with the task: the downloads run in the activity's
-             Flutter engine, which a swiped-away task takes with it. -->
+        <!-- Stops with the task: its notification and buttons work through
+             the activity (DownloadChannel), which a swiped-away task takes
+             with it. The app's Flutter engine, where the downloads run,
+             goes too unless live geotagging holds it (AppEngine). -->
         <service
             android:name=".DownloadService"
             android:exported="false"

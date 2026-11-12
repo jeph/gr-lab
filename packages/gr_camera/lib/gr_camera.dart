@@ -1,6 +1,6 @@
 /// The camera layer of GR Photo: the only code that talks to Ricoh GR cameras
-/// or to the phone's Bluetooth and Wi-Fi on their behalf. Every exchange is
-/// reported to the environment's `TraceSink`.
+/// or to the phone's Bluetooth, Wi-Fi and location service on their behalf.
+/// Every exchange is reported to the environment's `TraceSink`.
 ///
 /// The app builds one [GrCameraEnvironment] and creates sessions, pairing
 /// runs and scanners from it; it never touches protocol objects itself.
@@ -50,14 +50,26 @@ export 'package:gr_protocol/gr_protocol.dart'
         GrUnparsedChange,
         JpegDimensions,
         LiveViewFrame,
+        LocationAccess,
+        LocationFix,
+        LocationPermission,
+        LocationRunException,
+        LocationRunNotice,
+        LocationRunRefusal,
+        LocationSettingsPage,
+        PhoneLocation,
+        PowerOnWatch,
         TraceChannel,
         TraceDirection,
         TraceEvent,
         TraceSink,
+        WatchedCamera,
         stripRicohPrefix;
 
 export 'src/camera_features.dart' show CameraBody, CameraFeature;
-export 'src/environment.dart' show GrCameraEnvironment;
+export 'src/environment.dart' show GrCameraEnvironment, devicePhoneLocation;
+export 'src/geotag/geotagging.dart'
+    show CameraGeotagging, GeotagSettings, GeotagStatus;
 export 'src/library/camera_file.dart' show CameraFile, FileInfo;
 export 'src/library/camera_images.dart'
     show CameraImages, ImageRequest, NotAnImageException;

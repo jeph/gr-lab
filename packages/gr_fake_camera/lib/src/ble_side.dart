@@ -279,10 +279,13 @@ extension on FakeGrCamera {
     return link;
   }
 
-  /// Every catalog characteristic the model's firmware carries.
+  /// Every catalog characteristic the model's firmware carries, less the
+  /// ones this camera is set up without ([FakeCameraConfig.absent]).
   List<GrBleCharacteristic<Object>> get _present => [
     for (final c in GrBleCatalog.all)
-      if ((model.family == GrModelFamily.gr4 ? c.onGr4 : c.onGr3) != false) c,
+      if ((model.family == GrModelFamily.gr4 ? c.onGr4 : c.onGr3) != false &&
+          !config.absent.contains(c.key))
+        c,
   ];
 
   List<BleServiceInfo> _gatt() {
@@ -352,6 +355,7 @@ extension on FakeGrCamera {
       GrBleCatalog.shootingMode => [_exposureMode.wire, _userMode.wire],
       GrBleCatalog.captureStatus => _captureStatus,
       GrBleCatalog.storageInformation => _storageInformation(),
+      GrBleCatalog.dateTime => _readClock(),
       _ => null,
     };
     if (record != null) return Uint8List.fromList(record);
@@ -440,6 +444,12 @@ extension on FakeGrCamera {
           throw BleException(BleErrorCode.gatt, '${c.key}: invalid value');
         }
         _values[c.uuid] = v;
+      case GrBleCatalog.geoTag:
+        _writeStoreLocationInfo(c, v);
+      case GrBleCatalog.gpsInformation:
+        _writeLocation(c, v);
+      case GrBleCatalog.dateTime:
+        _writeClock(c, v);
       default:
         _values[c.uuid] = v;
     }

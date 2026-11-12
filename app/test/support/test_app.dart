@@ -37,6 +37,8 @@ final class TestApp {
     required this.ble,
     required this.media,
     required this.background,
+    required this.location,
+    required this.powerOnWatch,
     required this._permission,
     required this._root,
   });
@@ -50,6 +52,13 @@ final class TestApp {
 
   /// What the app asked the platform to show of its downloads.
   final RecordingBackgroundDownloads background;
+
+  /// The phone's location service as the app sees it: its access, fixes,
+  /// run notice and recorded history are scripted here.
+  final FakePhoneLocation location;
+
+  /// The phone's watch for cameras being switched on; `sight` reports one.
+  final FakePowerOnWatch powerOnWatch;
   final _Permission _permission;
   final Directory _root;
   WidgetTester? _tester;
@@ -104,8 +113,10 @@ final class TestApp {
       await pumpUntil(tester, () => flushed, reason: 'library flush');
       models.library.dispose();
       models.idle.dispose();
+      models.geotag.dispose();
       models.connection.dispose();
       await tester.runAsync(camera.close);
+      await tester.runAsync(_closePhone);
       // Lets timers the camera or session started run out.
       await tester.pump(const Duration(minutes: 2));
       // Its writes were queued in the test's fake-time zone, so they need
@@ -119,11 +130,18 @@ final class TestApp {
       await _flushLibrary();
       models.library.dispose();
       models.idle.dispose();
+      models.geotag.dispose();
       models.connection.dispose();
       await camera.close();
+      await _closePhone();
       await models.debugLog.close();
       await _deleteRoot();
     }
+  }
+
+  Future<void> _closePhone() async {
+    await location.close();
+    await powerOnWatch.close();
   }
 
   /// Waits until the library's listing and download records are on disk.
@@ -153,6 +171,13 @@ final class TestApp {
 /// [debugLogBlocked] puts a file where the debug log's folder goes, so the
 /// log cannot open. [saveModel] false saves the camera without its model,
 /// as when pairing could not read it.
+///
+/// [location] and [powerOnWatch] stand for the phone's location service
+/// and its watch for cameras being switched on (by default location is
+/// allowed while the app is in use, and the watch needs no link to the
+/// camera). The saved camera has live geotagging as [liveGeotagging] says
+/// and counts as offered it unless [geotagOffered] is false, so that only
+/// tests of the offer see its dialog.
 Future<TestApp> createTestApp({
   FakeCameraConfig config = const FakeCameraConfig(),
   bool saveCamera = false,
@@ -165,6 +190,10 @@ Future<TestApp> createTestApp({
   List<Duration> redialDelays = const [Duration(milliseconds: 20)],
   bool debugLogBlocked = false,
   FakeMediaSource? media,
+  FakePhoneLocation? location,
+  FakePowerOnWatch? powerOnWatch,
+  bool liveGeotagging = false,
+  bool geotagOffered = true,
 }) async {
   // flutter_test answers every dart:io HttpClient request with 400; the
   // fake camera serves real HTTP on loopback.
@@ -190,6 +219,8 @@ Future<TestApp> createTestApp({
         paired: paired,
         name: SavedCamera.defaultName(paired),
         pairedAt: DateTime(2026, 11, 7, 9, 41),
+        liveGeotagging: liveGeotagging,
+        geotagOffered: geotagOffered,
       ),
     );
   }
@@ -199,6 +230,8 @@ Future<TestApp> createTestApp({
   );
   final saver = RecordingMediaSaver();
   final background = RecordingBackgroundDownloads();
+  final phone = location ?? FakePhoneLocation();
+  final watch = powerOnWatch ?? FakePowerOnWatch();
   final trace = TraceRelay();
   final services = AppServices(
     camera: GrCameraEnvironment(
@@ -209,11 +242,13 @@ Future<TestApp> createTestApp({
       sessionOptions: sessionOptions,
       wifiApprovalShown: wifiApprovalShown,
       ensureBluetoothPermission: () async => permission.granted,
+      location: phone,
+      powerOnWatch: watch,
     ),
     trace: trace,
     media: saver,
     background: background,
-    clientName: 'GR Photo',
+    clientName: () async => 'GR Photo',
     dataDir: data,
     cacheDir: cache,
     debugLogDir: debugLogDir,
@@ -226,6 +261,8 @@ Future<TestApp> createTestApp({
     ble: ble,
     media: saver,
     background: background,
+    location: phone,
+    powerOnWatch: watch,
     permission: permission,
     root: root,
   );

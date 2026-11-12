@@ -11,6 +11,7 @@ import 'package:grphoto/src/connection/connect_failure_view.dart';
 import 'package:grphoto/src/connection/connection_controller.dart';
 import 'package:grphoto/src/connection/storage_counts.dart';
 import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/geotag/geotag_section.dart';
 import 'package:grphoto/src/pairing/pairing_flow.dart';
 import 'package:grphoto/src/pairing/pairing_widgets.dart';
 import 'package:grphoto/src/theme/tokens.dart';
@@ -31,7 +32,9 @@ Future<void> showCameraSheet(BuildContext context) =>
 /// and a row each for Bluetooth and Wi-Fi that says what the link is doing
 /// and connects or disconnects it. Disconnecting Bluetooth ends the
 /// session, Wi-Fi included; disconnecting Wi-Fi keeps Bluetooth. Either
-/// one returns to the Cameras screen from the camera's pages.
+/// one returns to the Cameras screen from the camera's pages. Under them,
+/// for a camera that can be sent a location, its geotagging and clock
+/// ([GeotagSection]).
 class CameraSheet extends StatelessWidget {
   const new({super.key});
 
@@ -82,6 +85,7 @@ class CameraSheet extends StatelessWidget {
                   _wifiRow(l10n, connection),
                 ],
               ),
+              GeotagSection(camera: camera),
             ],
           ),
         );
@@ -125,9 +129,12 @@ class CameraSheet extends StatelessWidget {
           icon: icon,
           title: title,
           // The camera drops the link when it is woken or turned off; the
-          // session links it again.
+          // session links it again, except that it lets go of a camera
+          // that is off until the camera says it is on.
           state: connection.cameraSession?.bleLinked ?? false
               ? l10n.connectionSheetConnected
+              : connection.parked
+              ? l10n.connectionPillCameraOff
               : !connection.bleLinking
               ? l10n.connectionPillNotConnected
               : switch (connection.powerChange) {

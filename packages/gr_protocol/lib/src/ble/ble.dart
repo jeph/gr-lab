@@ -11,6 +11,7 @@ export 'codecs.dart' hide fixedLengthUsable, parseBoolText, parseIntText;
 export 'enums.dart';
 export 'model.dart';
 export 'pairing.dart';
+export 'power_on_watch.dart';
 export 'records.dart';
 export 'tables.dart';
 export 'tracing_transport.dart';

@@ -116,12 +116,20 @@ tieltäsi, ja Kuvansäätö-tyylejä kohdellaan asiana, jota kannattaa hallita.
 - **Live-kuva.** Kameran kuva Wi-Fin kautta: tarkenna napauttamalla, aseta aukko, suljinaika, ISO
   ja valotuksen korjaus valitsimella, jossa ovat kameran tarjoamat arvot, ja vaihda kuvaustapaa,
   ajastinta, mittausta ja Kuvansäätöä.
+- **Paikkamerkintä.** GR-kameroissa ei ole GPS:ää. Kun Paikkamerkintä on päällä kameralle, GR Photo
+  lähettää puhelimesi sijainnin siihen Bluetoothilla kameran ollessa päällä, ja kamera tallentaa sen
+  jokaiseen kuvaan. Se jatkuu, kun käytät toista sovellusta tai lukitset puhelimen, käynnistyy
+  itsestään, kun käynnistät kameran, jos sallit sijainnin käytön aina, ja pitää kameran kellon
+  puhelimesi ajassa. Taustapaikkamerkintä on vaivaton vaihtoehto: puhelin säilyttää 90 päivän
+  historiaa siitä, missä se on ollut, ja GR Photo lisää kuvaan sen ottamisaikaa lähimpänä
+  tallennetun paikan, kun lataat sen, niin JPEG- kuin RAW-tiedostoihin.
 - **Useita kameroita.** Muodosta pari niin monen kameran kanssa kuin omistat ja vaihda niiden
   välillä; voit nimetä jokaisen uudelleen tai unohtaa sen.
 - **Teemat ja kielet.** Teemat Vaalea, Tumma, Pimiö, Paperi ja Sinikopio sekä kameran omien
   valikoiden 21 kieltä.
 - **Yksityinen.** Ei tilejä, analytiikkaa, mainoksia eikä kaatumisraportointia. GR Photo viestii
-  vain kamerasi kanssa; katso [tietosuojakäytäntö](../../app/assets/privacy.md).
+  vain kamerasi kanssa, ja sijaintisi päätyy vain kameraasi ja omiin kuviisi; katso
+  [tietosuojakäytäntö](../../app/assets/privacy.md).
 
 ## Vaatimukset
 
@@ -185,6 +193,11 @@ flutter run --dart-define=GR_DEMO=true
 4. **Tallenna tyyli.** Avaa kuva Kirjastossa ja napauta Tallenna tyyli, tai luo tyyli alusta alkaen
    Tyylit-sivun painikkeella +. Muokkaa tyyliä napauttamalla sitä ja siirrä se kameraan vetämällä se
    paikan C1, C2 tai C3 päälle.
+5. **Lisää sijainnit.** GR Photo tarjoaa Paikkamerkintää kerran kullekin kameralle; voit ottaa sen
+   käyttöön myös myöhemmin napauttamalla kameran kortissa olevaa merkkiä. Puhelin kysyy, saako GR
+   Photo käyttää sen sijaintia. Siitä lähtien sijainti lähetetään aina, kun kamera on päällä ja
+   lähellä. Taustapaikkamerkintä löytyy kohdasta Asetukset, Sijainti, ja se edellyttää, että
+   sijainnin käyttö on sallittu aina.
 
 Asetusten Automaattinen katkaisu poistuu kameran Wi-Fi-verkosta, kun GR Photo on ollut jonkin aikaa
 käyttämättä (oletuksena 5 minuuttia). [Näin GR Photo toimii](../behaviour.md) kuvaa jokaisen näytön

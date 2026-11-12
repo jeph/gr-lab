@@ -338,7 +338,8 @@ extension on FakeGrCamera {
     final photo = FakePhoto(
       dir,
       'R${(number + 1).toString().padLeft(7, '0')}.JPG',
-      DateTime.now(),
+      // Pictures are stamped with the camera's clock, not the phone's.
+      clockTime,
       size: template?.size,
       storage: storage,
       // The served bytes are the template's, so is their orientation.

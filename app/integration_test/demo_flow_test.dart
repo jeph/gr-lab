@@ -44,6 +44,10 @@ void main() {
       timeout: const Duration(seconds: 30),
     );
     await tester.tap(find.byKey(const Key('pairing-done-button')));
+    // Geotagging is offered once for a camera just paired.
+    final later = find.byKey(const Key('geotag-offer-later')).hitTestable();
+    await _pumpUntilFound(tester, later, timeout: const Duration(seconds: 30));
+    await tester.tap(later);
     // Pairing links Bluetooth; the camera's Wi-Fi joins only for the
     // Library, and Android asks before the first join.
     final library = find.byKey(const Key('camera-card-library')).hitTestable();

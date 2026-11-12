@@ -29,6 +29,11 @@ enum CameraFeature {
   /// The Monochrome's finish: a matte black body whose GR logo is black
   /// too; the camera's drawing shows it.
   blackFinish,
+
+  /// Taking the phone's position over Bluetooth and saving it in the
+  /// pictures it takes: the GPS Information and GEO Tag (Store Location
+  /// Info) characteristics (`CameraGeotagging`).
+  geotagging,
 }
 
 /// For each feature, the oldest firmware version of each model that has
@@ -64,6 +69,25 @@ const _minimumFirmware = <CameraFeature, Map<GrModel, String>>{
     GrModel.gr4Hdf: '0.00',
   },
   CameraFeature.blackFinish: {GrModel.gr4Monochrome: '0.00'},
+  // The GPS Information and GEO Tag characteristics are in the `bled` of
+  // both families (research/firmware-protocol-inventory.md, the UUID
+  // table; `GrBleCatalog.gpsInformation` and `geoTag`), and the main
+  // firmware of both takes a position behind the GEO Tag setting (found in
+  // GR IV 1.20 and GR III 2.20; research/protocol/geotagging.md §1.2,
+  // §1.5). Each family shares one `bled` (research/camera-models.md §5),
+  // so the x, HDF and Monochrome bodies are listed too; the GR IIIx
+  // firmware was not read. Any version is [inferred]: older firmware was
+  // not read either. Nothing was run on a camera yet (geotagging.md §7).
+  CameraFeature.geotagging: {
+    GrModel.gr3: '0.00',
+    GrModel.gr3x: '0.00',
+    GrModel.gr3Hdf: '0.00',
+    GrModel.gr3xHdf: '0.00',
+    GrModel.gr4: '0.00',
+    GrModel.gr4Hdf: '0.00',
+    GrModel.gr4Monochrome: '0.00',
+    GrModel.gr4x: '0.00',
+  },
 };
 
 /// A camera as far as what it supports goes: its model and the firmware

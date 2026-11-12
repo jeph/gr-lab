@@ -345,6 +345,7 @@ final class FakeCameraConfig {
     this.downloadBytesPerSecond,
     this.refusePairing = false,
     this.unreadable = const {},
+    this.absent = const {},
     this.dropWifiAfter,
     this.unreachable = false,
     this.reportsWifiLoss = true,
@@ -359,6 +360,8 @@ final class FakeCameraConfig {
     this.announcesDialChanges = true,
     this.selfTimerScale = 1.0,
     this.lookSlots,
+    this.storeLocationInfo = false,
+    this.clockOffset = Duration.zero,
   });
 
   /// `/v1/props` `model` and the Camera Information model name; must be a
@@ -463,6 +466,11 @@ final class FakeCameraConfig {
   /// with a GATT error, as a read the phone's stack drops or times out does.
   final Set<String> unreadable;
 
+  /// Catalog keys (`GrBleCatalog`, such as `gps`) of characteristics this
+  /// camera does not have: discovery leaves them out and reads and writes
+  /// of them fail as not found.
+  final Set<String> absent;
+
   /// The camera's access point goes down this long after the first
   /// successful join (once). A WLAN-on write brings it back.
   final Duration? dropWifiAfter;
@@ -524,4 +532,13 @@ final class FakeCameraConfig {
   /// What Custom slots C1–C3 hold (GR IV family); null means the first
   /// three [FakeLook.presets].
   final List<FakeLook>? lookSlots;
+
+  /// Initial value of the camera's Store Location Info setting (BLE GEO
+  /// Tag). Off as the camera ships (GR IV manual p.128,
+  /// research/protocol/geotagging.md §1.6).
+  final bool storeLocationInfo;
+
+  /// How far the camera's clock runs ahead of the phone's when the camera
+  /// is created (negative: behind); [FakeGrCamera.clockOffset] changes it.
+  final Duration clockOffset;
 }

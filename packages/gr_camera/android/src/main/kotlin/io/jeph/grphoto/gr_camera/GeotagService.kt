@@ -1,0 +1,431 @@
+package io.jeph.grphoto.gr_camera
+
+import android.app.ForegroundServiceStartNotAllowedException
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.graphics.drawable.Icon
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import android.os.PowerManager
+import android.os.SystemClock
+
+/**
+ * Keeps GR Photo running while live geotagging runs or waits for the
+ * camera with the app not in front, and shows that as a notification with
+ * a Stop button.
+ *
+ * A foreground service is what keeps Android from freezing the process,
+ * and with it the Bluetooth link to the camera, and what lets the app be
+ * located with its screen off. Its types are `location` and
+ * `connectedDevice` (the camera, over Bluetooth). The service does no work
+ * itself: the Dart side locates the phone and writes to the camera, says
+ * what to show ([hold]) and when it is done ([release]).
+ *
+ * Two things start it:
+ *
+ * - The Dart side holding a run ([hold], the channel's `holdRun`).
+ * - [WatchReceiver] seeing a camera come on while no Flutter engine runs
+ *   ([launch]). The service then shows the notice of the last run, which
+ *   [hold] keeps in the app's preferences, asks the host for an engine
+ *   ([GeotagHost.startEngine]) and gives the Dart side [CLAIM_MS] to hold
+ *   the run; when it does not (live geotagging was turned off since), the
+ *   service ends by itself. A `releaseRun` before that is not an answer:
+ *   the Dart side may release what it does not hold while it starts.
+ *
+ * While the run is `awake` (a camera is on) the service holds a partial
+ * wake lock, so the Dart side's timers run with the screen off; a run that
+ * only waits holds none. The lock is timed and renewed by what the Dart
+ * side does while it works (a held run updated, a position passed on or
+ * asked for, [alive]), so it runs out by itself [WAKE_LOCK_TIMEOUT_MS]
+ * after the Dart side stopped working.
+ *
+ * Everything here runs on the main thread.
+ */
+class GeotagService : Service() {
+    /** The notification's texts, in the user's language; [channel] names its channel. */
+    internal data class Notice(
+        val title: String,
+        val text: String,
+        val stopLabel: String,
+        val channel: String,
+    )
+
+    /** Why a run could not be held: a `holdRun` error code and Android's message. */
+    internal class Failure(val code: String, val message: String)
+
+    internal companion object {
+        private const val CHANNEL_ID = "geotagging"
+
+        // The app's download notification is 1; ids are shared by the app.
+        private const val NOTIFICATION_ID = 2
+        private const val ACTION_STOP = "io.jeph.grphoto.gr_camera.GEOTAG_STOP"
+        private const val WAKE_LOCK_TIMEOUT_MS = 10 * 60 * 1000L
+
+        /** A lock renewed less than this long ago is left alone. */
+        private const val RENEW_AFTER_MS = 60 * 1000L
+
+        /**
+         * How long the Dart side has to hold the run of a service started
+         * for a camera: an engine start and the start of a connection.
+         */
+        private const val CLAIM_MS = 60 * 1000L
+
+        private const val PREFERENCES = "gr_camera_location"
+
+        /** Called when the user pressed Stop; the run is released already. */
+        var onStopped: (() -> Unit)? = null
+
+        private val main = Handler(Looper.getMainLooper())
+        private var notice: Notice? = null
+        private var awake = false
+
+        /** The Dart side holds a run. */
+        private var held = false
+
+        /** Started for a camera; the Dart side has not held the run yet. */
+        private var launched = false
+
+        /** `startForegroundService` was called and `onStartCommand` is due. */
+        private var starting = false
+        private var running: GeotagService? = null
+
+        /** The `holdRun` calls waiting for the service to start. */
+        private val waiting = mutableListOf<(Failure?) -> Unit>()
+
+        private val claimTimeout = Runnable {
+            if (!launched) return@Runnable
+            running?.log("the app did not take up the run within $CLAIM_MS ms; ending it")
+            end()
+        }
+
+        /** The service runs or is starting; see [GeotagHost.runHeld]. */
+        val active: Boolean
+            get() = held || launched
+
+        /**
+         * Holds a run showing [next], or updates the one held. [done] gets
+         * null once the service is in the foreground, or why it is not.
+         */
+        fun hold(context: Context, next: Notice, keepAwake: Boolean, done: (Failure?) -> Unit) {
+            notice = next
+            awake = keepAwake
+            held = true
+            launched = false
+            main.removeCallbacks(claimTimeout)
+            save(context, next)
+            val service = running
+            if (service != null) {
+                service.show(next)
+                done(null)
+                return
+            }
+            waiting += done
+            if (starting) return
+            try {
+                context.startForegroundService(Intent(context, GeotagService::class.java))
+                starting = true
+            } catch (e: ForegroundServiceStartNotAllowedException) {
+                held = false
+                settle(Failure("background", "Android does not start the run in the background: ${e.message}"))
+            } catch (e: RuntimeException) {
+                held = false
+                settle(Failure("failed", "Android did not start the run: ${e.message}"))
+            }
+        }
+
+        /** Ends the run the Dart side holds; nothing happens without one. */
+        fun release() {
+            if (held) end()
+        }
+
+        /**
+         * Starts the service for a camera that came on with no Flutter
+         * engine running. Null when it starts or runs already, otherwise
+         * why it does not.
+         */
+        fun launch(context: Context): String? {
+            if (active) return null
+            val kept = load(context) ?: return "no run was held before, so there is no notice to show"
+            notice = kept
+            // The camera is on and the Dart side has to start with the
+            // screen off.
+            awake = true
+            launched = true
+            return try {
+                context.startForegroundService(Intent(context, GeotagService::class.java))
+                starting = true
+                null
+            } catch (e: RuntimeException) {
+                // ForegroundServiceStartNotAllowedException without a
+                // companion device association, among others.
+                launched = false
+                "${e.javaClass.simpleName}: ${e.message}"
+            }
+        }
+
+        /**
+         * The app is on screen again: asks for both service types once
+         * more, for a service that Android started without the `location`
+         * type or without location access (see [enterForeground]).
+         */
+        fun refresh() {
+            val service = running ?: return
+            val shown = notice ?: return
+            if (!active) return
+            val failure = service.enterForeground(shown) ?: return
+            service.log("the run could not be renewed in the foreground: ${failure.message}")
+        }
+
+        /**
+         * The Dart side is at work (a position passed on or asked for):
+         * renews the wake lock of an awake run.
+         */
+        fun alive() {
+            val service = running ?: return
+            if (!awake || SystemClock.elapsedRealtime() - service.renewedAt < RENEW_AFTER_MS) return
+            service.keepAwake()
+        }
+
+        /** Ends the run and the service, and tells the host. */
+        private fun end() {
+            held = false
+            launched = false
+            main.removeCallbacks(claimTimeout)
+            // A service still starting stops when it arrives.
+            settle(null)
+            running?.stop()
+            ended()
+        }
+
+        /** Posted, so the host never ends an engine from inside one of its calls. */
+        private fun ended() {
+            main.post { GeotagHost.runEnded?.invoke() }
+        }
+
+        private fun settle(failure: Failure?) {
+            val callbacks = waiting.toList()
+            waiting.clear()
+            for (done in callbacks) done(failure)
+        }
+
+        private fun save(context: Context, shown: Notice) {
+            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).edit()
+                .putString("noticeTitle", shown.title)
+                .putString("noticeText", shown.text)
+                .putString("noticeStopLabel", shown.stopLabel)
+                .putString("noticeChannel", shown.channel)
+                .apply()
+        }
+
+        private fun load(context: Context): Notice? {
+            val kept = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
+            return Notice(
+                title = kept.getString("noticeTitle", null) ?: return null,
+                text = kept.getString("noticeText", null) ?: return null,
+                stopLabel = kept.getString("noticeStopLabel", null) ?: return null,
+                channel = kept.getString("noticeChannel", null) ?: return null,
+            )
+        }
+    }
+
+    private val notifications by lazy { getSystemService(NotificationManager::class.java) }
+    private val wakeLock by lazy {
+        getSystemService(PowerManager::class.java)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "grphoto:geotagging")
+            .apply { setReferenceCounted(false) }
+    }
+    private var channelName: String? = null
+
+    /** When the wake lock was last taken, on the clock of [SystemClock.elapsedRealtime]. */
+    private var renewedAt = 0L
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP) {
+            // The notification's button, sent with startService: it owes
+            // Android no startForeground.
+            if (active) stoppedByUser() else stopSelf()
+            return START_NOT_STICKY
+        }
+        starting = false
+        val shown = notice
+        if (shown == null) {
+            // Every start sets a notice first (hold, launch), and the
+            // service is not restarted by Android (START_NOT_STICKY).
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        // Android requires this of a service started with
+        // startForegroundService, even one that is to stop at once.
+        val failure = enterForeground(shown)
+        if (failure != null) {
+            log("not started: ${failure.code}: ${failure.message}")
+            val unclaimed = launched
+            held = false
+            launched = false
+            settle(failure)
+            stopSelf()
+            // A start for a camera has nothing else to tell the host.
+            if (unclaimed) ended()
+            return START_NOT_STICKY
+        }
+        running = this
+        if (!active) {
+            // Released while it was starting.
+            stop()
+            return START_NOT_STICKY
+        }
+        keepAwake()
+        settle(null)
+        if (launched) awaitClaim()
+        return START_NOT_STICKY
+    }
+
+    override fun onDestroy() {
+        releaseWakeLock()
+        if (running === this) running = null
+        super.onDestroy()
+    }
+
+    /**
+     * Puts the service in the foreground with [shown] as both a location
+     * and a connected-device service, or as a connected-device service
+     * alone when Android refuses the location type.
+     *
+     * Android 14 and later refuse it with a [SecurityException] when the
+     * service starts while the app is in the background and location is
+     * allowed only while the app is in use: there, the permission does not
+     * count in the background (developer.android.com/develop/background-work/services/fgs/restrictions-bg-start,
+     * "Restrictions on starting foreground services that need while-in-use
+     * permissions"; it needs "Allow all the time"). That is the case when
+     * the Dart side, kept alive in the background, links a camera that
+     * came on and holds a run. The connected-device type alone keeps the
+     * process and the camera link going, though without positions, until
+     * the app is next on screen and [refresh] asks for both types again.
+     * Earlier versions accept both types and withhold the positions
+     * instead, which [refresh] also ends.
+     */
+    private fun enterForeground(shown: Notice): Failure? = try {
+        val built = notification(shown)
+        try {
+            startForeground(
+                NOTIFICATION_ID,
+                built,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION or ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE,
+            )
+        } catch (e: SecurityException) {
+            log("Android refused the location service type (${e.message}); running as a connected-device service")
+            startForeground(NOTIFICATION_ID, built, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+        }
+        null
+    } catch (e: ForegroundServiceStartNotAllowedException) {
+        Failure("background", "Android does not start the run in the background: ${e.message}")
+    } catch (e: RuntimeException) {
+        Failure("failed", "Android did not start the run: ${e.message}")
+    }
+
+    /**
+     * The service was started for a camera: starts the app's Flutter
+     * engine when none is attached and waits for the Dart side to hold the
+     * run.
+     */
+    private fun awaitClaim() {
+        if (!LocationChannel.attached) {
+            val start = GeotagHost.startEngine
+            if (start == null) {
+                log("the app set no way to start its engine; ending the run")
+                end()
+                return
+            }
+            log("starting the app's Flutter engine for a camera that came on")
+            try {
+                start(applicationContext)
+            } catch (e: RuntimeException) {
+                log("the engine did not start: ${e.message}")
+                end()
+                return
+            }
+        }
+        main.postDelayed(claimTimeout, CLAIM_MS)
+    }
+
+    private fun stoppedByUser() {
+        log("stopped from the notification")
+        // Kept until the camera has been off, so that one still on does
+        // not start the run again at once (WatchReceiver).
+        WatchStore.setStopped(this, true)
+        end()
+        onStopped?.invoke()
+    }
+
+    private fun show(next: Notice) {
+        notifications.notify(NOTIFICATION_ID, notification(next))
+        keepAwake()
+    }
+
+    private fun stop() {
+        // A run held after this starts the service anew.
+        running = null
+        releaseWakeLock()
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
+    private fun keepAwake() {
+        if (!awake) {
+            releaseWakeLock()
+            return
+        }
+        wakeLock.acquire(WAKE_LOCK_TIMEOUT_MS)
+        renewedAt = SystemClock.elapsedRealtime()
+    }
+
+    private fun releaseWakeLock() {
+        if (wakeLock.isHeld) wakeLock.release()
+    }
+
+    private fun notification(shown: Notice): Notification {
+        if (channelName != shown.channel) {
+            // Low importance: shown without sound. Creating it again renames it
+            // when the app's language changed.
+            notifications.createNotificationChannel(
+                NotificationChannel(CHANNEL_ID, shown.channel, NotificationManager.IMPORTANCE_LOW),
+            )
+            channelName = shown.channel
+        }
+        val press = Intent(this, GeotagService::class.java).setAction(ACTION_STOP)
+        val icon: Icon? = null
+        val stop = Notification.Action.Builder(
+            icon,
+            shown.stopLabel,
+            PendingIntent.getService(this, 0, press, PendingIntent.FLAG_IMMUTABLE),
+        ).build()
+        val builder = Notification.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_stat_geotag)
+            .setContentTitle(shown.title)
+            .setContentText(shown.text)
+            .setCategory(Notification.CATEGORY_SERVICE)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(false)
+            // Without this Android holds the notification back for ten seconds.
+            .setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
+            .addAction(stop)
+        // The launcher's own intent, so tapping brings the running app forward.
+        val open = packageManager.getLaunchIntentForPackage(packageName)
+        if (open != null) {
+            builder.setContentIntent(PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE))
+        }
+        return builder.build()
+    }
+
+    private fun log(message: String) = Logs.location.log(this, "run: $message")
+}

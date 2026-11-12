@@ -204,8 +204,10 @@ final class LooksModel extends ChangeNotifier {
     final session = connection.cameraSession;
     if (!identical(session, _session)) _attach(session);
     final looks = _looks;
-    final linked = looks != null && connection.bleLinked;
-    if (_visible && linked && state == SlotsState.idle) {
+    if (_visible &&
+        looks != null &&
+        connection.canWake &&
+        state == SlotsState.idle) {
       unawaited(_read(looks));
     }
     notifyListeners();

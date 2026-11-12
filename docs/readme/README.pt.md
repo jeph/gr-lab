@@ -115,12 +115,21 @@ estilos de Controlo de Imagem como algo que merece ser gerido.
   velocidade de obturação, o ISO e a compensação da exposição num seletor com os valores que a
   câmara oferece, e altere o modo de fotografar, o temporizador automático, a medição e o Controlo
   de Imagem.
+- **Georreferenciação.** As câmaras GR não têm GPS. Com a Georreferenciação ativada para uma câmara,
+  o GR Photo envia-lhe a localização do seu telemóvel por Bluetooth enquanto a câmara está ligada, e
+  a câmara guarda-a em cada foto. Continua enquanto utiliza outra app ou bloqueia o telemóvel,
+  inicia sozinha quando liga a câmara se permitir sempre a localização, e mantém o relógio da câmara
+  acertado pela hora do seu telemóvel. A Georreferenciação em segundo plano é a alternativa que
+  dispensa atenção: o telemóvel guarda um histórico de 90 dias dos locais por onde passou, e o GR
+  Photo adiciona a cada foto, quando a transfere, o local registado mais próximo da hora em que foi
+  tirada, tanto em ficheiros JPEG como RAW.
 - **Várias câmaras.** Emparelhe todas as que tiver e alterne entre elas; mude o nome ou esqueça
   cada uma.
 - **Temas e idiomas.** Temas Claro, Escuro, Câmara escura, Papel e Cianotipia, e os 21 idiomas dos
   menus da própria câmara.
 - **Privado.** Sem contas, análise de dados, publicidade nem relatórios de falhas. O GR Photo
-  comunica apenas com a sua câmara; consulte a [política de privacidade](../../app/assets/privacy.md).
+  comunica apenas com a sua câmara, e a sua localização vai apenas para a sua câmara e para as suas
+  próprias fotos; consulte a [política de privacidade](../../app/assets/privacy.md).
 
 ## Requisitos
 
@@ -186,6 +195,11 @@ flutter run --dart-define=GR_DEMO=true
 4. **Guarde um estilo.** Abra uma foto na Biblioteca e toque em Guardar estilo, ou crie um de raiz
    com + na página Estilos. Toque num estilo para o editar e arraste-o para C1, C2 ou C3 para o
    carregar na câmara.
+5. **Adicione a localização.** O GR Photo propõe a Georreferenciação uma vez para cada câmara;
+   também pode ativá-la mais tarde tocando no chip do cartão da câmara. O seu telemóvel pergunta se
+   o GR Photo pode utilizar a localização dele. A partir daí, a localização é enviada sempre que a
+   câmara estiver ligada e ao alcance. A Georreferenciação em segundo plano está em Definições,
+   Localização, e precisa de que a localização esteja sempre permitida.
 
 Desligar automaticamente, nas Definições, sai do Wi-Fi da câmara depois de o GR Photo estar algum
 tempo sem ser utilizado (5 minutos por predefinição). [Como se comporta o GR Photo](../behaviour.md)

@@ -191,6 +191,33 @@ void main() {
     await app.dispose();
   });
 
+  testWidgets('Shoot turns on a camera that dropped its link while off, '
+      'which the session let go of', (tester) async {
+    tester.view
+      ..physicalSize = const Size(1170, 2532)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final app = (await tester.runAsync(
+      () => createTestApp(
+        config: const FakeCameraConfig(bonded: true, poweredOn: false),
+        saveCamera: true,
+        sessionOptions: _quietLiveness,
+      ),
+    ))!;
+    await app.pumpApp(tester);
+    final connection = app.models.connection;
+    await pumpUntil(tester, () => connection.bleLinked, reason: 'linked');
+    app.camera.dropBluetooth();
+    await pumpUntil(tester, () => connection.parked, reason: 'let go of');
+
+    await tapWhenReady(tester, find.byKey(const Key('camera-card-shoot')));
+    await pumpUntilFound(tester, find.byKey(const Key('shoot-remote')));
+    await _untilReady(tester);
+    expect(app.camera.poweredOn, isTrue);
+    expect(connection.parked, isFalse);
+    await app.dispose();
+  });
+
   testWidgets('leaving the camera pages turns a camera Shoot woke back off', (
     tester,
   ) async {

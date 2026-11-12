@@ -220,6 +220,24 @@ void main() {
     expect(find.byType(LibraryScreen), findsNothing);
     expect(app.camera.wlanOn, isFalse);
 
+    // Back on the Cameras screen the new camera is offered geotagging,
+    // once.
+    final offer = find.byKey(const Key('geotag-offer'));
+    await pumpUntilFound(tester, offer);
+    expect(app.models.cameras.current!.geotagOffered, isFalse);
+    await tapWhenReady(tester, find.byKey(const Key('geotag-offer-later')));
+    await pumpUntil(
+      tester,
+      () => offer.evaluate().isEmpty,
+      reason: 'the offer closed',
+    );
+    await pumpUntil(
+      tester,
+      () => app.models.cameras.current!.geotagOffered,
+      reason: 'offered',
+    );
+    expect(app.models.cameras.current!.liveGeotagging, isFalse);
+
     await tapWhenReady(tester, find.byKey(const Key('camera-card-library')));
     await pumpUntilFound(tester, find.byType(LibraryScreen));
     await pumpUntil(

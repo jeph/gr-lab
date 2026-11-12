@@ -527,7 +527,7 @@
   },
   "connectionPillCameraOff": "Camera off",
   "@connectionPillCameraOff": {
-    "description": "Link state on the camera pill and the camera card's chip, and under Wi-Fi on the camera sheet: the camera turned off while its Wi-Fi was in use, and stays off until the user turns it on."
+    "description": "Link state on the camera pill and the camera card's chip, and under Bluetooth or Wi-Fi on the camera sheet: the camera is off. Either it turned off while its Wi-Fi was in use and stays off until the user turns it on, or it is off on Bluetooth alone and GR Photo waits for it to be switched on."
   },
   "connectionPillConnecting": "Connecting…",
   "@connectionPillConnecting": {
@@ -968,6 +968,160 @@
   "downloadStateRunning": "Downloading",
   "@downloadStateRunning": {
     "description": "Status of a download in the queue while it runs."
+  },
+  "geotagAutoStart": "Automatic start",
+  "@geotagAutoStart": {
+    "description": "Title of the row on the camera sheet about geotagging starting by itself when the camera is switched on, with GR Photo closed."
+  },
+  "geotagAutoStartNeedsAlways": "Starts when GR Photo is open. To start whenever the camera is switched on, allow location all the time.",
+  "@geotagAutoStartNeedsAlways": {
+    "description": "Subtitle of the Automatic start row while it is not set up and only the permission is missing. A Set up button follows. Name the choice as the phone's settings do (Android: Allow all the time; iOS: Always)."
+  },
+  "geotagAutoStartNeedsBoth": "Starts when GR Photo is open. To start whenever the camera is switched on, allow location all the time and link the camera to this phone when the phone asks.",
+  "@geotagAutoStartNeedsBoth": {
+    "description": "Subtitle of the Automatic start row while it is not set up and both the permission and the phone's own link to the camera are missing (Android). A Set up button follows."
+  },
+  "geotagAutoStartNeedsLink": "Starts when GR Photo is open. To start whenever the camera is switched on, link the camera to this phone when the phone asks.",
+  "@geotagAutoStartNeedsLink": {
+    "description": "Subtitle of the Automatic start row while it is not set up, location is already allowed all the time, and the phone has not linked GR Photo to the camera yet (Android asks for that in a prompt of its own). A Set up button follows."
+  },
+  "geotagAutoStartReady": "Starts whenever the camera is switched on, also when GR Photo is closed",
+  "@geotagAutoStartReady": {
+    "description": "Subtitle of the Automatic start row once it is set up."
+  },
+  "geotagAutoStartSetUp": "Set up",
+  "@geotagAutoStartSetUp": {
+    "description": "Button under the Automatic start row: asks for location all the time and, on Android, for the phone's link to the camera."
+  },
+  "geotagNeedAlways": "Location has to be allowed all the time",
+  "@geotagNeedAlways": {
+    "description": "Why background geotagging or the automatic start of geotagging does not run: the user allows location only while GR Photo is in use. A button to the phone's settings follows. Name the choice as the phone's settings do (Android: Allow all the time; iOS: Always)."
+  },
+  "geotagNeedCameraLink": "The camera wasn't linked to this phone",
+  "@geotagNeedCameraLink": {
+    "description": "On the camera sheet's Automatic start row after the user declined the phone's own prompt that links GR Photo to the camera (Android's companion device prompt). The Set up button stays."
+  },
+  "geotagNoticeChannel": "Geotagging",
+  "@geotagNoticeChannel": {
+    "description": "Name of the geotagging notifications in Android's notification settings (the notification category)."
+  },
+  "geotagNoticeStop": "Stop",
+  "@geotagNoticeStop": {
+    "description": "Button of Android's geotagging notification that stops live geotagging until the camera is next switched on. Keep it short."
+  },
+  "geotagNoticeTitle": "Geotagging: {cameraName}",
+  "@geotagNoticeTitle": {
+    "description": "Title of Android's notification while live geotagging runs or waits for the camera with GR Photo not on screen. The camera's name stands after the colon so that it needs no case ending.",
+    "placeholders": {
+      "cameraName": {
+        "type": "String",
+        "description": "The camera's name as the user named it, for example GR IV."
+      }
+    }
+  },
+  "geotagOfferBody": "GR cameras have no GPS. With geotagging on, GR Photo sends this phone's location to the camera over Bluetooth, and the camera saves it in each photo. The location is sent only while the camera is on.",
+  "@geotagOfferBody": {
+    "description": "First paragraph of the geotagging offer: what is sent and when."
+  },
+  "geotagOfferClock": "It also keeps the camera's clock on this phone's time.",
+  "@geotagOfferClock": {
+    "description": "Paragraph of the geotagging offer: geotagging also sets the camera's clock."
+  },
+  "geotagOfferNotNow": "Not now",
+  "@geotagOfferNotNow": {
+    "description": "Button of the geotagging offer that leaves live geotagging off. It can be turned on later on the camera sheet."
+  },
+  "geotagOfferNotification": "While it runs, Android shows a notification with a Stop button.",
+  "@geotagOfferNotification": {
+    "description": "Paragraph of the geotagging offer, shown on Android only."
+  },
+  "geotagOfferPermission": "If you turn it on, your phone asks whether GR Photo may use its location.",
+  "@geotagOfferPermission": {
+    "description": "Last paragraph of the geotagging offer: the phone's permission prompt comes next."
+  },
+  "geotagOfferTitle": "Add locations to your photos?",
+  "@geotagOfferTitle": {
+    "description": "Title of the dialog that offers live geotagging once for each camera, before the phone's own location permission prompt. The camera's name is shown on a line of its own under it."
+  },
+  "geotagOfferTurnOn": "Turn on",
+  "@geotagOfferTurnOn": {
+    "description": "Button of the geotagging offer that turns live geotagging on for the camera."
+  },
+  "geotagOpenSettings": "Open settings",
+  "@geotagOpenSettings": {
+    "description": "Button that opens the page of the phone's settings where location can be allowed for GR Photo, or turned on for the phone: on the camera sheet, in Settings, and as the action of a snack bar. Keep it short."
+  },
+  "geotagResume": "Resume",
+  "@geotagResume": {
+    "description": "Button under the Geotagging row on the camera sheet, shown with geotagStatusStopped: starts geotagging again after the user stopped it from the notification."
+  },
+  "geotagSection": "Location",
+  "@geotagSection": {
+    "description": "Heading of the camera sheet's section with the camera's Geotagging, Automatic start and Sync camera clock rows."
+  },
+  "geotagStatusLocationOff": "Location is turned off on this phone",
+  "@geotagStatusLocationOff": {
+    "description": "Location services are switched off for the whole phone. One of the status lines under the Geotagging switch on the camera sheet. A button to the phone's settings follows. Also shown in Settings and in a snack bar when turning a geotagging mode on was refused for this reason."
+  },
+  "geotagStatusNeedsApp": "The camera was switched on while GR Photo was closed. Geotagging starts when GR Photo is open.",
+  "@geotagStatusNeedsApp": {
+    "description": "The camera came on while GR Photo was not on screen, and the phone did not let geotagging start from there. One of the status lines under the Geotagging switch on the camera sheet."
+  },
+  "geotagStatusOff": "Off",
+  "@geotagStatusOff": {
+    "description": "Geotagging is turned off for this camera. One of the status lines under the Geotagging switch on the camera sheet."
+  },
+  "geotagStatusOffOnCamera": "Store Location Info is off on the camera",
+  "@geotagStatusOffOnCamera": {
+    "description": "The camera's own menu setting that lets it take a location is off: someone turned it off in the camera's menu. One of the status lines under the Geotagging switch on the camera sheet. A Turn on button follows. Also the text of Android's notification while geotagging runs with GR Photo not on screen. Store Location Info is the camera's menu entry: write it as the camera's menu does in this language."
+  },
+  "geotagStatusPermissionDenied": "GR Photo isn't allowed to use this phone's location",
+  "@geotagStatusPermissionDenied": {
+    "description": "The location permission is denied. One of the status lines under the Geotagging switch on the camera sheet. A button to the phone's settings follows. Also shown in Settings and in a snack bar when turning a geotagging mode on was refused for this reason."
+  },
+  "geotagStatusPreciseNeeded": "Precise location is needed. Approximate location can be kilometres off.",
+  "@geotagStatusPreciseNeeded": {
+    "description": "The user allowed GR Photo only the approximate location, which is too coarse to tag photos with. One of the status lines under the Geotagging switch on the camera sheet. A button to the phone's settings follows. Also shown in Settings and in a snack bar when turning a geotagging mode on was refused for this reason. Name precise and approximate location as the phone's own settings do."
+  },
+  "geotagStatusSending": "Sending this phone's location to the camera",
+  "@geotagStatusSending": {
+    "description": "Geotagging is running: the camera holds a location the phone sent. One of the status lines under the Geotagging switch on the camera sheet. Also the text of Android's notification while geotagging runs with GR Photo not on screen."
+  },
+  "geotagStatusStopped": "Stopped. It starts again the next time the camera is switched on.",
+  "@geotagStatusStopped": {
+    "description": "The user pressed Stop on Android's geotagging notification. One of the status lines under the Geotagging switch on the camera sheet. A Resume button follows."
+  },
+  "geotagStatusUnsupported": "This camera can't be sent a location",
+  "@geotagStatusUnsupported": {
+    "description": "The camera's model or firmware has no geotagging over Bluetooth. Status of geotagging for such a camera; the camera sheet hides the section for it."
+  },
+  "geotagStatusWaitingForCamera": "Starts when the camera is switched on and in reach",
+  "@geotagStatusWaitingForCamera": {
+    "description": "Geotagging is on, and the camera is off or out of Bluetooth reach. One of the status lines under the Geotagging switch on the camera sheet. Also the text of Android's notification while geotagging runs with GR Photo not on screen."
+  },
+  "geotagStatusWaitingForLocation": "Waiting for this phone's location",
+  "@geotagStatusWaitingForLocation": {
+    "description": "The camera is on, and the phone has no position good enough to send yet. One of the status lines under the Geotagging switch on the camera sheet. Also the text of Android's notification while geotagging runs with GR Photo not on screen."
+  },
+  "geotagSwitch": "Geotagging",
+  "@geotagSwitch": {
+    "description": "Title of the switch row on the camera sheet that turns live geotagging on or off for this camera: while the camera is on, the phone sends it its location over Bluetooth and the camera saves it in each photo."
+  },
+  "geotagSyncClock": "Sync camera clock",
+  "@geotagSyncClock": {
+    "description": "Title of the switch row on the camera sheet that keeps the camera's clock on the phone's time."
+  },
+  "geotagSyncClockForced": "On while geotagging is on: geotagging keeps the camera's clock on this phone's time",
+  "@geotagSyncClockForced": {
+    "description": "Subtitle of the Sync camera clock row while geotagging is on for the camera: the switch is on and cannot be changed."
+  },
+  "geotagSyncClockSubtitle": "Keeps the camera's clock on this phone's time",
+  "@geotagSyncClockSubtitle": {
+    "description": "Subtitle of the Sync camera clock row while geotagging is off for the camera."
+  },
+  "geotagTurnOnStoreLocationInfo": "Turn on",
+  "@geotagTurnOnStoreLocationInfo": {
+    "description": "Button under the Geotagging row on the camera sheet, shown with geotagStatusOffOnCamera: turns the camera's Store Location Info setting back on."
   },
   "homeBarCameras": "Cameras",
   "@homeBarCameras": {
@@ -2581,6 +2735,72 @@
   "@settingsAutoDisconnectSubtitle": {
     "description": "Settings: explanation under Auto-disconnect."
   },
+  "settingsBackgroundContinue": "Continue",
+  "@settingsBackgroundContinue": {
+    "description": "Button of the background geotagging dialog that goes on to the phone's permission prompt."
+  },
+  "settingsBackgroundExplain90Days": "Photos downloaded more than {days} days after they were taken get no location from background geotagging.",
+  "@settingsBackgroundExplain90Days": {
+    "description": "Paragraph of the background geotagging dialog, and note under the Location group in Settings: the limit of the location history.",
+    "placeholders": {
+      "days": {
+        "type": "int",
+        "format": "decimalPattern",
+        "description": "How many days the location history is kept: always 90."
+      }
+    }
+  },
+  "settingsBackgroundExplainAsk": "If you continue, your phone asks you to allow location all the time.",
+  "@settingsBackgroundExplainAsk": {
+    "description": "Last paragraph of the background geotagging dialog: the phone's permission prompt or settings page comes next. Name the choice as the phone's settings do (Android: Allow all the time; iOS: Always)."
+  },
+  "settingsBackgroundExplainBackground": "Background geotagging is the hands-free way. This phone keeps a history of where it has been for {days} days, also while GR Photo is closed. When you download a photo, GR Photo adds the place recorded closest to the time it was taken. It is less accurate: the phone records a place only now and then, so it can be some way from where you stood.",
+  "@settingsBackgroundExplainBackground": {
+    "description": "Paragraph of the background geotagging dialog: what background geotagging is and its trade-off.",
+    "placeholders": {
+      "days": {
+        "type": "int",
+        "format": "decimalPattern",
+        "description": "How many days the location history is kept: always 90."
+      }
+    }
+  },
+  "settingsBackgroundExplainLive": "Live geotagging is the accurate way. While a camera is on, this phone sends it its location over Bluetooth, and the camera saves it in each photo. It needs the camera connected over Bluetooth and switched on, and is turned on for each camera.",
+  "@settingsBackgroundExplainLive": {
+    "description": "Paragraph of the background geotagging dialog: what live geotagging is and what it needs."
+  },
+  "settingsBackgroundExplainLiveWins": "With both on, live geotagging wins: a location the camera saved is never replaced.",
+  "@settingsBackgroundExplainLiveWins": {
+    "description": "Paragraph of the background geotagging dialog, and note under the Location group in Settings."
+  },
+  "settingsBackgroundExplainPrivate": "The history stays on this phone, and you can delete it in Settings at any time.",
+  "@settingsBackgroundExplainPrivate": {
+    "description": "Paragraph of the background geotagging dialog: where the location history is kept."
+  },
+  "settingsBackgroundExplainTitle": "Two ways to add locations",
+  "@settingsBackgroundExplainTitle": {
+    "description": "Title of the dialog shown when Background geotagging is turned on, before the phone asks for location all the time. It explains live and background geotagging."
+  },
+  "settingsBackgroundGeotagging": "Background geotagging",
+  "@settingsBackgroundGeotagging": {
+    "description": "Title of the Settings switch that has the phone keep a history of where it has been, from which GR Photo adds a location to photos when they are downloaded."
+  },
+  "settingsBackgroundGeotaggingOff": "Adds a location to photos when you download them",
+  "@settingsBackgroundGeotaggingOff": {
+    "description": "Subtitle of the Background geotagging switch while it is off."
+  },
+  "settingsBackgroundGeotaggingOn": "On. This phone keeps a history of where it has been.",
+  "@settingsBackgroundGeotaggingOn": {
+    "description": "Subtitle of the Background geotagging switch while it is on and recording."
+  },
+  "settingsBackgroundGeotaggingPaused": "Paused",
+  "@settingsBackgroundGeotaggingPaused": {
+    "description": "Subtitle of the Background geotagging switch while it is on but cannot record, because a permission was taken away later. The row under it says what is missing."
+  },
+  "settingsBackgroundNotNow": "Not now",
+  "@settingsBackgroundNotNow": {
+    "description": "Button of the background geotagging dialog that leaves background geotagging off."
+  },
   "settingsCamera": "Camera",
   "@settingsCamera": {
     "description": "Settings section heading: camera connection settings."
@@ -2597,6 +2817,30 @@
   "@settingsDebugLog": {
     "description": "Settings section heading: debug logging."
   },
+  "settingsDeleteHistory": "Delete location history",
+  "@settingsDeleteHistory": {
+    "description": "Row in Settings that deletes the history of where the phone has been, which background geotagging keeps."
+  },
+  "settingsDeleteHistoryBody": "Every place recorded so far is deleted, so photos you download later can't get a location from them. Photos already downloaded keep theirs.",
+  "@settingsDeleteHistoryBody": {
+    "description": "Body of the confirmation shown before the location history is deleted. Only the places recorded up to now go; recording carries on if background geotagging is on."
+  },
+  "settingsDeleteHistoryConfirm": "Delete",
+  "@settingsDeleteHistoryConfirm": {
+    "description": "Button of the confirmation that deletes the location history."
+  },
+  "settingsDeleteHistoryDone": "Location history deleted",
+  "@settingsDeleteHistoryDone": {
+    "description": "Snack bar after the location history was deleted."
+  },
+  "settingsDeleteHistoryFailed": "Couldn't delete the location history",
+  "@settingsDeleteHistoryFailed": {
+    "description": "Snack bar in Settings after Delete location history could not delete the recorded places from the phone's storage."
+  },
+  "settingsDeleteHistoryTitle": "Delete location history?",
+  "@settingsDeleteHistoryTitle": {
+    "description": "Title of the confirmation shown before the location history is deleted."
+  },
   "settingsLanguage": "Language",
   "@settingsLanguage": {
     "description": "Settings: title of the row that chooses the language GR Photo is shown in, and heading of the list of languages it opens."
@@ -2608,6 +2852,10 @@
   "settingsLanguageSystem": "System default",
   "@settingsLanguageSystem": {
     "description": "Settings: the language choice that follows the phone's language. Shown as the value of the Language row and as the first entry in the list of languages."
+  },
+  "settingsLocation": "Location",
+  "@settingsLocation": {
+    "description": "Settings section heading: background geotagging and the location history."
   },
   "settingsTheme": "Theme",
   "@settingsTheme": {

@@ -56,7 +56,10 @@ void main() {
       final connection = app.models.connection;
       await connection.connect();
 
-      app.camera.powerOffFully();
+      // Gone without saying it turned off: one that says so is waited for.
+      app.camera
+        ..dropBluetooth()
+        ..powerOffFully();
       await _until(() => connection.reconnecting);
       unawaited(connection.openCamera(CameraTab.library));
       await _until(
@@ -523,24 +526,33 @@ void main() {
       expect(app.camera.poweredOn, isFalse);
     });
 
-    test('a camera switched off with its Bluetooth too is said to be off, '
-        'and the session ends once the link has not come back', () async {
+    test('a camera switched off with its Bluetooth too is said to be off '
+        'and let go of, and is linked again with its Wi-Fi when it is '
+        'switched on', () async {
       final app = await connected(const FakeCameraConfig(bonded: true));
       final connection = app.models.connection;
-      final kinds = <ConnectFailureKind?>[];
-      void record() => kinds.add(connection.failure?.kind);
-      connection.addListener(record);
-      addTearDown(() => connection.removeListener(record));
 
       app.camera.powerOffFully();
       await _until(
-        () => connection.status == ConnectionStatus.failed,
+        () => connection.parked,
         timeout: const Duration(seconds: 30),
       );
-      expect(kinds, contains(ConnectFailureKind.cameraOff));
-      expect(connection.failure?.kind, ConnectFailureKind.unreachable);
-      expect(connection.failure?.loss, ConnectLoss.bluetooth);
-      expect(connection.tab, isNull);
+      expect(connection.status, ConnectionStatus.bluetooth);
+      expect(connection.failure?.kind, ConnectFailureKind.cameraOff);
+      expect(connection.reconnecting, isFalse);
+      expect(connection.tab, CameraTab.library);
+      // Not given up on, however long it stays off.
+      await Future<void>.delayed(const Duration(seconds: 2));
+      expect(connection.parked, isTrue);
+      expect(connection.status, ConnectionStatus.bluetooth);
+
+      app.camera.poweredOn = true;
+      await _until(
+        () => connection.status == ConnectionStatus.connected,
+        timeout: const Duration(seconds: 30),
+      );
+      expect(connection.parked, isFalse);
+      expect(connection.failure, isNull);
     });
 
     test('a Wi-Fi that does not come back returns to Cameras on Bluetooth '

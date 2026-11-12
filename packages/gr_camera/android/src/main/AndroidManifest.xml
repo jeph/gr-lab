@@ -4,4 +4,72 @@
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+
+    <!-- The phone's position for a camera that is on (LocationChannel):
+         precise, with approximate asked alongside as Android requires. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- "Allow all the time": recording the location history with the app
+         closed (HistoryRecorder), and locating the phone when live
+         geotagging starts for a camera that came on with the app closed. -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <!-- Live geotagging carries on with the app not in front: GeotagService
+         is a foreground service. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Its location type: the phone is located with the screen off. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Its connected-device type (the camera, over Bluetooth): the only
+         type Android grants a service that starts in the background
+         without "Allow all the time". -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+    <!-- GeotagService's notification, with its Stop button. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- GeotagService keeps the processor on while a camera is on, so
+         positions are written with the screen off. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- After a restart of the phone the history's location request and
+         the power-on watch's Bluetooth scan are filed again (BootReceiver). -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- With a camera associated as a companion device, GeotagService may
+         start from the background when that camera is switched on
+         (WatchReceiver). -->
+    <uses-permission android:name="android.permission.REQUEST_COMPANION_START_FOREGROUND_SERVICES_FROM_BACKGROUND" />
+    <!-- With a camera associated, Android exempts the app from battery
+         optimization, so live geotagging keeps running, and keeps its
+         Bluetooth link to the camera, with the screen off. -->
+    <uses-permission android:name="android.permission.REQUEST_COMPANION_RUN_IN_BACKGROUND" />
+
+    <!-- Companion device associations (WatchChannel); phones without them
+         run everything but the start with the app closed. -->
+    <uses-feature
+        android:name="android.software.companion_device_setup"
+        android:required="false" />
+
+    <application>
+        <!-- Not stopped with the task: live geotagging carries on after the
+             app is swiped away, until its Stop button or the Dart side
+             ends it. -->
+        <service
+            android:name=".GeotagService"
+            android:exported="false"
+            android:foregroundServiceType="location|connectedDevice" />
+        <!-- The three receivers get broadcasts from Android only: the
+             results of the power-on watch's Bluetooth scan, the positions
+             of the location history, and the restart of the phone or
+             update of the app after which both are set up again. -->
+        <receiver
+            android:name=".WatchReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".HistoryReceiver"
+            android:exported="false" />
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+    </application>
 </manifest>

@@ -1,8 +1,8 @@
 # Geotagging: sending the phone's location to the camera
 
-GR cameras have no GPS receiver. A phone writes its position to the camera over Bluetooth, and the camera records it in the pictures it takes while the position is still valid. This file covers what the camera firmware does with a written position, how Ricoh's two apps decide when to write one, and what is still to be tested on a camera.
+GR cameras have no GPS receiver. A phone writes its position to the camera over Bluetooth, and the camera records it in the pictures it takes while the position is still valid. This file covers what the camera firmware does with a written position, how Ricoh's two apps decide when to write one, what GR Photo does with all of that, and what is still to be tested on a camera.
 
-Nothing here has been run on hardware yet: the camera facts come from the GR IV 1.20 and GR III 2.20 firmware, and the app facts from GR WORLD 2.0.0 and Image Sync 2.1.32, all read on 2026-11-12. Each fact is tagged **[found]** (in code, with its address or file), **[inferred]** or **[unknown]**.
+Nothing here has been run on hardware yet: the camera facts come from the GR IV 1.20 and GR III 2.20 firmware, and the app facts from GR WORLD 2.0.0 and Image Sync 2.1.32, all read on 2026-11-12. Each fact is tagged **[found]** (in code, with its address or file), **[inferred]** or **[unknown]**; what GR Photo does that no camera or Ricoh app prescribes is tagged **[design]**.
 
 The wire format of the record is in [ble.md §GPS push](ble.md#gps-push); the setting that enables it is the GEO Tag characteristic `A36AFDCF` (Camera State service), which is the camera's Store Location Info menu item.
 
@@ -127,6 +127,7 @@ Observed 2026-11-12 in files a GR IV and a GR IV HDF (firmware 1.20) had saved w
 
 - Every DNG has a GPS directory holding only `GPSVersionID`, pointed to from IFD0 (tag `0x8825`). Seven of eight JPEGs have the same; one has no GPS directory.
 - No file carries a time zone (`OffsetTimeOriginal`) or sub-second capture time: only the camera's local time.
+- The DNGs are little-endian classic TIFF, and their GPS pointer is one LONG. A JPEG's EXIF segment is about 39 KB of the 64 KB a segment can hold, so a GPS directory with a position fits in it.
 
 **[unknown]** Which GPS tags the camera writes when it has a location (the time and date stamp in particular, which would show the age of the position at capture), and what it writes after the 600 s.
 
@@ -138,6 +139,52 @@ Observed 2026-11-12 in files a GR IV and a GR IV HDF (firmware 1.20) had saved w
 - Write after a clock sync, never just before one (GR IV).
 - A refused write means the setting is off or the camera could not take it; it is not a lost link.
 - After the link drops, or the phone stops writing, the camera tags with the last position for up to 600 s more. Only turning Store Location Info off clears it sooner.
+
+GR Photo's geotagging (2026-11-12) is built on these. None of it has run against a camera or on an iPhone; the simulated camera treats a location and its clock as §1 says the firmware does, and the tests run against that.
+
+### 6.1 Live geotagging: what is written, and when
+
+All **[design]**, to be tuned on hardware (test 11):
+
+- **Only to a camera that is on.** The phone is located only while the camera is linked, on (Operation Mode other than `02`) and has GEO Tag `01`. Nothing is written to a camera in its off state, which could not record it and drops the link within seconds ([firmware bonding §6.1](firmware-bonding.md#61-the-radio-runs-a-different-firmware-image-in-each-power-state)).
+- **The setting.** Turning geotagging on for a camera writes GEO Tag `01`; turning it off writes `00`, which clears the location the camera holds (§1.3). A change made while the camera is off or away is written at the next link that finds it on. GEO Tag is read at every such link and its notifications are followed: a user who turns Store Location Info off in the camera's menu is not overruled, and the phone is no longer located.
+- **Which positions.** A position is written only when it is at most 60 s old and accurate to 100 m, the first one after power-on included, because the camera cannot tell an old position from a new one.
+- **How often.** The first usable position is written at once. After that one is written when the phone moved more than 5 m from the last one written, or more than the new position's own accuracy when that is larger (a fixed 5 m would fire on GPS noise), with at least 5 s between writes. A phone that does not move has a new position taken and written every 180 s, well inside the 600 s; a stored position is never sent again.
+- **The record.** Fix time in UTC, as both Ricoh apps send it; altitude `0` when the phone gave none, held to the camera's ±9999 m.
+- **A refused write.** GEO Tag is read again; when it is off, geotagging shows as off on the camera. The link is not treated as lost.
+- **The first shots.** Between power-on and the first write the camera uses the location it still holds, if that is under 600 s old (§1.3), and otherwise none.
+
+### 6.2 The camera's clock
+
+GR WORLD writes Date Time on every connect when its per-camera time-sync flag is set ([ble.md, Date/time sync](ble.md#datetime-sync)). GR Photo does not copy that, because on a GR IV a clock change clears the location one second later (§1.3) **[design]**:
+
+- The clock is read (Date Time `FA46BBDD`) at each link that finds the camera on, and every 60 minutes while it stays on and linked, and compared with the phone's local time. Date Time has no zone and whole seconds.
+- It is written only when the two differ by 2 s or more. After a write GR Photo waits 2 s and then writes a newly taken position.
+- The clock is checked before the first position of a link is written.
+- This runs while geotagging is on for the camera, or its own switch (Sync camera clock, on by default) is.
+
+What the camera reads back just after a write, and whether a write that changes nothing still clears the location, are **[unknown]** (test 12).
+
+### 6.3 Starting when the camera comes on
+
+A camera that is off cannot be held on a link ([GR WORLD power-on §8](power-on-grworld.md#8-gr-photo-link-drops-at-power-changes)), so its power-on is noticed from its advertisement: on, it advertises the Camera Information service `9A5ED1C5` in the primary packet where it advertised Client Registration `0F291746` while off, and power tag `01` in the scan response ([camera models §4.1](../camera-models.md#41-before-connecting-ble-advertising-recommended); observed on a GR IV HDF, [hardware results](../hardware-validation.md#4-results-log)). Three things watch for it **[design]**:
+
+- **A session that let go of its camera** scans for that service itself while the app runs.
+- **Android, with the app not running:** a Bluetooth scan filed with Android to deliver to a broadcast receiver (`BluetoothLeScanner.startScan` with a `PendingIntent`), which outlives the app's process, with one filter per camera on the service and the camera's address. Where the Bluetooth chip filters by itself Android reports a camera's first advertisement and its going away; elsewhere it reports every advertisement and the receiver tells the first from the rest. Android forgets the scan at a restart of the phone and when Bluetooth goes off, so it is filed again after a restart, an update of the app and at each start of the app. With no app running, the receiver starts the foreground service that locates the phone, which starts the app's Flutter engine without a screen; the app's screen attaches to that same engine when it is opened. Starting that service from the background needs a companion device association with the camera (Android, "Restrictions on starting a foreground service from the background"), which the user approves once per camera
+- **iOS, with the app suspended or ended by the system:** a scan for the service by a central manager with a restore identifier, under the `bluetooth-central` background mode, which iOS keeps for an app it suspended or ended and wakes or starts it for (Apple, "Core Bluetooth Background Processing for iOS Apps"). A background scan reports a peripheral once, so the scan is started afresh each time the camera has gone off. A result that carries manufacturer data with power tag `00` is ignored. When iOS started the app for it there is no scene and so no screen; the app then starts its Flutter engine by itself, and a scene that connects later shows that engine. iOS does not start an app again that the user swiped away.
+
+A link that is still up when the camera is switched on is the other way in: Camera Power `01` notified on it, or an Operation Mode other than `02` read on a link that returns ([GR WORLD power-on §8](power-on-grworld.md#8-gr-photo-link-drops-at-power-changes)).
+
+Once the camera is linked and on, locating the phone with the app off screen needs, on Android, a foreground service of the location type, which Android 12 and later let an app start from the background only in listed cases (location allowed all the time is one; Android, "Restrictions on starting a foreground service from the background"), and on iOS location updates under the `location` background mode. With location allowed only while the app is in use, geotagging therefore starts when the app is opened and carries on after it is left.
+
+**[unknown]**, all for hardware (tests 8 and 10): whether iOS matches the service in a background scan at all, how long either platform takes to report the camera with the phone locked, and whether a GR III advertises the same way.
+
+### 6.4 Background geotagging: the history, and writing into files
+
+- **The history.** While background geotagging is on, the phone records where it is the cheapest way each platform has **[design]**: on Android a standing request to the location service for a position every five minutes at balanced power, delivered to a broadcast receiver, which Android answers only a few times an hour for an app not in front (Android, "Background Location Limits"); on iOS significant location changes (about 500 m or more, at most one every five minutes: Apple, `startMonitoringSignificantLocationChanges`) and visits, for which iOS starts the app again after ending it. Native code stores the positions with no Flutter engine running, and the app takes them over when it runs. Observed on an Android 16 emulator (2026-11-12): with GR Photo in the background Android stretched the request to one position every ten minutes, and with the app's process ended it started the process for the receiver at the next one, which stored the position. On the iOS 26.5 simulator the switch turned on with location allowed all the time; no significant change or visit was delivered there, and none has been on an iPhone. Positions live geotagging took go into the history too, one every 15 s of the about one a second the phone takes while the camera is on. Each is kept 90 days.
+- **Matching.** At download, a JPEG or DNG whose GPS directory has no latitude gets the recorded position nearest in time to its capture time, before or after. A photo taken more than 90 days ago gets none, and a photo with no position before it takes the next one only when that came within 10 minutes. The capture time is EXIF `DateTimeOriginal`, the camera's local time with no zone (§5), read as local time in the phone's current zone: a camera clock that is wrong, or set to another zone, shifts every match by as much.
+- **Writing.** The file's bytes stay where they are: a new GPS directory is appended to the TIFF data (in a JPEG, the EXIF segment) and only the four bytes of the pointer to it change, which a camera file already has in IFD0 (tag `0x8825`, §5). It holds `GPSVersionID` 2.3.0.0, latitude, longitude, altitude when known, the UTC time and date the phone took the position (so the file shows how old its position is) and `GPSMapDatum` WGS-84. A file that already has a latitude, a movie, and a file that cannot be parsed are left as they are. A file given a location no longer matches the copy on the memory card.
+- **Checked on camera files** (observed 2026-11-12, on copies of two DNGs and two JPEGs from a GR IV, firmware 1.20, on a Mac): in each DNG four bytes changed inside the original length and 227 were appended; in each JPEG the EXIF segment grew by 226 bytes and everything after it was the same bytes further on. `exiftool -validate` reported the same as for the untouched files and read every tag written, the embedded preview was byte-identical, and macOS's ImageIO read the location and still decoded the raw image. Photos apps on a phone and Lightroom are still to try (test 15).
 
 ## 7. Hardware tests
 
@@ -152,6 +199,13 @@ None run yet.
 7. A record written while the camera is in its off state (Bluetooth only): accepted, refused, or does the link drop first?
 8. How long after power-on a phone in a pocket has linked and written its first record, on Android and iOS.
 9. GR III and IIIx: all of the above, and whether a clock change clears the location.
+10. Switch the camera on with GR Photo closed, in the background and ended by the system, phone locked, on Android and on iOS: whether geotagging starts, how long that takes, and whether an iPhone's background scan reports the camera at all (§6.3).
+11. GR Photo's thresholds (§6.1) on a walk and indoors: how many writes an hour, how far the recorded position is from where each picture was taken, and how often pictures go untagged.
+12. Date Time read and write on a GR IV and a GR III: the offset GR Photo measures just after its own write, and whether a write that changes nothing still clears the location.
+13. Switch the camera on at its power button while a link to it is still up (inside the 8 s after a connect to the off camera): is Camera Power `01` notified, or does the link drop?
+14. A day out with background geotagging on: how many positions the history gets on Android and on iOS, and how far the matched position of each downloaded photo is from where it was taken.
+15. A DNG and a JPEG given a location by GR Photo, opened in Apple Photos, Google Photos and Lightroom: is the location shown, and does the raw still develop?
+16. A DNG and a JPEG shot while a location was valid: which GPS tags the camera writes itself (§5), so GR Photo's can match.
 
 ## 8. Evidence
 

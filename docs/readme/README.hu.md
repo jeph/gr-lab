@@ -118,12 +118,21 @@ ne legyen útban, és hogy a Képvezérlés stílusait érdemes legyen benne kez
 - **Élőkép.** A kamera képe Wi-Fi-kapcsolaton: koppintson a fókuszáláshoz, állítsa be a rekeszt, a
   záridőt, az ISO-értéket és az expozíciókompenzációt egy tárcsán, amely a kamera által kínált
   értékeket mutatja, és módosítsa a meghajtást, az önkioldót, a fénymérést és a Képvezérlést.
+- **Geocímkézés.** A GR kamerákban nincs GPS. Ha egy kameránál be van kapcsolva a Geocímkézés, a GR
+  Photo Bluetooth-kapcsolaton elküldi neki a telefonja helyzetét, amíg a kamera be van kapcsolva, a
+  kamera pedig minden fotóba elmenti. Akkor is folytatódik, ha másik alkalmazást használ vagy
+  zárolja a telefont, a kamera bekapcsolásakor magától elindul, ha mindig engedélyezi a
+  helyhozzáférést, és a kamera óráját a telefonja idejéhez igazítja. A Háttérbeli geocímkézés a
+  beavatkozást nem igénylő alternatíva: a telefon 90 napos előzményeket vezet arról, hol járt, és a
+  GR Photo a fotó letöltésekor azt a helyet adja hozzá, amelyet a telefon a készítés időpontjához
+  legközelebb rögzített, JPEG- és RAW-fájlokhoz egyaránt.
 - **Több kamera.** Annyi kamerát párosíthat, ahány van, és válthat közöttük; mindegyiket
   átnevezheti vagy elfelejtetheti.
 - **Témák és nyelvek.** Világos, Sötét, Sötétkamra, Papír és Cianotípia téma, valamint a kamera
   saját menüinek 21 nyelve.
 - **Bizalmas.** Nincs fiók, analitika, hirdetés vagy összeomlás-jelentés. A GR Photo kizárólag az Ön
-  kamerájával kommunikál; lásd az [adatvédelmi irányelveket](../../app/assets/privacy.md).
+  kamerájával kommunikál, a helyzete pedig csak a kamerájába és a saját fotóiba kerül; lásd az
+  [adatvédelmi irányelveket](../../app/assets/privacy.md).
 
 ## Követelmények
 
@@ -190,6 +199,11 @@ flutter run --dart-define=GR_DEMO=true
 4. **Mentsen egy stílust.** Nyisson meg egy fotót a Könyvtárban, és koppintson a Stílus mentése
    gombra, vagy készítsen egyet a nulláról a Stílusok oldal + gombjával. Koppintson egy stílusra a
    szerkesztéséhez, és húzza a C1, C2 vagy C3 helyre, ha be szeretné tölteni a kamerába.
+5. **Adjon hozzá helyadatokat.** A GR Photo minden kameránál egyszer felajánlja a Geocímkézést;
+   később is bekapcsolhatja, ha a kamera kártyáján lévő címkére koppint. A telefon megkérdezi, hogy
+   a GR Photo használhatja-e a helyzetét. Ettől kezdve a GR Photo mindig elküldi a helyzetet, amikor
+   a kamera be van kapcsolva és a közelben van. A Háttérbeli geocímkézés a Beállítások
+   Helymeghatározás részében található, és ehhez mindig engedélyezni kell a helyhozzáférést.
 
 A Beállítások Automatikus leválasztás funkciója kilép a kamera Wi-Fi-hálózatából, ha a GR Photo egy
 ideje nincs használatban (alapértelmezés szerint 5 perc után). [A GR Photo

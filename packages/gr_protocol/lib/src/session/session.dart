@@ -352,6 +352,16 @@ final class GrSession {
   /// it off, and the session is getting it back ([bleReconnecting]).
   bool _bleLostUnexpectedly = false;
 
+  /// The session let go of a camera that is off ([parked]).
+  bool _parked = false;
+
+  /// The scan a parked session reads the camera's advertisements from.
+  StreamSubscription<BleAdvertisement>? _parkWatch;
+
+  /// The camera no longer holds this phone's keys (`ble.needsPairing`):
+  /// nothing links it again by itself.
+  bool _bondLost = false;
+
   /// The wake running now (a Wi-Fi start's, or [wake]'s); the next one
   /// waits for it, so two wakes never overlap.
   Future<void>? _wakeRunning;
@@ -434,6 +444,25 @@ final class GrSession {
   /// after [GrSessionOptions.bleLostAfter] and
   /// [GrSessionOptions.powerOffGuard] (`power.offUnsettled`) \[design\].
   bool get turningOff => _turningOff;
+
+  /// The session let go of a camera that is off and only reads its
+  /// advertisements, from `ble.parked` until the camera is linked again.
+  ///
+  /// A camera in its BT-only state drops a link that is not used to turn
+  /// it on about 8 s after it opened, and every link wakes its host (GR IV
+  /// HDF, firmware 1.20, 2026-11-11: research/protocol/firmware-bonding.md
+  /// §6.1), so the session does not link it again \[design\]. It links
+  /// when an advertisement says the camera is on (`ble.seenOn`): the
+  /// Camera Information service in place of Client Registration, or power
+  /// tag `01` (research/camera-models.md §4.1). [wake] and [startWifi]
+  /// link a parked camera themselves.
+  bool get parked => _parked;
+
+  /// The platform saw the camera advertise in its on state (its power-on
+  /// watch, which also works where this session's own scan does not: with
+  /// the phone's screen off, or the app in the background). A [parked]
+  /// session links at once; otherwise nothing happens.
+  void cameraSeenOn() => _seenOn('platform');
 
   /// The camera's Wi-Fi was lost and is being got back: from `wifi.lost`
   /// until `recovery.done` or `recovery.gaveUp`, through every phase the
@@ -981,6 +1010,7 @@ final class GrSession {
     _http?.close(force: true);
     _http = null;
     await _powerSub?.cancel();
+    _unpark();
     _ble = null;
     if (ble != null) {
       try {
@@ -1119,6 +1149,8 @@ final class GrSession {
     }
     _ble = client;
     _bleLostUnexpectedly = false;
+    _bondLost = false;
+    _unpark();
     _emit('ble.ready', {
       'missingCharacteristics': report.missing.length,
       'identity': {
@@ -1144,6 +1176,7 @@ final class GrSession {
             _wifiLost('cameraOff');
           case BleCameraPower.on:
             _wakeSettle?.cameraOn();
+            _cameraTurnedOn();
           case BleCameraPower.sleep || null:
         }
       }, onError: (Object e) => _emit('ble.cameraPowerError', {'error': '$e'}));
@@ -1425,6 +1458,7 @@ final class GrSession {
     });
     if (d.bondRejected) {
       _endTurnOff();
+      _bondLost = true;
       _emit('ble.needsPairing');
       return;
     }
@@ -1433,15 +1467,121 @@ final class GrSession {
 
   /// Starts the BLE reconnect when the link is down and nothing else is
   /// linking again. A link that drops as soon as the reconnect restored
-  /// it, before that reconnect ended, starts another.
+  /// it, before that reconnect ended, starts another. A camera that is
+  /// off is not linked again ([parked]), except once after the session
+  /// turned it off ([turningOff]), to see it settle.
   void _reconnectIfDown() {
-    if (_closing || _relinking || _ble != null || _bleReconnect != null) {
+    if (_closing ||
+        _relinking ||
+        _bondLost ||
+        _ble != null ||
+        _bleReconnect != null) {
+      return;
+    }
+    if (_cameraOff && !_turningOff) {
+      _park();
       return;
     }
     _bleReconnect = _reconnectBle().then((restored) {
       _bleReconnect = null;
       if (restored) _reconnectIfDown();
     });
+  }
+
+  /// Lets go of a camera that is off and starts reading its
+  /// advertisements for the one that says it is on ([parked]).
+  void _park() {
+    if (_parked) return;
+    _parked = true;
+    _emit('ble.parked');
+    _parkWatch = transport
+        .scan(serviceUuids: [GrBleServices.cameraInformation.uuid])
+        .listen(
+          (ad) {
+            final seen = GrAdvertisement(ad);
+            if (!_isThisCamera(seen)) return;
+            // The service filter is the platform's; the tag is checked
+            // too where a result carries it.
+            if ((seen.powerOn ?? seen.powerOnFromServices) ?? false) {
+              _seenOn('scan');
+            }
+          },
+          // Without a scan (Bluetooth off, or another owner's scan
+          // running) the platform's watch is what is left.
+          onError: (Object e) => _emit('ble.parkWatchFailed', {'error': '$e'}),
+        );
+  }
+
+  /// Whether [ad] is this session's camera: its device id, or without one
+  /// its serial number.
+  bool _isThisCamera(GrAdvertisement ad) {
+    final deviceId = _deviceId;
+    if (deviceId != null) return ad.deviceId == deviceId;
+    final serial = _serial;
+    return serial != null && grSerialMatches(serial, ad.serialNumber);
+  }
+
+  /// Ends [parked] and its scan.
+  void _unpark() {
+    if (!_parked) return;
+    _parked = false;
+    unawaited(_parkWatch?.cancel());
+    _parkWatch = null;
+  }
+
+  /// A [parked] camera advertises that it is on ([source]: this session's
+  /// `scan`, or the `platform`'s watch): links it. A wake links by itself.
+  void _seenOn(String source) {
+    if (!_parked ||
+        _closing ||
+        _relinking ||
+        _bondLost ||
+        _wakeRunning != null ||
+        _ble != null ||
+        _bleReconnect != null) {
+      return;
+    }
+    _emit('ble.seenOn', {'source': source});
+    _bleReconnect = _relinkParked().then((_) {
+      _bleReconnect = null;
+      // A wake that came meanwhile, or a camera that was off after all.
+      _reconnectIfDown();
+    });
+  }
+
+  /// Links a [parked] camera that advertised being on. A link that cannot
+  /// be made leaves the session parked, reading advertisements again
+  /// after the first [GrSessionOptions.bleReconnectDelays] pause: the
+  /// camera was switched off again, or went out of reach.
+  Future<void> _relinkParked() async {
+    try {
+      await _connectBle(initial: false);
+      _emit('ble.restored', {'afterPark': true});
+    } on Object catch (e) {
+      _emit('ble.seenOnFailed', {'error': '$e'});
+      if (e is GrSessionException && e.needsPairing) {
+        _unpark();
+        _bondLost = true;
+        _emit('ble.needsPairing');
+        return;
+      }
+      await _until(
+        _closeSignal.future,
+        Future<void>.delayed(_delay(options.bleReconnectDelays, 0)),
+      );
+    }
+  }
+
+  /// The camera reported being on (Camera Power `01`) over a link that
+  /// found it off, with no wake of this session's running: its own power
+  /// button. Whether a GR IV notifies this on a link held in its BT-only
+  /// state is \[unknown\] (research/protocol/power-on-grworld.md §8); a
+  /// camera that drops the link instead is found by its advertisement
+  /// ([parked]).
+  void _cameraTurnedOn() {
+    if (!_cameraOff || _relinking || _wakeRunning != null) return;
+    _cameraOff = false;
+    _emit('ble.cameraOn');
   }
 
   /// The current link, for a step in [phase] that needs one.
@@ -1482,12 +1622,20 @@ final class GrSession {
         if (e.needsPairing) {
           _bleLostUnexpectedly = false;
           _endTurnOff();
+          _bondLost = true;
           _emit('ble.needsPairing');
           return false;
         }
       }
     }
     _bleLostUnexpectedly = false;
+    if (_cameraOff) {
+      // Turned off by this session and not linked again in its off state:
+      // it is left alone like any camera that is off, not given up on.
+      _endTurnOff('power.offUnsettled');
+      _park();
+      return false;
+    }
     _endTurnOff();
     _emit('ble.gaveUp', {
       'attempts': attempts,

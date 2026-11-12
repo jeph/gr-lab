@@ -1576,27 +1576,29 @@ void main() {
 
     for (final viaStart in [false, true]) {
       test('while the wake write of ${viaStart ? 'a Wi-Fi start' : 'wake'} '
-          'is in flight, which then fails, leaves no dead link', () async {
+          'is in flight, which then fails, leaves no dead link, and the '
+          'camera that is still off is let go of', () async {
         final camera = BondedCamera(operationMode: 2)
           ..holdModeWrite = Completer<void>();
         final s = dropSession(camera);
         await s.connectBluetooth(deviceId: 'cam');
-        final old = s.ble;
         final poweringOn = next(s, 'power.on');
-        final restored = next(s, 'ble.restored');
+        final parked = next(s, 'ble.parked');
         final woke = expectLater(
           viaStart ? s.startWifi() : s.wake(BleOperationMode.capture),
           throwsA(isA<GrSessionException>()),
         );
         await poweringOn;
+        final connects = camera.connectTimeouts.length;
         camera
           ..dropAll()
           ..holdModeWrite!.complete();
         await woke;
-        expect(s.ble, isNot(same(old)));
-        await restored;
-        expect(s.ble, allOf(isNotNull, isNot(same(old))));
-        expect(camera.openLinks, 1);
+        await parked;
+        expect(s.ble, isNull);
+        expect(s.parked, isTrue);
+        expect(camera.openLinks, 0);
+        expect(camera.connectTimeouts, hasLength(connects));
         expect(s.phase, GrSessionPhase.bluetooth);
         await s.close();
       }, timeout: const Timeout(Duration(seconds: 10)));
@@ -2082,6 +2084,287 @@ void main() {
       expect(s.turningOff, isFalse);
       expect(camera.ops, isNot(contains('write power 0')));
       await s.close();
+    });
+  });
+
+  group('a camera that is off', () {
+    const on = 'on';
+    const off = 'off';
+
+    /// What the camera 'cam' with serial 1234567 advertises in [state]:
+    /// the service of that state in the primary packet and, with
+    /// [payload], the Ricoh payload of the scan response with its power
+    /// tag.
+    BleAdvertisement advertisement(
+      String state, {
+      String deviceId = 'cam',
+      bool payload = true,
+    }) => BleAdvertisement(
+      deviceId: deviceId,
+      rssi: -60,
+      serviceUuids: [
+        if (state == on)
+          GrBleServices.cameraInformation.uuid
+        else
+          GrBleServices.clientRegistration.uuid,
+      ],
+      manufacturerData: {
+        if (payload)
+          grRicohCompanyId: Uint8List.fromList([
+            0xDA, 0x01, 0x08, 0x02, 0x87, 0xD6, 0x12, 0x00, 0x03, //
+            if (state == on) 1 else 0,
+          ]),
+      },
+    );
+
+    GrSession parkSession(BondedCamera camera) => GrSession(
+      transport: camera,
+      wifi: FailingWifi(),
+      options: const GrSessionOptions(
+        bleReconnectDelays: [Duration.zero],
+        bleLostAfter: Duration(milliseconds: 300),
+        powerOffGuard: Duration.zero,
+        wakeSettle: Duration(milliseconds: 50),
+      ),
+    );
+
+    /// An off camera whose link has dropped, as it does about 8 s after it
+    /// opened: the session has let go of it.
+    Future<(BondedCamera, GrSession)> parked() async {
+      final camera = BondedCamera(operationMode: 2)
+        ..advertising = StreamController<BleAdvertisement>.broadcast()
+        ..cameraPower = StreamController<Uint8List>.broadcast();
+      final s = parkSession(camera);
+      await s.connectBluetooth(deviceId: 'cam');
+      final parked = next(s, 'ble.parked');
+      camera.dropAll();
+      await parked;
+      return (camera, s);
+    }
+
+    test('is not linked again after it drops the link: the session lets go '
+        'of it and reads its advertisements', () async {
+      final (camera, s) = await parked();
+      final connects = camera.connectTimeouts.length;
+      expect(s.parked, isTrue);
+      expect(s.cameraOff, isTrue);
+      expect(s.ble, isNull);
+      expect(s.bleReconnecting, isFalse);
+      expect(camera.scans, 1);
+
+      // Well past every reconnect pause and bleLostAfter.
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      expect(camera.connectTimeouts, hasLength(connects));
+      expect(s.parked, isTrue);
+      expect(s.phase, GrSessionPhase.bluetooth);
+      await s.close();
+    });
+
+    test('is linked again when it advertises that it is on, and the scan '
+        'ends', () async {
+      final (camera, s) = await parked();
+      final connects = camera.connectTimeouts.length;
+      camera.advertising!.add(advertisement(off));
+      camera.advertising!.add(advertisement(on, deviceId: 'other'));
+      await pumpEventQueue();
+      expect(camera.connectTimeouts, hasLength(connects));
+      expect(s.parked, isTrue);
+
+      final seen = next(s, 'ble.seenOn');
+      final ready = next(s, 'ble.ready');
+      camera
+        ..operationMode = 1
+        ..advertising!.add(advertisement(on));
+      expect((await seen).fields, {'source': 'scan'});
+      await ready;
+      expect(s.parked, isFalse);
+      expect(s.cameraOff, isFalse);
+      expect(s.ble, isNotNull);
+      expect(camera.advertising!.hasListener, isFalse);
+      expect(camera.connectTimeouts, hasLength(connects + 1));
+      await s.close();
+    });
+
+    test('is linked on the service of its on state alone, when the result '
+        'carries no power tag', () async {
+      final (camera, s) = await parked();
+      final ready = next(s, 'ble.ready');
+      camera
+        ..operationMode = 1
+        ..advertising!.add(advertisement(on, payload: false));
+      await ready;
+      expect(s.cameraOff, isFalse);
+      await s.close();
+    });
+
+    test("is linked at once on the platform's sighting, and only while "
+        'let go of', () async {
+      final camera = BondedCamera(operationMode: 2)
+        ..advertising = StreamController<BleAdvertisement>.broadcast();
+      final s = parkSession(camera);
+      await s.connectBluetooth(deviceId: 'cam');
+      final connects = camera.connectTimeouts.length;
+      // Linked: a sighting changes nothing.
+      s.cameraSeenOn();
+      await pumpEventQueue();
+      expect(camera.connectTimeouts, hasLength(connects));
+
+      final parked = next(s, 'ble.parked');
+      camera.dropAll();
+      await parked;
+      final seen = next(s, 'ble.seenOn');
+      final ready = next(s, 'ble.ready');
+      camera.operationMode = 1;
+      s.cameraSeenOn();
+      expect((await seen).fields, {'source': 'platform'});
+      await ready;
+      expect(s.parked, isFalse);
+      expect(s.cameraOff, isFalse);
+      await s.close();
+    });
+
+    test('that was seen on but is off after all is let go of again when it '
+        'drops that link', () async {
+      final (camera, s) = await parked();
+      final ready = next(s, 'ble.ready');
+      camera.advertising!.add(advertisement(on));
+      await ready;
+      expect(s.parked, isFalse);
+      expect(s.cameraOff, isTrue);
+
+      final again = next(s, 'ble.parked');
+      camera.dropAll();
+      await again;
+      expect(s.parked, isTrue);
+      expect(camera.advertising!.hasListener, isTrue);
+      await s.close();
+    });
+
+    test('that was seen on but cannot be linked stays let go of, and is '
+        'tried again at its next advertisement', () async {
+      final (camera, s) = await parked();
+      final failed = next(s, 'ble.seenOnFailed');
+      camera
+        // Every link of the attempt drops during discovery.
+        ..dropLinks = 3
+        ..advertising!.add(advertisement(on));
+      await failed;
+      await pumpEventQueue();
+      expect(s.parked, isTrue);
+      expect(s.ble, isNull);
+      expect(camera.advertising!.hasListener, isTrue);
+      expect(camera.dropLinks, 0);
+
+      final ready = next(s, 'ble.ready');
+      camera
+        ..operationMode = 1
+        ..advertising!.add(advertisement(on));
+      await ready;
+      expect(s.parked, isFalse);
+      await s.close();
+    });
+
+    test('is linked by a wake while let go of, which ends the scan and '
+        'takes no sighting meanwhile', () async {
+      final (camera, s) = await parked();
+      camera.holdConnect = Completer<void>();
+      final connects = camera.connectTimeouts.length;
+      final woke = s.wake(BleOperationMode.capture);
+      await pumpEventQueue();
+      // The wake is linking: a sighting must not link a second time.
+      camera.advertising!.add(advertisement(on));
+      s.cameraSeenOn();
+      await pumpEventQueue();
+      expect(camera.connectTimeouts, hasLength(connects + 1));
+      camera.holdConnect!.complete();
+      await woke;
+      expect(s.cameraOff, isFalse);
+      expect(s.parked, isFalse);
+      expect(s.ble, isNotNull);
+      expect(camera.advertising!.hasListener, isFalse);
+      expect(camera.ops, contains('write mode 0'));
+      await s.close();
+    });
+
+    test('that reports being on over a link that found it off is on, with '
+        'no write', () async {
+      final camera = BondedCamera(operationMode: 2)
+        ..cameraPower = StreamController<Uint8List>.broadcast();
+      final s = parkSession(camera);
+      await s.connectBluetooth(deviceId: 'cam');
+      expect(s.cameraOff, isTrue);
+      final on = next(s, 'ble.cameraOn');
+      camera.cameraPower!.add(Uint8List.fromList([BleCameraPower.on.wire]));
+      await on;
+      expect(s.cameraOff, isFalse);
+      expect(camera.ops.where((o) => o.startsWith('write')), isEmpty);
+
+      // On now: a drop is a loss, and is linked again.
+      final restored = next(s, 'ble.restored');
+      camera
+        ..operationMode = 1
+        ..dropAll();
+      await restored;
+      expect(s.parked, isFalse);
+      await s.close();
+    });
+
+    test('that the session turned off is linked once more to see it '
+        'settle, then let go of', () async {
+      final camera = BondedCamera()
+        ..advertising = StreamController<BleAdvertisement>.broadcast();
+      final s = parkSession(camera);
+      await s.connectBluetooth(deviceId: 'cam');
+      final settled = next(s, 'power.offSettled');
+      expect(await s.powerOff(), isTrue);
+      camera
+        ..operationMode = 2
+        ..dropAll();
+      await settled;
+      expect(s.turningOff, isFalse);
+      expect(s.parked, isFalse);
+      expect(s.ble, isNotNull);
+
+      final connects = camera.connectTimeouts.length;
+      final parked = next(s, 'ble.parked');
+      camera.dropAll();
+      await parked;
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+      expect(camera.connectTimeouts, hasLength(connects));
+      await s.close();
+    });
+
+    test('that the session turned off and that cannot be linked again is '
+        'let go of, not given up on', () async {
+      final camera = BondedCamera()
+        ..advertising = StreamController<BleAdvertisement>.broadcast();
+      final s = parkSession(camera);
+      await s.connectBluetooth(deviceId: 'cam');
+      final kinds = <String>[];
+      final sub = s.events.listen((e) => kinds.add(e.kind));
+      final parked = next(s, 'ble.parked');
+      expect(await s.powerOff(), isTrue);
+      camera
+        ..outOfRange = true
+        ..dropAll();
+      await parked;
+      expect(kinds, contains('power.offUnsettled'));
+      expect(kinds, isNot(contains('ble.gaveUp')));
+      expect(s.turningOff, isFalse);
+      expect(s.cameraOff, isTrue);
+      await sub.cancel();
+      await s.close();
+    }, timeout: const Timeout(Duration(seconds: 10)));
+
+    test('close ends the scan of a session that let go of its camera, and '
+        'a sighting after it changes nothing', () async {
+      final (camera, s) = await parked();
+      final connects = camera.connectTimeouts.length;
+      await s.close();
+      expect(camera.advertising!.hasListener, isFalse);
+      s.cameraSeenOn();
+      await pumpEventQueue();
+      expect(camera.connectTimeouts, hasLength(connects));
     });
   });
 }

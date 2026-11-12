@@ -225,7 +225,6 @@ final class ShootModel extends ChangeNotifier {
     final session = connection.cameraSession;
     if (!identical(session, _session)) _attach(session);
     final remote = _remote;
-    final linked = remote != null && connection.bleLinked;
     if (_power == ShootPower.ready && connection.cameraOff) {
       // Switched off with its power button, or by the session after a
       // failed Wi-Fi recovery.
@@ -233,7 +232,10 @@ final class ShootModel extends ChangeNotifier {
       _updateRemote();
       remote?.cameraSwitchedOff();
     }
-    if (_visible && linked && _power == ShootPower.idle) {
+    if (_visible &&
+        remote != null &&
+        connection.canWake &&
+        _power == ShootPower.idle) {
       unawaited(_wake(remote));
     }
     _updateLiveView();

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 import 'package:universal_ble/universal_ble.dart';
 
@@ -26,15 +26,18 @@ final class UniversalBleTransport implements BleTransport {
   /// Connects and disconnects, one device at a time.
   final _deviceOps = _Serial();
 
-  /// The scan stream that owns the platform scan. Only its cancellation
-  /// stops the scan; a rejected concurrent scan must not.
-  StreamController<BleAdvertisement>? _scanOwner;
+  /// Everyone scanning now; one platform scan serves them all.
+  final List<_Scanner> _scanners = [];
 
-  /// The platform stop of the previous owner. A cancelled scan releases
-  /// ownership at once, so a scan asked for straight afterwards (the Cameras
-  /// screen's nearby scan ending as a connection starts its own) is accepted
-  /// and starts once this completes.
-  Future<void> _stopping = Future.value();
+  /// What the running platform scan was started for; null while none runs.
+  _ScanNeed? _scanning;
+  StreamSubscription<BleDevice>? _results;
+
+  /// Starts and stops of the platform scan, one after another: a scan
+  /// asked for while the previous one is stopping (the Cameras screen's
+  /// nearby scan ending as a connection starts its own) starts once that
+  /// has completed.
+  Future<void> _scanOp = Future.value();
 
   @override
   Future<BleAdapterState> adapterState() async {
@@ -53,66 +56,95 @@ final class UniversalBleTransport implements BleTransport {
   /// scanning (Android 12+ nearby-devices); a no-op elsewhere.
   Future<void> requestPermissions() => _guard(UniversalBle.requestPermissions);
 
+  /// Scans share the one platform scan `universal_ble` has: a session
+  /// that reads the advertisements of a camera it let go of scans for as
+  /// long as it lasts, next to the Cameras screen's scan or a pairing
+  /// run's. Each listener gets the advertisements its [serviceUuids] ask
+  /// for; the platform filters only while every listener has a filter.
   @override
   Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) {
-    late final StreamController<BleAdvertisement> controller;
-    StreamSubscription<BleDevice>? sub;
-    var started = false;
-    controller = StreamController<BleAdvertisement>(
-      onListen: () async {
-        if (_scanOwner != null) {
-          controller.addError(
-            const BleException(BleErrorCode.transport, 'a scan is running'),
-          );
-          await controller.close();
-          return;
-        }
-        _scanOwner = controller;
-        await _stopping;
-        // Cancelled while the previous scan was stopping.
-        if (!identical(_scanOwner, controller)) return;
-        sub = UniversalBle.scanStream.listen(
-          (d) => controller.add(_advertisement(d)),
-          onError: controller.addError,
-        );
-        try {
-          started = true;
-          await _guard(
-            () => UniversalBle.startScan(
-              scanFilter: serviceUuids.isEmpty
-                  ? null
-                  : ScanFilter(withServices: serviceUuids),
-              // Android's default low-power mode listens ~0.5 s every 5 s
-              // and misses cameras; the app scans only while a screen
-              // shows the results or a connection looks for its camera.
-              platformConfig: PlatformConfig(
-                android: AndroidOptions(scanMode: AndroidScanMode.lowLatency),
-              ),
-            ),
-          );
-        } on Object catch (e, s) {
-          started = false;
-          controller.addError(e, s);
-          await sub?.cancel();
-          if (identical(_scanOwner, controller)) _scanOwner = null;
-          await controller.close();
-        }
+    late final _Scanner scanner;
+    final controller = StreamController<BleAdvertisement>(
+      onListen: () {
+        _scanners.add(scanner);
+        // A stop of the scan before that failed: the listeners hear of it.
+        unawaited(_syncScan().catchError(_fail));
       },
       onCancel: () {
-        if (!identical(_scanOwner, controller)) return sub?.cancel();
-        _scanOwner = null;
-        final listening = sub;
-        final stop = started;
-        final stopping = () async {
-          await listening?.cancel();
-          if (stop) await _guard(UniversalBle.stopScan);
-        }();
-        // The next scan only waits; the error is the canceller's.
-        _stopping = stopping.catchError((Object _) {});
-        return stopping;
+        if (!_scanners.remove(scanner)) return null;
+        return _syncScan();
       },
     );
+    scanner = _Scanner(controller, {
+      for (final uuid in serviceUuids) _canonicalOrSelf(uuid),
+    });
     return controller.stream;
+  }
+
+  /// Brings the platform scan in line with [_scanners], after every start
+  /// and stop asked for before. A start that fails ends every scan
+  /// listening then with its error; a stop that fails is the error of the
+  /// call that asked for it.
+  Future<void> _syncScan() {
+    final op = _scanOp.then((_) async {
+      final need = _ScanNeed.of(_scanners);
+      if (need == _scanning) return;
+      if (_scanning != null) {
+        _scanning = null;
+        await _results?.cancel();
+        _results = null;
+        await _guard(UniversalBle.stopScan);
+      }
+      if (need == null) return;
+      _results = UniversalBle.scanStream.listen(_deliver, onError: _fail);
+      _scanning = need;
+      try {
+        await _guard(
+          () => UniversalBle.startScan(
+            scanFilter: need.services.isEmpty
+                ? null
+                : ScanFilter(withServices: need.services.toList()),
+            platformConfig: PlatformConfig(
+              android: AndroidOptions(
+                // Android's low-power mode listens ~0.5 s every 5 s and
+                // misses cameras, so a search (no filter: a screen shows
+                // the results, or a connection looks for its camera) scans
+                // at full rate. A filtered scan is a watch that may last
+                // for hours, and that is what low power is for.
+                scanMode: need.services.isEmpty
+                    ? AndroidScanMode.lowLatency
+                    : AndroidScanMode.lowPower,
+              ),
+            ),
+          ),
+        );
+      } on Object catch (e, s) {
+        _scanning = null;
+        await _results?.cancel();
+        _results = null;
+        _fail(e, s);
+        for (final scanner in _scanners.toList()) {
+          _scanners.remove(scanner);
+          unawaited(scanner.controller.close());
+        }
+      }
+    });
+    // The next start or stop only waits; the error is this caller's.
+    _scanOp = op.catchError((Object _) {});
+    return op;
+  }
+
+  void _deliver(BleDevice device) {
+    final advertisement = _advertisement(device);
+    for (final scanner in _scanners.toList()) {
+      if (scanner.wants(advertisement)) scanner.controller.add(advertisement);
+    }
+  }
+
+  void _fail(Object error, [StackTrace? stack]) {
+    for (final scanner in _scanners.toList()) {
+      scanner.controller.addError(error, stack);
+    }
   }
 
   @override
@@ -158,11 +190,10 @@ final class UniversalBleTransport implements BleTransport {
 
   @override
   Future<void> close() async {
-    if (_scanOwner != null) {
-      _scanOwner = null;
-      await _guard(UniversalBle.stopScan);
-    }
-    await _stopping;
+    // Their streams stay open, as a cancelled scan's would; nothing more
+    // is delivered.
+    _scanners.clear();
+    await _syncScan();
     for (final link in _links.values.toList()) {
       await link.disconnect();
     }
@@ -178,6 +209,46 @@ final class UniversalBleTransport implements BleTransport {
     serviceUuids: [for (final u in d.services) _canonicalOrSelf(u)],
     connectable: d.connectable,
   );
+}
+
+/// One listener of [UniversalBleTransport.scan].
+final class _Scanner {
+  new(this.controller, this.services);
+
+  final StreamController<BleAdvertisement> controller;
+
+  /// The services it asked for, canonical; empty for every advertisement.
+  final Set<String> services;
+
+  bool wants(BleAdvertisement advertisement) =>
+      services.isEmpty || advertisement.serviceUuids.any(services.contains);
+}
+
+/// What the platform scan has to deliver for a set of listeners.
+@immutable
+final class _ScanNeed {
+  const new(this.services);
+
+  /// Null without listeners. One listener without a filter makes the whole
+  /// scan unfiltered; otherwise the platform filters to every service
+  /// asked for.
+  static _ScanNeed? of(List<_Scanner> scanners) {
+    if (scanners.isEmpty) return null;
+    if (scanners.any((s) => s.services.isEmpty)) return const _ScanNeed({});
+    return _ScanNeed({for (final s in scanners) ...s.services});
+  }
+
+  /// The services the platform filters to; empty for no filter.
+  final Set<String> services;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _ScanNeed &&
+      other.services.length == services.length &&
+      other.services.containsAll(services);
+
+  @override
+  int get hashCode => Object.hashAllUnordered(services);
 }
 
 /// One owner's use of a [_UniversalBleLink], handed out by

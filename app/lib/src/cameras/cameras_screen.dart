@@ -753,6 +753,10 @@ enum _Link {
   /// Linked over Bluetooth.
   bluetooth,
 
+  /// The camera is off and the session waits for it to be switched on
+  /// ([ConnectionController.parked]); the power button links it.
+  off,
+
   /// Joining the camera's Wi-Fi, or getting it back after a loss.
   wifiConnecting,
 
@@ -768,6 +772,7 @@ enum _Link {
     if (onWifi) return wifi;
     if (connection.bleLinking) return bluetoothConnecting;
     if (connection.bleLinked) return bluetooth;
+    if (connection.parked) return off;
     return seen == Presence.away ? away : nearby;
   }
 
@@ -775,6 +780,7 @@ enum _Link {
     failed => Icons.error_outline_rounded,
     idle => Icons.timer_outlined,
     away || nearby => Icons.bluetooth_disabled_rounded,
+    off => Icons.power_settings_new_rounded,
     bluetoothConnecting => Icons.bluetooth_rounded,
     bluetooth => Icons.bluetooth_connected_rounded,
     wifiConnecting || wifi => Icons.wifi_rounded,
@@ -784,7 +790,7 @@ enum _Link {
     failed => c.danger,
     idle => c.accent,
     away => c.t3,
-    nearby => c.t2,
+    nearby || off => c.t2,
     bluetoothConnecting || wifiConnecting => c.t1,
     bluetooth || wifi => c.ok,
   };

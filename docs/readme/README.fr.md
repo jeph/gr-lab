@@ -122,12 +122,23 @@ Contrôle de l'image comme quelque chose qui mérite d'être géré.
   réglez l'ouverture, la vitesse, la sensibilité ISO et la correction d'exposition sur une molette
   qui reprend les valeurs proposées par l'appareil photo, et changez le déclenchement, le
   retardateur, la mesure et le Contrôle de l'image.
+- **Géolocalisation.** Les appareils photo GR n'ont pas de GPS. Lorsque la Géolocalisation est
+  activée pour un appareil photo, GR Photo lui envoie la position de votre téléphone en Bluetooth
+  tant que l'appareil photo est allumé, et l'appareil photo l'enregistre dans chaque photo. Elle
+  continue pendant que vous utilisez une autre application ou verrouillez le téléphone, démarre
+  toute seule quand vous allumez l'appareil photo si vous autorisez toujours l'accès à la position,
+  et maintient l'horloge de l'appareil photo à l'heure de votre téléphone. La Géolocalisation en
+  arrière-plan est l'alternative sans intervention : le téléphone conserve pendant 90 jours un
+  historique des lieux où il s'est trouvé, et GR Photo ajoute à une photo, quand vous la
+  téléchargez, le lieu enregistré au plus près de l'heure de la prise de vue, dans les fichiers JPEG
+  comme RAW.
 - **Plusieurs appareils photo.** Jumelez tous ceux que vous possédez et passez de l'un à l'autre ;
   renommez ou oubliez chacun d'eux.
 - **Thèmes et langues.** Les thèmes Clair, Sombre, Chambre noire, Papier et Cyanotype, et les
   21 langues des menus de l'appareil photo.
 - **Respect de la vie privée.** Ni compte, ni mesure d'audience, ni publicité, ni rapport de
-  plantage. GR Photo ne communique qu'avec votre appareil photo ; consultez la
+  plantage. GR Photo ne communique qu'avec votre appareil photo, et votre position ne va qu'à votre
+  appareil photo et dans vos propres photos ; consultez la
   [politique de confidentialité](../../app/assets/privacy.md).
 
 ## Configuration requise
@@ -197,6 +208,12 @@ flutter run --dart-define=GR_DEMO=true
 4. **Enregistrez un style.** Ouvrez une photo dans la Bibliothèque et touchez Enregistrer le style,
    ou créez-en un de toutes pièces avec + sur la page Styles. Touchez un style pour le modifier, et
    faites-le glisser sur C1, C2 ou C3 pour le charger dans l'appareil photo.
+5. **Ajoutez la position.** GR Photo propose la Géolocalisation une fois pour chaque appareil
+   photo ; vous pouvez aussi l'activer plus tard en touchant la pastille sur la carte de l'appareil
+   photo. Votre téléphone demande si GR Photo peut utiliser sa position. Dès lors, la position est
+   envoyée chaque fois que l'appareil photo est allumé et à portée. La Géolocalisation en
+   arrière-plan se trouve dans Réglages, Position, et nécessite que l'accès à la position soit
+   toujours autorisé.
 
 L'option Déconnexion automatique des Réglages quitte le Wi-Fi de l'appareil photo lorsque GR Photo
 est resté inutilisé un certain temps (5 minutes par défaut). [Le comportement de

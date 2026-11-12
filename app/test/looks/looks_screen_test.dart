@@ -147,11 +147,12 @@ void main() {
     expect(_inSlot(2, 'Daido'), findsOneWidget);
     expect(_inSlot(2, 'Hi-Contrast B&W'), findsOneWidget);
     expect(_inSlot(3, 'Soft Summer'), findsOneWidget);
+    await app.dispose();
   });
 
   testWidgets('C1-C3 are skeletons of their cards, without a spinner, until '
       'the camera has been read', (tester) async {
-    await _inLooks(tester);
+    final app = await _inLooks(tester);
     final card = find.byKey(const Key('looks-slot-1'));
     Finder inCard(Type type) =>
         find.descendant(of: card, matching: find.byType(type));
@@ -164,6 +165,7 @@ void main() {
     await pumpUntilFound(tester, _inSlot(1, 'Tokyo Night'));
     expect(inCard(Skeleton), findsNothing);
     expect(tester.getSize(card), size);
+    await app.dispose();
   });
 
   testWidgets('a slot edited to a new base and toning loads back into the '
@@ -205,6 +207,7 @@ void main() {
     expect(look.valueOf(LookParameter.grain), isNull);
     expect(app.camera.lookSlot(1).name, 'Tokyo Night');
     expect(app.camera.lookSlot(2).name, 'Daido', reason: 'C2 untouched');
+    await app.dispose();
   });
 
   testWidgets('a look on a base the camera does not offer cannot be loaded '
@@ -247,6 +250,7 @@ void main() {
     await pumpUntilFound(tester, find.text('Loaded Tokyo Night into C1'));
     expect(_slotLook(app, 1).base, LookBase.standardMono);
     expect(app.camera.lookSlot(1).data, isNot(held));
+    await app.dispose();
   });
 
   testWidgets("a GR III's card and pages offer no Looks, so it is not turned "
@@ -265,6 +269,21 @@ void main() {
       reason: 'linked',
     );
     expect(app.camera.poweredOn, isFalse);
+    await app.dispose();
+  });
+
+  testWidgets('Looks turns on a camera that dropped its link while off, '
+      'which the session let go of', (tester) async {
+    final app = await _start(tester);
+    final connection = app.models.connection;
+    await pumpUntil(tester, () => connection.bleLinked, reason: 'linked');
+    app.camera.dropBluetooth();
+    await pumpUntil(tester, () => connection.parked, reason: 'let go of');
+
+    await tapWhenReady(tester, find.byKey(const Key('camera-card-looks')));
+    await pumpUntilFound(tester, _inSlot(1, 'Tokyo Night'));
+    expect(app.camera.poweredOn, isTrue);
+    expect(connection.parked, isFalse);
     await app.dispose();
   });
 
@@ -1507,6 +1526,7 @@ void main() {
     final saved = app.models.looks.looks.single;
     expect(saved.name, 'Daido');
     expect(saved.data, app.camera.lookSlot(2).data);
+    await app.dispose();
   });
 
   testWidgets('a save the phone cannot store says so, and saving again '
@@ -1533,6 +1553,7 @@ void main() {
     await tapWhenReady(tester, find.byKey(const Key('looks-name-ok')));
     await pumpUntilFound(tester, find.text('Saved Daido'));
     expect(app.models.looks.looks.single.name, 'Daido');
+    await app.dispose();
   });
 
   testWidgets('a look with the name or the settings of a saved look is not '

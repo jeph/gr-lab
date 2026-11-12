@@ -9,6 +9,7 @@ import 'package:grphoto/src/connection/connection_controller.dart';
 import 'package:grphoto/src/connection/idle_disconnect.dart';
 import 'package:grphoto/src/connection/wifi_consent_dialog.dart';
 import 'package:grphoto/src/downloads/download_background.dart';
+import 'package:grphoto/src/geotag/geotag_offer.dart';
 import 'package:grphoto/src/home/home_pages.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 
@@ -53,8 +54,16 @@ class GrPhotoApp extends StatelessWidget {
 /// [ConnectionController.tab] is set and the camera is linked. Going back
 /// from them closes them ([ConnectionController.closeCamera]); the session
 /// ending pops back to the home pages, closing whatever was open over
-/// them. Also tells the connection whether the app is in front, and asks
-/// before the first join of a camera's Wi-Fi when the platform needs it.
+/// them. Also tells the connection whether the app is in front, asks
+/// before the first join of a camera's Wi-Fi when the platform needs it,
+/// and offers live geotagging once per camera ([GeotagOfferGate]).
+///
+/// On Android the app can run with no screen: live geotagging keeps it
+/// going after its window was closed, and a camera being switched on
+/// starts it without one. When the window goes
+/// ([AppLifecycleState.detached]) the camera's pages close and its Wi-Fi is
+/// left, as when the user disconnects the Wi-Fi, unless a download still
+/// uses it; Bluetooth and everything else carry on.
 class RootScreen extends StatefulWidget {
   const new({super.key});
 
@@ -84,14 +93,31 @@ class _RootScreenState extends State<RootScreen> {
   void initState() {
     super.initState();
     _models.connection.addListener(_onConnection);
+    _lifecycle = AppLifecycleListener(onStateChange: _onLifecycle);
+    // An app started off screen (by a camera being switched on, or by iOS
+    // for a Bluetooth event) is not in front until it says so.
+    final state = WidgetsBinding.instance.lifecycleState;
+    if (state != null) _onLifecycle(state);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onConnection());
+  }
+
+  void _onLifecycle(AppLifecycleState state) {
     // `inactive` covers system sheets drawn over the app, including
     // Android's own Wi-Fi approval screen; only leaving the app counts.
-    _lifecycle = AppLifecycleListener(
-      onStateChange: (state) => _models.connection.foreground =
+    final connection = _models.connection
+      ..foreground =
           state == AppLifecycleState.resumed ||
-          state == AppLifecycleState.inactive,
-    );
-    WidgetsBinding.instance.addPostFrameCallback((_) => _onConnection());
+          state == AppLifecycleState.inactive;
+    // No window is left to show the camera's pages or approve a join in.
+    // Work still running over the Wi-Fi (a download) keeps it; it is left
+    // once the app has gone unused for long enough (`IdleDisconnect`).
+    if (state == AppLifecycleState.detached) {
+      unawaited(
+        connection.wifiBusy
+            ? connection.closeCamera()
+            : connection.disconnectWifi(),
+      );
+    }
   }
 
   @override
@@ -166,8 +192,10 @@ class _RootScreenState extends State<RootScreen> {
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: Listenable.merge([_models.connection, _models.settings]),
-    builder: (context, _) => HomePages(
-      autoConnect: _autoConnect && _models.settings.connectWhenNearby,
+    builder: (context, _) => GeotagOfferGate(
+      child: HomePages(
+        autoConnect: _autoConnect && _models.settings.connectWhenNearby,
+      ),
     ),
   );
 }

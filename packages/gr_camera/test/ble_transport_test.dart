@@ -14,6 +14,13 @@ final class _FakePlatform extends UniversalBlePlatform {
   int starts = 0;
   int stops = 0;
   final calls = <String>[];
+
+  /// The services and Android scan mode of every scan started.
+  final filters = <List<String>>[];
+  final modes = <AndroidScanMode?>[];
+
+  /// While set, the next `startScan` fails with it.
+  Error? startError;
   Completer<void>? stopGate;
   Completer<void>? connectGate;
   Completer<void>? mtuGate;
@@ -28,8 +35,15 @@ final class _FakePlatform extends UniversalBlePlatform {
     ScanFilter? scanFilter,
     PlatformConfig? platformConfig,
   }) async {
+    final error = startError;
+    if (error != null) {
+      startError = null;
+      throw error;
+    }
     starts++;
     calls.add('start');
+    filters.add(scanFilter?.withServices ?? const []);
+    modes.add(platformConfig?.android?.scanMode);
   }
 
   @override
@@ -115,32 +129,90 @@ void main() {
 
   BleDevice device(String id) => BleDevice(deviceId: id, name: 'GR_$id');
 
-  test('a rejected second scan leaves the first scan running', () async {
+  BleDevice advertising(String id, String service) =>
+      BleDevice(deviceId: id, name: 'GR_$id', services: [service]);
+
+  test('a second scan shares the platform scan of the first, and the '
+      'platform scan stops with the last of them', () async {
     final seenA = <String>[];
+    final seenB = <String>[];
     final subA = transport.scan().listen((a) => seenA.add(a.deviceId));
     await pumpEventQueue();
-    expect(platform.starts, 1);
-
-    final errorsB = <Object>[];
-    final doneB = Completer<void>();
-    transport.scan().listen(
-      (_) {},
-      onError: errorsB.add,
-      onDone: doneB.complete,
-    );
-    await doneB.future;
+    final subB = transport.scan().listen((a) => seenB.add(a.deviceId));
     await pumpEventQueue();
-
-    expect(errorsB.single, isA<BleException>());
-    expect(platform.stops, 0, reason: 'scan B must not stop scan A');
+    expect(platform.starts, 1);
 
     platform.updateScanResult(device('a1'));
     await pumpEventQueue();
     expect(seenA, ['a1']);
+    expect(seenB, ['a1']);
 
     await subA.cancel();
     await pumpEventQueue();
+    expect(platform.stops, 0, reason: 'scan B still listens');
+    platform.updateScanResult(device('a2'));
+    await pumpEventQueue();
+    expect(seenA, ['a1']);
+    expect(seenB, ['a1', 'a2']);
+
+    await subB.cancel();
+    await pumpEventQueue();
     expect(platform.stops, 1);
+  });
+
+  test('a scan for a service is filtered by the platform at low power '
+      'while it is alone, and by the transport next to an unfiltered '
+      'scan', () async {
+    const other = '0f291746-0c80-4726-87a7-3c501fd3b4b6';
+    final watched = <String>[];
+    final watch = transport
+        .scan(serviceUuids: [_service])
+        .listen((a) => watched.add(a.deviceId));
+    await pumpEventQueue();
+    expect(platform.filters.single, [canonicalUuid(_service)]);
+    expect(platform.modes.single, AndroidScanMode.lowPower);
+
+    // A search starts: the platform scan is started again without a
+    // filter, at full rate, and the watch still gets only its service.
+    final found = <String>[];
+    final search = transport.scan().listen((a) => found.add(a.deviceId));
+    await pumpEventQueue();
+    expect(platform.calls, ['start', 'stop', 'stopped', 'start']);
+    expect(platform.filters.last, isEmpty);
+    expect(platform.modes.last, AndroidScanMode.lowLatency);
+    platform
+      ..updateScanResult(advertising('on', _service))
+      ..updateScanResult(advertising('off', other));
+    await pumpEventQueue();
+    expect(found, ['on', 'off']);
+    expect(watched, ['on']);
+
+    // The search ends: the watch is alone again, filtered by the platform.
+    await search.cancel();
+    await pumpEventQueue();
+    expect(platform.filters.last, [canonicalUuid(_service)]);
+    expect(platform.modes.last, AndroidScanMode.lowPower);
+    expect(await platform.isScanning(), isTrue);
+
+    await watch.cancel();
+    await pumpEventQueue();
+    expect(await platform.isScanning(), isFalse);
+  });
+
+  test('a scan the platform refuses to start ends with its error, and the '
+      'next one starts', () async {
+    platform.startError = StateError('Bluetooth is off');
+    final errors = <Object>[];
+    final done = Completer<void>();
+    transport.scan().listen((_) {}, onError: errors.add, onDone: done.complete);
+    await done.future;
+    expect(errors.single, isA<StateError>());
+    expect(platform.starts, 0);
+
+    final sub = transport.scan().listen((_) {});
+    await pumpEventQueue();
+    expect(platform.starts, 1);
+    await sub.cancel();
   });
 
   test('a new scan can start after the previous one is cancelled', () async {
@@ -170,8 +242,9 @@ void main() {
     platform.stopGate = Completer();
 
     // As when the Cameras screen stops its nearby scan and a connection
-    // starts its own straight away.
+    // starts its own a moment later.
     unawaited(subA.cancel());
+    await pumpEventQueue();
     final errorsB = <Object>[];
     final subB = transport.scan().listen((_) {}, onError: errorsB.add);
     await pumpEventQueue();
@@ -184,6 +257,23 @@ void main() {
     expect(await platform.isScanning(), isTrue);
 
     await subB.cancel();
+  });
+
+  test('a scan requested as the previous one is cancelled takes over the '
+      'platform scan without a stop', () async {
+    final subA = transport.scan().listen((_) {});
+    await pumpEventQueue();
+    unawaited(subA.cancel());
+    final seenB = <String>[];
+    final subB = transport.scan().listen((a) => seenB.add(a.deviceId));
+    await pumpEventQueue();
+    expect(platform.calls, ['start']);
+    platform.updateScanResult(device('b1'));
+    await pumpEventQueue();
+    expect(seenB, ['b1']);
+    await subB.cancel();
+    await pumpEventQueue();
+    expect(platform.calls, ['start', 'stop', 'stopped']);
   });
 
   group('a connect still running when another owner connects', () {

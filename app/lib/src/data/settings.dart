@@ -50,6 +50,10 @@ final class SettingsController extends ChangeNotifier {
           ShootMode.values.asNameMap()[json['shootMode']] ?? c._shootMode;
       final connectWhenNearby = json['connectWhenNearby'];
       if (connectWhenNearby is bool) c._connectWhenNearby = connectWhenNearby;
+      final backgroundGeotagging = json['backgroundGeotagging'];
+      if (backgroundGeotagging is bool) {
+        c._backgroundGeotagging = backgroundGeotagging;
+      }
       final debugLogging = json['debugLogging'];
       c
         .._debugLogging = debugLogging is bool ? debugLogging : null
@@ -74,6 +78,7 @@ final class SettingsController extends ChangeNotifier {
   AutoDisconnect _autoDisconnect = AutoDisconnect.fiveMinutes;
   bool _connectWhenNearby = true;
   ShootMode _shootMode = ShootMode.remote;
+  bool _backgroundGeotagging = false;
   bool? _debugLogging;
   Locale? _language;
 
@@ -91,6 +96,13 @@ final class SettingsController extends ChangeNotifier {
   /// needs no Wi-Fi.
   ShootMode get shootMode => _shootMode;
 
+  /// Background geotagging: the phone keeps a history of where it has been
+  /// and GR Photo gives downloaded photos the nearest recorded place
+  /// (`GeotagController`). Off until the user turns it on in Settings; it
+  /// stays on here when the permission it needs is taken away later, and is
+  /// shown as paused then.
+  bool get backgroundGeotagging => _backgroundGeotagging;
+
   /// Whether the app keeps debug logs (Settings, "Enable debug logging");
   /// null until the user chooses, so the build's default (on in dev, off in
   /// prod) applies.
@@ -105,6 +117,7 @@ final class SettingsController extends ChangeNotifier {
   set autoDisconnect(AutoDisconnect v) => _update(() => _autoDisconnect = v);
   set connectWhenNearby(bool v) => _update(() => _connectWhenNearby = v);
   set shootMode(ShootMode v) => _update(() => _shootMode = v);
+  set backgroundGeotagging(bool v) => _update(() => _backgroundGeotagging = v);
   set debugLogging(bool? v) => _update(() => _debugLogging = v);
   set language(Locale? v) => _update(() => _language = v);
 
@@ -118,6 +131,7 @@ final class SettingsController extends ChangeNotifier {
       'autoDisconnect': _autoDisconnect.name,
       'connectWhenNearby': _connectWhenNearby,
       'shootMode': _shootMode.name,
+      'backgroundGeotagging': _backgroundGeotagging,
       'debugLogging': ?_debugLogging,
       _languageKey: ?_language?.toLanguageTag(),
     };

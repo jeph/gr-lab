@@ -110,11 +110,19 @@ treating Image Control looks as something worth managing.
 - **Live view.** The camera's picture over Wi-Fi: tap to focus, set aperture, shutter speed, ISO and
   exposure compensation on a dial of the values the camera offers, and change drive, self-timer,
   metering and Image Control.
+- **Geotagging.** GR cameras have no GPS. With Geotagging on for a camera, GR Photo sends your
+  phone's location to it over Bluetooth while the camera is on, and the camera saves it in each
+  photo. It carries on while you use another app or lock the phone, starts by itself when you
+  switch the camera on if you allow location all the time, and keeps the camera's clock on your
+  phone's time. Background geotagging is the hands-free alternative: the phone keeps a 90-day
+  history of where it has been, and GR Photo adds the place recorded closest to the time a photo
+  was taken when you download it, to JPEG and RAW files alike.
 - **Several cameras.** Pair as many as you own and switch between them; rename or forget each one.
 - **Themes and languages.** Light, Dark, Darkroom, Paper and Cyanotype themes, and the 21 languages
   of the camera's own menus.
 - **Private.** No accounts, analytics, advertising or crash reporting. GR Photo talks only to your
-  camera; see the [privacy policy](app/assets/privacy.md).
+  camera, and your location goes only to your camera and into your own photos; see the
+  [privacy policy](app/assets/privacy.md).
 
 ## Requirements
 
@@ -174,6 +182,10 @@ flutter run --dart-define=GR_DEMO=true
 4. **Save a look.** Open a photo in the Library and tap Save look, or make one from scratch with +
    on the Looks page. Tap a look to edit it, and drag it onto C1, C2 or C3 to load it into the
    camera.
+5. **Add locations.** GR Photo offers Geotagging once for each camera; you can also turn it on
+   later by tapping the chip on the camera's card. Your phone asks whether GR Photo may use its
+   location. From then on the location is sent whenever the camera is on and in reach. Background
+   geotagging is under Settings, Location, and needs location allowed all the time.
 
 Auto-disconnect in Settings leaves the camera's Wi-Fi after GR Photo has gone unused for a while (5
 minutes by default). [How GR Photo behaves](docs/behaviour.md) describes each screen and every
