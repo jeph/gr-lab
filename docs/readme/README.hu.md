@@ -336,5 +336,10 @@ féltől származó csomagokra és betűtípusokra a saját licencük vonatkozik
 **Beállítások › Névjegy › Licencek** alatt sorolja fel, a betűtípusok licencszövegei pedig az
 [`app/assets/fonts/`](../../app/assets/fonts/) mappában találhatók.
 
+A mintafotók az [Unsplash](https://unsplash.com) oldalról származnak, és nem az MIT-licenc, hanem az
+[Unsplash-licenc](https://unsplash.com/license) vonatkozik rájuk; az
+[`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) fájl sorolja fel őket
+a fotósaikkal együtt.
+
 A Ricoh alkalmazásai és firmware-e, amelyekre a kutatás hivatkozik, a Ricoh tulajdonát képezik, és
 nem részei ennek a tárolónak.

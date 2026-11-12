@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:grlab/src/app.dart';
@@ -7,6 +6,7 @@ import 'package:grlab/src/app_scope.dart';
 import 'package:grlab/src/debug/debug_log.dart';
 import 'package:grlab/src/demo/demo_services.dart';
 import 'package:grlab/src/platform/device_services.dart';
+import 'package:grlab/src/settings/bundled_licenses.dart';
 
 /// `--dart-define=GR_DEMO=true` runs against the simulated camera, for the
 /// emulator and for trying the app without a GR.
@@ -18,7 +18,7 @@ Future<void> main() async {
   DebugLog? log;
   await runWithDebugLog(() => log, () async {
     WidgetsFlutterBinding.ensureInitialized();
-    LicenseRegistry.addLicense(_fontLicenses);
+    LicenseRegistry.addLicense(bundledLicenses);
     final services = _demo
         ? await buildDemoServices()
         : await buildDeviceServices();
@@ -27,15 +27,4 @@ Future<void> main() async {
     PlatformDispatcher.instance.onError = models.debugLog.onUncaughtError;
     runApp(GrLabApp(models: models));
   });
-}
-
-Stream<LicenseEntry> _fontLicenses() async* {
-  for (final (package, file) in [
-    ('Inter', 'Inter-OFL.txt'),
-    ('JetBrains Mono', 'JetBrainsMono-OFL.txt'),
-  ]) {
-    yield LicenseEntryWithLineBreaks([
-      package,
-    ], await rootBundle.loadString('assets/fonts/$file'));
-  }
 }

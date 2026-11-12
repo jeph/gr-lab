@@ -331,5 +331,10 @@ paketler ve yazı tipleri kendi lisanslarını korur. Uygulama bunları **Ayarla
 Lisanslar** altında listeler; yazı tiplerinin lisans metinleri ise
 [`app/assets/fonts/`](../../app/assets/fonts/) klasöründedir.
 
+Örnek fotoğraflar [Unsplash](https://unsplash.com) kaynaklıdır ve MIT Lisansı ile değil,
+[Unsplash Lisansı](https://unsplash.com/license) ile kullanılır;
+[`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) dosyası bunları
+fotoğrafçılarıyla birlikte listeler.
+
 Araştırmanın atıfta bulunduğu Ricoh uygulamaları ve yazılımı Ricoh’a aittir ve bu deponun parçası
 değildir.

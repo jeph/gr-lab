@@ -334,5 +334,10 @@ Drittanbietern, die GR Lab enthält, behalten ihre eigenen Lizenzen. Die App fü
 **Einstellungen › Info › Lizenzen** auf, und die Lizenztexte der Schriften liegen in
 [`app/assets/fonts/`](../../app/assets/fonts/).
 
+Die Beispielfotos stammen von [Unsplash](https://unsplash.com) und werden unter der
+[Unsplash-Lizenz](https://unsplash.com/license) verwendet, nicht unter der MIT-Lizenz;
+[`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) führt sie mit ihren
+Fotografinnen und Fotografen auf.
+
 Ricohs Apps und Firmware, die in der Forschung zitiert werden, gehören Ricoh und sind nicht Teil
 dieses Repositorys.

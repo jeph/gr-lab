@@ -320,5 +320,9 @@ GR Lab je vydán pod [licencí MIT](../../LICENSE). Balíčky a písma třetích
 obsahuje, si ponechávají své vlastní licence. Aplikace je uvádí v části **Nastavení › O aplikaci ›
 Licence** a texty licencí písem jsou ve složce [`app/assets/fonts/`](../../app/assets/fonts/).
 
+Ukázkové fotky pocházejí ze služby [Unsplash](https://unsplash.com) a jsou použity pod
+[licencí Unsplash](https://unsplash.com/license), nikoli pod licencí MIT; soubor
+[`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) je uvádí spolu s jejich autory.
+
 Aplikace a firmware společnosti Ricoh, které výzkum cituje, patří společnosti Ricoh a nejsou
 součástí tohoto repozitáře.

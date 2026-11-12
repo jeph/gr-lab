@@ -329,5 +329,10 @@ in GR Lab mantengono le rispettive licenze. L'app li elenca in **Impostazioni â€
 Licenze**, e i testi delle licenze dei font si trovano in
 [`app/assets/fonts/`](../../app/assets/fonts/).
 
+Le foto di esempio provengono da [Unsplash](https://unsplash.com) e sono utilizzate con
+[licenza Unsplash](https://unsplash.com/license), non con licenza MIT;
+[`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) le elenca con i rispettivi
+fotografi.
+
 Le app e il firmware di Ricoh, citati dalla ricerca, appartengono a Ricoh e non fanno parte di
 questo repository.

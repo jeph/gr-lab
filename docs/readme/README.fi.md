@@ -327,5 +327,9 @@ ja fontit säilyttävät omat lisenssinsä. Sovellus luettelee ne kohdassa
 **Asetukset › Tietoja › Lisenssit**, ja fonttien lisenssitekstit ovat kansiossa
 [`app/assets/fonts/`](../../app/assets/fonts/).
 
+Esimerkkikuvat ovat peräisin [Unsplashista](https://unsplash.com), ja niitä käytetään
+[Unsplash-lisenssillä](https://unsplash.com/license), ei MIT-lisenssillä;
+[`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) luettelee ne kuvaajineen.
+
 Ricohin sovellukset ja laiteohjelmisto, joihin tutkimus viittaa, kuuluvat Ricohille eivätkä ole osa
 tätä repositoriota.

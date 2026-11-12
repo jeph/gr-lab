@@ -212,4 +212,6 @@ GR Lab 使用 [Flutter](https://flutter.dev) 构建，蓝牙部分使用 [univer
 
 GR Lab 依据 [MIT 许可证](../../LICENSE)发布。GR Lab 所包含的第三方软件包和字体各自沿用其原有许可。应用在**设置 › 关于 › 许可**下列出了这些许可，字体的许可文本位于 [`app/assets/fonts/`](../../app/assets/fonts/)。
 
+示例照片来自 [Unsplash](https://unsplash.com)，依据 [Unsplash 许可](https://unsplash.com/license)使用，不适用 MIT 许可证；[`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) 列出了这些照片及其拍摄者。
+
 研究中引用的 Ricoh 应用和固件归 Ricoh 所有，不属于本仓库的内容。

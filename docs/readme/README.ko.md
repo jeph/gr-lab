@@ -310,4 +310,8 @@ GR Lab은 [MIT 라이선스](../../LICENSE)로 배포됩니다. GR Lab에 포함
 각각의 라이선스가 그대로 적용됩니다. 앱의 **설정 › 정보 › 라이선스**에서 목록을 볼 수 있으며,
 글꼴의 라이선스 전문은 [`app/assets/fonts/`](../../app/assets/fonts/)에 있습니다.
 
+샘플 사진은 [Unsplash](https://unsplash.com)에서 가져온 것으로, MIT 라이선스가 아니라
+[Unsplash 라이선스](https://unsplash.com/license)에 따라 사용됩니다. 사진과 촬영자 목록은
+[`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt)에 있습니다.
+
 조사에서 인용하는 Ricoh의 앱과 펌웨어는 Ricoh의 소유이며 이 저장소에 포함되어 있지 않습니다.

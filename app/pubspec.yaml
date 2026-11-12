@@ -44,6 +44,7 @@ flutter:
     - assets/welcome.jpg
     - assets/fonts/Inter-OFL.txt
     - assets/fonts/JetBrainsMono-OFL.txt
+    - assets/photo-credits.txt
     - assets/privacy.md
   shaders:
     - shaders/look_lut.frag

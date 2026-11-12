@@ -327,5 +327,9 @@ die GR Lab bevat, behouden hun eigen licentie. De app toont ze onder
 **Instellingen › Over › Licenties**, en de licentieteksten van de lettertypen staan in
 [`app/assets/fonts/`](../../app/assets/fonts/).
 
+De voorbeeldfoto's komen van [Unsplash](https://unsplash.com) en worden gebruikt onder de
+[Unsplash-licentie](https://unsplash.com/license), niet onder de MIT-licentie;
+[`app/assets/photo-credits.txt`](../../app/assets/photo-credits.txt) vermeldt ze met hun fotografen.
+
 De apps en firmware van Ricoh, waarnaar het onderzoek verwijst, zijn eigendom van Ricoh en maken
 geen deel uit van deze repository.

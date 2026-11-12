@@ -1,0 +1,55 @@
+Sample photos in GR Lab
+
+The sample photos GR Lab ships are from Unsplash (https://unsplash.com),
+fetched through Lorem Picsum (https://picsum.photos). They are the welcome
+picture, which is also the look editor's sample (assets/welcome.jpg), and the
+simulated camera's photos and video in demo mode (assets/demo/). They are used
+under the Unsplash License below, not under GR Lab's MIT License. Each was
+resized, some were cropped, the tall ones are stored on their side as a camera
+stores them, and one was made into a short video.
+
+assets/welcome.jpg and assets/demo/tall02: Daniel Genser,
+https://unsplash.com/photos/PzPbh-faPgU
+
+assets/demo/land01 and assets/demo/clip: Caleb George,
+https://unsplash.com/photos/URmkfvtK3Qw
+
+assets/demo/land02: Thomas Brault,
+https://unsplash.com/photos/BnYkT95oHHg
+
+assets/demo/land03: Verne Ho,
+https://unsplash.com/photos/tXICOsK8Duc
+
+assets/demo/land04: Ariana Prestes,
+https://unsplash.com/photos/RwNd3xQhjNs
+
+assets/demo/land05: Rob Potvin,
+https://unsplash.com/photos/VLWy8LIdzsQ
+
+assets/demo/land06: Martin Wessely,
+https://unsplash.com/photos/sX4lxBWV0-A
+
+assets/demo/land07: Sonja Langford,
+https://unsplash.com/photos/RQHzRELE2Ss (no longer on Unsplash; archived at
+https://web.archive.org/web/20230610100837/https://unsplash.com/photos/RQHzRELE2Ss)
+
+assets/demo/land08: Volkan Olmez,
+https://unsplash.com/photos/ccPpd02Spe0
+
+assets/demo/land09: Marcelo Quinan,
+https://unsplash.com/photos/upywS5QFwr8
+
+assets/demo/tall01: Luke Pamer,
+https://unsplash.com/photos/TjEjUqGHjcw
+
+assets/demo/tall03: Padurariu Alexandru,
+https://unsplash.com/photos/ZKBQmgMyf8s
+
+Unsplash License (https://unsplash.com/license)
+
+Unsplash grants you an irrevocable, nonexclusive, worldwide copyright license
+to download, copy, modify, distribute, perform, and use images from Unsplash
+for free, including for commercial purposes, without permission from or
+attributing the photographer or Unsplash. This license does not include the
+right to compile images from Unsplash to replicate a similar or competing
+service.
