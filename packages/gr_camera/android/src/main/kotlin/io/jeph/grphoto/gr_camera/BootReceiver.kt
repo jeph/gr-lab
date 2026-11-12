@@ -7,9 +7,8 @@ import android.content.Intent
 /**
  * Sets up again what Android forgets when the phone restarts, and may
  * forget when the app is updated: the location request of the history
- * ([HistoryRecorder]) and the scan of the power-on watch ([PowerOnScan]).
- * Both read what to do from the app's preferences; no Flutter engine is
- * started.
+ * ([HistoryRecorder]), which reads what to do from the app's preferences.
+ * No Flutter engine is started.
  */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -18,7 +17,5 @@ class BootReceiver : BroadcastReceiver() {
         val app = context.applicationContext
         Logs.location.log(app, "history: setting up after $action")
         HistoryRecorder.sync(app)
-        Logs.watch.log(app, "scan: setting up after $action")
-        PowerOnScan.restart(app)
     }
 }

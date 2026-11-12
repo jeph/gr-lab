@@ -7,8 +7,8 @@ import Foundation
 /// It is a directory of its own under Application Support, kept out of
 /// iCloud and computer backups like the rest of GR Photo's data. That is
 /// also why the flags are not in `UserDefaults`, which is backed up: restored
-/// on another phone they would name Bluetooth peripherals that phone does
-/// not know and start a scan, with its permission prompt, at first launch.
+/// on another phone they would start the location history there at first
+/// launch, before its user turned it on.
 enum NativeStorage {
   /// The directory, created on first use.
   static func directory() throws -> URL {
@@ -65,10 +65,6 @@ final class StateFile {
 
   func bool(_ key: String) -> Bool {
     values[key] as? Bool ?? false
-  }
-
-  func strings(_ key: String) -> [String] {
-    values[key] as? [String] ?? []
   }
 
   func int64(_ key: String) -> Int64? {

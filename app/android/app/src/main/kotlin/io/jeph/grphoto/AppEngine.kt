@@ -10,17 +10,17 @@ import io.flutter.plugin.common.MethodChannel
 import io.jeph.grphoto.gr_camera.GeotagHost
 
 /**
- * The one Flutter engine of the app, shared by its screen and by live
- * geotagging that started with the app closed.
+ * The one Flutter engine of the app, which outlives its screen while live
+ * geotagging runs.
  *
- * The camera protocol is Dart. When a camera is switched on with the app
- * closed, the camera layer's service starts Dart without a screen
- * ([GeotagHost.startEngine], set in [GrPhotoApplication]); when the user
- * then opens the app, [MainActivity] attaches to that same engine instead
- * of starting a second copy of the app that would talk to the same camera.
- * Either way the engine is made here, with the application's context (it
- * outlives the activity), with every plugin registered, and running the
- * app's `main`.
+ * The camera protocol is Dart, so a geotagging run carries on after the
+ * app's task is swiped away only if the engine does. [MainActivity]
+ * therefore does not own its engine: it is made here when the user opens
+ * the app, with the application's context, with every plugin registered,
+ * and running the app's `main`. When the user opens the app again while a
+ * run kept the engine, the new activity attaches to that same engine
+ * instead of starting a second copy of the app that would talk to the same
+ * camera.
  *
  * The engine lasts as long as something needs it: an attached activity, or
  * a run of the geotagging service ([GeotagHost.runHeld]). When the
@@ -44,10 +44,12 @@ object AppEngine {
      * passes its debugging flags that way); they have no effect on an
      * engine that exists.
      */
-    fun obtain(context: Context, dartVmArgs: Array<String>? = null): FlutterEngine {
+    fun obtain(context: Context, dartVmArgs: Array<String>): FlutterEngine {
         val cache = FlutterEngineCache.getInstance()
         cache.get(ENGINE_ID)?.let { return it }
         val app = context.applicationContext
+        // Set before the engine's Dart code can hold a run.
+        GeotagHost.runEnded = { releaseIfUnused() }
         val engine = FlutterEngine(app, dartVmArgs)
         registerDeviceChannel(app, engine)
         engine.dartExecutor.executeDartEntrypoint(DartExecutor.DartEntrypoint.createDefault())

@@ -43,8 +43,8 @@ import java.io.IOException
  * it, the two requests prompt for it, and `accessChanged` follows every
  * prompt, every return of the app to the screen and the phone's location
  * switch. Prompts need the app's activity, which [GrCameraPlugin] passes
- * in; with none (the engine was started for a camera with the app closed)
- * a request answers with the access as it is.
+ * in; with none (the app's task was swiped away while a run is held) a
+ * request answers with the access as it is.
  *
  * Every callback runs on the main looper, the same thread as the method
  * channel, so the state needs no locking; only the history file is read
@@ -422,15 +422,14 @@ class LocationChannel(private val context: Context, messenger: BinaryMessenger) 
      * per launch, while a run is held. Android only shows the question
      * over an app that is on screen, and one question at a time, so it is
      * put when the run is held, or else as soon as both are true: when the
-     * app is next resumed (a run held with no screen, by an engine started
-     * for a camera, or while the app was in the background) or the prompt
-     * that was open is answered. Refused, the run still works and Android
+     * app is next resumed (a run held while the app was in the background)
+     * or the prompt that was open is answered. Refused, the run still works and Android
      * lists it under its active apps, without the notification and its
      * Stop button.
      */
     private fun askToNotify() {
         if (askedToNotify || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-        if (!GeotagService.active || !resumed || prompts.isNotEmpty()) return
+        if (!GeotagService.held || !resumed || prompts.isNotEmpty()) return
         val over = activity ?: return
         askedToNotify = true
         val permission = Manifest.permission.POST_NOTIFICATIONS
@@ -468,10 +467,6 @@ class LocationChannel(private val context: Context, messenger: BinaryMessenger) 
     internal companion object {
         /** The channel of the Flutter engine that is attached, if any. */
         private var attachedChannel: LocationChannel? = null
-
-        /** A Flutter engine is attached to the plugin. */
-        val attached: Boolean
-            get() = attachedChannel != null
 
         /** [HistoryReceiver] recorded a position: tells an attached Dart side. */
         fun historyRecorded() {

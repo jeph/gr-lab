@@ -118,14 +118,13 @@ Görüntü Kontrolü stillerini yönetilmeye değer bir şey olarak görmek.
 - **Canlı görüntü.** Wi-Fi üzerinden kameranın görüntüsü: odaklamak için dokunun; açıklığı,
   obtüratör hızını, ISO’yu ve pozlama telafisini kameranın sunduğu değerlerden oluşan bir kadranla
   ayarlayın; geçiş modunu, zamanlayıcıyı, ölçmeyi ve Görüntü Kontrolü’nü değiştirin.
-- **Konum etiketleme.** GR kameralarında GPS yoktur. Bir kamera için Konum etiketleme açıkken GR
-  Photo, kamera açık olduğu sürece telefonunuzun konumunu Bluetooth üzerinden ona gönderir, kamera
-  da onu her fotoğrafa kaydeder. Siz başka bir uygulama kullanırken ya da telefonu kilitlediğinizde
-  de sürer, konuma her zaman izin verirseniz kamerayı açtığınızda kendiliğinden başlar ve kameranın
-  saatini telefonunuzun saatiyle aynı tutar. Arka planda konum etiketleme ise sizden bir şey
-  yapmanızı gerektirmeyen seçenektir: telefon bulunduğu yerlerin 90 günlük geçmişini tutar, GR Photo
-  da bir fotoğrafı indirdiğinizde, çekildiği zamana en yakın anda kaydedilen yeri JPEG ve RAW
-  dosyalarına aynı şekilde ekler.
+- **Konum etiketleme.** GR kameralarında GPS yoktur. Bir kamera için Canlı konum etiketleme açıkken
+  GR Photo, kamera açık olduğu sürece telefonunuzun konumunu Bluetooth üzerinden ona gönderir,
+  kamera da onu her fotoğrafa kaydeder. GR Photo’yu açtığınızda başlar ve siz başka bir uygulama
+  kullanırken ya da telefonu kilitlediğinizde de sürer. Arka planda konum etiketleme ise sizden bir
+  şey yapmanızı gerektirmeyen seçenektir: telefon bulunduğu yerlerin 90 günlük geçmişini tutar, GR
+  Photo da bir fotoğrafı indirdiğinizde, çekildiği zamana en yakın anda kaydedilen yeri JPEG ve RAW
+  dosyalarına aynı şekilde ekler. İkisi de siz bir kamera için açana kadar kapalıdır.
 - **Birden çok kamera.** Sahip olduğunuz kadar kamerayı eşleştirin ve aralarında geçiş yapın; her
   birini yeniden adlandırın ya da unutun.
 - **Temalar ve diller.** Açık, Koyu, Karanlık oda, Kâğıt ve Siyanotip temaları ile kameranın kendi
@@ -197,11 +196,11 @@ flutter run --dart-define=GR_DEMO=true
 4. **Bir stil kaydedin.** Arşiv’de bir fotoğrafı açıp Stili kaydet’e dokunun ya da Stiller
    sayfasındaki + ile sıfırdan bir stil oluşturun. Düzenlemek için bir stile dokunun; kameraya
    yüklemek için de onu C1, C2 veya C3’e sürükleyin.
-5. **Konum ekleyin.** GR Photo, Konum etiketleme’yi her kamera için bir kez önerir; daha sonra
-   kameranın kartındaki ⋯ ile de açabilirsiniz. Telefonunuz, GR Photo’nun telefonun konumunu
-   kullanmasına izin verip vermediğinizi sorar. Bundan sonra konum, kamera açık ve kapsama alanında
-   olduğu her an gönderilir. Arka planda konum etiketleme, Ayarlar’da Konum altındadır ve konuma her
-   zaman izin verilmesini gerektirir.
+5. **Konum ekleyin.** Kameranın kartında, Arşiv, Çekim ve Stiller’in altındaki Canlı konum
+   etiketleme’yi açın. Telefonunuz, GR Photo’nun telefonun konumunu kullanmasına izin verip
+   vermediğinizi sorar. Bundan sonra konum, GR Photo çalışırken ve kamera açık ve kapsama
+   alanındayken gönderilir. Arka planda konum etiketleme, kameranın kartındaki ⋯ altındadır ve
+   konuma her zaman izin verilmesini gerektirir.
 
 Ayarlar’daki Otomatik bağlantı kesme, GR Photo bir süre (varsayılan olarak 5 dakika)
 kullanılmadığında kameranın Wi-Fi ağından çıkar. [GR Photo nasıl davranır](../behaviour.md) belgesi,

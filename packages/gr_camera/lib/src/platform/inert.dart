@@ -47,28 +47,3 @@ final class InertPhoneLocation implements PhoneLocation {
   @override
   Stream<void> get historyPending => const Stream.empty();
 }
-
-/// The [PowerOnWatch] of an environment built without one: the platform
-/// never watches for a camera.
-final class InertPowerOnWatch implements PowerOnWatch {
-  /// A watch that is never supported and never sees a camera.
-  const new();
-
-  @override
-  Future<bool> supported() async => false;
-
-  @override
-  Future<bool> associated(String deviceId) async => false;
-
-  @override
-  Future<bool> associate(WatchedCamera camera) async => false;
-
-  @override
-  Future<void> watch(List<WatchedCamera> cameras) async {}
-
-  @override
-  Stream<String> get sightings => const Stream.empty();
-
-  @override
-  Future<List<String>> takeLaunchSightings() async => const [];
-}

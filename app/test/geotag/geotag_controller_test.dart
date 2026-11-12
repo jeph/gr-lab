@@ -5,19 +5,16 @@ import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:grphoto/src/connection/connection_controller.dart';
 import 'package:grphoto/src/data/cameras.dart';
-import 'package:grphoto/src/geotag/geotag_controller.dart';
 import 'package:grphoto/src/geotag/geotag_need.dart';
 
 import '../support/test_app.dart';
 
 // No widget is built in this file: the controller runs on its listeners
-// and streams alone, as it does when Android starts the app with no
-// screen.
+// and streams alone, as it does while live geotagging carries on with the
+// app not on screen.
 
 const _serial = '1234567';
-final String _deviceId = const FakeCameraConfig().deviceId;
 
 /// A camera that accepts this phone, with Store Location Info off as a
 /// camera ships.
@@ -70,15 +67,15 @@ LocationFix _fix({
 Future<TestApp> _app({
   FakeCameraConfig config = _bonded,
   FakePhoneLocation? location,
-  FakePowerOnWatch? watch,
   bool live = false,
+  bool background = false,
 }) async {
   final app = await createTestApp(
     config: config,
     saveCamera: true,
     location: location,
-    powerOnWatch: watch,
     liveGeotagging: live,
+    backgroundGeotagging: background,
   );
   addTearDown(app.dispose);
   // The notice is worded in the app's language, whatever the machine's.
@@ -90,21 +87,18 @@ Future<TestApp> _app({
 Future<SavedCamera> _onDisk(TestApp app) async =>
     (await CameraStore.load(app.models.services.dataDir)).current!;
 
-/// Pairs [_other] as well, with live geotagging on, and leaves [current]
-/// the current camera.
-Future<void> _addOther(TestApp app, {required String current}) async {
+/// The saved camera with [serial].
+SavedCamera _saved(TestApp app, [String serial = _serial]) =>
+    app.models.cameras.cameras.singleWhere((c) => c.serial == serial);
+
+/// Pairs [_other] as well and leaves the first camera the current one.
+Future<void> _addOther(TestApp app) async {
   final cameras = app.models.cameras;
   await cameras.add(
-    SavedCamera(
-      paired: _other,
-      name: 'Street',
-      pairedAt: DateTime(2026),
-      liveGeotagging: true,
-      geotagOffered: true,
-    ),
+    SavedCamera(paired: _other, name: 'Street', pairedAt: DateTime(2026)),
   );
-  await cameras.select(current);
-  expect(cameras.current!.serial, current);
+  await cameras.select(_serial);
+  expect(cameras.current!.serial, _serial);
 }
 
 Future<void> _until(
@@ -123,6 +117,26 @@ Future<void> _settle() =>
     Future<void>.delayed(const Duration(milliseconds: 300));
 
 void main() {
+  test('with both kinds off, as for a camera just paired, the phone is '
+      'asked nothing and located by nothing, also once the camera is '
+      'linked', () async {
+    final location = FakePhoneLocation(access: _denied);
+    final app = await _app(location: location);
+    expect(_saved(app).liveGeotagging, isFalse);
+    expect(_saved(app).backgroundGeotagging, isFalse);
+
+    await app.models.connection.connect();
+    await _settle();
+    expect(location.whileInUseRequests, 0);
+    expect(location.alwaysRequests, 0);
+    expect(location.locating, isFalse);
+    expect(location.currentRequests, 0);
+    expect(location.runHolds, isEmpty);
+    expect(location.historyEnabled, isFalse);
+    expect(app.models.geotag.status, GeotagStatus.off);
+    expect(app.camera.storeLocationInfo, isFalse);
+  });
+
   group('live geotagging', () {
     test('turning it on asks for the location while in use, and with it '
         'allowed saves the choice with the Store Location Info the camera '
@@ -143,7 +157,7 @@ void main() {
       expect(notified, greaterThan(0));
       final saved = await _onDisk(app);
       expect(saved.liveGeotagging, isTrue);
-      expect(saved.geotagOffered, isTrue);
+      expect(saved.backgroundGeotagging, isFalse);
       expect(saved.storeLocationInfoPending, isTrue);
       // Nothing is linked: it starts when the camera is.
       expect(geotag.status, GeotagStatus.waitingForCamera);
@@ -257,205 +271,99 @@ void main() {
       }
     });
 
-    test("the camera's clock is put on the phone's time when it is linked, "
-        'unless Sync camera clock is off', () async {
-      const late = FakeCameraConfig(
-        bonded: true,
-        clockOffset: Duration(minutes: 5),
-      );
-      final synced = await _app(config: late);
-      await synced.models.connection.connect();
-      await _until(() => synced.camera.clockWrites.isNotEmpty);
-
-      final left = await _app(config: late);
-      await left.models.geotag.setSyncClock(_serial, on: false);
-      expect((await _onDisk(left)).syncClock, isFalse);
-      await left.models.connection.connect();
-      await _settle();
-      expect(left.camera.clockWrites, isEmpty);
-    });
-  });
-
-  group('automatic start', () {
-    test('the phone watches for the cameras with live geotagging on, and '
-        'for none without', () async {
-      final watch = FakePowerOnWatch();
-      final app = await _app(watch: watch);
-      final geotag = app.models.geotag;
-      expect(geotag.autoStartSupported, isTrue);
-      expect(watch.watched, isEmpty);
-
-      expect(await geotag.turnLiveOn(_serial), isNull);
-      await _until(() => watch.watched.isNotEmpty);
-      expect(watch.watched.single.deviceId, _deviceId);
-      expect(watch.watched.single.name, 'GR IV');
-
-      await geotag.turnLiveOff(_serial);
-      await _until(() => watch.watched.isEmpty);
-    });
-
-    test('setting it up asks for location at all times, then for the '
-        "phone's link to the camera", () async {
-      final location = FakePhoneLocation()
-        ..alwaysAnswer = FakePhoneLocation.always;
-      final watch = FakePowerOnWatch(needsAssociation: true);
-      final app = await _app(location: location, watch: watch, live: true);
-      final geotag = app.models.geotag;
-      final camera = app.models.cameras.current!;
-      expect(geotag.autoStartReady(camera), isFalse);
-      expect(geotag.linkedToPhone(camera), isFalse);
-
-      expect(await geotag.setUpAutoStart(_serial), isNull);
-      expect(location.alwaysRequests, 1);
-      expect(watch.associateRequests.single.deviceId, _deviceId);
-      expect(watch.associateRequests.single.name, 'GR IV');
-      expect(geotag.locationAlways, isTrue);
-      expect(geotag.linkedToPhone(camera), isTrue);
-      expect(geotag.autoStartReady(camera), isTrue);
-    });
-
-    test('location not allowed at all times: nothing is linked, and the '
-        'result says so', () async {
+    test('it starts again by itself when a camera that went off, and that '
+        'the session let go of, says it is on', () async {
       final location = FakePhoneLocation();
-      final watch = FakePowerOnWatch(needsAssociation: true);
-      final app = await _app(location: location, watch: watch, live: true);
+      final app = await _app(config: _storing, location: location, live: true);
       final geotag = app.models.geotag;
-
-      expect(await geotag.setUpAutoStart(_serial), GeotagNeed.always);
-      expect(location.alwaysRequests, 1);
-      expect(watch.associateRequests, isEmpty);
-      expect(geotag.autoStartReady(app.models.cameras.current!), isFalse);
-    });
-
-    test("the phone's link refused: the result says so", () async {
-      final location = FakePhoneLocation(access: FakePhoneLocation.always);
-      final watch = FakePowerOnWatch(needsAssociation: true)
-        ..associateAnswer = false;
-      final app = await _app(location: location, watch: watch, live: true);
-      final geotag = app.models.geotag;
-
-      expect(await geotag.setUpAutoStart(_serial), GeotagNeed.cameraLink);
-      // Already allowed, so the phone is not asked again.
-      expect(location.alwaysRequests, 0);
-      expect(watch.associateRequests, hasLength(1));
-      expect(geotag.autoStartReady(app.models.cameras.current!), isFalse);
-    });
-
-    test('a phone that cannot watch for cameras is not asked to', () async {
-      final watch = FakePowerOnWatch(supported: false);
-      final app = await _app(watch: watch, live: true);
-      final geotag = app.models.geotag;
-      expect(geotag.autoStartSupported, isFalse);
-      expect(geotag.autoStartReady(app.models.cameras.current!), isFalse);
-      expect(watch.watchCalls, isEmpty);
-    });
-  });
-
-  group('a camera seen switched on', () {
-    test('is connected when nothing is linked', () async {
-      final watch = FakePowerOnWatch();
-      final app = await _app(watch: watch, live: true);
-      final connection = app.models.connection;
-      expect(connection.status, ConnectionStatus.offline);
-      expect(watch.watched.single.deviceId, _deviceId);
-
-      watch.sight(_deviceId);
-      await _until(() => connection.status == ConnectionStatus.bluetooth);
-      expect(connection.bleLinked, isTrue);
-      expect(connection.cameraOff, isFalse);
-    });
-
-    test('is left alone when its live geotagging is off', () async {
-      final watch = FakePowerOnWatch()..launchSightings.add(_deviceId);
-      final app = await _app(watch: watch);
-      await _settle();
-      expect(watch.launchSightings, isEmpty);
-      expect(app.models.connection.status, ConnectionStatus.offline);
-      expect(app.ble.connects, 0);
-    });
-
-    test('that started the app is connected at start-up', () async {
-      final watch = FakePowerOnWatch()..launchSightings.add(_deviceId);
-      final app = await _app(watch: watch, live: true);
-      final connection = app.models.connection;
-      await _until(() => connection.status == ConnectionStatus.bluetooth);
-      expect(watch.launchSightings, isEmpty);
-      expect(connection.camera!.serial, _serial);
-    });
-
-    test('becomes the current camera and is connected while the current '
-        'one is not linked', () async {
-      final watch = FakePowerOnWatch();
-      final app = await _app(watch: watch, live: true);
-      await _addOther(app, current: _other.serialNumber);
-      await _until(() => watch.watched.length == 2);
-      final connection = app.models.connection;
-
-      watch.sight(_deviceId);
-      await _until(() => connection.status == ConnectionStatus.bluetooth);
-      expect(app.models.cameras.current!.serial, _serial);
-      expect(app.ble.connected, everyElement(_deviceId));
-    });
-
-    test('is ignored while another camera is on and linked', () async {
-      final watch = FakePowerOnWatch();
-      final app = await _app(watch: watch, live: true);
-      await _addOther(app, current: _serial);
-      await _until(() => watch.watched.length == 2);
       final connection = app.models.connection;
       await connection.connect();
-      expect(connection.bleLinked, isTrue);
+      await _until(() => location.locating);
 
-      watch.sight(_other.deviceId);
-      await _settle();
-      expect(app.models.cameras.current!.serial, _serial);
-      expect(connection.status, ConnectionStatus.bluetooth);
-      expect(connection.bleLinked, isTrue);
-      expect(app.ble.connected, everyElement(_deviceId));
-    });
-
-    test('that the session had let go of while it was off is linked at '
-        'once, and the phone was told to watch for it afresh', () async {
-      final watch = FakePowerOnWatch();
-      final app = await _app(
-        config: const FakeCameraConfig(bonded: true, poweredOn: false),
-        watch: watch,
-        live: true,
-      );
-      final connection = app.models.connection;
-      await connection.connect();
-      expect(connection.cameraOff, isTrue);
-      final watches = watch.watchCalls.length;
-
-      // An off camera drops its link after a while; the session then only
+      // Switched off, the camera drops its link; the session links it once
+      // more, in its off state.
+      app.camera.poweredOn = false;
+      await _until(() => connection.cameraOff && connection.bleLinked);
+      // An off camera drops that link after a while; the session then only
       // reads its advertisements.
       app.camera.dropBluetooth();
       await _until(() => connection.parked);
-      expect(app.models.geotag.status, GeotagStatus.waitingForCamera);
-      await _until(() => watch.watchCalls.length > watches);
-      expect(watch.watched.single.deviceId, _deviceId);
+      expect(geotag.status, GeotagStatus.waitingForCamera);
+      expect(location.locating, isFalse);
 
-      // The camera still advertises that it is off, so only the phone's
-      // sighting can have linked it.
-      final connects = app.ble.connects;
-      watch.sight(_deviceId);
-      await _until(() => connection.bleLinked);
-      expect(connection.parked, isFalse);
-      expect(app.ble.connects, connects + 1);
+      app.camera.poweredOn = true;
+      await _until(() => connection.bleLinked && !connection.cameraOff);
+      await _until(() => location.locating);
+      final before = app.camera.location;
+      await _until(() {
+        location.emitFix(_fix(latitude: 36));
+        return app.camera.location != before && app.camera.location != null;
+      });
+      expect(app.camera.location!.latitude, closeTo(36, 1e-4));
+    });
+  });
+
+  group("the camera's clock", () {
+    const late = FakeCameraConfig(
+      bonded: true,
+      clockOffset: Duration(minutes: 5),
+    );
+
+    test("is put on the phone's time when the camera is linked, by "
+        'default and without live geotagging', () async {
+      final app = await _app(config: late);
+      expect(_saved(app).liveGeotagging, isFalse);
+      await app.models.connection.connect();
+      await _until(() => app.camera.clockWrites.isNotEmpty);
     });
 
-    test('is watched for afresh after it was on and linked and then went '
-        'off', () async {
-      final watch = FakePowerOnWatch();
-      final app = await _app(config: _storing, watch: watch, live: true);
-      final connection = app.models.connection;
-      await connection.connect();
-      expect(connection.cameraOff, isFalse);
-      final watches = watch.watchCalls.length;
+    test('is left alone with Sync camera clock off, also while live '
+        'geotagging is on', () async {
+      final location = FakePhoneLocation();
+      final app = await _app(
+        config: const FakeCameraConfig(
+          bonded: true,
+          storeLocationInfo: true,
+          clockOffset: Duration(minutes: 5),
+        ),
+        location: location,
+        live: true,
+      );
+      await app.models.geotag.setSyncClock(_serial, on: false);
+      expect((await _onDisk(app)).syncClock, isFalse);
 
-      app.camera.poweredOn = false;
-      await _until(() => watch.watchCalls.length > watches);
-      expect(watch.watched.single.deviceId, _deviceId);
+      await app.models.connection.connect();
+      await _until(() => location.locating);
+      await _until(() {
+        location.emitFix(_fix());
+        return app.camera.location != null;
+      });
+      await _settle();
+      expect(app.camera.clockWrites, isEmpty);
+    });
+
+    test('is kept in sync while background geotagging is on for the '
+        'camera, whatever Sync camera clock says, and left alone again '
+        'once that is off', () async {
+      final location = FakePhoneLocation(access: FakePhoneLocation.always);
+      final app = await _app(config: late, location: location);
+      final geotag = app.models.geotag;
+      await geotag.setSyncClock(_serial, on: false);
+      await app.models.connection.connect();
+      await _settle();
+      expect(app.camera.clockWrites, isEmpty);
+
+      expect(await geotag.turnBackgroundOn(_serial), isNull);
+      expect(_saved(app).syncClock, isFalse);
+      expect(_saved(app).keepsClock, isTrue);
+      await _until(() => app.camera.clockWrites.isNotEmpty);
+
+      await geotag.turnBackgroundOff(_serial);
+      expect(_saved(app).keepsClock, isFalse);
+      final writes = app.camera.clockWrites.length;
+      app.camera.clockOffset = const Duration(minutes: 5);
+      await _settle();
+      expect(app.camera.clockWrites, hasLength(writes));
     });
   });
 
@@ -467,19 +375,21 @@ void main() {
         ..alwaysAnswer = FakePhoneLocation.always;
       final app = await _app(location: location);
       final geotag = app.models.geotag;
-      final settings = app.models.settings;
-      expect(settings.backgroundGeotagging, isFalse);
+      expect(_saved(app).backgroundGeotagging, isFalse);
       expect(location.historyEnabled, isFalse);
 
-      expect(await geotag.turnBackgroundOn(), isNull);
+      expect(await geotag.turnBackgroundOn(_serial), isNull);
       expect(location.whileInUseRequests, 1);
       expect(location.alwaysRequests, 1);
-      expect(settings.backgroundGeotagging, isTrue);
+      expect((await _onDisk(app)).backgroundGeotagging, isTrue);
+      // Live geotagging is another switch.
+      expect(_saved(app).liveGeotagging, isFalse);
+      expect(_saved(app).storeLocationInfoPending, isNull);
       expect(location.historyEnabled, isTrue);
-      expect(geotag.backgroundPausedBy, isNull);
+      expect(geotag.backgroundPausedBy(_saved(app)), isNull);
 
-      await geotag.turnBackgroundOff();
-      expect(settings.backgroundGeotagging, isFalse);
+      await geotag.turnBackgroundOff(_serial);
+      expect((await _onDisk(app)).backgroundGeotagging, isFalse);
       expect(location.historyEnabled, isFalse);
     });
 
@@ -489,10 +399,10 @@ void main() {
       final app = await _app(location: location);
       final geotag = app.models.geotag;
 
-      expect(await geotag.turnBackgroundOn(), GeotagNeed.permission);
+      expect(await geotag.turnBackgroundOn(_serial), GeotagNeed.permission);
       expect(location.whileInUseRequests, 1);
       expect(location.alwaysRequests, 0);
-      expect(app.models.settings.backgroundGeotagging, isFalse);
+      expect(_saved(app).backgroundGeotagging, isFalse);
       expect(location.historyEnabled, isFalse);
     });
 
@@ -500,9 +410,12 @@ void main() {
       final location = FakePhoneLocation();
       final app = await _app(location: location);
 
-      expect(await app.models.geotag.turnBackgroundOn(), GeotagNeed.always);
+      expect(
+        await app.models.geotag.turnBackgroundOn(_serial),
+        GeotagNeed.always,
+      );
       expect(location.alwaysRequests, 1);
-      expect(app.models.settings.backgroundGeotagging, isFalse);
+      expect(_saved(app).backgroundGeotagging, isFalse);
       expect(location.historyEnabled, isFalse);
     });
 
@@ -511,8 +424,7 @@ void main() {
       final location = FakePhoneLocation(access: FakePhoneLocation.always);
       final app = await _app(location: location);
       final geotag = app.models.geotag;
-      final settings = app.models.settings;
-      expect(await geotag.turnBackgroundOn(), isNull);
+      expect(await geotag.turnBackgroundOn(_serial), isNull);
       expect(location.alwaysRequests, 0);
 
       for (final (access, need) in [
@@ -521,13 +433,13 @@ void main() {
         (_phoneOff, GeotagNeed.phoneLocation),
       ]) {
         location.setAccess(access);
-        await _until(() => geotag.backgroundPausedBy == need);
-        expect(settings.backgroundGeotagging, isTrue);
+        await _until(() => geotag.backgroundPausedBy(_saved(app)) == need);
+        expect(_saved(app).backgroundGeotagging, isTrue);
       }
 
       location.setAccess(FakePhoneLocation.always);
-      await _until(() => geotag.backgroundPausedBy == null);
-      expect(settings.backgroundGeotagging, isTrue);
+      await _until(() => geotag.backgroundPausedBy(_saved(app)) == null);
+      expect(_saved(app).backgroundGeotagging, isTrue);
       expect(location.historyEnabled, isTrue);
       // What the phone recorded is taken over again.
       location.recordHistory(_fix());
@@ -535,25 +447,65 @@ void main() {
       await _until(() async => !await geotag.history.isEmpty);
     });
 
-    test('at start-up the phone is told to record when the setting is on, '
-        'whatever it did before', () async {
+    test('at start-up the phone is told to record when a camera has it on '
+        'and to stop when none has, whatever it did before', () async {
+      // As after a restore that brought back the cameras file alone.
+      final silent = FakePhoneLocation(access: FakePhoneLocation.always);
+      expect(silent.historyEnabled, isFalse);
+      final on = await _app(location: silent, background: true);
+      expect(silent.historyEnabled, isTrue);
+      expect(on.models.geotag.backgroundPausedBy(_saved(on)), isNull);
+
+      // And the other way round: the phone still records, for no camera.
+      final recording = FakePhoneLocation(access: FakePhoneLocation.always);
+      await recording.setHistory(enabled: true);
+      await _app(location: recording);
+      expect(recording.historyEnabled, isFalse);
+    });
+
+    test('the phone records while any camera has it on, and only the '
+        'photos of a camera that has it on get a location', () async {
       final location = FakePhoneLocation(access: FakePhoneLocation.always);
       final app = await _app(location: location);
-      final models = app.models;
-      // As after a restore that brought back the settings file alone.
-      models.settings.backgroundGeotagging = true;
-      expect(location.historyEnabled, isFalse);
+      final geotag = app.models.geotag;
+      await _addOther(app);
+      const other = '1111111';
 
-      final started = await GeotagController.open(
-        services: models.services,
-        connection: models.connection,
-        cameras: models.cameras,
-        settings: models.settings,
-      );
-      addTearDown(started.dispose);
-      await started.start();
+      expect(await geotag.turnBackgroundOn(other), isNull);
       expect(location.historyEnabled, isTrue);
-      expect(started.backgroundPausedBy, isNull);
+      expect(_saved(app, other).backgroundGeotagging, isTrue);
+      expect(_saved(app).backgroundGeotagging, isFalse);
+      expect(geotag.geotagger.enabled(other), isTrue);
+      expect(geotag.geotagger.enabled(_serial), isFalse);
+      // Not a paired camera at all.
+      expect(geotag.geotagger.enabled('2222222'), isFalse);
+      // Paused is said of the camera that has it on only.
+      location.setAccess(FakePhoneLocation.whileInUse);
+      await _until(() => geotag.backgroundPausedBy(_saved(app, other)) != null);
+      expect(geotag.backgroundPausedBy(_saved(app)), isNull);
+      location.setAccess(FakePhoneLocation.always);
+      await _until(() => geotag.backgroundPausedBy(_saved(app, other)) == null);
+
+      expect(await geotag.turnBackgroundOn(_serial), isNull);
+      await geotag.turnBackgroundOff(other);
+      // The first camera still has it on.
+      expect(location.historyEnabled, isTrue);
+      expect(geotag.geotagger.enabled(other), isFalse);
+      await geotag.turnBackgroundOff(_serial);
+      expect(location.historyEnabled, isFalse);
+    });
+
+    test('forgetting the only camera that has it on stops the '
+        'recording', () async {
+      final location = FakePhoneLocation(access: FakePhoneLocation.always);
+      final app = await _app(location: location);
+      final geotag = app.models.geotag;
+      await _addOther(app);
+      expect(await geotag.turnBackgroundOn('1111111'), isNull);
+      expect(location.historyEnabled, isTrue);
+
+      await app.models.cameras.remove('1111111');
+      await _until(() => !location.historyEnabled);
     });
 
     test("the phone's own recording is moved into the history, and Delete "
@@ -561,7 +513,7 @@ void main() {
       final location = FakePhoneLocation(access: FakePhoneLocation.always);
       final app = await _app(location: location);
       final geotag = app.models.geotag;
-      expect(await geotag.turnBackgroundOn(), isNull);
+      expect(await geotag.turnBackgroundOn(_serial), isNull);
       expect(await geotag.history.isEmpty, isTrue);
 
       location.recordHistory(_fix(latitude: 35.5, longitude: 139.5));
@@ -575,7 +527,8 @@ void main() {
       expect(await geotag.history.isEmpty, isTrue);
       expect(location.pendingHistory, isEmpty);
       // Deleting does not turn it off.
-      expect(app.models.settings.backgroundGeotagging, isTrue);
+      expect(_saved(app).backgroundGeotagging, isTrue);
+      expect(location.historyEnabled, isTrue);
     });
 
     test('the positions live geotagging takes are kept in the history only '
@@ -593,7 +546,7 @@ void main() {
       await _settle();
       expect(await geotag.history.isEmpty, isTrue);
 
-      expect(await geotag.turnBackgroundOn(), isNull);
+      expect(await geotag.turnBackgroundOn(_serial), isNull);
       await _until(() async {
         location.emitFix(_fix(latitude: 35.5, longitude: 139.5));
         return !await geotag.history.isEmpty;
@@ -602,7 +555,7 @@ void main() {
       expect(nearest!.latitude, closeTo(35.5, 1e-3));
       expect(nearest.longitude, closeTo(139.5, 1e-3));
 
-      await geotag.turnBackgroundOff();
+      await geotag.turnBackgroundOff(_serial);
       expect(await geotag.deleteHistory(), isTrue);
       location.emitFix(_fix(latitude: 36, longitude: 140));
       await _settle();
@@ -616,7 +569,7 @@ void main() {
       final geotag = app.models.geotag;
       await app.models.connection.connect();
       await _until(() => location.locating);
-      expect(await geotag.turnBackgroundOn(), isNull);
+      expect(await geotag.turnBackgroundOn(_serial), isNull);
 
       final start = clock.now().toUtc().subtract(const Duration(seconds: 40));
       DateTime at(int seconds) => start.add(Duration(seconds: seconds));

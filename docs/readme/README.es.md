@@ -116,14 +116,14 @@ Control de imagen como algo que merece la pena gestionar.
   velocidad de obturación, el ISO y la compensación de exposición en un dial con los valores que
   ofrece la cámara, y cambia el modo Fotografiar, el autodisparador, la medición y el Control de
   imagen.
-- **Geoetiquetado.** Las cámaras GR no tienen GPS. Con Geoetiquetado activado para una cámara, GR
-  Photo le envía la ubicación de tu teléfono por Bluetooth mientras la cámara está encendida, y la
-  cámara la guarda en cada foto. Sigue funcionando mientras usas otra app o bloqueas el teléfono, se
-  inicia solo al encender la cámara si permites la ubicación siempre, y mantiene el reloj de la
-  cámara en la hora de tu teléfono. Geoetiquetado en segundo plano es la alternativa que no requiere
-  atención: el teléfono guarda un historial de 90 días de los lugares donde ha estado, y GR Photo
-  añade a cada foto, cuando la descargas, el lugar registrado más cerca de la hora en que se tomó,
-  tanto en archivos JPEG como RAW.
+- **Geoetiquetado.** Las cámaras GR no tienen GPS. Con Geoetiquetado en directo activado para una
+  cámara, GR Photo le envía la ubicación de tu teléfono por Bluetooth mientras la cámara está
+  encendida, y la cámara la guarda en cada foto. Se inicia una vez que has abierto GR Photo y sigue
+  funcionando mientras usas otra app o bloqueas el teléfono. Geoetiquetado en segundo plano es la
+  alternativa que no requiere atención: el teléfono guarda un historial de 90 días de los lugares
+  donde ha estado, y GR Photo añade a cada foto, cuando la descargas, el lugar registrado más cerca
+  de la hora en que se tomó, tanto en archivos JPEG como RAW. Los dos están desactivados hasta que
+  los activas para una cámara.
 - **Varias cámaras.** Empareja todas las que tengas y cambia de una a otra; renombra u olvida cada
   una.
 - **Temas e idiomas.** Temas Claro, Oscuro, Cuarto oscuro, Papel y Cianotipia, y los 21 idiomas de
@@ -196,11 +196,11 @@ flutter run --dart-define=GR_DEMO=true
 4. **Guarda un estilo.** Abre una foto en la Biblioteca y toca Guardar estilo, o crea uno desde
    cero con + en la página Estilos. Toca un estilo para editarlo y arrástralo a C1, C2 o C3 para
    cargarlo en la cámara.
-5. **Añade la ubicación.** GR Photo ofrece Geoetiquetado una vez para cada cámara; también puedes
-   activarlo más tarde con ⋯ en la tarjeta de la cámara. Tu teléfono pregunta si GR Photo puede usar
-   su ubicación. A partir de entonces, la ubicación se envía siempre que la cámara esté encendida y
-   al alcance. Geoetiquetado en segundo plano está en Ajustes, Ubicación, y necesita que la
-   ubicación esté permitida siempre.
+5. **Añade la ubicación.** Activa Geoetiquetado en directo en la tarjeta de la cámara, debajo de
+   Biblioteca, Disparo y Estilos. Tu teléfono pregunta si GR Photo puede usar su ubicación. A partir
+   de entonces, la ubicación se envía mientras GR Photo esté en ejecución y la cámara esté encendida
+   y al alcance. Geoetiquetado en segundo plano está en ⋯ en la tarjeta de la cámara, y necesita que
+   la ubicación esté permitida siempre.
 
 Desconexión automática, en Ajustes, sale del Wi-Fi de la cámara cuando GR Photo lleva un rato sin
 usarse (5 minutos de forma predeterminada). [Cómo se comporta GR Photo](../behaviour.md) describe en

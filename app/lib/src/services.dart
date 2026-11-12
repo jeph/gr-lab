@@ -176,11 +176,8 @@ final class AppServices {
   /// Downloads while GR Photo is not in front (`DownloadBackground`).
   final BackgroundDownloads background;
 
-  /// The phone's name, written to the camera's Paired Devices list during
-  /// pairing. Asked for when a pairing starts rather than once at
-  /// start-up: an app that Android started without a screen (a camera with
-  /// live geotagging was switched on) cannot read it yet.
-  final Future<String> Function() clientName;
+  /// Written to the camera's Paired Devices list during pairing.
+  final String clientName;
 
   /// Persistent app data (paired cameras, settings, download records).
   final Directory dataDir;

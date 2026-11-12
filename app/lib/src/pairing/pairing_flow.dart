@@ -50,9 +50,6 @@ class _PairingFlowState extends State<PairingFlow> {
   PairingRun? _run;
   GrPairingStage _stage = GrPairingStage.scanning;
 
-  /// The phone's name is being read for an attempt about to start.
-  bool _preparing = false;
-
   /// Why the last attempt failed; the failure page maps it to messages.
   Object? _pairingError;
 
@@ -144,17 +141,11 @@ class _PairingFlowState extends State<PairingFlow> {
 
   Future<void> _pair() async {
     final selected = _selected;
-    if (selected == null || _run != null || _preparing) return;
-    _preparing = true;
-    final clientName = await _models.services.clientName();
-    _preparing = false;
-    // Left, or gone back to another camera, meanwhile.
-    if (!mounted || !identical(_selected, selected)) return;
-    if (_page != _Page.instructions) return;
+    if (selected == null || _run != null) return;
     final run = PairingRun(
       _models.services.camera,
       target: selected,
-      clientName: clientName,
+      clientName: _models.services.clientName,
     );
     setState(() {
       _run = run;
@@ -208,7 +199,7 @@ class _PairingFlowState extends State<PairingFlow> {
       name: existing?.name ?? SavedCamera.defaultName(paired),
       pairedAt: DateTime.now(),
       liveGeotagging: existing?.liveGeotagging ?? false,
-      geotagOffered: existing?.geotagOffered ?? false,
+      backgroundGeotagging: existing?.backgroundGeotagging ?? false,
       syncClock: existing?.syncClock ?? true,
       storeLocationInfoPending: existing?.storeLocationInfoPending,
     );

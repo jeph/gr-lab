@@ -458,12 +458,6 @@ final class GrSession {
   /// link a parked camera themselves.
   bool get parked => _parked;
 
-  /// The platform saw the camera advertise in its on state (its power-on
-  /// watch, which also works where this session's own scan does not: with
-  /// the phone's screen off, or the app in the background). A [parked]
-  /// session links at once; otherwise nothing happens.
-  void cameraSeenOn() => _seenOn('platform');
-
   /// The camera's Wi-Fi was lost and is being got back: from `wifi.lost`
   /// until `recovery.done` or `recovery.gaveUp`, through every phase the
   /// recovery passes (WLAN-on, joining).
@@ -1503,11 +1497,11 @@ final class GrSession {
             // The service filter is the platform's; the tag is checked
             // too where a result carries it.
             if ((seen.powerOn ?? seen.powerOnFromServices) ?? false) {
-              _seenOn('scan');
+              _seenOn();
             }
           },
           // Without a scan (Bluetooth off, or another owner's scan
-          // running) the platform's watch is what is left.
+          // running) only a wake links the camera.
           onError: (Object e) => _emit('ble.parkWatchFailed', {'error': '$e'}),
         );
   }
@@ -1529,9 +1523,9 @@ final class GrSession {
     _parkWatch = null;
   }
 
-  /// A [parked] camera advertises that it is on ([source]: this session's
-  /// `scan`, or the `platform`'s watch): links it. A wake links by itself.
-  void _seenOn(String source) {
+  /// A [parked] camera advertises that it is on: links it. A wake links
+  /// by itself.
+  void _seenOn() {
     if (!_parked ||
         _closing ||
         _relinking ||
@@ -1541,7 +1535,7 @@ final class GrSession {
         _bleReconnect != null) {
       return;
     }
-    _emit('ble.seenOn', {'source': source});
+    _emit('ble.seenOn');
     _bleReconnect = _relinkParked().then((_) {
       _bleReconnect = null;
       // A wake that came meanwhile, or a camera that was off after all.

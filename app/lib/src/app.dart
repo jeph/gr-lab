@@ -9,7 +9,6 @@ import 'package:grphoto/src/connection/connection_controller.dart';
 import 'package:grphoto/src/connection/idle_disconnect.dart';
 import 'package:grphoto/src/connection/wifi_consent_dialog.dart';
 import 'package:grphoto/src/downloads/download_background.dart';
-import 'package:grphoto/src/geotag/geotag_offer.dart';
 import 'package:grphoto/src/home/home_pages.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 
@@ -54,13 +53,11 @@ class GrPhotoApp extends StatelessWidget {
 /// [ConnectionController.tab] is set and the camera is linked. Going back
 /// from them closes them ([ConnectionController.closeCamera]); the session
 /// ending pops back to the home pages, closing whatever was open over
-/// them. Also tells the connection whether the app is in front, asks
-/// before the first join of a camera's Wi-Fi when the platform needs it,
-/// and offers live geotagging once per camera ([GeotagOfferGate]).
+/// them. Also tells the connection whether the app is in front, and asks
+/// before the first join of a camera's Wi-Fi when the platform needs it.
 ///
 /// On Android the app can run with no screen: live geotagging keeps it
-/// going after its window was closed, and a camera being switched on
-/// starts it without one. When the window goes
+/// going after its window was closed. When the window goes
 /// ([AppLifecycleState.detached]) the camera's pages close and its Wi-Fi is
 /// left, as when the user disconnects the Wi-Fi, unless a download still
 /// uses it; Bluetooth and everything else carry on.
@@ -192,10 +189,8 @@ class _RootScreenState extends State<RootScreen> {
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: Listenable.merge([_models.connection, _models.settings]),
-    builder: (context, _) => GeotagOfferGate(
-      child: HomePages(
-        autoConnect: _autoConnect && _models.settings.connectWhenNearby,
-      ),
+    builder: (context, _) => HomePages(
+      autoConnect: _autoConnect && _models.settings.connectWhenNearby,
     ),
   );
 }

@@ -9,9 +9,8 @@ import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 
 /**
  * Registers the camera layer's native code: the camera Wi-Fi join
- * ([WifiChannel], `io.jeph.grphoto/wifi`), the phone's location
- * ([LocationChannel], `io.jeph.grphoto/location`) and the power-on watch
- * ([WatchChannel], `io.jeph.grphoto/watch`).
+ * ([WifiChannel], `io.jeph.grphoto/wifi`) and the phone's location
+ * ([LocationChannel], `io.jeph.grphoto/location`).
  *
  * [WifiChannel] needs to know when the app's activity is in front: Android
  * only joins camera networks for the foreground app, and its approval
@@ -21,15 +20,14 @@ import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
  * lifecycle callbacks, filtered to the activity this engine is attached
  * to.
  *
- * The engine can run with no activity at all (started for a camera that
- * came on with the app closed, [GeotagHost]): the location and watch
- * channels work without one, and get the activity for their permission
- * prompts and Android's association dialog while there is one.
+ * The engine can run with no activity (the app's task was swiped away
+ * while a geotagging run is held, [GeotagHost]): the location channel
+ * works without one, and gets the activity for its permission prompts
+ * while there is one.
  */
 class GrCameraPlugin : FlutterPlugin, ActivityAware {
     private var wifi: WifiChannel? = null
     private var location: LocationChannel? = null
-    private var watch: WatchChannel? = null
     private var activityBinding: ActivityPluginBinding? = null
     private var activity: Activity? = null
 
@@ -60,7 +58,6 @@ class GrCameraPlugin : FlutterPlugin, ActivityAware {
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         wifi = WifiChannel(binding.applicationContext, binding.binaryMessenger)
         location = LocationChannel(binding.applicationContext, binding.binaryMessenger)
-        watch = WatchChannel(binding.applicationContext, binding.binaryMessenger)
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -68,8 +65,6 @@ class GrCameraPlugin : FlutterPlugin, ActivityAware {
         wifi = null
         location?.dispose()
         location = null
-        watch?.dispose()
-        watch = null
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
@@ -81,10 +76,6 @@ class GrCameraPlugin : FlutterPlugin, ActivityAware {
             binding.addRequestPermissionsResultListener(it)
             it.onActivity(a)
         }
-        watch?.let {
-            binding.addActivityResultListener(it)
-            it.onActivity(a)
-        }
     }
 
     override fun onDetachedFromActivity() {
@@ -94,10 +85,6 @@ class GrCameraPlugin : FlutterPlugin, ActivityAware {
         activityBinding = null
         location?.let {
             binding?.removeRequestPermissionsResultListener(it)
-            it.onActivity(null)
-        }
-        watch?.let {
-            binding?.removeActivityResultListener(it)
             it.onActivity(null)
         }
     }

@@ -115,13 +115,13 @@ att stilar för Bildkontroll är något värt att hålla ordning på.
 - **Livevisning.** Kamerans bild via Wi-Fi: tryck för att fokusera, ställ in bländare, slutartid,
   ISO och exponeringskompensation på en ratt med de värden kameran erbjuder, och ändra Exponering,
   Självutlösare, Exponeringsmätning och Bildkontroll.
-- **Geotaggning.** GR-kameror har ingen GPS. Med Geotaggning på för en kamera skickar GR Photo
+- **Geotaggning.** GR-kameror har ingen GPS. Med Live-geotaggning på för en kamera skickar GR Photo
   telefonens plats till den via Bluetooth medan kameran är på, och kameran sparar den i varje bild.
-  Den fortsätter medan du använder en annan app eller låser telefonen, startar av sig själv när du
-  slår på kameran om du tillåter plats alltid, och håller kamerans klocka på telefonens tid.
-  Geotaggning i bakgrunden är alternativet som sköter sig självt: telefonen sparar 90 dagars
-  historik över var den har varit, och när du hämtar en bild lägger GR Photo till den plats som
-  registrerades närmast tidpunkten då bilden togs, i både JPEG- och RAW-filer.
+  Den startar när du har öppnat GR Photo och fortsätter medan du använder en annan app eller låser
+  telefonen. Geotaggning i bakgrunden är alternativet som sköter sig självt: telefonen sparar 90
+  dagars historik över var den har varit, och när du hämtar en bild lägger GR Photo till den plats
+  som registrerades närmast tidpunkten då bilden togs, i både JPEG- och RAW-filer. Båda är av tills
+  du slår på dem för en kamera.
 - **Flera kameror.** Parkoppla så många du äger och växla mellan dem; byt namn på eller glöm var
   och en.
 - **Teman och språk.** Temana Ljust, Mörkt, Mörkrum, Papper och Cyanotypi, och de 21 språken i
@@ -192,10 +192,10 @@ flutter run --dart-define=GR_DEMO=true
 4. **Spara en stil.** Öppna en bild i Bibliotek och tryck på Spara stil, eller skapa en från
    grunden med + på sidan Stilar. Tryck på en stil för att redigera den, och dra den till C1, C2
    eller C3 för att lägga in den i kameran.
-5. **Lägg till plats.** GR Photo erbjuder Geotaggning en gång för varje kamera; du kan också slå på
-   den senare via ⋯ på kamerans kort. Telefonen frågar om GR Photo får använda dess plats. Därefter
-   skickas platsen så fort kameran är påslagen och inom räckhåll. Geotaggning i bakgrunden finns
-   under Inställningar, Plats, och kräver att plats alltid är tillåten.
+5. **Lägg till plats.** Slå på Live-geotaggning på kamerans kort, under Bibliotek, Fota och Stilar.
+   Telefonen frågar om GR Photo får använda dess plats. Därefter skickas platsen medan GR Photo körs
+   och kameran är påslagen och inom räckhåll. Geotaggning i bakgrunden finns under ⋯ på kamerans
+   kort och kräver att plats alltid är tillåten.
 
 Med Koppla från automatiskt i Inställningar lämnar GR Photo kamerans Wi-Fi när appen inte har
 använts på ett tag (5 minuter som standard). [Så beter sig GR Photo](../behaviour.md) beskriver

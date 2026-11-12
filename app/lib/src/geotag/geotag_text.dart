@@ -2,11 +2,12 @@ import 'package:gr_camera/gr_camera.dart';
 import 'package:grphoto/l10n/l10n.dart';
 import 'package:grphoto/src/geotag/geotag_need.dart';
 
-/// What live geotagging is doing, in words: the status line in the
-/// camera's details and the text of the phone's notice while it runs.
+/// What live geotagging is doing, in words: the line under its switch on
+/// the camera's card and the text of the phone's notice while it runs.
+/// While it is off, the line says what the switch does.
 String geotagStatusText(AppLocalizations l10n, GeotagStatus status) =>
     switch (status) {
-      GeotagStatus.off => l10n.geotagStatusOff,
+      GeotagStatus.off => l10n.geotagLiveSubtitle,
       GeotagStatus.unsupported => l10n.geotagStatusUnsupported,
       GeotagStatus.permissionDenied => l10n.geotagStatusPermissionDenied,
       GeotagStatus.preciseNeeded => l10n.geotagStatusPreciseNeeded,
@@ -26,5 +27,4 @@ String geotagNeedText(AppLocalizations l10n, GeotagNeed need) => switch (need) {
   GeotagNeed.permission => l10n.geotagStatusPermissionDenied,
   GeotagNeed.precise => l10n.geotagStatusPreciseNeeded,
   GeotagNeed.always => l10n.geotagNeedAlways,
-  GeotagNeed.cameraLink => l10n.geotagNeedCameraLink,
 };

@@ -119,8 +119,8 @@ final class GeotagSettings {
   /// while the camera is on.
   final bool live;
 
-  /// The camera's clock is kept on the phone's time. Always done while
-  /// [live], whatever this says.
+  /// The camera's clock is kept on the phone's time, with or without
+  /// [live].
   final bool syncClock;
 
   /// The value of the camera's Store Location Info the app still has to
@@ -322,7 +322,7 @@ final class CameraGeotagging extends ChangeNotifier {
 
   bool get _live => _settings?.live ?? false;
 
-  bool get _clockWanted => _live || (_settings?.syncClock ?? false);
+  bool get _clockWanted => _settings?.syncClock ?? false;
 
   /// The camera is known not to take a position: its model does not
   /// (`CameraFeature.geotagging`), or the link found it without the

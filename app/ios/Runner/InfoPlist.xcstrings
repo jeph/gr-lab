@@ -269,127 +269,127 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Photo posílá vaši polohu do fotoaparátu, dokud je fotoaparát zapnutý. Když polohu povolíte vždy, začne ji posílat také po zapnutí fotoaparátu, aniž byste GR Photo otevřeli, a v tomto zařízení uchovává 90denní historii polohy, podle které přidává polohu ke stahovaným fotkám. Vaše poloha se posílá jen do vašeho fotoaparátu."
+            "value" : "GR Photo posílá vaši polohu do fotoaparátu, dokud je fotoaparát zapnutý. Když polohu povolíte vždy, uchovává také v tomto zařízení 90denní historii polohy, podle které přidává polohu ke stahovaným fotkám. Vaše poloha se posílá jen do vašeho fotoaparátu."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Photo sender din lokalitet til dit kamera, mens kameraet er tændt. Hvis du tillader altid, begynder appen også at sende, når du tænder kameraet uden at åbne GR Photo, og den gemmer 90 dages lokalitetshistorik på denne enhed for at føje lokalitet til de billeder, du downloader. Din lokalitet sendes kun til dit kamera."
+            "value" : "GR Photo sender din lokalitet til dit kamera, mens kameraet er tændt. Hvis du tillader altid, gemmer appen også 90 dages lokalitetshistorik på denne enhed for at føje lokalitet til de billeder, du downloader. Din lokalitet sendes kun til dit kamera."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Photo sendet deinen Standort an deine Kamera, solange die Kamera eingeschaltet ist. Wenn du „Immer“ erlaubst, beginnt das Senden auch dann, wenn du die Kamera einschaltest, ohne GR Photo zu öffnen, und GR Photo speichert auf diesem Gerät einen Standortverlauf der letzten 90 Tage, um den Fotos, die du herunterlädst, Standorte hinzuzufügen. Dein Standort geht nur an deine Kamera."
+            "value" : "GR Photo sendet deinen Standort an deine Kamera, solange die Kamera eingeschaltet ist. Wenn du „Immer“ erlaubst, speichert GR Photo außerdem auf diesem Gerät einen Standortverlauf der letzten 90 Tage, um den Fotos, die du herunterlädst, Standorte hinzuzufügen. Dein Standort geht nur an deine Kamera."
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Το GR Photo στέλνει την τοποθεσία σας στην κάμερα όσο η κάμερα είναι ενεργοποιημένη. Αν επιτρέψετε την πρόσβαση πάντα, αρχίζει επίσης να τη στέλνει όταν ενεργοποιείτε την κάμερα χωρίς να ανοίξετε το GR Photo, και διατηρεί σε αυτή τη συσκευή ιστορικό τοποθεσίας 90 ημερών για να προσθέτει τοποθεσία στις φωτογραφίες που κατεβάζετε. Η τοποθεσία σας στέλνεται μόνο στην κάμερά σας."
+            "value" : "Το GR Photo στέλνει την τοποθεσία σας στην κάμερα όσο η κάμερα είναι ενεργοποιημένη. Αν επιτρέψετε την πρόσβαση πάντα, διατηρεί επίσης σε αυτή τη συσκευή ιστορικό τοποθεσίας 90 ημερών για να προσθέτει τοποθεσία στις φωτογραφίες που κατεβάζετε. Η τοποθεσία σας στέλνεται μόνο στην κάμερά σας."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Photo sends your location to your camera while the camera is on. With Always, it also starts sending when you switch the camera on without opening GR Photo, and keeps a 90-day location history on this device to add locations to the photos you download. Your location goes only to your camera."
+            "value" : "GR Photo sends your location to your camera while the camera is on. With Always, it also keeps a 90-day location history on this device to add locations to the photos you download. Your location goes only to your camera."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Photo envía tu ubicación a la cámara mientras la cámara está encendida. Si la permites siempre, también empieza a enviarla cuando enciendes la cámara sin abrir GR Photo, y guarda en este dispositivo un historial de ubicaciones de 90 días para añadir la ubicación a las fotos que descargas. Tu ubicación solo se envía a tu cámara."
+            "value" : "GR Photo envía tu ubicación a la cámara mientras la cámara está encendida. Si la permites siempre, también guarda en este dispositivo un historial de ubicaciones de 90 días para añadir la ubicación a las fotos que descargas. Tu ubicación solo se envía a tu cámara."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Photo lähettää sijaintisi kameraan, kun kamera on päällä. Jos sallit sijainnin aina, lähetys alkaa myös, kun kytket kameran päälle avaamatta GR Photoa, ja sovellus säilyttää tällä laitteella 90 päivän sijaintihistoriaa lisätäkseen sijainnin lataamiisi kuviin. Sijaintisi lähetetään vain kameraasi."
+            "value" : "GR Photo lähettää sijaintisi kameraan, kun kamera on päällä. Jos sallit sijainnin aina, sovellus myös säilyttää tällä laitteella 90 päivän sijaintihistoriaa lisätäkseen sijainnin lataamiisi kuviin. Sijaintisi lähetetään vain kameraasi."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Photo envoie votre position à votre appareil photo tant que celui-ci est allumé. Si vous l’autorisez toujours, l’envoi commence aussi lorsque vous allumez l’appareil sans ouvrir GR Photo, et l’app conserve sur cet appareil un historique de positions de 90 jours pour ajouter le lieu aux photos que vous téléchargez. Votre position n’est envoyée qu’à votre appareil photo."
+            "value" : "GR Photo envoie votre position à votre appareil photo tant que celui-ci est allumé. Si vous l’autorisez toujours, l’app conserve aussi sur cet appareil un historique de positions de 90 jours pour ajouter le lieu aux photos que vous téléchargez. Votre position n’est envoyée qu’à votre appareil photo."
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A GR Photo elküldi a tartózkodási helyét a kamerának, amíg a kamera be van kapcsolva. Ha mindig engedélyezi, akkor is elkezdi küldeni, amikor a GR Photo megnyitása nélkül kapcsolja be a kamerát, és ezen az eszközön 90 napos helyelőzményt őriz, hogy helyadatot adjon a letöltött fotókhoz. A tartózkodási helyét csak a kamerája kapja meg."
+            "value" : "A GR Photo elküldi a tartózkodási helyét a kamerának, amíg a kamera be van kapcsolva. Ha mindig engedélyezi, ezen az eszközön 90 napos helyelőzményt is őriz, hogy helyadatot adjon a letöltött fotókhoz. A tartózkodási helyét csak a kamerája kapja meg."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Photo invia la tua posizione alla fotocamera mentre la fotocamera è accesa. Se la consenti sempre, inizia a inviarla anche quando accendi la fotocamera senza aprire GR Photo, e conserva su questo dispositivo una cronologia delle posizioni di 90 giorni per aggiungere la posizione alle foto che scarichi. La tua posizione viene inviata solo alla tua fotocamera."
+            "value" : "GR Photo invia la tua posizione alla fotocamera mentre la fotocamera è accesa. Se la consenti sempre, conserva anche su questo dispositivo una cronologia delle posizioni di 90 giorni per aggiungere la posizione alle foto che scarichi. La tua posizione viene inviata solo alla tua fotocamera."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Photoは、カメラの電源が入っている間、あなたの位置情報をカメラに送信します。「常に」を許可すると、GR Photoを開かずにカメラの電源を入れたときにも送信を開始し、ダウンロードする写真に位置情報を追加するために90日分の位置情報の履歴をこのデバイスに保存します。位置情報はあなたのカメラにのみ送信されます。"
+            "value" : "GR Photoは、カメラの電源が入っている間、あなたの位置情報をカメラに送信します。「常に」を許可すると、ダウンロードする写真に位置情報を追加するために90日分の位置情報の履歴もこのデバイスに保存します。位置情報はあなたのカメラにのみ送信されます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Photo는 카메라가 켜져 있는 동안 사용자의 위치를 카메라로 보냅니다. ‘항상’을 허용하면 GR Photo를 열지 않고 카메라를 켤 때도 전송을 시작하며, 다운로드하는 사진에 위치를 추가하기 위해 90일간의 위치 기록을 이 기기에 보관합니다. 위치는 사용자의 카메라로만 전송됩니다."
+            "value" : "GR Photo는 카메라가 켜져 있는 동안 사용자의 위치를 카메라로 보냅니다. ‘항상’을 허용하면 다운로드하는 사진에 위치를 추가하기 위해 90일간의 위치 기록도 이 기기에 보관합니다. 위치는 사용자의 카메라로만 전송됩니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Photo stuurt je locatie naar je camera zolang de camera aan staat. Als je 'Altijd' toestaat, begint het versturen ook wanneer je de camera aanzet zonder GR Photo te openen, en bewaart GR Photo op dit apparaat een locatiegeschiedenis van 90 dagen om locaties toe te voegen aan de foto's die je downloadt. Je locatie gaat alleen naar je camera."
+            "value" : "GR Photo stuurt je locatie naar je camera zolang de camera aan staat. Als je 'Altijd' toestaat, bewaart GR Photo op dit apparaat ook een locatiegeschiedenis van 90 dagen om locaties toe te voegen aan de foto's die je downloadt. Je locatie gaat alleen naar je camera."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Photo wysyła Twoją lokalizację do aparatu, gdy aparat jest włączony. Jeśli zezwolisz zawsze, zacznie ją wysyłać także po włączeniu aparatu bez otwierania GR Photo i będzie przechowywać na tym urządzeniu 90-dniową historię lokalizacji, aby dodawać lokalizację do pobieranych zdjęć. Twoja lokalizacja trafia wyłącznie do Twojego aparatu."
+            "value" : "GR Photo wysyła Twoją lokalizację do aparatu, gdy aparat jest włączony. Jeśli zezwolisz zawsze, będzie też przechowywać na tym urządzeniu 90-dniową historię lokalizacji, aby dodawać lokalizację do pobieranych zdjęć. Twoja lokalizacja trafia wyłącznie do Twojego aparatu."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O GR Photo envia a sua localização para a câmara enquanto a câmara está ligada. Se permitir sempre, também começa a enviá-la quando liga a câmara sem abrir o GR Photo, e guarda neste dispositivo um histórico de localização de 90 dias para adicionar a localização às fotos que transfere. A sua localização é enviada apenas para a sua câmara."
+            "value" : "O GR Photo envia a sua localização para a câmara enquanto a câmara está ligada. Se permitir sempre, também guarda neste dispositivo um histórico de localização de 90 dias para adicionar a localização às fotos que transfere. A sua localização é enviada apenas para a sua câmara."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Photo отправляет вашу геопозицию на камеру, пока камера включена. Если разрешить доступ всегда, отправка начнётся и тогда, когда вы включите камеру, не открывая GR Photo, а на этом устройстве будет храниться история геопозиции за 90 дней, чтобы добавлять место съёмки к загружаемым фото. Ваша геопозиция отправляется только на вашу камеру."
+            "value" : "GR Photo отправляет вашу геопозицию на камеру, пока камера включена. Если разрешить доступ всегда, на этом устройстве также будет храниться история геопозиции за 90 дней, чтобы добавлять место съёмки к загружаемым фото. Ваша геопозиция отправляется только на вашу камеру."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Photo skickar din plats till kameran medan kameran är på. Om du tillåter alltid börjar appen också skicka när du slår på kameran utan att öppna GR Photo, och den sparar 90 dagars platshistorik på den här enheten för att lägga till plats i de bilder du hämtar. Din plats skickas bara till din kamera."
+            "value" : "GR Photo skickar din plats till kameran medan kameran är på. Om du tillåter alltid sparar appen också 90 dagars platshistorik på den här enheten för att lägga till plats i de bilder du hämtar. Din plats skickas bara till din kamera."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Photo ส่งตำแหน่งที่ตั้งของคุณไปยังกล้องขณะที่กล้องเปิดอยู่ หากคุณอนุญาตตลอดเวลา แอปจะเริ่มส่งเมื่อคุณเปิดกล้องโดยไม่ต้องเปิด GR Photo ด้วย และจะเก็บประวัติตำแหน่งที่ตั้ง 90 วันไว้ในอุปกรณ์นี้เพื่อเพิ่มตำแหน่งที่ตั้งให้กับรูปภาพที่คุณดาวน์โหลด ตำแหน่งที่ตั้งของคุณจะถูกส่งไปยังกล้องของคุณเท่านั้น"
+            "value" : "GR Photo ส่งตำแหน่งที่ตั้งของคุณไปยังกล้องขณะที่กล้องเปิดอยู่ หากคุณอนุญาตตลอดเวลา แอปจะเก็บประวัติตำแหน่งที่ตั้ง 90 วันไว้ในอุปกรณ์นี้ด้วย เพื่อเพิ่มตำแหน่งที่ตั้งให้กับรูปภาพที่คุณดาวน์โหลด ตำแหน่งที่ตั้งของคุณจะถูกส่งไปยังกล้องของคุณเท่านั้น"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Photo, kamera açıkken konumunuzu kameranıza gönderir. Her zaman izin verirseniz, GR Photo’yu açmadan kamerayı açtığınızda da göndermeye başlar ve indirdiğiniz fotoğraflara konum eklemek için bu aygıtta 90 günlük konum geçmişi tutar. Konumunuz yalnızca kameranıza gönderilir."
+            "value" : "GR Photo, kamera açıkken konumunuzu kameranıza gönderir. Her zaman izin verirseniz, indirdiğiniz fotoğraflara konum eklemek için bu aygıtta 90 günlük konum geçmişi de tutar. Konumunuz yalnızca kameranıza gönderilir."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "相机开机期间，GR Photo 会将你的位置发送到相机。如果你允许“始终”，在你未打开 GR Photo 而打开相机时也会开始发送，并在此设备上保存 90 天的位置历史记录，以便为你下载的照片添加位置。你的位置只会发送到你的相机。"
+            "value" : "相机开机期间，GR Photo 会将你的位置发送到相机。如果你允许“始终”，它还会在此设备上保存 90 天的位置历史记录，以便为你下载的照片添加位置。你的位置只会发送到你的相机。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "相機開機期間，GR Photo 會將你的位置傳送到相機。如果你允許「永遠」，在你未打開 GR Photo 而開啟相機時也會開始傳送，並在此裝置上保存 90 天的位置記錄，以便為你下載的照片加入位置。你的位置只會傳送到你的相機。"
+            "value" : "相機開機期間，GR Photo 會將你的位置傳送到相機。如果你允許「永遠」，它還會在此裝置上保存 90 天的位置記錄，以便為你下載的照片加入位置。你的位置只會傳送到你的相機。"
           }
         }
       }

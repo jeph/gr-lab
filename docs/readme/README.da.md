@@ -114,14 +114,13 @@ og at looks til Billedkontrol er noget, det er værd at holde styr på.
 - **Live view.** Kameraets billede via Wi-Fi: Tryk for at fokusere, indstil blænde, lukkertid, ISO
   og eksponeringskompensation på en drejeskive med de værdier, kameraet tilbyder, og skift Motor,
   Selvudløser, Lysmåling og Billedkontrol.
-- **Geotagging.** GR-kameraer har ingen GPS. Når Geotagging er slået til for et kamera, sender GR
-  Photo din telefons lokalitet til det via Bluetooth, mens kameraet er tændt, og kameraet gemmer den
-  i hvert billede. Det fortsætter, mens du bruger en anden app eller låser telefonen, starter af sig
-  selv, når du tænder kameraet, hvis du altid tillader lokalitet, og holder kameraets ur på din
-  telefons tid. Geotagging i baggrunden er alternativet, der passer sig selv: Telefonen gemmer 90
-  dages historik over, hvor den har været, og når du downloader et billede, tilføjer GR Photo det
-  sted, der blev registreret tættest på det tidspunkt, hvor billedet blev taget, i både JPEG- og
-  RAW-filer.
+- **Geotagging.** GR-kameraer har ingen GPS. Når Live-geotagging er slået til for et kamera, sender
+  GR Photo din telefons lokalitet til det via Bluetooth, mens kameraet er tændt, og kameraet gemmer
+  den i hvert billede. Det starter, når du har åbnet GR Photo, og fortsætter, mens du bruger en
+  anden app eller låser telefonen. Geotagging i baggrunden er alternativet, der passer sig selv:
+  Telefonen gemmer 90 dages historik over, hvor den har været, og når du downloader et billede,
+  tilføjer GR Photo det sted, der blev registreret tættest på det tidspunkt, hvor billedet blev
+  taget, i både JPEG- og RAW-filer. Begge er slået fra, indtil du slår dem til for et kamera.
 - **Flere kameraer.** Par alle dem, du ejer, og skift mellem dem; hvert kamera kan omdøbes eller
   glemmes.
 - **Temaer og sprog.** Temaerne Lyst, Mørkt, Mørkekammer, Papir og Cyanotypi og de 21 sprog fra
@@ -192,10 +191,10 @@ flutter run --dart-define=GR_DEMO=true
 4. **Gem et look.** Åbn et billede i Bibliotek, og tryk på Gem look, eller opret et fra bunden med +
    på siden Looks. Tryk på et look for at redigere det, og træk det til C1, C2 eller C3 for at
    indlæse det i kameraet.
-5. **Tilføj lokalitet.** GR Photo tilbyder Geotagging én gang for hvert kamera; du kan også slå det
-   til senere via ⋯ på kameraets kort. Din telefon spørger, om GR Photo må bruge dens lokalitet.
-   Derefter sendes lokaliteten, hver gang kameraet er tændt og inden for rækkevidde. Geotagging i
-   baggrunden findes under Indstillinger, Lokalitet, og kræver, at lokalitet altid er tilladt.
+5. **Tilføj lokalitet.** Slå Live-geotagging til på kameraets kort, under Bibliotek, Optag og Looks.
+   Din telefon spørger, om GR Photo må bruge dens lokalitet. Derefter sendes lokaliteten, mens GR
+   Photo kører, og kameraet er tændt og inden for rækkevidde. Geotagging i baggrunden findes under ⋯
+   på kameraets kort og kræver, at lokalitet altid er tilladt.
 
 Afbryd automatisk i Indstillinger afbryder kameraets Wi-Fi, når GR Photo ikke har været i brug et
 stykke tid (som standard 5 minutter). [Sådan opfører GR Photo sig](../behaviour.md) beskriver hvert

@@ -42,7 +42,7 @@
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>GR Photo connects to your camera over its own Wi-Fi network to browse and download photos and videos and to show its live view.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>GR Photo sends your location to your camera while the camera is on. With Always, it also starts sending when you switch the camera on without opening GR Photo, and keeps a 90-day location history on this device to add locations to the photos you download. Your location goes only to your camera.</string>
+	<string>GR Photo sends your location to your camera while the camera is on. With Always, it also keeps a 90-day location history on this device to add locations to the photos you download. Your location goes only to your camera.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>GR Photo sends your location to your camera over Bluetooth while the camera is on, so the camera can save it in the photos you take. Your location goes only to your camera.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
@@ -66,6 +66,8 @@
 					<string>flutter</string>
 					<key>UISceneDelegateClassName</key>
 					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
 				</dict>
 			</array>
 		</dict>
@@ -79,6 +81,8 @@
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

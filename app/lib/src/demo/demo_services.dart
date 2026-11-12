@@ -22,8 +22,7 @@ import 'package:grphoto/src/services.dart';
 ///
 /// The phone's location is the real one ([devicePhoneLocation]), so
 /// geotagging can be tried with its permission prompts: the simulated
-/// camera takes the positions as a GR IV does. Nothing watches for the
-/// simulated camera being switched on.
+/// camera takes the positions as a GR IV does.
 Future<AppServices> buildDemoServices() async {
   final dirs = await appDirectories();
   final data = Directory('${dirs.data.path}/demo');
@@ -71,7 +70,7 @@ Future<AppServices> buildDemoServices() async {
     trace: trace,
     media: PlatformMediaSaver(),
     background: PlatformBackgroundDownloads(),
-    clientName: () async => 'GR Photo',
+    clientName: 'GR Photo',
     dataDir: data,
     cacheDir: cache,
     debugLogDir: Directory('${data.path}/debug-log'),

@@ -5,8 +5,8 @@ import 'package:grphoto/src/theme/tokens.dart';
 
 /// What live and background geotagging each do and cost, how the two go
 /// together, the limit of the location history and what the phone asks
-/// when background geotagging is turned on. Opened by Learn more under
-/// Settings' Background geotagging switch.
+/// when background geotagging is turned on. Opened by Learn more in a
+/// camera's details, under its Background geotagging switch.
 class GeotaggingExplainedScreen extends StatelessWidget {
   const new({super.key});
 

@@ -117,14 +117,14 @@ trattare gli stili di Controllo immagine come qualcosa che vale la pena gestire.
 - **Live view.** L'immagine della fotocamera tramite Wi-Fi: tocca per mettere a fuoco, imposta
   diaframma, tempo di posa, ISO e compensazione dell'esposizione su una ghiera con i valori che la
   fotocamera offre, e cambia Scatto, Autoscatto, Misurazione e Controllo immagine.
-- **Geotagging.** Le fotocamere GR non hanno il GPS. Con Geotagging attivo per una fotocamera, GR
-  Photo le invia la posizione del tuo telefono tramite Bluetooth mentre la fotocamera è accesa, e la
-  fotocamera la salva in ogni foto. Continua mentre usi un'altra app o blocchi il telefono, si avvia
-  da solo quando accendi la fotocamera se consenti sempre l'accesso alla posizione, e mantiene
-  l'orologio della fotocamera sull'ora del tuo telefono. Geotagging in background è l'alternativa
-  che non richiede interventi: il telefono conserva per 90 giorni una cronologia dei luoghi in cui è
-  stato, e GR Photo aggiunge a ogni foto, quando la scarichi, il luogo registrato più vicino all'ora
-  dello scatto, nei file JPEG come nei RAW.
+- **Geotagging.** Le fotocamere GR non hanno il GPS. Con Geotagging in tempo reale attivo per una
+  fotocamera, GR Photo le invia la posizione del tuo telefono tramite Bluetooth mentre la fotocamera
+  è accesa, e la fotocamera la salva in ogni foto. Si avvia dopo che hai aperto GR Photo e continua
+  mentre usi un'altra app o blocchi il telefono. Geotagging in background è l'alternativa che non
+  richiede interventi: il telefono conserva per 90 giorni una cronologia dei luoghi in cui è stato,
+  e GR Photo aggiunge a ogni foto, quando la scarichi, il luogo registrato più vicino all'ora dello
+  scatto, nei file JPEG come nei RAW. Entrambi restano disattivati finché non li attivi per una
+  fotocamera.
 - **Più fotocamere.** Accoppia tutte quelle che possiedi e passa dall'una all'altra; puoi
   rinominarle o dimenticarle una per una.
 - **Temi e lingue.** I temi Chiaro, Scuro, Camera oscura, Carta e Cianotipia, e le 21 lingue dei
@@ -196,10 +196,10 @@ flutter run --dart-define=GR_DEMO=true
 4. **Salva uno stile.** Apri una foto nella Libreria e tocca Salva stile, oppure creane uno da zero
    con + nella pagina Stili. Tocca uno stile per modificarlo e trascinalo su C1, C2 o C3 per
    caricarlo nella fotocamera.
-5. **Aggiungi la posizione.** GR Photo propone Geotagging una volta per ogni fotocamera; puoi anche
-   attivarlo più tardi con ⋯ sulla scheda della fotocamera. Il telefono chiede se GR Photo può usare
-   la sua posizione. Da quel momento la posizione viene inviata ogni volta che la fotocamera è
-   accesa e a portata. Geotagging in background si trova in Impostazioni, Posizione, e richiede che
+5. **Aggiungi la posizione.** Attiva Geotagging in tempo reale sulla scheda della fotocamera, sotto
+   Libreria, Scatta e Stili. Il telefono chiede se GR Photo può usare la sua posizione. Da quel
+   momento la posizione viene inviata mentre GR Photo è in esecuzione e la fotocamera è accesa e a
+   portata. Geotagging in background si trova sotto ⋯ sulla scheda della fotocamera, e richiede che
    l'accesso alla posizione sia consentito sempre.
 
 Disconnessione automatica, in Impostazioni, esce dal Wi-Fi della fotocamera dopo che GR Photo è

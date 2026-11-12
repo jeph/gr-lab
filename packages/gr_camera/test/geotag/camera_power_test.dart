@@ -17,7 +17,7 @@ void main() {
         clockOffset: Duration(hours: 1),
       ),
     );
-    await rig.configure(syncClock: true, pending: true);
+    await rig.configure(pending: true);
     expect(rig.session.bleLinked, isTrue);
     expect(rig.session.cameraOff, isTrue);
     expect(rig.status, GeotagStatus.waitingForCamera);
@@ -99,31 +99,6 @@ void main() {
     await rig.emit(rig.fix());
     expect(rig.writes, hasLength(1));
     expect(rig.status, GeotagStatus.sending);
-    await rig.close();
-  });
-
-  testWidgets("the platform's sighting reaches a session that let go of the "
-      'camera', (tester) async {
-    final rig = await GeotagRig.start(tester, config: cameraOff);
-    await rig.configure();
-    // Linked: a sighting changes nothing.
-    rig.session.cameraSeenOn();
-    await rig.advance(const Duration(seconds: 1));
-    expect(rig.sessionEvents, isNot(contains('ble.seenOn')));
-
-    // Off with its Bluetooth off: no advertisement tells the session.
-    rig.camera.powerOffFully();
-    await rig.until(() => rig.session.parked, reason: 'the session to park');
-    rig.session.cameraSeenOn();
-    await rig.advance(const Duration(milliseconds: 100));
-    expect(rig.decisions('session.ble.seenOn').single['source'], 'platform');
-
-    rig.camera.poweredOn = true;
-    await rig.until(
-      () => rig.status == GeotagStatus.waitingForLocation,
-      reason: 'live geotagging to start',
-    );
-    expect(rig.session.parked, isFalse);
     await rig.close();
   });
 

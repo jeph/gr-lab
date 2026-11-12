@@ -63,17 +63,19 @@ void main() {
     final store = await CameraStore.load(temp);
     await store.add(_camera('1234567'));
     expect(store.current!.liveGeotagging, isFalse);
-    expect(store.current!.geotagOffered, isFalse);
+    expect(store.current!.backgroundGeotagging, isFalse);
     expect(store.current!.syncClock, isTrue);
+    expect(store.current!.keepsClock, isTrue);
     expect(store.current!.storeLocationInfoPending, isNull);
 
     await store.setLiveGeotagging('1234567', on: true);
     await store.setSyncClock('1234567', on: false);
     var reloaded = (await CameraStore.load(temp)).current!;
     expect(reloaded.liveGeotagging, isTrue);
-    // Turning it on is an answer to the offer.
-    expect(reloaded.geotagOffered, isTrue);
+    expect(reloaded.backgroundGeotagging, isFalse);
     expect(reloaded.syncClock, isFalse);
+    // Live geotagging does not keep the clock by itself.
+    expect(reloaded.keepsClock, isFalse);
     expect(reloaded.storeLocationInfoPending, isTrue);
 
     // The camera took another value than the one it is owed now.
@@ -85,22 +87,38 @@ void main() {
     await store.setLiveGeotagging('1234567', on: false);
     reloaded = (await CameraStore.load(temp)).current!;
     expect(reloaded.liveGeotagging, isFalse);
-    expect(reloaded.geotagOffered, isTrue);
     expect(reloaded.storeLocationInfoPending, isFalse);
   });
 
-  test('the offer of geotagging is remembered without turning it on', () async {
+  test('background geotagging is saved for each camera, and keeps that '
+      "camera's clock in sync whatever its clock switch says", () async {
     final store = await CameraStore.load(temp);
     await store.add(_camera('1234567'));
-    await store.markGeotagOffered('1234567');
-    final reloaded = (await CameraStore.load(temp)).current!;
-    expect(reloaded.geotagOffered, isTrue);
-    expect(reloaded.liveGeotagging, isFalse);
-    expect(reloaded.storeLocationInfoPending, isNull);
+    await store.add(_camera('7654321'));
+    await store.setSyncClock('1234567', on: false);
+    await store.setSyncClock('7654321', on: false);
+    await store.setBackgroundGeotagging('1234567', on: true);
+
+    var reloaded = (await CameraStore.load(temp)).cameras;
+    SavedCamera of(String serial) =>
+        reloaded.singleWhere((camera) => camera.serial == serial);
+    expect(of('1234567').backgroundGeotagging, isTrue);
+    expect(of('1234567').syncClock, isFalse);
+    expect(of('1234567').keepsClock, isTrue);
+    expect(of('1234567').liveGeotagging, isFalse);
+    expect(of('1234567').storeLocationInfoPending, isNull);
+    expect(of('7654321').backgroundGeotagging, isFalse);
+    expect(of('7654321').keepsClock, isFalse);
+
+    await store.setBackgroundGeotagging('1234567', on: false);
+    reloaded = (await CameraStore.load(temp)).cameras;
+    expect(of('1234567').backgroundGeotagging, isFalse);
+    // The user's own choice is what is left.
+    expect(of('1234567').keepsClock, isFalse);
   });
 
-  test('a camera saved before GR Photo had geotagging loads with geotagging '
-      'off, not offered, and its clock kept in sync', () async {
+  test('a camera saved before GR Photo had geotagging loads with both '
+      'kinds of geotagging off and its clock kept in sync', () async {
     final store = await CameraStore.load(temp);
     await store.add(_camera('1234567'));
     final file = File('${temp.path}/cameras.json');
@@ -114,7 +132,7 @@ void main() {
     final loaded = (await CameraStore.load(temp)).current!;
     expect(loaded.serial, '1234567');
     expect(loaded.liveGeotagging, isFalse);
-    expect(loaded.geotagOffered, isFalse);
+    expect(loaded.backgroundGeotagging, isFalse);
     expect(loaded.syncClock, isTrue);
     expect(loaded.storeLocationInfoPending, isNull);
   });

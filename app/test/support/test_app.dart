@@ -38,7 +38,6 @@ final class TestApp {
     required this.media,
     required this.background,
     required this.location,
-    required this.powerOnWatch,
     required this._permission,
     required this._root,
   });
@@ -56,9 +55,6 @@ final class TestApp {
   /// The phone's location service as the app sees it: its access, fixes,
   /// run notice and recorded history are scripted here.
   final FakePhoneLocation location;
-
-  /// The phone's watch for cameras being switched on; `sight` reports one.
-  final FakePowerOnWatch powerOnWatch;
   final _Permission _permission;
   final Directory _root;
   WidgetTester? _tester;
@@ -139,10 +135,7 @@ final class TestApp {
     }
   }
 
-  Future<void> _closePhone() async {
-    await location.close();
-    await powerOnWatch.close();
-  }
+  Future<void> _closePhone() => location.close();
 
   /// Waits until the library's listing and download records are on disk.
   Future<void> _flushLibrary() async {
@@ -172,12 +165,10 @@ final class TestApp {
 /// log cannot open. [saveModel] false saves the camera without its model,
 /// as when pairing could not read it.
 ///
-/// [location] and [powerOnWatch] stand for the phone's location service
-/// and its watch for cameras being switched on (by default location is
-/// allowed while the app is in use, and the watch needs no link to the
-/// camera). The saved camera has live geotagging as [liveGeotagging] says
-/// and counts as offered it unless [geotagOffered] is false, so that only
-/// tests of the offer see its dialog.
+/// [location] stands for the phone's location service (by default location
+/// is allowed while the app is in use). The saved camera has live and
+/// background geotagging as [liveGeotagging] and [backgroundGeotagging]
+/// say.
 Future<TestApp> createTestApp({
   FakeCameraConfig config = const FakeCameraConfig(),
   bool saveCamera = false,
@@ -191,9 +182,8 @@ Future<TestApp> createTestApp({
   bool debugLogBlocked = false,
   FakeMediaSource? media,
   FakePhoneLocation? location,
-  FakePowerOnWatch? powerOnWatch,
   bool liveGeotagging = false,
-  bool geotagOffered = true,
+  bool backgroundGeotagging = false,
 }) async {
   // flutter_test answers every dart:io HttpClient request with 400; the
   // fake camera serves real HTTP on loopback.
@@ -220,7 +210,7 @@ Future<TestApp> createTestApp({
         name: SavedCamera.defaultName(paired),
         pairedAt: DateTime(2026, 11, 7, 9, 41),
         liveGeotagging: liveGeotagging,
-        geotagOffered: geotagOffered,
+        backgroundGeotagging: backgroundGeotagging,
       ),
     );
   }
@@ -231,7 +221,6 @@ Future<TestApp> createTestApp({
   final saver = RecordingMediaSaver();
   final background = RecordingBackgroundDownloads();
   final phone = location ?? FakePhoneLocation();
-  final watch = powerOnWatch ?? FakePowerOnWatch();
   final trace = TraceRelay();
   final services = AppServices(
     camera: GrCameraEnvironment(
@@ -243,12 +232,11 @@ Future<TestApp> createTestApp({
       wifiApprovalShown: wifiApprovalShown,
       ensureBluetoothPermission: () async => permission.granted,
       location: phone,
-      powerOnWatch: watch,
     ),
     trace: trace,
     media: saver,
     background: background,
-    clientName: () async => 'GR Photo',
+    clientName: 'GR Photo',
     dataDir: data,
     cacheDir: cache,
     debugLogDir: debugLogDir,
@@ -262,7 +250,6 @@ Future<TestApp> createTestApp({
     media: saver,
     background: background,
     location: phone,
-    powerOnWatch: watch,
     permission: permission,
     root: root,
   );

@@ -93,8 +93,6 @@ final class AppModels {
         idle: idle,
       ),
     );
-    // Last, since a camera whose switching on started the app is connected
-    // from here.
     await geotag.start();
     return models;
   }

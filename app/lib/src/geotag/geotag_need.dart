@@ -14,18 +14,11 @@ enum GeotagNeed {
   precise,
 
   /// Location is allowed while GR Photo is in use, not at all times.
-  always,
+  always;
 
-  /// The phone's own link between GR Photo and the camera, which lets the
-  /// app start when the camera is switched on, was not made (Android's
-  /// companion device prompt was refused).
-  cameraLink;
-
-  /// The page of the phone's settings where the user allows it; null when
-  /// none does (the camera link is asked for again instead).
-  LocationSettingsPage? get settingsPage => switch (this) {
+  /// The page of the phone's settings where the user allows it.
+  LocationSettingsPage get settingsPage => switch (this) {
     phoneLocation => LocationSettingsPage.phone,
     permission || precise || always => LocationSettingsPage.app,
-    cameraLink => null,
   };
 }

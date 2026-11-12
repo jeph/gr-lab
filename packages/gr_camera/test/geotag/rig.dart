@@ -127,7 +127,7 @@ final class GeotagRig {
   /// text is the status's name, and lets what follows finish.
   Future<void> configure({
     bool live = true,
-    bool syncClock = false,
+    bool syncClock = true,
     bool? pending,
   }) async {
     geotagging.configure(

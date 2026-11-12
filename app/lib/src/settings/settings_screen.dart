@@ -14,7 +14,7 @@ import 'package:grphoto/src/widgets/pressable.dart';
 
 /// App settings (subset of mock `b-settings`): appearance and language,
 /// connecting to the camera when the app opens, leaving its Wi-Fi when the
-/// app is not used, background geotagging and its location history, the
+/// app is not used, the location history of background geotagging, the
 /// debug log, licenses, the privacy policy and the note that GR Photo is
 /// not Ricoh's.
 class SettingsScreen extends StatelessWidget {

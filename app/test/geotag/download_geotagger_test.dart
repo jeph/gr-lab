@@ -15,6 +15,9 @@ final _captured = DateTime(2026, 11, 5, 10, 15, 30);
 
 const _minute = Duration(minutes: 1);
 
+/// Serial number of the camera the files were downloaded from.
+const _serial = '1234567';
+
 /// A made-up position, 12° 15' N 34° 30' E, taken at [time].
 LocationFix _at(DateTime time) => LocationFix(
   latitude: 12.25,
@@ -55,12 +58,12 @@ void main() {
       File('${temp.path}/shot/$name').writeAsBytes(bytes, flush: true);
 
   DownloadGeotagger geotagger({
-    bool Function()? enabled,
+    bool Function(String serial)? enabled,
     Future<void> Function()? beforeMatch,
     void Function(String line)? log,
   }) => DownloadGeotagger(
     history: history,
-    enabled: enabled ?? () => true,
+    enabled: enabled ?? (serial) => serial == _serial,
     beforeMatch: beforeMatch,
     log: log ?? lines.add,
   );
@@ -121,7 +124,7 @@ void main() {
       await put('R0000004.JPG', plain),
     ];
 
-    await geotagger().tag(files);
+    await geotagger().tag(_serial, files);
 
     expect(lines, [
       'Geotag R0000001.JPG: written',
@@ -156,25 +159,48 @@ void main() {
     var prepared = 0;
 
     await geotagger(
-      enabled: () => false,
+      enabled: (_) => false,
       beforeMatch: () async => prepared++,
-    ).tag([file]);
+    ).tag(_serial, [file]);
 
     expect(await file.readAsBytes(), bytes);
     expect(prepared, 0);
     expect(lines, isEmpty);
   });
 
+  geotagTest('asks whether it is on for the camera the files came from, '
+      'and leaves the files of a camera that has it off', () async {
+    await history.add([_at(_captured)]);
+    final bytes = testTiff();
+    final file = await put('R0000001.DNG', bytes);
+    final asked = <String>[];
+    final tagger = geotagger(
+      enabled: (serial) {
+        asked.add(serial);
+        return serial == _serial;
+      },
+    );
+
+    await tagger.tag('7654321', [file]);
+    expect(asked, ['7654321']);
+    expect(await file.readAsBytes(), bytes);
+    expect(lines, isEmpty);
+
+    await tagger.tag(_serial, [file]);
+    expect(asked, ['7654321', _serial]);
+    expect(lines, ['Geotag R0000001.DNG: written']);
+  });
+
   geotagTest('asks whether it is on at each call', () async {
     await history.add([_at(_captured)]);
     final file = await put('R0000001.DNG', testTiff());
     var on = false;
-    final tagger = geotagger(enabled: () => on);
+    final tagger = geotagger(enabled: (_) => on);
 
-    await tagger.tag([file]);
+    await tagger.tag(_serial, [file]);
     expect(lines, isEmpty);
     on = true;
-    await tagger.tag([file]);
+    await tagger.tag(_serial, [file]);
     expect(lines, ['Geotag R0000001.DNG: written']);
   });
 
@@ -195,17 +221,17 @@ void main() {
     );
     final movie = await put('R0000002.MOV', _movie);
 
-    await tagger.tag([jpeg, raw]);
+    await tagger.tag(_serial, [jpeg, raw]);
     expect(prepared, 1);
     expect(lines, [
       'Geotag R0000001.JPG: written',
       'Geotag R0000001.DNG: written',
     ]);
 
-    await tagger.tag([movie]);
+    await tagger.tag(_serial, [movie]);
     expect(prepared, 1);
 
-    await tagger.tag([movie, raw]);
+    await tagger.tag(_serial, [movie, raw]);
     expect(prepared, 2);
     expect(lines.last, 'Geotag R0000001.DNG: alreadyLocated');
   });
@@ -217,7 +243,7 @@ void main() {
     final bytes = testTiff();
     final file = await put('R0000001.DNG', bytes);
 
-    await geotagger().tag([file]);
+    await geotagger().tag(_serial, [file]);
 
     expect(lines, ['Geotag R0000001.DNG: no position in the history']);
     expect(await file.readAsBytes(), bytes);
@@ -240,7 +266,7 @@ void main() {
       await put('R0000004.DNG', tiff),
     ];
 
-    await geotagger().tag(files);
+    await geotagger().tag(_serial, files);
 
     expect(lines, [
       'Geotag R0000001.DNG: failed',
@@ -260,14 +286,16 @@ void main() {
     // What prepares the history fails: the photo is matched against what
     // the history has.
     await geotagger(beforeMatch: () async => throw StateError('no phone'))
-        .tag([file]);
+        .tag(_serial, [file]);
     expect(lines, [
       'Geotag: preparing the history failed (StateError)',
       'Geotag R0000001.DNG: written',
     ]);
 
-    await geotagger(enabled: () => throw StateError('no settings')).tag([file]);
-    await geotagger(log: (line) => throw StateError('no log')).tag([file]);
-    await geotagger().tag(const []);
+    await geotagger(enabled: (_) => throw StateError('no settings'))
+        .tag(_serial, [file]);
+    await geotagger(log: (line) => throw StateError('no log'))
+        .tag(_serial, [file]);
+    await geotagger().tag(_serial, const []);
   });
 }

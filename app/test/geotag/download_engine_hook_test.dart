@@ -97,7 +97,7 @@ final class _Harness {
 
   DownloadEngine engine(
     MediaSaver media, {
-    Future<void> Function(List<File> files)? beforeSave,
+    Future<void> Function(String serial, List<File> files)? beforeSave,
   }) {
     final engine = DownloadEngine(
       dataDir: Directory('${root.path}/data'),
@@ -143,12 +143,14 @@ void main() {
       'and what it makes of them is what the photo library gets', () async {
     final media = RecordingMediaSaver();
     final seen = <(String, int)>[];
+    final cameras = <String>[];
     var calls = 0;
     var savedBefore = 0;
     final engine = h.engine(
       media,
-      beforeSave: (files) async {
+      beforeSave: (serial, files) async {
         calls++;
+        cameras.add(serial);
         savedBefore += media.shots.length;
         for (final file in files) {
           seen.add((file.uri.pathSegments.last, file.lengthSync()));
@@ -163,6 +165,7 @@ void main() {
     final tiff = testTiff(imageBytes: 4001);
     final jpeg = testJpeg(exif: testTiff(imageBytes: 64));
     expect(calls, 1);
+    expect(cameras, [_serial]);
     expect(savedBefore, 0, reason: 'nothing was saved yet');
     expect(seen, [
       ('R0000001.JPG', jpeg.length),
@@ -182,7 +185,7 @@ void main() {
     var waiting = 0;
     final engine = h.engine(
       media,
-      beforeSave: (files) async {
+      beforeSave: (serial, files) async {
         waiting++;
         await gate.future;
       },
@@ -218,7 +221,7 @@ void main() {
     final media = RecordingMediaSaver();
     final engine = h.engine(
       media,
-      beforeSave: (files) async => throw StateError('no location'),
+      beforeSave: (serial, files) async => throw StateError('no location'),
     );
 
     await engine.enqueue(_serial, [h.shot('R0000001'), h.shot('R0000002')]);
@@ -244,7 +247,7 @@ void main() {
     final media = RecordingMediaSaver();
     final engine = h.engine(
       media,
-      beforeSave: (files) => throw StateError('no location'),
+      beforeSave: (serial, files) => throw StateError('no location'),
     );
 
     await engine.enqueue(_serial, [h.shot('R0000001')]);
@@ -288,7 +291,7 @@ void main() {
         media,
         beforeSave: DownloadGeotagger(
           history: history,
-          enabled: () => true,
+          enabled: (serial) => serial == _serial,
           log: lines.add,
         ).tag,
       );

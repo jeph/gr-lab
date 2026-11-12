@@ -6,7 +6,7 @@ import 'package:grphoto/src/connection/connection_controller.dart';
 /// from the controller in this one place.
 @immutable
 final class LinkState {
-  const new _(this.label, {required this.bluetooth, this.parked = false});
+  const new _(this.label, {required this.bluetooth});
 
   factory of(ConnectionController connection) {
     final bluetooth = connection.bleLinked;
@@ -20,12 +20,12 @@ final class LinkState {
         connection.powerChange == CameraPowerChange.off
             ? LinkLabel.turningOff
             : LinkLabel.turningOn,
-      // Turned off while its Wi-Fi was in use, and left off; or off, and
-      // let go of until it says it is on.
+      // Turned off while its Wi-Fi was in use, and left off.
       ConnectionStatus.bluetooth
-          when connection.failure?.kind == ConnectFailureKind.cameraOff ||
-              connection.parked =>
+          when connection.failure?.kind == ConnectFailureKind.cameraOff =>
         LinkLabel.cameraOff,
+      // Off, and let go of until it says it is on: no link, and none lost.
+      ConnectionStatus.bluetooth when connection.parked => LinkLabel.offline,
       ConnectionStatus.connecting || ConnectionStatus.bluetooth
           when connection.reconnecting =>
         LinkLabel.reconnecting,
@@ -40,7 +40,7 @@ final class LinkState {
         connection.cameraOff ? LinkLabel.cameraOff : LinkLabel.reconnecting,
       ConnectionStatus.connected => LinkLabel.wifi,
     };
-    return LinkState._(label, bluetooth: bluetooth, parked: connection.parked);
+    return LinkState._(label, bluetooth: bluetooth);
   }
 
   final LinkLabel label;
@@ -48,10 +48,6 @@ final class LinkState {
   /// Bluetooth is linked now ([ConnectionController.bleLinked]); the
   /// camera's Wi-Fi carries on without it.
   final bool bluetooth;
-
-  /// The session let go of a camera that is off and waits for it to say
-  /// it is on ([ConnectionController.parked]): nothing failed.
-  final bool parked;
 
   /// The camera is being turned on or off
   /// ([ConnectionController.powerChange]).
@@ -66,8 +62,6 @@ final class LinkState {
     LinkLabel.turningOff => LinkKind.connecting,
     LinkLabel.bluetooth || LinkLabel.wifi => LinkKind.connected,
     LinkLabel.reconnecting => LinkKind.reconnecting,
-    // A camera that was switched off is at rest, not lost.
-    LinkLabel.cameraOff when parked => LinkKind.offline,
     LinkLabel.notConnected || LinkLabel.cameraOff => LinkKind.failed,
   };
 }
@@ -76,6 +70,8 @@ enum LinkKind { offline, connecting, connected, reconnecting, failed }
 
 /// The link state the pill and the sheet name.
 enum LinkLabel {
+  /// No link: no session, or one that let go of a camera that is off
+  /// ([ConnectionController.parked]).
   offline,
 
   /// Connecting failed.
@@ -96,10 +92,7 @@ enum LinkLabel {
   /// On the camera's Wi-Fi.
   wifi,
 
-  /// The camera is off: switched off with the Library open, while it is
-  /// turned back on or after it was left off, or off on Bluetooth alone
-  /// with the session waiting for it to be switched on
-  /// ([ConnectionController.parked]).
+  /// Switched off with the Library open, while it is turned back on.
   cameraOff,
 
   /// The camera is being turned on, until it is on and linked.

@@ -62,20 +62,4 @@ void main() {
     await File('${temp.path}/settings.json').writeAsString('{"language":"nb"}');
     expect((await SettingsController.load(temp)).language, isNull);
   });
-
-  test('background geotagging is off until turned on, is saved, and a '
-      'settings file from before it existed loads with it off', () async {
-    final settings = await SettingsController.load(temp);
-    expect(settings.backgroundGeotagging, isFalse);
-    settings.backgroundGeotagging = true;
-    await settings.flush();
-    expect((await SettingsController.load(temp)).backgroundGeotagging, isTrue);
-
-    await File('${temp.path}/settings.json')
-        .writeAsString('{"themeMode":"dark","connectWhenNearby":false}');
-    final old = await SettingsController.load(temp);
-    expect(old.theme, AppTheme.dark);
-    expect(old.connectWhenNearby, isFalse);
-    expect(old.backgroundGeotagging, isFalse);
-  });
 }

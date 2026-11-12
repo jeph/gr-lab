@@ -13,28 +13,32 @@ import 'package:grphoto/src/geotag/geotag_text.dart';
 import 'package:grphoto/src/geotag/location_history.dart';
 import 'package:grphoto/src/services.dart';
 
-/// Geotagging as the app runs it, with no widget involved: Android can
-/// start the app with no screen when a camera is switched on, so everything
-/// here is driven by listeners and streams.
+/// Geotagging as the app runs it, with no widget involved: live geotagging
+/// carries on with the app not on screen, so everything here is driven by
+/// listeners and streams.
 ///
-/// **Live mode**, per camera (`SavedCamera.liveGeotagging`): the camera
-/// layer sends the phone's location to a camera that is on
-/// ([CameraGeotagging]). This controller gives each session its settings,
-/// saves that the camera took the Store Location Info value it was owed,
-/// and has the phone watch for cameras being switched on
-/// ([PowerOnWatch]). A sighting links the camera: a session that let go of
-/// it while it was off is told ([CameraSession.cameraSeenOn]), and with no
-/// session, or one for another camera that is not on, the sighted camera
-/// becomes the current one and is connected. A sighting while another
-/// camera is on and linked is ignored: one camera at a time. \[design\]
+/// **Live geotagging**, per camera (`SavedCamera.liveGeotagging`): the
+/// camera layer sends the phone's location to a camera that is on
+/// ([CameraGeotagging]), from when GR Photo is opened and has linked the
+/// camera. This controller gives each session its settings and saves that
+/// the camera took the Store Location Info value it was owed. Nothing
+/// starts GR Photo for a camera that is switched on while the app is not
+/// running \[design\]: that was tried and did not start it
+/// (research/protocol/geotagging.md §6.3).
 ///
-/// **Background mode** (`SettingsController.backgroundGeotagging`): the
-/// phone records where it is by itself ([PhoneLocation.setHistory]), this
-/// controller moves those positions into the [history], and [geotagger]
-/// gives downloaded photos the nearest one. While background mode is on,
-/// the positions live mode takes are kept in the history too. A permission
-/// reduced later leaves the setting on: [backgroundPausedBy] says what is
-/// missing, and recording resumes by itself when it is back.
+/// **Background geotagging**, per camera
+/// (`SavedCamera.backgroundGeotagging`): while it is on for any paired
+/// camera the phone records where it is by itself
+/// ([PhoneLocation.setHistory]), this controller moves those positions
+/// into the [history], and [geotagger] gives the photos downloaded from a
+/// camera that has it on the nearest one. The positions live geotagging
+/// takes are kept in the history too then. A permission reduced later
+/// leaves the setting on: [backgroundPausedBy] says what is missing, and
+/// recording resumes by itself when it is back.
+///
+/// **The camera's clock**, per camera (`SavedCamera.keepsClock`): kept on
+/// the phone's time while the user wants it, and always with background
+/// geotagging, which matches photos by the time the camera wrote.
 final class GeotagController extends ChangeNotifier {
   new _({
     required this.connection,
@@ -42,12 +46,12 @@ final class GeotagController extends ChangeNotifier {
     required this.settings,
     required this.history,
     required this._location,
-    required this._watch,
   });
 
   /// Opens the location history under [AppServices.dataDir] and follows
   /// the connection, the paired cameras, the settings and the phone from
-  /// now on. [start] then puts the phone in line with the settings.
+  /// now on. [start] then puts the phone in line with the cameras'
+  /// settings.
   static Future<GeotagController> open({
     required AppServices services,
     required ConnectionController connection,
@@ -61,7 +65,6 @@ final class GeotagController extends ChangeNotifier {
       Directory('${services.dataDir.path}/location-history'),
     ),
     location: services.camera.location,
-    watch: services.camera.powerOnWatch,
   ).._listen();
 
   /// How long a recorded position is kept: a photo downloaded later than
@@ -74,33 +77,27 @@ final class GeotagController extends ChangeNotifier {
   /// The paired cameras, with each one's geotagging settings.
   final CameraStore cameras;
 
-  /// Holds whether background mode is on, and the app's language.
+  /// Holds the app's language, for the phone's notice.
   final SettingsController settings;
 
-  /// Where the phone has been, for background mode.
+  /// Where the phone has been, for background geotagging.
   final LocationHistory history;
 
   final PhoneLocation _location;
-  final PowerOnWatch _watch;
 
-  /// Gives downloaded photos a location from the [history] while background
-  /// mode is on; the download engine runs [DownloadGeotagger.tag] before it
-  /// saves a shot. Positions the phone recorded meanwhile are taken over
-  /// first.
+  /// Gives the photos downloaded from a camera with background geotagging
+  /// on a location from the [history]; the download engine runs
+  /// [DownloadGeotagger.tag] before it saves a shot. Positions the phone
+  /// recorded meanwhile are taken over first.
   late final DownloadGeotagger geotagger = DownloadGeotagger(
     history: history,
-    enabled: () => settings.backgroundGeotagging,
+    enabled: (serial) => _camera(serial)?.backgroundGeotagging ?? false,
     beforeMatch: drainHistory,
     log: (line) => debugPrint(line),
   );
 
   final List<StreamSubscription<void>> _phone = [];
   LocationAccess _access = LocationAccess.none;
-  bool _autoStartSupported = false;
-
-  /// Device ids of the paired cameras the phone's own link exists for
-  /// ([PowerOnWatch.associated]).
-  final Set<String> _associated = {};
 
   CameraSession? _session;
   CameraGeotagging? _geotagging;
@@ -114,27 +111,14 @@ final class GeotagController extends ChangeNotifier {
   /// only when something changed.
   Object? _configured;
 
-  /// The watched cameras as last handed to the phone.
-  String? _watched;
-
-  /// Whether there is a session, whether its camera is on and linked, and
-  /// whether it let go of a camera that is off, as last seen.
-  ({bool session, bool on, bool parked}) _power = (
-    session: false,
-    on: false,
-    parked: false,
-  );
+  /// Whether the phone was last told to record its location history, and
+  /// that call.
+  bool? _recording;
+  Future<void> _historySet = Future.value();
 
   /// Every history job so far; the next one runs after them.
   Future<void> _historyJobs = Future.value();
 
-  /// Set after a camera the phone saw on could not be reached: the phone
-  /// is told to watch afresh when it fires, so it reports the camera again
-  /// if it is still on.
-  Timer? _watchAgain;
-
-  /// Such attempts in a row; a camera that gets linked while on clears it.
-  int _unreached = 0;
   bool _disposed = false;
 
   // ---------------------------------------------------------------- state
@@ -201,29 +185,19 @@ final class GeotagController extends ChangeNotifier {
     _ => null,
   };
 
-  /// The phone can notice a camera being switched on while GR Photo is not
-  /// running, and start it.
-  bool get autoStartSupported => _autoStartSupported;
-
-  /// The phone has its own link between GR Photo and [camera]
-  /// ([PowerOnWatch.associated]); always true where none is needed.
-  bool linkedToPhone(SavedCamera camera) =>
-      _associated.contains(camera.paired.deviceId);
-
-  /// Location is allowed at all times, which starting with GR Photo closed
-  /// takes.
+  /// Location is allowed at all times, which recording the location
+  /// history takes.
   bool get locationAlways => _access.permission == LocationPermission.always;
 
-  /// Live geotagging starts by itself when [camera] is switched on, with
-  /// GR Photo closed too: location is allowed at all times and the phone
-  /// links the app to the camera.
-  bool autoStartReady(SavedCamera camera) =>
-      _autoStartSupported && locationAlways && linkedToPhone(camera);
+  /// What keeps background geotagging from recording while it is on for
+  /// [camera]; null while it records, and while it is off.
+  GeotagNeed? backgroundPausedBy(SavedCamera camera) =>
+      camera.backgroundGeotagging ? _alwaysNeed(_access) : null;
 
-  /// What keeps background mode from recording while it is on; null while
-  /// it records, and while it is off.
-  GeotagNeed? get backgroundPausedBy =>
-      settings.backgroundGeotagging ? _alwaysNeed(_access) : null;
+  /// Background geotagging is on for a paired camera, so the phone is to
+  /// record where it is.
+  bool get _backgroundWanted =>
+      cameras.cameras.any((camera) => camera.backgroundGeotagging);
 
   // -------------------------------------------------------------- actions
 
@@ -245,8 +219,9 @@ final class GeotagController extends ChangeNotifier {
   Future<void> turnLiveOff(String serial) =>
       _saved(cameras.setLiveGeotagging(serial, on: false));
 
-  /// Turns keeping [serial]'s clock on the phone's time on or off. Live
-  /// geotagging keeps it there whatever this says.
+  /// Turns keeping [serial]'s clock on the phone's time on or off.
+  /// Background geotagging keeps it there whatever this says
+  /// ([SavedCamera.keepsClock]).
   Future<void> setSyncClock(String serial, {required bool on}) =>
       _saved(cameras.setSyncClock(serial, on: on));
 
@@ -266,59 +241,26 @@ final class GeotagController extends ChangeNotifier {
   /// phone's notice ([GeotagStatus.stopped]).
   void resume() => _geotagging?.resume();
 
-  /// Sets up live geotagging starting whenever [serial]'s camera is
-  /// switched on: asks for location at all times, then for the phone's own
-  /// link to the camera where one is needed. Returns null when both are in
-  /// place.
-  Future<GeotagNeed?> setUpAutoStart(String serial) async {
-    final camera = _camera(serial);
-    if (camera == null) return GeotagNeed.cameraLink;
-    final need = _liveNeed(await _ask(_location.access));
-    if (need != null) return need;
-    if (!locationAlways) await _ask(_location.requestAlways);
-    if (!locationAlways) return GeotagNeed.always;
-    final id = camera.paired.deviceId;
-    final linked = await _guard(
-      'linking the camera to the phone',
-      () async =>
-          await _watch.associated(id) ||
-          await _watch.associate(
-            WatchedCamera(deviceId: id, name: camera.name),
-          ),
-      false,
-    );
-    if (_disposed) return null;
-    if (!linked) {
-      _associated.remove(id);
-      notifyListeners();
-      return GeotagNeed.cameraLink;
-    }
-    _associated.add(id);
-    notifyListeners();
-    // The phone may start the app for this camera from now on.
-    _armWatch();
-    return null;
-  }
-
-  /// Turns background mode on: asks for the phone's location while GR
-  /// Photo is in use, which the phone wants granted first, then for
-  /// location at all times. Only that turns it on; otherwise it stays off
-  /// and the result says what the phone lacks.
-  Future<GeotagNeed?> turnBackgroundOn() async {
+  /// Turns background geotagging on for [serial]'s camera: asks for the
+  /// phone's location while GR Photo is in use, which the phone wants
+  /// granted first, then for location at all times. Only that turns it on;
+  /// otherwise it stays off and the result says what the phone lacks.
+  Future<GeotagNeed?> turnBackgroundOn(String serial) async {
     final need = _liveNeed(await _ask(_location.requestWhileInUse));
     if (need != null) return need;
     if (!locationAlways) await _ask(_location.requestAlways);
     if (!locationAlways) return GeotagNeed.always;
-    settings.backgroundGeotagging = true;
+    await _saved(cameras.setBackgroundGeotagging(serial, on: true));
     await _setHistory();
     return null;
   }
 
-  /// Turns background mode off: the phone stops recording where it is.
-  /// What it recorded stays in the [history] until it is 90 days old or
-  /// deleted ([deleteHistory]).
-  Future<void> turnBackgroundOff() async {
-    settings.backgroundGeotagging = false;
+  /// Turns background geotagging off for [serial]'s camera. The phone
+  /// stops recording where it is once no camera has it on; what it
+  /// recorded stays in the [history] until it is 90 days old or deleted
+  /// ([deleteHistory]).
+  Future<void> turnBackgroundOff(String serial) async {
+    await _saved(cameras.setBackgroundGeotagging(serial, on: false));
     await _setHistory();
   }
 
@@ -345,11 +287,9 @@ final class GeotagController extends ChangeNotifier {
 
   /// Opens the page of the phone's settings where [need] is allowed.
   Future<void> openSettings(GeotagNeed need) async {
-    final page = need.settingsPage;
-    if (page == null) return;
     await _guard<void>(
       'opening the settings',
-      () => _location.openSettings(page),
+      () => _location.openSettings(need.settingsPage),
       null,
     );
   }
@@ -362,61 +302,33 @@ final class GeotagController extends ChangeNotifier {
     settings.addListener(_onSettings);
     _phone
       ..add(_location.accessChanges.listen(_onAccess))
-      ..add(_location.historyPending.listen((_) => unawaited(drainHistory())))
-      ..add(_watch.sightings.listen(_onSighting));
+      ..add(_location.historyPending.listen((_) => unawaited(drainHistory())));
   }
 
-  /// Reads where the phone stands, puts its recording and its watch in
-  /// line with the settings, and acts on the sightings that started the
-  /// app (a camera was switched on while GR Photo was not running). Called
-  /// once, when the app's other models exist.
+  /// Reads where the phone stands and puts its recording in line with the
+  /// cameras' settings. Called once, when the app's other models exist.
   Future<void> start() async {
     _access = await _guard('reading the access', _location.access, _access);
-    _autoStartSupported = await _guard(
-      'asking for the power-on watch',
-      _watch.supported,
-      false,
-    );
-    await _readLinks();
-    // The settings file decides, also after a restore that kept only one
+    // The cameras file decides, also after a restore that kept only one
     // of the two.
-    await _setHistory();
+    await _setHistory(again: true);
     unawaited(drainHistory());
     _onConnection();
-    _armWatch();
-    final launched = await _guard(
-      'taking the launch sightings',
-      _watch.takeLaunchSightings,
-      const <String>[],
-    );
-    launched.forEach(_onSighting);
   }
 
   void _onConnection() {
     if (_disposed) return;
     final session = connection.cameraSession;
     if (!identical(session, _session)) _attach(session);
-    final power = (
-      session: session != null,
-      on: _cameraOn,
-      parked: connection.parked,
-    );
-    final wentOff = _power.on && !power.on;
-    final nowParked = power.parked && !_power.parked;
-    _power = power;
-    if (power.on) _unreached = 0;
-    // The phone reports a camera once per watch, so it is told to watch
-    // afresh each time a camera that was on and linked no longer is, and
-    // when the session lets go of one that is off.
-    if (wentOff || nowParked) _armWatch(again: true);
     notifyListeners();
   }
 
   void _onCameras() {
     if (_disposed) return;
     _configure();
-    _armWatch();
-    unawaited(_readLinks());
+    // Background geotagging was switched, or a camera that had it on was
+    // forgotten.
+    unawaited(_setHistory());
     notifyListeners();
   }
 
@@ -433,67 +345,18 @@ final class GeotagController extends ChangeNotifier {
         access.permission == LocationPermission.always && !locationAlways;
     _access = access;
     notifyListeners();
-    // The user may have been in the phone's settings.
-    unawaited(_readLinks());
-    if (!regained || !settings.backgroundGeotagging) return;
-    unawaited(_setHistory());
+    if (!regained || !_backgroundWanted) return;
+    unawaited(_setHistory(again: true));
     unawaited(drainHistory());
   }
 
-  /// The phone saw the camera at [deviceId] advertising that it is on.
-  void _onSighting(String deviceId) {
-    if (_disposed) return;
-    final camera = cameras.cameras
-        .where((c) => c.paired.deviceId == deviceId)
-        .firstOrNull;
-    if (camera == null || !camera.liveGeotagging) return;
-    final session = connection.cameraSession;
-    if (session != null && connection.camera?.serial == camera.serial) {
-      // Links at once when the session had let go of the camera.
-      session.cameraSeenOn();
-      return;
-    }
-    if (session != null && _cameraOn) {
-      debugPrint(
-        'Geotagging: ${camera.serial} was switched on while another '
-        'camera is on and linked; left alone',
-      );
-      return;
-    }
-    debugPrint('Geotagging: ${camera.serial} was switched on; connecting');
-    unawaited(_connectSeen(camera.serial));
-  }
-
-  /// Makes [serial]'s camera, which the phone saw on, the current one and
-  /// links it. When it cannot be reached, the phone is asked to watch
-  /// afresh a little later, three times at most: a camera that is on a
-  /// moment too short, or just out of reach, is tried again without a
-  /// camera that never answers being dialled for good. A failure only the
-  /// user can clear (pairing, Bluetooth off) is left to them.
-  Future<void> _connectSeen(String serial) async {
-    await connection.connectTo(serial);
-    if (_disposed || connection.status != ConnectionStatus.failed) return;
-    if (connection.failure?.kind != ConnectFailureKind.unreachable) return;
-    if (_unreached >= _reachAttempts) return;
-    _unreached++;
-    _watchAgain?.cancel();
-    _watchAgain = Timer(_watchAgainAfter, () => _armWatch(again: true));
-  }
-
-  /// The least time between two of live mode's positions kept in the
+  /// The least time between two of live geotagging's positions kept in the
   /// history.
   static const _liveHistoryEvery = Duration(seconds: 15);
 
-  /// When the last of live mode's positions kept in the history was taken.
+  /// When the last of live geotagging's positions kept in the history was
+  /// taken.
   DateTime? _liveHistoryAt;
-
-  static const _reachAttempts = 3;
-  static const _watchAgainAfter = Duration(seconds: 30);
-
-  /// The session's camera is on and within reach: linked over Bluetooth,
-  /// or carrying on over its Wi-Fi without it.
-  bool get _cameraOn =>
-      !connection.cameraOff && (connection.bleLinked || connection.inSession);
 
   void _attach(CameraSession? session) {
     _geotagging?.removeListener(_onGeotagging);
@@ -527,7 +390,7 @@ final class GeotagController extends ChangeNotifier {
     final configured = (
       session: _session,
       live: camera.liveGeotagging,
-      syncClock: camera.syncClock,
+      syncClock: camera.keepsClock,
       pending: camera.storeLocationInfoPending,
       name: camera.name,
       language: _l10n.localeName,
@@ -537,7 +400,7 @@ final class GeotagController extends ChangeNotifier {
     geotagging.configure(
       GeotagSettings(
         live: camera.liveGeotagging,
-        syncClock: camera.syncClock,
+        syncClock: camera.keepsClock,
         storeLocationInfoPending: camera.storeLocationInfoPending,
       ),
       // Asked for each time the notice changes, so it follows a new name.
@@ -575,13 +438,14 @@ final class GeotagController extends ChangeNotifier {
     );
   }
 
-  /// A position live mode took for the camera: kept for the photos the
-  /// camera does not tag, while background mode is on. The phone takes
+  /// A position live geotagging took for the camera: kept for the photos
+  /// the camera does not tag, while the phone records its history (so
+  /// while background geotagging is on for any camera). The phone takes
   /// about one a second while the camera is on, so only one every
   /// [_liveHistoryEvery] is kept: a photo is matched by its capture time,
   /// which that resolves well, and the history stays small.
   void _onFix(LocationFix fix) {
-    if (!settings.backgroundGeotagging) return;
+    if (!_backgroundWanted) return;
     final last = _liveHistoryAt;
     if (last != null && fix.time.difference(last).abs() < _liveHistoryEvery) {
       return;
@@ -590,54 +454,21 @@ final class GeotagController extends ChangeNotifier {
     unawaited(_historyJob(() => history.add([fix])));
   }
 
-  /// Has the phone watch for every camera with live geotagging on, when
-  /// those changed or [again] asks for a fresh watch.
-  void _armWatch({bool again = false}) {
-    if (!_autoStartSupported) return;
-    final watched = [
-      for (final camera in cameras.cameras)
-        if (camera.liveGeotagging && camera.supportsGeotagging)
-          WatchedCamera(deviceId: camera.paired.deviceId, name: camera.name),
-    ];
-    final key = [for (final w in watched) '${w.deviceId}\n${w.name}']
-        .join('\n');
-    if (!again && key == _watched) return;
-    // Nothing to stop when no camera was watched before either.
-    if (watched.isEmpty && key == _watched) return;
-    _watched = key;
-    unawaited(
-      _guard<void>('watching for cameras', () => _watch.watch(watched), null),
+  /// Puts the phone's own recording in line with the cameras' settings:
+  /// on while background geotagging is on for any of them. Without
+  /// location at all times it records nothing; it is asked again when that
+  /// comes back ([_onAccess]). The phone is told when that changed, or
+  /// [again].
+  Future<void> _setHistory({bool again = false}) {
+    final enabled = _backgroundWanted;
+    if (!again && enabled == _recording) return _historySet;
+    _recording = enabled;
+    return _historySet = _guard<void>(
+      'switching the location history',
+      () => _location.setHistory(enabled: enabled),
+      null,
     );
   }
-
-  /// Reads which paired cameras the phone links GR Photo to.
-  Future<void> _readLinks() async {
-    if (!_autoStartSupported) return;
-    final linked = <String>{};
-    for (final camera in cameras.cameras) {
-      final id = camera.paired.deviceId;
-      final has = await _guard(
-        'reading the camera link',
-        () => _watch.associated(id),
-        false,
-      );
-      if (has) linked.add(id);
-    }
-    if (_disposed || setEquals(linked, _associated)) return;
-    _associated
-      ..clear()
-      ..addAll(linked);
-    notifyListeners();
-  }
-
-  /// Puts the phone's own recording in line with the setting. Without
-  /// location at all times it records nothing; it is asked again when that
-  /// comes back ([_onAccess]).
-  Future<void> _setHistory() => _guard<void>(
-    'switching the location history',
-    () => _location.setHistory(enabled: settings.backgroundGeotagging),
-    null,
-  );
 
   /// Runs [job] after every history job before it, so the phone's
   /// positions are taken over in order and a deletion misses none. The
@@ -705,7 +536,6 @@ final class GeotagController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
-    _watchAgain?.cancel();
     connection.removeListener(_onConnection);
     cameras.removeListener(_onCameras);
     settings.removeListener(_onSettings);

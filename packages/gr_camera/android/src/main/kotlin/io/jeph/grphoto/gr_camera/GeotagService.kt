@@ -28,16 +28,8 @@ import android.os.SystemClock
  * itself: the Dart side locates the phone and writes to the camera, says
  * what to show ([hold]) and when it is done ([release]).
  *
- * Two things start it:
- *
- * - The Dart side holding a run ([hold], the channel's `holdRun`).
- * - [WatchReceiver] seeing a camera come on while no Flutter engine runs
- *   ([launch]). The service then shows the notice of the last run, which
- *   [hold] keeps in the app's preferences, asks the host for an engine
- *   ([GeotagHost.startEngine]) and gives the Dart side [CLAIM_MS] to hold
- *   the run; when it does not (live geotagging was turned off since), the
- *   service ends by itself. A `releaseRun` before that is not an answer:
- *   the Dart side may release what it does not hold while it starts.
+ * Only the Dart side starts it, by holding a run ([hold], the channel's
+ * `holdRun`), so it never runs without a Flutter engine.
  *
  * While the run is `awake` (a camera is on) the service holds a partial
  * wake lock, so the Dart side's timers run with the screen off; a run that
@@ -71,14 +63,6 @@ class GeotagService : Service() {
         /** A lock renewed less than this long ago is left alone. */
         private const val RENEW_AFTER_MS = 60 * 1000L
 
-        /**
-         * How long the Dart side has to hold the run of a service started
-         * for a camera: an engine start and the start of a connection.
-         */
-        private const val CLAIM_MS = 60 * 1000L
-
-        private const val PREFERENCES = "gr_camera_location"
-
         /** Called when the user pressed Stop; the run is released already. */
         var onStopped: (() -> Unit)? = null
 
@@ -86,11 +70,12 @@ class GeotagService : Service() {
         private var notice: Notice? = null
         private var awake = false
 
-        /** The Dart side holds a run. */
-        private var held = false
-
-        /** Started for a camera; the Dart side has not held the run yet. */
-        private var launched = false
+        /**
+         * The Dart side holds a run: the service runs or is starting. See
+         * [GeotagHost.runHeld].
+         */
+        var held = false
+            private set
 
         /** `startForegroundService` was called and `onStartCommand` is due. */
         private var starting = false
@@ -98,16 +83,6 @@ class GeotagService : Service() {
 
         /** The `holdRun` calls waiting for the service to start. */
         private val waiting = mutableListOf<(Failure?) -> Unit>()
-
-        private val claimTimeout = Runnable {
-            if (!launched) return@Runnable
-            running?.log("the app did not take up the run within $CLAIM_MS ms; ending it")
-            end()
-        }
-
-        /** The service runs or is starting; see [GeotagHost.runHeld]. */
-        val active: Boolean
-            get() = held || launched
 
         /**
          * Holds a run showing [next], or updates the one held. [done] gets
@@ -117,9 +92,6 @@ class GeotagService : Service() {
             notice = next
             awake = keepAwake
             held = true
-            launched = false
-            main.removeCallbacks(claimTimeout)
-            save(context, next)
             val service = running
             if (service != null) {
                 service.show(next)
@@ -146,31 +118,6 @@ class GeotagService : Service() {
         }
 
         /**
-         * Starts the service for a camera that came on with no Flutter
-         * engine running. Null when it starts or runs already, otherwise
-         * why it does not.
-         */
-        fun launch(context: Context): String? {
-            if (active) return null
-            val kept = load(context) ?: return "no run was held before, so there is no notice to show"
-            notice = kept
-            // The camera is on and the Dart side has to start with the
-            // screen off.
-            awake = true
-            launched = true
-            return try {
-                context.startForegroundService(Intent(context, GeotagService::class.java))
-                starting = true
-                null
-            } catch (e: RuntimeException) {
-                // ForegroundServiceStartNotAllowedException without a
-                // companion device association, among others.
-                launched = false
-                "${e.javaClass.simpleName}: ${e.message}"
-            }
-        }
-
-        /**
          * The app is on screen again: asks for both service types once
          * more, for a service that Android started without the `location`
          * type or without location access (see [enterForeground]).
@@ -178,7 +125,7 @@ class GeotagService : Service() {
         fun refresh() {
             val service = running ?: return
             val shown = notice ?: return
-            if (!active) return
+            if (!held) return
             val failure = service.enterForeground(shown) ?: return
             service.log("the run could not be renewed in the foreground: ${failure.message}")
         }
@@ -196,8 +143,6 @@ class GeotagService : Service() {
         /** Ends the run and the service, and tells the host. */
         private fun end() {
             held = false
-            launched = false
-            main.removeCallbacks(claimTimeout)
             // A service still starting stops when it arrives.
             settle(null)
             running?.stop()
@@ -213,25 +158,6 @@ class GeotagService : Service() {
             val callbacks = waiting.toList()
             waiting.clear()
             for (done in callbacks) done(failure)
-        }
-
-        private fun save(context: Context, shown: Notice) {
-            context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE).edit()
-                .putString("noticeTitle", shown.title)
-                .putString("noticeText", shown.text)
-                .putString("noticeStopLabel", shown.stopLabel)
-                .putString("noticeChannel", shown.channel)
-                .apply()
-        }
-
-        private fun load(context: Context): Notice? {
-            val kept = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-            return Notice(
-                title = kept.getString("noticeTitle", null) ?: return null,
-                text = kept.getString("noticeText", null) ?: return null,
-                stopLabel = kept.getString("noticeStopLabel", null) ?: return null,
-                channel = kept.getString("noticeChannel", null) ?: return null,
-            )
         }
     }
 
@@ -252,14 +178,14 @@ class GeotagService : Service() {
         if (intent?.action == ACTION_STOP) {
             // The notification's button, sent with startService: it owes
             // Android no startForeground.
-            if (active) stoppedByUser() else stopSelf()
+            if (held) stoppedByUser() else stopSelf()
             return START_NOT_STICKY
         }
         starting = false
         val shown = notice
         if (shown == null) {
-            // Every start sets a notice first (hold, launch), and the
-            // service is not restarted by Android (START_NOT_STICKY).
+            // Every start sets a notice first (hold), and the service is
+            // not restarted by Android (START_NOT_STICKY).
             stopSelf()
             return START_NOT_STICKY
         }
@@ -268,24 +194,19 @@ class GeotagService : Service() {
         val failure = enterForeground(shown)
         if (failure != null) {
             log("not started: ${failure.code}: ${failure.message}")
-            val unclaimed = launched
             held = false
-            launched = false
             settle(failure)
             stopSelf()
-            // A start for a camera has nothing else to tell the host.
-            if (unclaimed) ended()
             return START_NOT_STICKY
         }
         running = this
-        if (!active) {
+        if (!held) {
             // Released while it was starting.
             stop()
             return START_NOT_STICKY
         }
         keepAwake()
         settle(null)
-        if (launched) awaitClaim()
         return START_NOT_STICKY
     }
 
@@ -306,8 +227,8 @@ class GeotagService : Service() {
      * count in the background (developer.android.com/develop/background-work/services/fgs/restrictions-bg-start,
      * "Restrictions on starting foreground services that need while-in-use
      * permissions"; it needs "Allow all the time"). That is the case when
-     * the Dart side, kept alive in the background, links a camera that
-     * came on and holds a run. The connected-device type alone keeps the
+     * the Dart side, still running in the background with no run held,
+     * links a camera and holds one. The connected-device type alone keeps the
      * process and the camera link going, though without positions, until
      * the app is next on screen and [refresh] asks for both types again.
      * Earlier versions accept both types and withhold the positions
@@ -332,36 +253,8 @@ class GeotagService : Service() {
         Failure("failed", "Android did not start the run: ${e.message}")
     }
 
-    /**
-     * The service was started for a camera: starts the app's Flutter
-     * engine when none is attached and waits for the Dart side to hold the
-     * run.
-     */
-    private fun awaitClaim() {
-        if (!LocationChannel.attached) {
-            val start = GeotagHost.startEngine
-            if (start == null) {
-                log("the app set no way to start its engine; ending the run")
-                end()
-                return
-            }
-            log("starting the app's Flutter engine for a camera that came on")
-            try {
-                start(applicationContext)
-            } catch (e: RuntimeException) {
-                log("the engine did not start: ${e.message}")
-                end()
-                return
-            }
-        }
-        main.postDelayed(claimTimeout, CLAIM_MS)
-    }
-
     private fun stoppedByUser() {
         log("stopped from the notification")
-        // Kept until the camera has been off, so that one still on does
-        // not start the run again at once (WatchReceiver).
-        WatchStore.setStopped(this, true)
         end()
         onStopped?.invoke()
     }

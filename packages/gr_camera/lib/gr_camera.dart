@@ -58,12 +58,10 @@ export 'package:gr_protocol/gr_protocol.dart'
         LocationRunRefusal,
         LocationSettingsPage,
         PhoneLocation,
-        PowerOnWatch,
         TraceChannel,
         TraceDirection,
         TraceEvent,
         TraceSink,
-        WatchedCamera,
         stripRicohPrefix;
 
 export 'src/camera_features.dart' show CameraBody, CameraFeature;

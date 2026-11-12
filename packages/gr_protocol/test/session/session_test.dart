@@ -2175,7 +2175,7 @@ void main() {
       camera
         ..operationMode = 1
         ..advertising!.add(advertisement(on));
-      expect((await seen).fields, {'source': 'scan'});
+      await seen;
       await ready;
       expect(s.parked, isFalse);
       expect(s.cameraOff, isFalse);
@@ -2193,32 +2193,6 @@ void main() {
         ..operationMode = 1
         ..advertising!.add(advertisement(on, payload: false));
       await ready;
-      expect(s.cameraOff, isFalse);
-      await s.close();
-    });
-
-    test("is linked at once on the platform's sighting, and only while "
-        'let go of', () async {
-      final camera = BondedCamera(operationMode: 2)
-        ..advertising = StreamController<BleAdvertisement>.broadcast();
-      final s = parkSession(camera);
-      await s.connectBluetooth(deviceId: 'cam');
-      final connects = camera.connectTimeouts.length;
-      // Linked: a sighting changes nothing.
-      s.cameraSeenOn();
-      await pumpEventQueue();
-      expect(camera.connectTimeouts, hasLength(connects));
-
-      final parked = next(s, 'ble.parked');
-      camera.dropAll();
-      await parked;
-      final seen = next(s, 'ble.seenOn');
-      final ready = next(s, 'ble.ready');
-      camera.operationMode = 1;
-      s.cameraSeenOn();
-      expect((await seen).fields, {'source': 'platform'});
-      await ready;
-      expect(s.parked, isFalse);
       expect(s.cameraOff, isFalse);
       await s.close();
     });
@@ -2273,7 +2247,6 @@ void main() {
       await pumpEventQueue();
       // The wake is linking: a sighting must not link a second time.
       camera.advertising!.add(advertisement(on));
-      s.cameraSeenOn();
       await pumpEventQueue();
       expect(camera.connectTimeouts, hasLength(connects + 1));
       camera.holdConnect!.complete();
@@ -2356,15 +2329,13 @@ void main() {
       await s.close();
     }, timeout: const Timeout(Duration(seconds: 10)));
 
-    test('close ends the scan of a session that let go of its camera, and '
-        'a sighting after it changes nothing', () async {
-      final (camera, s) = await parked();
-      final connects = camera.connectTimeouts.length;
-      await s.close();
-      expect(camera.advertising!.hasListener, isFalse);
-      s.cameraSeenOn();
-      await pumpEventQueue();
-      expect(camera.connectTimeouts, hasLength(connects));
-    });
+    test(
+      'close ends the scan of a session that let go of its camera',
+      () async {
+        final (camera, s) = await parked();
+        await s.close();
+        expect(camera.advertising!.hasListener, isFalse);
+      },
+    );
   });
 }

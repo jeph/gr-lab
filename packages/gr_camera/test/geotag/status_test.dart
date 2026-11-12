@@ -7,7 +7,7 @@ import 'rig.dart';
 /// What live geotagging says it is doing, and when it runs at all.
 void main() {
   testWidgets('it is off until the app turns it on: the phone is not asked '
-      'for anything', (tester) async {
+      'for anything, and the camera only for its clock', (tester) async {
     final rig = await GeotagRig.start(tester);
     expect(rig.status, GeotagStatus.off);
 
@@ -20,7 +20,8 @@ void main() {
     expect(rig.phone.locating, isFalse);
     expect(rig.phone.runHolds, isEmpty);
     expect(rig.phone.currentRequests, 0);
-    expect(rig.asked, isEmpty);
+    // Clock sync, which does not depend on live geotagging.
+    expect(rig.asked, everyElement('read date-time'));
     expect(rig.trace.where((e) => e.channel == TraceChannel.location), isEmpty);
     await rig.close();
   });

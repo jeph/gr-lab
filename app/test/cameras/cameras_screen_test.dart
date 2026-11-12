@@ -1111,7 +1111,12 @@ void main() {
       () => app.models.cameras.current?.name == 'Street GR',
       reason: 'renamed',
     );
-    await _tap(tester, const Key('camera-details-back'));
+    // The details are a little taller than this screen, and reaching the
+    // Name row scrolled the back button out of it.
+    await tapWhenReady(
+      tester,
+      find.byKey(const Key('camera-details-back'), skipOffstage: false),
+    );
     await pumpUntilFound(tester, find.text('Street GR').hitTestable());
 
     await app.dispose();

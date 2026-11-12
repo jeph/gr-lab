@@ -115,13 +115,13 @@ Ovládání obrazu jako něco, o co stojí za to se starat.
 - **Živý náhled.** Obraz z fotoaparátu přes Wi-Fi: klepnutím zaostřete, na voliči s hodnotami,
   které fotoaparát nabízí, nastavte clonu, čas závěrky, ISO a korekci expozice a měňte exponování,
   samospoušť, měření a Ovládání obrazu.
-- **Geotagování.** Fotoaparáty GR nemají GPS. Když je pro fotoaparát zapnuté Geotagování, GR Photo
-  mu přes Bluetooth posílá polohu vašeho telefonu, dokud je fotoaparát zapnutý, a fotoaparát ji
-  ukládá do každé fotky. Pokračuje, i když používáte jinou aplikaci nebo telefon zamknete, spustí se
-  samo při zapnutí fotoaparátu, pokud povolíte přístup k poloze vždy, a udržuje hodiny fotoaparátu
-  podle času vašeho telefonu. Geotagování na pozadí je alternativa bez starostí: telefon uchovává
-  90denní historii míst, kde byl, a GR Photo při stažení fotky přidá místo zaznamenané nejblíže času
-  jejího pořízení, a to do souborů JPEG i RAW.
+- **Geotagování.** Fotoaparáty GR nemají GPS. Když je pro fotoaparát zapnuté Živé geotagování, GR
+  Photo mu přes Bluetooth posílá polohu vašeho telefonu, dokud je fotoaparát zapnutý, a fotoaparát
+  ji ukládá do každé fotky. Spustí se, jakmile GR Photo otevřete, a pokračuje, i když používáte
+  jinou aplikaci nebo telefon zamknete. Geotagování na pozadí je alternativa bez starostí: telefon
+  uchovává 90denní historii míst, kde byl, a GR Photo při stažení fotky přidá místo zaznamenané
+  nejblíže času jejího pořízení, a to do souborů JPEG i RAW. Obojí je vypnuté, dokud to pro
+  fotoaparát nezapnete.
 - **Více fotoaparátů.** Spárujte všechny, které máte, a přepínejte mezi nimi; každý můžete
   přejmenovat nebo zapomenout.
 - **Motivy a jazyky.** Motivy Světlý, Tmavý, Temná komora, Papír a Kyanotypie a 21 jazyků, které
@@ -191,10 +191,10 @@ flutter run --dart-define=GR_DEMO=true
 4. **Uložte vzhled.** Otevřete fotku v Knihovně a klepněte na Uložit vzhled, nebo vytvořte vzhled
    úplně nový tlačítkem + na stránce Vzhledy. Klepnutím vzhled upravíte a přetažením na C1, C2 nebo
    C3 ho načtete do fotoaparátu.
-5. **Přidávejte polohu.** GR Photo nabídne Geotagování jednou pro každý fotoaparát; zapnout ho
-   můžete i později přes ⋯ na kartě fotoaparátu. Telefon se zeptá, zda GR Photo smí používat jeho
-   polohu. Od té chvíle se poloha posílá vždy, když je fotoaparát zapnutý a poblíž. Geotagování na
-   pozadí najdete v Nastavení v části Poloha a vyžaduje přístup k poloze povolený vždy.
+5. **Přidávejte polohu.** Zapněte Živé geotagování na kartě fotoaparátu pod tlačítky Knihovna,
+   Snímání a Vzhledy. Telefon se zeptá, zda GR Photo smí používat jeho polohu. Od té chvíle se
+   poloha posílá, když GR Photo běží a fotoaparát je zapnutý a poblíž. Geotagování na pozadí najdete
+   pod ⋯ na kartě fotoaparátu a vyžaduje přístup k poloze povolený vždy.
 
 Automatické odpojení v Nastavení ukončí připojení k Wi-Fi fotoaparátu, když se GR Photo nějakou dobu
 nepoužívá (ve výchozím nastavení 5 minut). Dokument [Jak se GR Photo chová](../behaviour.md)

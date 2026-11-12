@@ -118,14 +118,14 @@ Beeldregeling-looks behandelen als iets wat het beheren waard is.
 - **Live view.** Het beeld van de camera via Wi-Fi: tik om scherp te stellen, stel diafragma,
   sluitertijd, ISO en belichtingscorrectie in op een draaischijf met de waarden die de camera
   aanbiedt, en wijzig opnametransport, zelfontspanner, lichtmeting en Beeldregeling.
-- **Geotagging.** GR-camera's hebben geen gps. Als Geotagging voor een camera aanstaat, stuurt GR
-  Photo de locatie van je telefoon er via Bluetooth naartoe zolang de camera aanstaat, en bewaart de
-  camera die in elke foto. Het gaat door terwijl je een andere app gebruikt of de telefoon
-  vergrendelt, start vanzelf wanneer je de camera aanzet als je locatie altijd toestaat, en houdt de
-  klok van de camera gelijk met de tijd van je telefoon. Geotagging op de achtergrond is het
-  alternatief waarbij je niets hoeft te doen: de telefoon houdt een geschiedenis van 90 dagen bij
-  van waar hij is geweest, en GR Photo voegt bij het downloaden van een foto de plaats toe die het
-  dichtst bij het moment van de opname is vastgelegd, zowel aan JPEG- als aan RAW-bestanden.
+- **Geotagging.** GR-camera's hebben geen gps. Als Live geotagging voor een camera aanstaat, stuurt
+  GR Photo de locatie van je telefoon er via Bluetooth naartoe zolang de camera aanstaat, en bewaart
+  de camera die in elke foto. Het start zodra je GR Photo hebt geopend en gaat door terwijl je een
+  andere app gebruikt of de telefoon vergrendelt. Geotagging op de achtergrond is het alternatief
+  waarbij je niets hoeft te doen: de telefoon houdt een geschiedenis van 90 dagen bij van waar hij
+  is geweest, en GR Photo voegt bij het downloaden van een foto de plaats toe die het dichtst bij
+  het moment van de opname is vastgelegd, zowel aan JPEG- als aan RAW-bestanden. Beide staan uit
+  totdat je ze voor een camera aanzet.
 - **Meerdere camera's.** Koppel er zoveel als je hebt en wissel ertussen; geef elke camera een
   andere naam of vergeet hem.
 - **Thema's en talen.** De thema's Licht, Donker, Doka, Papier en Cyanotypie, en de 21 talen van de
@@ -199,11 +199,11 @@ flutter run --dart-define=GR_DEMO=true
 4. **Sla een look op.** Open een foto in de Bibliotheek en tik op Look opslaan, of maak er zelf een
    vanaf nul met + op de pagina Looks. Tik op een look om hem te bewerken en sleep hem naar C1, C2
    of C3 om hem in de camera te laden.
-5. **Voeg locaties toe.** GR Photo biedt Geotagging voor elke camera één keer aan; je kunt het ook
-   later aanzetten via ⋯ op de kaart van de camera. Je telefoon vraagt of GR Photo de locatie ervan
-   mag gebruiken. Vanaf dan wordt de locatie verstuurd zodra de camera aanstaat en binnen bereik is.
-   Geotagging op de achtergrond staat onder Instellingen, Locatie, en daarvoor moet locatie altijd
-   toegestaan zijn.
+5. **Voeg locaties toe.** Zet Live geotagging aan op de kaart van de camera, onder Bibliotheek,
+   Opname en Looks. Je telefoon vraagt of GR Photo de locatie ervan mag gebruiken. Vanaf dan wordt
+   de locatie verstuurd zolang GR Photo actief is en de camera aanstaat en binnen bereik is.
+   Geotagging op de achtergrond staat onder ⋯ op de kaart van de camera, en daarvoor moet locatie
+   altijd toegestaan zijn.
 
 Automatisch verbreken in Instellingen verlaat de Wi-Fi van de camera nadat GR Photo een tijd niet is
 gebruikt (standaard 5 minuten). [Hoe GR Photo zich gedraagt](../behaviour.md) beschrijft elk scherm

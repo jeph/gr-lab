@@ -6,14 +6,14 @@ import java.time.Instant
 
 /**
  * The log of one of the plugin's channels whose native code also runs with
- * no Flutter engine (a receiver woken for a camera or a position, the
- * service starting the app).
+ * no Flutter engine (a receiver woken for a position or after a restart
+ * of the phone).
  *
  * As everywhere in the plugin, a line goes to logcat and to Dart (`log` on
  * the channel, which records it in the camera trace), and only while the
  * app's "Enable debug logging" is on. Two things differ from [WifiChannel],
- * because the lines that explain a start with the app closed are written
- * before Dart runs:
+ * because the lines that explain what happened with the app closed are
+ * written with no Dart side to take them:
  *
  * - the setting is kept in the app's preferences, so a process started for
  *   a broadcast knows it;
@@ -72,10 +72,9 @@ internal class NativeLog(private val tag: String, private val key: String) {
         context.applicationContext.getSharedPreferences("gr_camera_log", Context.MODE_PRIVATE)
 }
 
-/** The logs of the location and power-on watch code. */
+/** The log of the location code. */
 internal object Logs {
     val location = NativeLog("GrPhotoLocation", "location")
-    val watch = NativeLog("GrPhotoWatch", "watch")
 }
 
 private const val HELD_LINES = 200

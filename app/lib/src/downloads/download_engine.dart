@@ -274,11 +274,12 @@ final class DownloadEngine extends ChangeNotifier {
   final MediaSaver media;
   final ValueListenable<CameraLibrary?> link;
 
-  /// Called with a shot's copies once they are all on the phone, before
-  /// the photo library gets them; it may rewrite them in place. Saving
+  /// Called with the serial number of the camera a shot came from and the
+  /// shot's copies once they are all on the phone, before the photo
+  /// library gets them; it may rewrite them in place. Saving
   /// waits for it, and a shot is saved as it is when this fails. It can
   /// get the same copies again, when a save that failed is retried.
-  final Future<void> Function(List<File> files)? beforeSave;
+  final Future<void> Function(String serial, List<File> files)? beforeSave;
 
   /// The photo library album shots are saved to; the app passes
   /// [albumFor] its flavor.
@@ -779,7 +780,7 @@ final class DownloadEngine extends ChangeNotifier {
     final prepare = beforeSave;
     if (prepare == null) return;
     try {
-      await prepare(local);
+      await prepare(job.serial, local);
     } on Object catch (e) {
       debugPrint('Preparing ${job.shot} for saving failed: $e');
     }

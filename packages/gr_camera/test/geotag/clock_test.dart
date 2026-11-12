@@ -34,7 +34,7 @@ void main() {
         tester,
         config: _clockOff(Duration(milliseconds: offsetMs)),
       );
-      await rig.configure(live: false, syncClock: true);
+      await rig.configure(live: false);
 
       final check = rig.decisions('clock.offset').single;
       final read = check['offsetMs']! as int;
@@ -125,7 +125,7 @@ void main() {
   testWidgets('while the camera stays on its clock is checked again every '
       '60 minutes', (tester) async {
     final rig = await GeotagRig.start(tester);
-    await rig.configure(live: false, syncClock: true);
+    await rig.configure(live: false);
     expect(rig.decisions('clock.offset'), hasLength(1));
     expect(rig.camera.clockWrites, isEmpty);
 
@@ -201,16 +201,20 @@ void main() {
     await rig.close();
   });
 
-  testWidgets("live geotagging keeps the clock whatever the app's clock "
-      'setting says; with neither, the clock is left alone', (tester) async {
+  testWidgets("the app's clock setting alone decides: live geotagging "
+      'leaves the clock alone while it is off, and it is set once it is '
+      'on', (tester) async {
     final rig = await GeotagRig.start(
       tester,
       config: _clockOff(const Duration(minutes: 5)),
     );
-    await rig.configure(live: false);
+    await rig.configure(syncClock: false);
+    await rig.emit(rig.fix());
     await rig.advance(const Duration(seconds: 30));
-    expect(rig.asked, isEmpty);
+    expect(rig.asked, isNot(contains('read date-time')));
     expect(rig.camera.clockWrites, isEmpty);
+    // Live geotagging itself runs.
+    expect(rig.writes, hasLength(1));
 
     await rig.configure();
     expect(rig.camera.clockWrites, hasLength(1));
@@ -219,10 +223,10 @@ void main() {
 
   testWidgets('clock sync that is turned off stops checking', (tester) async {
     final rig = await GeotagRig.start(tester);
-    await rig.configure(live: false, syncClock: true);
+    await rig.configure(live: false);
     expect(rig.decisions('clock.offset'), hasLength(1));
 
-    await rig.configure(live: false);
+    await rig.configure(live: false, syncClock: false);
     rig.camera.clockOffset = const Duration(seconds: 30);
     await rig.advance(
       const Duration(minutes: 61),
@@ -243,7 +247,7 @@ void main() {
         clockOffset: Duration(minutes: 5),
       ),
     );
-    await rig.configure(live: false, syncClock: true);
+    await rig.configure(live: false);
     await rig.advance(const Duration(seconds: 30));
     expect(rig.asked, isEmpty);
 

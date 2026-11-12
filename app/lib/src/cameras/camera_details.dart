@@ -12,8 +12,8 @@ import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/group.dart';
 
 /// One paired camera, from ⋯ on the Cameras screen (mock
-/// `b-camera-detail`): rename it, its geotagging and clock for a camera
-/// that can be sent a location ([GeotagSection]), or forget it.
+/// `b-camera-detail`): rename it, its background geotagging and clock
+/// ([GeotagSection]), or forget it.
 /// Connecting is on the Cameras screen: the camera card and its sheet, or
 /// the camera's row.
 class CameraDetailsScreen extends StatelessWidget {

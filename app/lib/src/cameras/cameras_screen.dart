@@ -15,6 +15,7 @@ import 'package:grphoto/src/connection/connect_failure_view.dart';
 import 'package:grphoto/src/connection/connection_controller.dart';
 import 'package:grphoto/src/connection/link_state.dart';
 import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/geotag/live_geotag_switch.dart';
 import 'package:grphoto/src/pairing/pairing_flow.dart';
 import 'package:grphoto/src/pairing/pairing_widgets.dart';
 import 'package:grphoto/src/sample_photos.dart';
@@ -533,7 +534,8 @@ class _CameraList extends StatelessWidget {
 /// what was there when it was aimed \[design\]: Cancel, shown only while
 /// Bluetooth is linked for a new connection, has a place of its own that
 /// is empty otherwise, and a failure is the chip's words, with its checks
-/// in the sheet.
+/// in the sheet. Live geotagging's switch ([LiveGeotagSwitch]) comes last,
+/// so the button that can come under its line pushes nothing on the card.
 class _CameraCard extends StatelessWidget {
   const new({
     required this.camera,
@@ -724,6 +726,9 @@ class _CameraCard extends StatelessWidget {
               ],
             ],
           ),
+          // A state of its own for each camera: what one refused is not
+          // said of the next.
+          LiveGeotagSwitch(key: ValueKey(camera.serial), camera: camera),
         ],
       ),
     );
@@ -744,7 +749,10 @@ enum _Link {
   /// Not linked, and the scan does not see the camera (or cannot look).
   away,
 
-  /// Not linked, but nearby.
+  /// Not linked, but nearby. A camera that is off and that the session
+  /// let go of ([ConnectionController.parked]) is not linked either: the
+  /// chip says how the camera is linked, and the power button whether it
+  /// is on.
   nearby,
 
   /// Bluetooth is being linked ([ConnectionController.bleLinking]).
@@ -752,10 +760,6 @@ enum _Link {
 
   /// Linked over Bluetooth.
   bluetooth,
-
-  /// The camera is off and the session waits for it to be switched on
-  /// ([ConnectionController.parked]); the power button links it.
-  off,
 
   /// Joining the camera's Wi-Fi, or getting it back after a loss.
   wifiConnecting,
@@ -772,7 +776,6 @@ enum _Link {
     if (onWifi) return wifi;
     if (connection.bleLinking) return bluetoothConnecting;
     if (connection.bleLinked) return bluetooth;
-    if (connection.parked) return off;
     return seen == Presence.away ? away : nearby;
   }
 
@@ -780,7 +783,6 @@ enum _Link {
     failed => Icons.error_outline_rounded,
     idle => Icons.timer_outlined,
     away || nearby => Icons.bluetooth_disabled_rounded,
-    off => Icons.power_settings_new_rounded,
     bluetoothConnecting => Icons.bluetooth_rounded,
     bluetooth => Icons.bluetooth_connected_rounded,
     wifiConnecting || wifi => Icons.wifi_rounded,
@@ -790,7 +792,7 @@ enum _Link {
     failed => c.danger,
     idle => c.accent,
     away => c.t3,
-    nearby || off => c.t2,
+    nearby => c.t2,
     bluetoothConnecting || wifiConnecting => c.t1,
     bluetooth || wifi => c.ok,
   };

@@ -3,7 +3,7 @@ import os
 
 /// The Dart end of one method channel, for native code that exists with or
 /// without a Flutter engine: iOS starts GR Photo in the background for a
-/// location or Bluetooth event before any engine, or with none at all.
+/// location event before any engine, or with none at all.
 ///
 /// Calls to Dart go out only once Dart has called in on the channel, because
 /// a call sent before Dart listens is lost.
@@ -27,9 +27,6 @@ final class DartLink {
   init(category: String) {
     logger = Logger(subsystem: "io.jeph.grphoto", category: category)
   }
-
-  /// A Flutter engine has registered the channel.
-  var attached: Bool { channel != nil }
 
   /// A Flutter engine registered the channel; Dart is not listening yet.
   func attach(_ channel: FlutterMethodChannel) {

@@ -4,7 +4,6 @@ import 'package:gr_camera/src/platform/ble_transport.dart';
 import 'package:gr_camera/src/platform/inert.dart';
 import 'package:gr_camera/src/platform/permissions.dart';
 import 'package:gr_camera/src/platform/phone_location.dart';
-import 'package:gr_camera/src/platform/power_on_watch.dart';
 import 'package:gr_camera/src/platform/tracing_phone_location.dart';
 import 'package:gr_camera/src/platform/tracing_wifi_control.dart';
 import 'package:gr_camera/src/platform/wifi_control.dart';
@@ -12,18 +11,17 @@ import 'package:gr_protocol/gr_protocol.dart';
 
 /// Everything the camera layer needs from the phone, built once at start-up:
 /// the Bluetooth transport, the Wi-Fi control, the phone's location
-/// service, the watch for a camera being switched on, where the camera
-/// serves HTTP and the [TraceSink] every exchange goes to.
+/// service, where the camera serves HTTP and the [TraceSink] every
+/// exchange goes to.
 ///
 /// The real device uses [GrCameraEnvironment.device]; the demo and tests
 /// build one from a simulated camera's transport, Wi-Fi control and HTTP
 /// client. Sessions, pairing runs and scanners are created from it
 /// (`CameraSession`, `PairingRun`, `NearbyScanner`, `PresenceScanner`).
 final class GrCameraEnvironment {
-  /// [ble], [wifi], [location] and [powerOnWatch] are wrapped so every
-  /// Bluetooth exchange, Wi-Fi call, location call and watch call reaches
-  /// [trace]. Without [location] the app may never locate the phone, and
-  /// without [powerOnWatch] the platform never watches for a camera.
+  /// [ble], [wifi] and [location] are wrapped so every Bluetooth exchange,
+  /// Wi-Fi call and location call reaches [trace]. Without [location] the
+  /// app may never locate the phone.
   /// [httpFactory] overrides the HTTP client a session builds (the demo
   /// camera serves on a loopback port). [wifiApprovalShown] emits when the
   /// OS's own network screen covers the app during a join (Android's
@@ -35,7 +33,6 @@ final class GrCameraEnvironment {
     required WifiNetworkControl wifi,
     required this.trace,
     PhoneLocation? location,
-    PowerOnWatch? powerOnWatch,
     this.cameraHost = grCameraHost,
     this._httpFactory,
     this.sessionOptions = const GrSessionOptions(),
@@ -48,18 +45,10 @@ final class GrCameraEnvironment {
          location ?? const InertPhoneLocation(),
          trace,
        ),
-       powerOnWatch = TracingPowerOnWatch(
-         powerOnWatch ?? const InertPowerOnWatch(),
-         trace,
-       ),
-       _nativeLocation = location is PlatformPhoneLocation ? location : null,
-       _nativeWatch = powerOnWatch is PlatformPowerOnWatch
-           ? powerOnWatch
-           : null;
+       _nativeLocation = location is PlatformPhoneLocation ? location : null;
 
   /// The real device: Bluetooth through `universal_ble`; the camera network
-  /// joined, the phone located and cameras watched for by this package's
-  /// native code.
+  /// joined and the phone located by this package's native code.
   factory device({required TraceSink trace}) {
     final wifi = PlatformWifiControl(trace: trace);
     return GrCameraEnvironment(
@@ -67,7 +56,6 @@ final class GrCameraEnvironment {
       wifi: wifi,
       trace: trace,
       location: PlatformPhoneLocation(trace: trace),
-      powerOnWatch: PlatformPowerOnWatch(trace: trace),
       wifiApprovalShown: wifi.approvalShown,
       ensureBluetoothPermission: ensureBluetoothPermission,
       setNativeLogging: wifi.setLogging,
@@ -81,10 +69,6 @@ final class GrCameraEnvironment {
   /// The phone's location service, for live geotagging and the location
   /// history; every call and every position taken for a camera is traced.
   final PhoneLocation location;
-
-  /// Notices a paired camera being switched on while the app is not on
-  /// screen, or not running; every call and sighting is traced.
-  final PowerOnWatch powerOnWatch;
 
   /// Address of the camera's HTTP API; [grCameraHost] for a real camera.
   final String cameraHost;
@@ -102,22 +86,20 @@ final class GrCameraEnvironment {
   final BleTransport _ble;
   final WifiNetworkControl _wifi;
 
-  /// The location service and the watch when they are this package's
-  /// native ones, whose logging [setNativeLogging] switches.
+  /// The location service when it is this package's native one, whose
+  /// logging [setNativeLogging] switches.
   final PlatformPhoneLocation? _nativeLocation;
-  final PlatformPowerOnWatch? _nativeWatch;
   final GrHttpClient Function(String host, TraceSink? trace)? _httpFactory;
   final Future<bool> Function()? _ensureBluetoothPermission;
   final Future<void> Function({required bool enabled})? _setNativeLogging;
 
-  /// Turns logging in the phone-side native code (the Wi-Fi joining code,
-  /// the location code and the power-on watch) on or off, following the
+  /// Turns logging in the phone-side native code (the Wi-Fi joining code
+  /// and the location code) on or off, following the
   /// app's debug logging setting. Native code logs nothing until this
   /// turns it on; environments without native code ignore it.
   Future<void> setNativeLogging({required bool enabled}) async {
     await _setNativeLogging?.call(enabled: enabled);
     await _nativeLocation?.setLogging(enabled: enabled);
-    await _nativeWatch?.setLogging(enabled: enabled);
   }
 
   /// Asks for Bluetooth scan/connect permission where the OS requires it

@@ -168,11 +168,6 @@ final class CameraSession {
   /// (`ble.parked`, then `ble.seenOn`).
   bool get parked => _session.parked;
 
-  /// The platform's power-on watch saw the camera advertise in its on
-  /// state (`PowerOnWatch.sightings`): a [parked] session links at once;
-  /// otherwise nothing happens.
-  void cameraSeenOn() => _session.cameraSeenOn();
-
   /// The camera's Wi-Fi was lost and the session is getting it back.
   bool get wifiRecovering => _session.wifiRecovering;
 

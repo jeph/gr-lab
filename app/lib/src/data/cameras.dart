@@ -14,7 +14,7 @@ final class SavedCamera {
     required this.pairedAt,
     this.wifiApproved = false,
     this.liveGeotagging = false,
-    this.geotagOffered = false,
+    this.backgroundGeotagging = false,
     this.syncClock = true,
     this.storeLocationInfoPending,
   });
@@ -30,7 +30,7 @@ final class SavedCamera {
       pairedAt: DateTime.parse(json['pairedAt']! as String),
       wifiApproved: json['wifiApproved'] == true,
       liveGeotagging: json['liveGeotagging'] == true,
-      geotagOffered: json['geotagOffered'] == true,
+      backgroundGeotagging: json['backgroundGeotagging'] == true,
       syncClock: json['syncClock'] != false,
       storeLocationInfoPending: pending is bool ? pending : null,
     );
@@ -47,17 +47,26 @@ final class SavedCamera {
   final bool wifiApproved;
 
   /// Live geotagging is on for this camera: while it is on and linked, the
-  /// phone's location is sent to it. Off until the user accepts the offer
-  /// or flips the switch in the camera's details.
+  /// phone's location is sent to it. Off until the user flips the switch
+  /// on the camera's card.
   final bool liveGeotagging;
 
-  /// The one-time offer of live geotagging was shown for this camera,
-  /// whatever the answer.
-  final bool geotagOffered;
+  /// Background geotagging is on for this camera: the photos downloaded
+  /// from it get the nearest place of the phone's location history. Off
+  /// until the user flips the switch in the camera's details; it stays on
+  /// when the permission it needs is taken away later, and is shown as
+  /// paused then.
+  final bool backgroundGeotagging;
 
-  /// Keep the camera's clock on the phone's time. Live geotagging does so
-  /// whatever this says.
+  /// Keep the camera's clock on the phone's time, as the user chose it.
+  /// [keepsClock] is what GR Photo does.
   final bool syncClock;
+
+  /// Whether GR Photo keeps the camera's clock on the phone's time: the
+  /// user's choice ([syncClock]), and always with [backgroundGeotagging],
+  /// which matches a photo to the history by the time the camera wrote
+  /// into it.
+  bool get keepsClock => syncClock || backgroundGeotagging;
 
   /// The value of the camera's Store Location Info that GR Photo still has
   /// to write, because the switch was flipped while the camera was off or
@@ -98,7 +107,7 @@ final class SavedCamera {
     bool? wifiApproved,
     GrPairedCamera? paired,
     bool? liveGeotagging,
-    bool? geotagOffered,
+    bool? backgroundGeotagging,
     bool? syncClock,
     bool? Function()? storeLocationInfoPending,
   }) => SavedCamera(
@@ -107,7 +116,7 @@ final class SavedCamera {
     pairedAt: pairedAt,
     wifiApproved: wifiApproved ?? this.wifiApproved,
     liveGeotagging: liveGeotagging ?? this.liveGeotagging,
-    geotagOffered: geotagOffered ?? this.geotagOffered,
+    backgroundGeotagging: backgroundGeotagging ?? this.backgroundGeotagging,
     syncClock: syncClock ?? this.syncClock,
     storeLocationInfoPending: storeLocationInfoPending == null
         ? this.storeLocationInfoPending
@@ -120,7 +129,7 @@ final class SavedCamera {
     'pairedAt': pairedAt.toUtc().toIso8601String(),
     if (wifiApproved) 'wifiApproved': true,
     if (liveGeotagging) 'liveGeotagging': true,
-    if (geotagOffered) 'geotagOffered': true,
+    if (backgroundGeotagging) 'backgroundGeotagging': true,
     if (!syncClock) 'syncClock': false,
     'storeLocationInfoPending': ?storeLocationInfoPending,
   };
@@ -203,23 +212,21 @@ final class CameraStore extends ChangeNotifier {
 
   /// Turns live geotagging on or off for [serial]. Either way the camera's
   /// Store Location Info is to follow
-  /// ([SavedCamera.storeLocationInfoPending]), and the offer of live
-  /// geotagging counts as made: the user has decided.
+  /// ([SavedCamera.storeLocationInfoPending]).
   Future<void> setLiveGeotagging(String serial, {required bool on}) => _change(
     serial,
-    (camera) => camera.copyWith(
-      liveGeotagging: on,
-      geotagOffered: true,
-      storeLocationInfoPending: () => on,
-    ),
+    (camera) =>
+        camera.copyWith(liveGeotagging: on, storeLocationInfoPending: () => on),
   );
 
-  /// Records that the offer of live geotagging was shown for [serial].
-  Future<void> markGeotagOffered(String serial) => _change(
-    serial,
-    (camera) =>
-        camera.geotagOffered ? camera : camera.copyWith(geotagOffered: true),
-  );
+  /// Turns background geotagging on or off for [serial].
+  Future<void> setBackgroundGeotagging(String serial, {required bool on}) =>
+      _change(
+        serial,
+        (camera) => camera.backgroundGeotagging == on
+            ? camera
+            : camera.copyWith(backgroundGeotagging: on),
+      );
 
   /// Turns keeping [serial]'s clock on the phone's time on or off.
   Future<void> setSyncClock(String serial, {required bool on}) => _change(

@@ -6,10 +6,9 @@ import io.flutter.embedding.engine.FlutterEngine
 
 /**
  * The app's screen. It shows the UI of the app's one Flutter engine
- * ([AppEngine]), which may be running already (live geotagging started it
- * with the app closed) and may outlive this activity (a geotagging run is
- * held). The channels that need an activity live as long as it is
- * attached.
+ * ([AppEngine]), which may outlive this activity (a geotagging run is
+ * held) and so may be running already when the user opens the app again.
+ * The channels that need an activity live as long as it is attached.
  */
 class MainActivity : FlutterActivity() {
     private var media: MediaChannel? = null
