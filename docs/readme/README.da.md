@@ -137,9 +137,18 @@ for, hvad der er observeret.
 
 ## Installation
 
-Der findes endnu ingen færdigpakkede udgivelser, så GR Lab installeres ved at bygge appen fra
-kildekoden. Det kræver [Flutter](https://flutter.dev) 3.47 eller nyere med Android SDK eller Xcode
-sat op.
+På Android henter du `gr-lab-v<version>.apk` fra den
+[seneste udgivelse](https://github.com/jeph/gr-lab/releases/latest) på din telefon og åbner filen.
+Android beder én gang om tilladelse til at installere apps fra din browser. Alle udgivelser er
+signeret med den samme nøgle, så en nyere installeres oven på den, du har, og beholder dine kameraer
+og indstillinger.
+
+På iOS sendes alle udgivelser til TestFlight, indtil videre kun til projektets egne testere. Der
+findes endnu intet offentligt TestFlight-link, så på en iPhone installeres GR Lab ved at bygge appen
+fra kildekoden.
+
+At bygge fra kildekoden kræver [Flutter](https://flutter.dev) 3.47 eller nyere med Android SDK eller
+Xcode sat op.
 
 ```sh
 git clone https://github.com/jeph/gr-lab.git
@@ -148,7 +157,9 @@ flutter run --flavor prod --release
 ```
 
 `flutter run` installerer på den telefon, der er sluttet til din computer. iOS-builds kræver dit
-eget signeringsteam med capabilities Hotspot Configuration og Access Wi-Fi Information.
+eget signeringsteam med capabilities Hotspot Configuration og Access Wi-Fi Information. Et
+Android-build fra kildekoden er signeret med din computers debugnøgle, ikke med udgivelsesnøglen, så
+Android installerer ingen af dem oven på den anden: Afinstaller først den, du har.
 
 Vil du prøve appen uden et kamera, kan du køre den i demotilstand, som bruger et simuleret GR IV med
 eksempelbilleder og virker på Android-emulatoren og iOS-simulatoren:
@@ -188,7 +199,7 @@ skærmbillede og hver forbindelsestilstand i detaljer.
 | `packages/gr_fake_camera` | Simuleret GR IV (BLE, Wi-Fi-forbindelse, HTTP-server på loopback) til test og demotilstand |
 | `app` | Flutter-appen med Kotlin- og Swift-kode til at gemme i fotobiblioteket |
 | `research` | Protokolundersøgelser: hvordan hver rute og characteristic blev fundet, belæg fra firmwaren, resultater fra hardware, åbne spørgsmål |
-| `tool` | `check.sh`, alle kontroller af kodekvaliteten; `testflight.sh`, upload til iOS |
+| `tool` | `check.sh`, alle kontroller af kodekvaliteten; de scripts, der bygger, signerer og uploader en udgivelse; `testflight.sh`, en upload til iOS fra en Mac |
 
 ### Kørsel
 
@@ -268,15 +279,28 @@ konsollen, med én undtagelse: Flutter-motoren rapporterer stadig selv uopfanged
 forbliver synlige. Indstillinger > Fejlfindingslog eksporterer loggen via delingsarket som JSON
 Lines-filer og rydder den. Loggen rummer ca. 50 MB. Den indeholder kameraets Wi-Fi-adgangskode.
 
-### TestFlight
+### Udgivelser
+
+Hvert push til `main` er en udgivelse, som laves af
+[`.github/workflows/release.yml`](../../.github/workflows/release.yml). Workflowet giver udgivelsen
+nummeret 0.0.N, én højere end den forrige, kører `tool/check.sh` og bygger flavoren `prod` af begge
+apps i release-tilstand. Android-APK'en signeres med GR Labs udgivelsesnøgle og offentliggøres på
+[udgivelsessiden](https://github.com/jeph/gr-lab/releases) med sin SHA-256-kontrolsum, en
+attestering af buildets oprindelse og den R8-mapping, der gør dens Kotlin-stack traces læselige.
+iOS-appen signeres til App Store og uploades til TestFlight. Nøglerne ligger i GitHub-miljøer, som
+kun `main` kan bruge, og de job, der bygger de to apps, har ingen af dem.
+
+`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab` kontrollerer, at en APK er bygget
+af dette workflow fra dette repository.
 
 ```sh
 tool/testflight.sh       # bygger prod-appen til iOS og uploader den til TestFlight
 ```
 
-Scriptet bygger flavoren `prod` med tidspunktet for uploaden som buildnummer og sender den til App
-Store Connect, hvor den dukker op under TestFlight, når den er behandlet. Interne testere installerer
-den fra TestFlight-appen, uden kabel. Xcode signerer og uploader buildet med en API-nøgle til App
+Scriptet lægger et build, der ikke er en udgivelse, på TestFlight fra en Mac. Det bygger flavoren
+`prod` med tidspunktet for uploaden som buildnummer og sender den til App Store Connect, hvor den
+dukker op under TestFlight, når den er behandlet. Interne testere installerer den fra
+TestFlight-appen, uden kabel. Xcode signerer og uploader buildet med en API-nøgle til App
 Store Connect, så opsætningen på en Mac består af nøglens fil `AuthKey_<key id>.p8` i
 `~/.appstoreconnect/private_keys` samt `ASC_KEY_ID` og `ASC_ISSUER_ID` i
 `~/.appstoreconnect/gr-lab.env`. Nøglen skal have rollen Admin: Apple lader ikke en nøgle med rollen

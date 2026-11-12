@@ -2,16 +2,18 @@
 
 ## Supported versions
 
-GR Lab is in early development and has no packaged releases yet. Security fixes land on the `dev`
-branch, so only its latest commit is supported.
+GR Lab is in early development. Security fixes land on the `dev` branch and reach users with the
+next [release](https://github.com/jeph/gr-lab/releases), so only the latest release and the latest
+commit on `dev` are supported.
 
 | Version | Security updates |
 | --- | --- |
+| Latest release | Supported |
 | Latest commit on `dev` | Supported |
-| Older commits and builds made from them | Not supported |
+| Older releases, older commits and builds made from them | Not supported |
 
-Before reporting a problem, reproduce it with a build of the latest `dev` commit when it is safe to
-do so.
+Before reporting a problem, reproduce it with the latest release or a build of the latest `dev`
+commit when it is safe to do so.
 
 ## Reporting a vulnerability
 
@@ -25,7 +27,8 @@ out the details, logs and screenshots until you have that private channel.
 
 Include enough information to investigate without exposing private data:
 
-- The GR Lab commit, the build (`dev` or `prod`), your phone model and its Android or iOS version.
+- The GR Lab release or commit, the build (`dev` or `prod`), your phone model and its Android or iOS
+  version.
 - The camera model and firmware version, if a camera is involved.
 - The security impact and who could exploit it.
 - Minimal reproduction steps or a proof of concept. Demo mode, which runs against the simulated

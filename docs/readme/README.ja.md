@@ -94,7 +94,11 @@ GR Labはまだ新しいアプリです。実機ログに記録されている�
 
 ## インストール
 
-パッケージ化されたリリースはまだないため、GR Labはソースからビルドしてインストールします。ビルドには[Flutter](https://flutter.dev) 3.47以降と、セットアップ済みのAndroid SDKまたはXcodeが必要です。
+Androidでは、スマートフォンで[最新のリリース](https://github.com/jeph/gr-lab/releases/latest)から`gr-lab-v<version>.apk`をダウンロードして開きます。Androidから、ブラウザーからのアプリのインストールを許可するよう一度だけ求められます。どのリリースも同じキーで署名されているため、新しいリリースはインストール済みのものに上書きでインストールされ、カメラと設定はそのまま残ります。
+
+iOSでは、どのリリースもTestFlightに送られますが、今のところ対象はプロジェクト自身のテスターだけです。公開のTestFlightリンクはまだないため、iPhoneではGR Labをソースからビルドしてインストールします。
+
+ソースからのビルドには[Flutter](https://flutter.dev) 3.47以降と、セットアップ済みのAndroid SDKまたはXcodeが必要です。
 
 ```sh
 git clone https://github.com/jeph/gr-lab.git
@@ -102,7 +106,7 @@ cd gr-lab/app
 flutter run --flavor prod --release
 ```
 
-`flutter run`は、コンピューターに接続されているスマートフォンにアプリをインストールします。iOS向けのビルドには、Hotspot ConfigurationとAccess Wi-Fi Informationのケイパビリティを持つ、ご自身の署名チームが必要です。
+`flutter run`は、コンピューターに接続されているスマートフォンにアプリをインストールします。iOS向けのビルドには、Hotspot ConfigurationとAccess Wi-Fi Informationのケイパビリティを持つ、ご自身の署名チームが必要です。ソースからビルドしたAndroid向けのビルドは、リリース用のキーではなくお使いのコンピューターのデバッグキーで署名されるため、Androidではどちらも他方に上書きしてインストールすることはできません。先にインストール済みのものをアンインストールしてください。
 
 カメラなしでアプリを試すには、デモモードで実行します。デモモードはサンプル写真の入ったシミュレートされたGR IVを使い、AndroidエミュレーターとiOSシミュレーターで動作します。
 
@@ -130,7 +134,7 @@ flutter run --dart-define=GR_DEMO=true
 | `packages/gr_fake_camera` | テストとデモモード用のシミュレートされたGR IV（BLE、Wi-Fi接続、ループバック上のHTTPサーバー） |
 | `app` | Flutterアプリ。写真ライブラリに保存するためのKotlinとSwiftのコードを含む |
 | `research` | プロトコルの調査。各ルートとキャラクタリスティックをどう見つけたか、ファームウェアからの根拠、実機での結果、未解決の疑問 |
-| `tool` | `check.sh`: コード品質のすべてのチェック。`testflight.sh`: iOSアプリのアップロード |
+| `tool` | `check.sh`: コード品質のすべてのチェック。リリースをビルドし、署名してアップロードするスクリプト。`testflight.sh`: MacからのiOSアプリのアップロード |
 
 ### 実行
 
@@ -186,13 +190,17 @@ flutter test integration_test --dart-define=GR_DEMO=true -d <simulator>
 
 GR Labは、設定 > 「デバッグログを有効にする」がオンの間、デバッグログを記録します。記録されるのは、カメラとの間で送受信するすべての内容（Bluetoothのスキャン、読み取り、書き込み、通知、すべてのHTTPリクエストと応答、WebSocketのメッセージ、ライブビューのフレームサイズ、Wi-Fi接続の各ステップ）、アプリが出力するすべての行、捕捉されなかったエラー、ネイティブのWi-Fiコードが出力する行です。この設定は`dev`では初期状態でオン、`prod`ではオフです。オフの間は、logcatにもコンソールにも何も記録されません。ただし例外がひとつあり、捕捉されなかったエラーはFlutterエンジン自身がそこに出力するため、クラッシュは引き続き確認できます。設定 > 「デバッグログ」では、ログをJSON Lines形式のファイルとして共有シートから書き出し、消去できます。ログは約50 MBまで保持されます。ログにはカメラのWi-Fiパスワードが含まれます。
 
-### TestFlight
+### リリース
+
+`main`へのプッシュはすべてリリースになり、[`.github/workflows/release.yml`](../../.github/workflows/release.yml)がそれを作成します。このワークフローは、リリースに前回より1つ大きい0.0.Nという番号を付け、`tool/check.sh`を実行し、両方のアプリの`prod`フレーバーをリリースモードでビルドします。AndroidのAPKはGR Labのリリース用キーで署名され、SHA-256チェックサム、ビルドの来歴証明（アテステーション）、Kotlinのスタックトレースを読み解くためのR8マッピングとともに[リリースページ](https://github.com/jeph/gr-lab/releases)で公開されます。iOSアプリはApp Store向けに署名され、TestFlightにアップロードされます。キーは`main`だけが使えるGitHubの環境（Environment）に保管されており、アプリをビルドするジョブはどのキーも持ちません。
+
+`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab`を実行すると、APKがこのリポジトリからそのワークフローでビルドされたものであることを確認できます。
 
 ```sh
 tool/testflight.sh       # prodのiOSアプリをビルドしてTestFlightにアップロード
 ```
 
-このスクリプトは、アップロード時刻をビルド番号として`prod`フレーバーをビルドし、App Store Connectに送信します。処理が終わると、TestFlightの下に表示されます。内部テスターは、ケーブルなしでTestFlightアプリからインストールできます。XcodeはApp Store ConnectのAPIキーでビルドに署名してアップロードするため、Macで必要な準備は、`~/.appstoreconnect/private_keys`に置くキーの`AuthKey_<key id>.p8`ファイルと、`~/.appstoreconnect/gr-lab.env`に書く`ASC_KEY_ID`と`ASC_ISSUER_ID`です。キーにはAdminロールが必要です。AppleはApp Managerのキーにチームの配布用証明書の使用を許可していないためです。アーカイブは署名なしでビルドし、書き出し時にApp Store向けに署名します（`app/ios/ExportOptions.plist`）。アーカイブ自体に署名するには、チームに登録済みのテストデバイスが必要になるからです。
+このスクリプトは、リリースではないビルドをMacからTestFlightに配信します。アップロード時刻をビルド番号として`prod`フレーバーをビルドし、App Store Connectに送信します。処理が終わると、TestFlightの下に表示されます。内部テスターは、ケーブルなしでTestFlightアプリからインストールできます。XcodeはApp Store ConnectのAPIキーでビルドに署名してアップロードするため、Macで必要な準備は、`~/.appstoreconnect/private_keys`に置くキーの`AuthKey_<key id>.p8`ファイルと、`~/.appstoreconnect/gr-lab.env`に書く`ASC_KEY_ID`と`ASC_ISSUER_ID`です。キーにはAdminロールが必要です。AppleはApp Managerのキーにチームの配布用証明書の使用を許可していないためです。アーカイブは署名なしでビルドし、書き出し時にApp Store向けに署名します（`app/ios/ExportOptions.plist`）。アーカイブ自体に署名するには、チームに登録済みのテストデバイスが必要になるからです。
 
 ## コントリビューション
 

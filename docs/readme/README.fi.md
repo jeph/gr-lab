@@ -139,9 +139,17 @@ sitä ole vielä testattu kameralla. Tehdyt havainnot löytyvät tiedostosta
 
 ## Asennus
 
-Valmiita julkaisupaketteja ei vielä ole, joten GR Lab asennetaan kääntämällä se lähdekoodista.
-Kääntämiseen tarvitaan [Flutter](https://flutter.dev) 3.47 tai uudempi sekä käyttövalmis Android SDK
-tai Xcode.
+Androidissa lataa `gr-lab-v<version>.apk` puhelimeesi
+[uusimmasta julkaisusta](https://github.com/jeph/gr-lab/releases/latest) ja avaa se. Android kysyy
+kerran lupaa asentaa sovelluksia selaimestasi. Jokainen julkaisu on allekirjoitettu samalla
+avaimella, joten uudempi asentuu nykyisen päälle ja säilyttää kamerasi ja asetuksesi.
+
+iOS:ssä jokainen julkaisu menee TestFlightiin, toistaiseksi vain projektin omille testaajille.
+Julkista TestFlight-linkkiä ei vielä ole, joten iPhoneen GR Lab asennetaan kääntämällä se
+lähdekoodista.
+
+Lähdekoodista kääntämiseen tarvitaan [Flutter](https://flutter.dev) 3.47 tai uudempi sekä
+käyttövalmis Android SDK tai Xcode.
 
 ```sh
 git clone https://github.com/jeph/gr-lab.git
@@ -151,7 +159,9 @@ flutter run --flavor prod --release
 
 `flutter run` asentaa sovelluksen puhelimeen, joka on liitetty tietokoneeseesi. iOS-käännökset
 vaativat oman allekirjoitustiimisi, jolla on Hotspot Configuration- ja Access Wi-Fi
-Information ‑ominaisuudet.
+Information ‑ominaisuudet. Lähdekoodista tehty Android-käännös allekirjoitetaan tietokoneesi
+debug-avaimella eikä julkaisuavaimella, joten Android ei asenna kumpaakaan toisen päälle: poista
+ensin asennettuna oleva sovellus.
 
 Jos haluat kokeilla sovellusta ilman kameraa, aja se esittelytilassa, joka käyttää simuloitua
 GR IV ‑kameraa esimerkkikuvineen ja toimii Android-emulaattorissa ja iOS-simulaattorissa:
@@ -191,7 +201,7 @@ ja jokaisen yhteystilan yksityiskohtaisesti.
 | `packages/gr_fake_camera` | Simuloitu GR IV (BLE, Wi-Fi-liittyminen, HTTP-palvelin loopback-osoitteessa) testejä ja esittelytilaa varten |
 | `app` | Flutter-sovellus sekä Kotlin- ja Swift-koodi kuvakirjastoon tallentamista varten |
 | `research` | Protokollatutkimus: miten kukin reitti ja ominaisuus (characteristic) löydettiin, laiteohjelmistosta saatu näyttö, laitteistotulokset, avoimet kysymykset |
-| `tool` | `check.sh`, kaikki koodin laatutarkistukset; `testflight.sh`, iOS-lähetys |
+| `tool` | `check.sh`, kaikki koodin laatutarkistukset; skriptit, jotka kääntävät, allekirjoittavat ja lähettävät julkaisun; `testflight.sh`, iOS-lähetys Macista |
 
 ### Ajaminen
 
@@ -276,15 +286,29 @@ itse, joten kaatumiset pysyvät näkyvissä. Asetukset > Vianetsintäloki vie lo
 JSON Lines ‑tiedostoina ja tyhjentää sen. Lokia säilytetään noin 50 Mt. Se sisältää kameran
 Wi-Fi-salasanan.
 
-### TestFlight
+### Julkaisut
+
+Jokainen push `main`-haaraan on julkaisu, jonka tekee
+[`.github/workflows/release.yml`](../../.github/workflows/release.yml). Työnkulku numeroi julkaisun
+0.0.N, yhtä suuremmaksi kuin edellinen, ajaa `tool/check.sh`-skriptin ja kääntää kummankin
+sovelluksen `prod`-flavorin release-tilassa. Androidin APK allekirjoitetaan GR Labin
+julkaisuavaimella ja julkaistaan [julkaisusivulla](https://github.com/jeph/gr-lab/releases)
+SHA-256-tarkistussummansa, käännöksen alkuperätodistuksen ja sen R8-mappingin kanssa, jolla APK:n
+Kotlin-kutsupinot voi lukea. iOS-sovellus allekirjoitetaan App Storea varten ja lähetetään
+TestFlightiin. Avaimet säilytetään GitHub-ympäristöissä, joita vain `main` voi käyttää, eikä
+sovellukset kääntävillä töillä ole niistä yhtäkään.
+
+`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab` tarkistaa, että APK on käännetty
+kyseisellä työnkululla tästä repositoriosta.
 
 ```sh
 tool/testflight.sh       # kääntää iOS-sovelluksen prod-version ja lähettää sen TestFlightiin
 ```
 
-Skripti kääntää `prod`-flavorin, käyttää lähetysajankohtaa koontiversion numerona ja lähettää
-käännöksen App Store Connectiin, jossa se ilmestyy käsittelyn jälkeen TestFlightin alle. Sisäiset
-testaajat asentavat sen TestFlight-sovelluksesta ilman kaapelia. Xcode allekirjoittaa ja lähettää
+Skripti vie Macista TestFlightiin käännöksen, joka ei ole julkaisu. Se kääntää `prod`-flavorin,
+käyttää lähetysajankohtaa koontiversion numerona ja lähettää käännöksen App Store Connectiin, jossa
+se ilmestyy käsittelyn jälkeen TestFlightin alle. Sisäiset testaajat asentavat sen
+TestFlight-sovelluksesta ilman kaapelia. Xcode allekirjoittaa ja lähettää
 käännöksen App Store Connectin API-avaimella, joten Macissa tarvitaan avaimen tiedosto
 `AuthKey_<key id>.p8` kansiossa `~/.appstoreconnect/private_keys` sekä `ASC_KEY_ID` ja
 `ASC_ISSUER_ID` tiedostossa `~/.appstoreconnect/gr-lab.env`. Avaimella on oltava Admin-rooli: Apple

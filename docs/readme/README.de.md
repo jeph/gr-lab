@@ -143,9 +143,18 @@ und wurde noch nicht an einer Kamera getestet. Was bisher beobachtet wurde, steh
 
 ## Installation
 
-Es gibt noch keine fertigen Releases, GR Lab wird also installiert, indem man es aus dem Quellcode
-baut. Für den Build wird [Flutter](https://flutter.dev) 3.47 oder neuer mit eingerichtetem Android
-SDK oder Xcode benötigt.
+Unter Android lädst du `gr-lab-v<version>.apk` aus dem
+[neuesten Release](https://github.com/jeph/gr-lab/releases/latest) auf dein Smartphone und öffnest
+die Datei. Android fragt einmalig nach der Erlaubnis, Apps aus deinem Browser zu installieren. Jedes
+Release ist mit demselben Schlüssel signiert, ein neueres wird also über das vorhandene installiert
+und behält deine Kameras und Einstellungen.
+
+Unter iOS geht jedes Release an TestFlight, vorerst nur an die eigenen Tester des Projekts. Einen
+öffentlichen TestFlight-Link gibt es noch nicht, auf einem iPhone wird GR Lab also installiert,
+indem man es aus dem Quellcode baut.
+
+Für den Build aus dem Quellcode wird [Flutter](https://flutter.dev) 3.47 oder neuer mit
+eingerichtetem Android SDK oder Xcode benötigt.
 
 ```sh
 git clone https://github.com/jeph/gr-lab.git
@@ -155,7 +164,9 @@ flutter run --flavor prod --release
 
 `flutter run` installiert die App auf dem Smartphone, das an deinen Computer angeschlossen ist.
 iOS-Builds brauchen dein eigenes Signing-Team mit den Capabilities Hotspot Configuration und Access
-Wi-Fi Information.
+Wi-Fi Information. Ein Android-Build aus dem Quellcode ist mit dem Debug-Schlüssel deines Computers
+signiert, nicht mit dem Release-Schlüssel. Android installiert deshalb keinen der beiden über den
+anderen: Deinstalliere zuerst die vorhandene App.
 
 Um die App ohne Kamera auszuprobieren, starte sie im Demomodus. Er verwendet eine simulierte GR IV
 mit Beispielfotos und funktioniert im Android-Emulator und im iOS-Simulator:
@@ -196,7 +207,7 @@ beschreibt jeden Bildschirm und jeden Verbindungszustand im Detail.
 | `packages/gr_fake_camera` | Simulierte GR IV (BLE, WLAN-Verbindung, HTTP-Server auf Loopback) für Tests und den Demomodus |
 | `app` | Die Flutter-App, mit Kotlin- und Swift-Code für das Speichern in der Fotomediathek |
 | `research` | Protokollforschung: wie jede Route und jede Characteristic gefunden wurde, Belege aus der Firmware, Hardware-Ergebnisse, offene Fragen |
-| `tool` | `check.sh`, alle Prüfungen der Codequalität; `testflight.sh`, der iOS-Upload |
+| `tool` | `check.sh`, alle Prüfungen der Codequalität; die Skripte, die ein Release bauen, signieren und hochladen; `testflight.sh`, ein iOS-Upload von einem Mac |
 
 ### Ausführen
 
@@ -281,15 +292,29 @@ abgefangene Fehler dort weiterhin selbst, Abstürze bleiben also sichtbar. Einst
 Debug-Protokoll exportiert das Protokoll über das Teilen-Menü als JSON-Lines-Dateien und löscht es.
 Das Protokoll behält etwa 50 MB. Es enthält das WLAN-Passwort der Kamera.
 
-### TestFlight
+### Releases
+
+Jeder Push auf `main` ist ein Release, erstellt von
+[`.github/workflows/release.yml`](../../.github/workflows/release.yml). Der Workflow nummeriert das
+Release mit 0.0.N, eins höher als das letzte, führt `tool/check.sh` aus und baut den Flavor `prod`
+beider Apps im Release-Modus. Das Android-APK wird mit dem Release-Schlüssel von GR Lab signiert und
+auf der [Release-Seite](https://github.com/jeph/gr-lab/releases) veröffentlicht, zusammen mit seiner
+SHA-256-Prüfsumme, einer Attestierung der Build-Herkunft und dem R8-Mapping, mit dem sich seine
+Kotlin-Stacktraces lesen lassen. Die iOS-App wird für den App Store signiert und zu TestFlight
+hochgeladen. Die Schlüssel liegen in GitHub-Umgebungen, die nur `main` verwenden kann, und die Jobs,
+die die Apps bauen, haben auf keinen davon Zugriff.
+
+`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab` prüft, ob ein APK von diesem
+Workflow aus diesem Repository gebaut wurde.
 
 ```sh
 tool/testflight.sh       # baut die prod-iOS-App und lädt sie zu TestFlight hoch
 ```
 
-Das Skript baut den Flavor `prod` mit dem Zeitpunkt des Uploads als Build-Nummer und sendet ihn an
-App Store Connect, wo er nach der Verarbeitung unter TestFlight erscheint. Interne Tester
-installieren ihn aus der TestFlight-App, ohne Kabel. Xcode signiert den Build und lädt ihn mit einem
+Das Skript bringt von einem Mac aus einen Build zu TestFlight, der kein Release ist. Es baut den
+Flavor `prod` mit dem Zeitpunkt des Uploads als Build-Nummer und sendet ihn an App Store Connect, wo
+er nach der Verarbeitung unter TestFlight erscheint. Interne Tester installieren ihn aus der
+TestFlight-App, ohne Kabel. Xcode signiert den Build und lädt ihn mit einem
 API-Schlüssel für App Store Connect hoch; die Einrichtung auf einem Mac besteht daher aus der Datei
 `AuthKey_<key id>.p8` des Schlüssels in `~/.appstoreconnect/private_keys` sowie `ASC_KEY_ID` und
 `ASC_ISSUER_ID` in `~/.appstoreconnect/gr-lab.env`. Der Schlüssel braucht die Rolle „Admin“: Apple

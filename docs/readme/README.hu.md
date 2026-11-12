@@ -141,9 +141,18 @@ származik, kamerán még nem teszteltük. A megfigyelt eredményeket lásd itt:
 
 ## Telepítés
 
-Csomagolt kiadások még nincsenek, ezért a GR Lab úgy telepíthető, hogy a forráskódból lefordítja.
-A fordításhoz [Flutter](https://flutter.dev) 3.47 vagy újabb szükséges, beállított Android SDK-val
-vagy Xcode-dal.
+Androidon töltse le a telefonjára a `gr-lab-v<version>.apk` fájlt a
+[legújabb kiadásból](https://github.com/jeph/gr-lab/releases/latest), és nyissa meg. Az Android
+egyszer engedélyt kér ahhoz, hogy a böngészőjéből alkalmazásokat telepíthessen. Minden kiadás
+ugyanazzal a kulccsal van aláírva, így az újabb a meglévőre települ, és megőrzi a kameráit és a
+beállításait.
+
+iOS-en minden kiadás a TestFlightra kerül, egyelőre csak a projekt saját tesztelőihez. Nyilvános
+TestFlight-hivatkozás még nincs, ezért iPhone-on a GR Lab úgy telepíthető, hogy a forráskódból
+lefordítja.
+
+A forráskódból történő fordításhoz [Flutter](https://flutter.dev) 3.47 vagy újabb szükséges,
+beállított Android SDK-val vagy Xcode-dal.
 
 ```sh
 git clone https://github.com/jeph/gr-lab.git
@@ -152,7 +161,9 @@ flutter run --flavor prod --release
 ```
 
 A `flutter run` a számítógéphez csatlakoztatott telefonra telepít. Az iOS-buildekhez saját aláíró
-csapatra van szükség, a Hotspot Configuration és az Access Wi-Fi Information képességgel.
+csapatra van szükség, a Hotspot Configuration és az Access Wi-Fi Information képességgel. A
+forráskódból készült Android-buildet a számítógépe hibakeresési kulcsa írja alá, nem a kiadási
+kulcs, ezért az Android egyiket sem telepíti a másikra: előbb távolítsa el a meglévőt.
 
 Ha kamera nélkül szeretné kipróbálni az alkalmazást, futtassa demó módban, amely mintafotókkal
 ellátott, szimulált GR IV kamerát használ, és az Android-emulátoron és az iOS-szimulátoron is
@@ -195,7 +206,7 @@ részletesen leírja az egyes képernyőket és minden kapcsolati állapotot.
 | `packages/gr_fake_camera` | Szimulált GR IV (BLE, Wi-Fi-csatlakozás, HTTP-kiszolgáló a loopback interfészen) a tesztekhez és a demó módhoz |
 | `app` | A Flutter-alkalmazás, a fotókönyvtárba mentést végző Kotlin- és Swift-kóddal |
 | `research` | Protokollkutatás: hogyan találtuk meg az egyes útvonalakat és karakterisztikákat, firmware-bizonyítékok, hardveres eredmények, nyitott kérdések |
-| `tool` | `check.sh`, az összes kódminőségi ellenőrzés; `testflight.sh`, az iOS-feltöltés |
+| `tool` | `check.sh`, az összes kódminőségi ellenőrzés; a kiadást lefordító, aláíró és feltöltő szkriptek; `testflight.sh`, iOS-feltöltés Macről |
 
 ### Futtatás
 
@@ -282,15 +293,30 @@ maga jelenti ott, így az összeomlások láthatók maradnak. A Beállítások >
 megosztási lapon keresztül JSON Lines fájlokként exportálja a naplót, majd törli. A napló
 körülbelül 50 MB-ot őriz meg. Tartalmazza a kamera Wi-Fi-jelszavát.
 
-### TestFlight
+### Kiadások
+
+A `main` ágra érkező minden push egy kiadás, amelyet a
+[`.github/workflows/release.yml`](../../.github/workflows/release.yml) készít el. A munkafolyamat a
+kiadásnak a 0.0.N számot adja, eggyel nagyobbat az előzőnél, lefuttatja a `tool/check.sh` szkriptet,
+és mindkét alkalmazás `prod` flavorját kiadási módban fordítja le. Az Android APK-t a GR Lab
+kiadási kulcsa írja alá, és a [kiadások oldalán](https://github.com/jeph/gr-lab/releases) jelenik
+meg, az SHA-256 ellenőrzőösszegével, a build eredetét igazoló tanúsítással és azzal az
+R8-leképezéssel együtt, amellyel a Kotlin-veremkiírásai olvashatók. Az iOS-alkalmazás az App Store
+számára van aláírva, és a TestFlightra kerül feltöltésre. A kulcsok olyan GitHub-környezetekben
+vannak, amelyeket csak a `main` használhat, és az alkalmazásokat fordító feladatok egyiket sem
+kapják meg.
+
+A `gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab` azt ellenőrzi, hogy egy APK-t ez
+a munkafolyamat fordított-e le ebből a tárolóból.
 
 ```sh
 tool/testflight.sh       # lefordítja a prod iOS-alkalmazást, és feltölti a TestFlightra
 ```
 
-A szkript a `prod` flavort fordítja le, buildszámként a feltöltés időpontját használva, és elküldi
-az App Store Connectnek, ahol a feldolgozás után megjelenik a TestFlight alatt. A belső tesztelők a
-TestFlight alkalmazásból telepítik, kábel nélkül. Az Xcode egy App Store Connect API-kulccsal írja
+A szkript olyan buildet tesz fel Macről a TestFlightra, amely nem kiadás. A `prod` flavort fordítja
+le, buildszámként a feltöltés időpontját használva, és elküldi az App Store Connectnek, ahol a
+feldolgozás után megjelenik a TestFlight alatt. A belső tesztelők a TestFlight alkalmazásból
+telepítik, kábel nélkül. Az Xcode egy App Store Connect API-kulccsal írja
 alá és tölti fel a buildet, így a Macen a beállítás a kulcs `AuthKey_<key id>.p8` fájljából áll a
 `~/.appstoreconnect/private_keys` mappában, valamint az `ASC_KEY_ID` és az `ASC_ISSUER_ID`
 értékéből a `~/.appstoreconnect/gr-lab.env` fájlban. A kulcsnak Admin szerepkörre van szüksége: az

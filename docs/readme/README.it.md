@@ -141,9 +141,17 @@ stato osservato, consulta [`research/hardware-validation.md`](../../research/har
 
 ## Installazione
 
-Non esistono ancora versioni pacchettizzate, quindi GR Lab si installa compilandola dal codice
-sorgente. La compilazione richiede [Flutter](https://flutter.dev) 3.47 o successivo, con Android SDK
-o Xcode configurati.
+Su Android, scarica `gr-lab-v<version>.apk`
+dall'[ultima versione](https://github.com/jeph/gr-lab/releases/latest) sul telefono e aprilo.
+Android chiede una sola volta l'autorizzazione a installare app dal browser. Ogni versione è
+firmata con la stessa chiave, quindi una più recente si installa sopra quella che hai e conserva
+fotocamere e impostazioni.
+
+Su iOS, ogni versione va su TestFlight, per ora solo ai tester del progetto. Non c'è ancora un link
+TestFlight pubblico, quindi su un iPhone GR Lab si installa compilandola dal codice sorgente.
+
+La compilazione dal codice sorgente richiede [Flutter](https://flutter.dev) 3.47 o successivo, con
+Android SDK o Xcode configurati.
 
 ```sh
 git clone https://github.com/jeph/gr-lab.git
@@ -152,7 +160,10 @@ flutter run --flavor prod --release
 ```
 
 `flutter run` installa l'app sul telefono collegato al computer. Le build per iOS richiedono un
-proprio team di firma con le capability Hotspot Configuration e Access Wi-Fi Information.
+proprio team di firma con le capability Hotspot Configuration e Access Wi-Fi Information. Una build
+Android compilata dal codice sorgente è firmata con la chiave di debug del computer, non con la
+chiave di rilascio, quindi Android non installa nessuna delle due sopra l'altra: disinstalla prima
+quella che hai.
 
 Per provare l'app senza una fotocamera, avviala in modalità demo, che usa una GR IV simulata con
 foto di esempio e funziona sull'emulatore Android e sul simulatore iOS:
@@ -193,7 +204,7 @@ connessione.
 | `packages/gr_fake_camera` | GR IV simulata (BLE, connessione Wi-Fi, server HTTP su loopback) per i test e la modalità demo |
 | `app` | L'app Flutter, con il codice Kotlin e Swift per il salvataggio nella libreria foto |
 | `research` | Ricerca sul protocollo: come sono state individuate ogni route e ogni caratteristica, riscontri nel firmware, risultati sull'hardware, questioni aperte |
-| `tool` | `check.sh`, tutti i controlli di qualità del codice; `testflight.sh`, il caricamento per iOS |
+| `tool` | `check.sh`, tutti i controlli di qualità del codice; gli script che compilano, firmano e caricano una versione; `testflight.sh`, un caricamento per iOS da un Mac |
 
 ### Esecuzione
 
@@ -276,13 +287,27 @@ gli arresti anomali restano visibili. Impostazioni > Log di debug esporta il log
 di condivisione sotto forma di file JSON Lines e lo cancella. Il log conserva circa 50 MB. Contiene
 la password del Wi-Fi della fotocamera.
 
-### TestFlight
+### Versioni
+
+Ogni push su `main` è una versione, creata da
+[`.github/workflows/release.yml`](../../.github/workflows/release.yml). Il workflow numera la
+versione 0.0.N, uno in più della precedente, esegue `tool/check.sh` e compila il flavor `prod` di
+entrambe le app in modalità release. L'APK Android viene firmato con la chiave di rilascio di GR
+Lab e pubblicato nella [pagina delle versioni](https://github.com/jeph/gr-lab/releases) con il suo
+checksum SHA-256, un'attestazione di provenienza della build e il mapping R8 che permette di
+leggerne gli stack trace Kotlin. L'app iOS viene firmata per l'App Store e caricata su TestFlight.
+Le chiavi sono conservate in ambienti GitHub che solo `main` può usare, e i job che compilano le
+app non ne possiedono nessuna.
+
+`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab` verifica che un APK sia stato
+compilato da quel workflow a partire da questo repository.
 
 ```sh
 tool/testflight.sh       # compila l'app iOS prod e la carica su TestFlight
 ```
 
-Lo script compila il flavor `prod` usando l'ora del caricamento come numero di build e lo invia ad
+Lo script mette su TestFlight, da un Mac, una build che non è una versione. Compila il flavor
+`prod` usando l'ora del caricamento come numero di build e lo invia ad
 App Store Connect, dove compare in TestFlight una volta elaborato. I tester interni lo installano
 dall'app TestFlight, senza cavo. Xcode firma e carica la build con una chiave API di App Store
 Connect, quindi la configurazione su un Mac consiste nel file `AuthKey_<key id>.p8` della chiave in

@@ -141,9 +141,17 @@ ve henüz bir kamerada test edilmemiştir. Nelerin gözlemlendiğini görmek iç
 
 ## Kurulum
 
-Henüz paketlenmiş bir sürüm yoktur; bu yüzden GR Lab kaynak koddan derlenerek kurulur. Derleme
-için Android SDK’sı veya Xcode kurulu olan [Flutter](https://flutter.dev) 3.47 veya sonrası
-gerekir.
+Android’de `gr-lab-v<version>.apk` dosyasını telefonunuzda
+[en son sürümden](https://github.com/jeph/gr-lab/releases/latest) indirin ve açın. Android,
+tarayıcınızdan uygulama kurma izni için bir kez sorar. Her sürüm aynı anahtarla imzalanır; bu
+yüzden yeni sürüm elinizdekinin üzerine kurulur ve kameralarınızı ve ayarlarınızı korur.
+
+iOS’te her sürüm TestFlight’a gider; şimdilik yalnızca projenin kendi test kullanıcılarına. Henüz
+herkese açık bir TestFlight bağlantısı yoktur; bu yüzden GR Lab bir iPhone’a kaynak koddan
+derlenerek kurulur.
+
+Kaynak koddan derleme için Android SDK’sı veya Xcode kurulu olan [Flutter](https://flutter.dev)
+3.47 veya sonrası gerekir.
 
 ```sh
 git clone https://github.com/jeph/gr-lab.git
@@ -153,6 +161,9 @@ flutter run --flavor prod --release
 
 `flutter run`, uygulamayı bilgisayarınıza bağlı olan telefona kurar. iOS derlemeleri için Hotspot
 Configuration ve Access Wi-Fi Information yeteneklerine sahip kendi imzalama ekibiniz gerekir.
+Kaynak koddan derlenen bir Android derlemesi yayın anahtarıyla değil, bilgisayarınızın hata
+ayıklama anahtarıyla imzalanır; bu yüzden Android bunlardan birini diğerinin üzerine kurmaz: önce
+elinizdekini kaldırın.
 
 Uygulamayı kamera olmadan denemek için demo modunda çalıştırın; bu mod, örnek fotoğraflar içeren
 simüle edilmiş bir GR IV kullanır ve Android emülatörü ile iOS simülatöründe çalışır:
@@ -193,7 +204,7 @@ bağlantı durumunu ayrıntılı olarak anlatır.
 | `packages/gr_fake_camera` | Testler ve demo modu için simüle edilmiş GR IV (BLE, Wi-Fi’ye bağlanma, geri döngü üzerinde HTTP sunucusu) |
 | `app` | Flutter uygulaması; fotoğraf arşivine kaydetmeyi sağlayan Kotlin ve Swift koduyla birlikte |
 | `research` | Protokol araştırması: her rotanın ve karakteristiğin nasıl bulunduğu, yazılımdan elde edilen kanıtlar, donanım sonuçları, açık sorular |
-| `tool` | `check.sh`: tüm kod kalitesi denetimleri; `testflight.sh`: iOS yüklemesi |
+| `tool` | `check.sh`: tüm kod kalitesi denetimleri; bir sürümü derleyen, imzalayan ve yükleyen betikler; `testflight.sh`: Mac’ten iOS yüklemesi |
 
 ### Çalıştırma
 
@@ -277,15 +288,29 @@ görünür kalır. Ayarlar > Hata ayıklama günlüğü, günlüğü paylaşma s
 dosyaları olarak dışa aktarır ve temizler. Günlükte yaklaşık 50 MB veri tutulur. Günlük, kameranın
 Wi-Fi parolasını içerir.
 
-### TestFlight
+### Sürümler
+
+`main`’e yapılan her push bir sürümdür ve
+[`.github/workflows/release.yml`](../../.github/workflows/release.yml) tarafından oluşturulur. Bu
+iş akışı sürüme, bir öncekinden bir fazla olacak şekilde 0.0.N numarasını verir, `tool/check.sh`
+betiğini çalıştırır ve her iki uygulamanın `prod` çeşidini yayın modunda derler. Android APK’sı
+GR Lab’ın yayın anahtarıyla imzalanır ve SHA-256 sağlama toplamı, bir derleme kaynağı doğrulaması
+ve Kotlin yığın izlerini okunur kılan R8 eşlemesiyle birlikte
+[sürümler sayfasında](https://github.com/jeph/gr-lab/releases) yayımlanır. iOS uygulaması App Store
+için imzalanır ve TestFlight’a yüklenir. Anahtarlar yalnızca `main`’in kullanabildiği GitHub
+ortamlarında tutulur ve uygulamaları derleyen işlerin hiçbirinde bu anahtarlar bulunmaz.
+
+`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab`, bir APK’nın bu depodan o iş akışı
+tarafından derlendiğini doğrular.
 
 ```sh
 tool/testflight.sh       # prod iOS uygulamasını derler ve TestFlight’a yükler
 ```
 
-Betik, `prod` çeşidini derleme numarası olarak yükleme zamanını kullanarak derler ve App Store
-Connect’e gönderir; derleme işlendikten sonra orada TestFlight altında görünür. Dahili test
-kullanıcıları onu kablo gerekmeden TestFlight uygulamasından kurar. Xcode, derlemeyi bir App Store
+Betik, sürüm olmayan bir derlemeyi bir Mac’ten TestFlight’a koyar. `prod` çeşidini derleme numarası
+olarak yükleme zamanını kullanarak derler ve App Store Connect’e gönderir; derleme işlendikten
+sonra orada TestFlight altında görünür. Dahili test kullanıcıları onu kablo gerekmeden TestFlight
+uygulamasından kurar. Xcode, derlemeyi bir App Store
 Connect API anahtarıyla imzalayıp yükler; dolayısıyla bir Mac’teki kurulum, anahtarın
 `~/.appstoreconnect/private_keys` içindeki `AuthKey_<key id>.p8` dosyasından ve
 `~/.appstoreconnect/gr-lab.env` içindeki `ASC_KEY_ID` ile `ASC_ISSUER_ID` değerlerinden ibarettir.

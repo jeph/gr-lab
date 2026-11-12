@@ -95,7 +95,8 @@ Run `tool/check.sh` before considering any change done. It runs the formatter, t
 
 - Flavors: `dev` (application ID `io.jeph.grlab.dev`, "GR Lab Dev") and `prod` (`io.jeph.grlab`, "GR Lab"). `flutter run` and `flutter build` without `--flavor` build `dev`.
 - Demo mode: `--dart-define=GR_DEMO=true` runs against the simulated camera.
-- TestFlight: `tool/testflight.sh` builds the `prod` iOS app and uploads it to App Store Connect (see `README.md`). Uploading publishes a build to the user's testers, so run it only when the user asks.
+- Releases: every push to `main` runs `.github/workflows/release.yml`, which releases that commit as version 0.0.N, one more than the last: a signed APK on the GitHub releases page and an iOS build on TestFlight (see `README.md`). Promoting `dev` to `main` therefore publishes to users and testers. The signing keys are in the `release` and `testflight` GitHub environments, which only `main` can use; never print them, copy them into the repository or widen those environments. Lint a change to a workflow with `actionlint` and `zizmor --pedantic`, and to a script in `tool/` with `shellcheck` and `shfmt -i 2`.
+- TestFlight from a Mac: `tool/testflight.sh` builds the `prod` iOS app and uploads it to App Store Connect outside a release (see `README.md`). Uploading publishes a build to the user's testers, so run it only when the user asks.
 
 ## Testing on devices
 

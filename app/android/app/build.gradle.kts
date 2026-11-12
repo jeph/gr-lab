@@ -51,8 +51,9 @@ configure<ApplicationExtension> {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // The debug key, so `flutter run --release` works without a key of
+            // one's own. A released APK is signed again with GR Lab's release
+            // key, which the build never holds (tool/sign_release_apk.sh).
             signingConfig = signingConfigs.getByName("debug")
         }
     }

@@ -94,7 +94,11 @@ GR Lab 还很年轻。硬件日志记录了在固件为 1.20 的 GR IV HDF 上�
 
 ## 安装
 
-目前还没有打包好的发行版，因此需要从源代码构建来安装 GR Lab。构建需要 [Flutter](https://flutter.dev) 3.47 或更高版本，并配置好 Android SDK 或 Xcode。
+在 Android 上，用手机从[最新发行版](https://github.com/jeph/gr-lab/releases/latest)下载 `gr-lab-v<version>.apk` 并打开它。Android 会请你授予一次从浏览器安装应用的权限。每个发行版都使用同一个密钥签名，因此新版本会直接覆盖安装在你现有的版本之上，并保留你的相机和设置。
+
+在 iOS 上，每个发行版都会发送到 TestFlight，目前只面向本项目自己的测试员。现在还没有公开的 TestFlight 链接，因此在 iPhone 上需要从源代码构建来安装 GR Lab。
+
+从源代码构建需要 [Flutter](https://flutter.dev) 3.47 或更高版本，并配置好 Android SDK 或 Xcode。
 
 ```sh
 git clone https://github.com/jeph/gr-lab.git
@@ -102,7 +106,7 @@ cd gr-lab/app
 flutter run --flavor prod --release
 ```
 
-`flutter run` 会把应用安装到与电脑连接的手机上。iOS 构建需要你自己的签名团队，并具备 Hotspot Configuration 和 Access Wi-Fi Information 两项功能。
+`flutter run` 会把应用安装到与电脑连接的手机上。iOS 构建需要你自己的签名团队，并具备 Hotspot Configuration 和 Access Wi-Fi Information 两项功能。从源代码得到的 Android 构建使用你电脑上的调试密钥签名，而不是发行密钥，因此 Android 不允许两者中的任何一个覆盖安装另一个：请先卸载你现有的那一个。
 
 如果想在没有相机的情况下试用应用，可以用演示模式运行。演示模式使用一台带有示例照片的模拟 GR IV，可在 Android 模拟器和 iOS 模拟器上运行：
 
@@ -130,7 +134,7 @@ flutter run --dart-define=GR_DEMO=true
 | `packages/gr_fake_camera` | 模拟的 GR IV（BLE、Wi-Fi 加入、回环地址上的 HTTP 服务器），用于测试和演示模式 |
 | `app` | Flutter 应用，以及用于存入手机相册的 Kotlin 和 Swift 代码 |
 | `research` | 协议研究：每个路由和特征是如何发现的、固件证据、硬件测试结果、尚未解决的问题 |
-| `tool` | `check.sh`，执行全部代码质量检查；`testflight.sh`，执行 iOS 上传 |
+| `tool` | `check.sh`，执行全部代码质量检查；构建、签名并上传发行版的各个脚本；`testflight.sh`，从 Mac 执行 iOS 上传 |
 
 ### 运行
 
@@ -186,13 +190,17 @@ flutter test integration_test --dart-define=GR_DEMO=true -d <simulator>
 
 只要“设置 > 启用调试日志”处于开启状态，GR Lab 就会保留调试日志：它与相机之间收发的一切（蓝牙扫描、读取、写入和通知，每一个 HTTP 请求和响应，WebSocket 消息，实时取景的帧大小，以及加入 Wi-Fi 的各个步骤）、应用输出的每一行、未捕获的错误，以及原生 Wi-Fi 代码输出的内容。该设置在 `dev` 中默认开启，在 `prod` 中默认关闭。关闭时不会记录任何内容，连 logcat 或控制台也不会写入，只有一个例外：Flutter 引擎自身仍会在那里报告未捕获的错误，因此崩溃依然看得到。“设置 > 调试日志”会通过共享表单把日志导出为 JSON Lines 文件，然后将其清除。日志大约保留 50 MB。其中包含相机的 Wi-Fi 密码。
 
-### TestFlight
+### 发行版
+
+每次推送到 `main` 都会产生一个发行版，由 [`.github/workflows/release.yml`](../../.github/workflows/release.yml) 完成。它把发行版编号为 0.0.N，比上一个大一，运行 `tool/check.sh`，并以 release 模式构建两个应用的 `prod` flavor。Android APK 使用 GR Lab 的发行密钥签名，连同它的 SHA-256 校验和、构建来源证明以及用于解读其 Kotlin 堆栈跟踪的 R8 映射文件一起发布在[发行版页面](https://github.com/jeph/gr-lab/releases)上。iOS 应用针对 App Store 签名并上传到 TestFlight。密钥保存在只有 `main` 才能使用的 GitHub 环境中，而构建应用的作业不持有其中任何一个。
+
+`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab` 用于检查某个 APK 是否由该工作流从本仓库构建而成。
 
 ```sh
 tool/testflight.sh       # 构建 prod 版 iOS 应用并上传到 TestFlight
 ```
 
-该脚本以上传时间作为构建号来构建 `prod` flavor，并把它发送到 App Store Connect；处理完成后，它会出现在 TestFlight 下。内部测试员通过 TestFlight 应用安装，无需连接数据线。Xcode 使用 App Store Connect API 密钥对构建进行签名并上传，因此在 Mac 上需要准备的是：放在 `~/.appstoreconnect/private_keys` 中的密钥文件 `AuthKey_<key id>.p8`，以及 `~/.appstoreconnect/gr-lab.env` 中的 `ASC_KEY_ID` 和 `ASC_ISSUER_ID`。密钥需要“管理”角色：Apple 不允许“App 管理”角色的密钥使用团队的分发证书。归档在构建时不签名，导出时才为 App Store 签名（`app/ios/ExportOptions.plist`），因为直接对归档签名需要团队中有一台已注册的测试设备。
+该脚本从 Mac 把一个不属于发行版的构建放到 TestFlight 上。它以上传时间作为构建号来构建 `prod` flavor，并把它发送到 App Store Connect；处理完成后，它会出现在 TestFlight 下。内部测试员通过 TestFlight 应用安装，无需连接数据线。Xcode 使用 App Store Connect API 密钥对构建进行签名并上传，因此在 Mac 上需要准备的是：放在 `~/.appstoreconnect/private_keys` 中的密钥文件 `AuthKey_<key id>.p8`，以及 `~/.appstoreconnect/gr-lab.env` 中的 `ASC_KEY_ID` 和 `ASC_ISSUER_ID`。密钥需要“管理”角色：Apple 不允许“App 管理”角色的密钥使用团队的分发证书。归档在构建时不签名，导出时才为 App Store 签名（`app/ios/ExportOptions.plist`），因为直接对归档签名需要团队中有一台已注册的测试设备。
 
 ## 参与贡献
 

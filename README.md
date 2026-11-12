@@ -130,8 +130,16 @@ and GR IIIx support comes from the protocol research and has not been tested on 
 
 ## Installation
 
-There are no packaged releases yet, so GR Lab is installed by building it from source. The build
-needs [Flutter](https://flutter.dev) 3.47 or newer with the Android SDK or Xcode set up.
+On Android, download `gr-lab-v<version>.apk` from the
+[latest release](https://github.com/jeph/gr-lab/releases/latest) on your phone and open it. Android
+asks once for permission to install apps from your browser. Every release is signed with the same
+key, so a newer one installs over the one you have and keeps your cameras and settings.
+
+On iOS, every release goes to TestFlight, for now only to the project's own testers. There is no
+public TestFlight link yet, so on an iPhone GR Lab is installed by building it from source.
+
+Building from source needs [Flutter](https://flutter.dev) 3.47 or newer with the Android SDK or
+Xcode set up.
 
 ```sh
 git clone https://github.com/jeph/gr-lab.git
@@ -140,7 +148,9 @@ flutter run --flavor prod --release
 ```
 
 `flutter run` installs on the phone that is connected to your computer. iOS builds need your own
-signing team with the Hotspot Configuration and Access Wi-Fi Information capabilities.
+signing team with the Hotspot Configuration and Access Wi-Fi Information capabilities. An Android
+build from source is signed with your computer's debug key, not the release key, so Android installs
+neither over the other: uninstall the one you have first.
 
 To try the app without a camera, run it in demo mode, which uses a simulated GR IV with sample
 photos and works on the Android emulator and the iOS simulator:
@@ -179,7 +189,7 @@ connection state in detail.
 | `packages/gr_fake_camera` | Simulated GR IV (BLE, Wi-Fi join, HTTP server on loopback) for tests and demo mode |
 | `app` | The Flutter app, with Kotlin and Swift code for saving to the photo library |
 | `research` | Protocol research: how each route and characteristic was found, firmware evidence, hardware results, open questions |
-| `tool` | `check.sh`, every code-quality check; `testflight.sh`, the iOS upload |
+| `tool` | `check.sh`, every code-quality check; the scripts that build, sign and upload a release; `testflight.sh`, an iOS upload from a Mac |
 
 ### Running
 
@@ -257,15 +267,28 @@ exception: the Flutter engine still reports uncaught errors there itself, so cra
 Settings > Debug log exports the log through the share sheet as JSON Lines files and clears it. The
 log keeps about 50 MB. It contains the camera's Wi-Fi password.
 
-### TestFlight
+### Releases
+
+Every push to `main` is a release, made by
+[`.github/workflows/release.yml`](.github/workflows/release.yml). It numbers the release 0.0.N, one
+more than the last, runs `tool/check.sh`, and builds the `prod` flavor of both apps in release mode.
+The Android APK is signed with GR Lab's release key and published on the
+[releases page](https://github.com/jeph/gr-lab/releases) with its SHA-256 checksum, a build
+provenance attestation and the R8 mapping that reads its Kotlin stack traces. The iOS app is signed
+for the App Store and uploaded to TestFlight. The keys are kept in GitHub environments that only
+`main` can use, and the jobs that build the apps hold none of them.
+
+`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab` checks that an APK was built by
+that workflow from this repository.
 
 ```sh
 tool/testflight.sh       # builds the prod iOS app and uploads it to TestFlight
 ```
 
-The script builds the `prod` flavor with the upload's time as its build number and sends it to App
-Store Connect, where it appears under TestFlight once processed. Internal testers install it from
-the TestFlight app, without a cable. Xcode signs and uploads the build with an App Store Connect API
+The script puts a build that is not a release on TestFlight from a Mac. It builds the `prod` flavor
+with the upload's time as its build number and sends it to App Store Connect, where it appears under
+TestFlight once processed. Internal testers install it from the TestFlight app, without a cable.
+Xcode signs and uploads the build with an App Store Connect API
 key, so the setup on a Mac is the key's `AuthKey_<key id>.p8` file in
 `~/.appstoreconnect/private_keys`, and `ASC_KEY_ID` and `ASC_ISSUER_ID` in
 `~/.appstoreconnect/gr-lab.env`. The key needs the Admin role: Apple doesn't let an App Manager key

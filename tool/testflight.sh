@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Builds the prod iOS app and uploads it to TestFlight.
+# Builds the prod iOS app on this Mac and uploads it to TestFlight, to try a
+# build that is not a release. Releases are built and uploaded by
+# .github/workflows/release.yml.
 #
 #   tool/testflight.sh [build number]
 #
@@ -24,23 +26,9 @@ source "$config"
 # a version to be higher than the last; the time of the build is both.
 build_number="${1:-$(date -u +%y%m%d%H%M)}"
 
+"$root/tool/build_ios_archive.sh" --build-number "$build_number"
+
 cd "$root/app"
-
-# Regenerates AppLocalizations from the ARB files. The build's own pub get
-# does not, and its static checks then fail on messages a pull brought in.
-flutter pub get
-
-# Flutter leaves the archive unsigned: signing it would take a development
-# provisioning profile, which Apple only issues to a team with a registered
-# device. The export below signs it for the App Store, which needs none.
-flutter build ipa --flavor prod --no-codesign --build-number "$build_number"
-
-# The export copies the app's entitlements from the archive's signature, so
-# an unsigned archive would lose the Wi-Fi entitlements and the app could
-# not join the camera's network. An ad hoc signature carries them.
-archive=build/ios/archive/Runner.xcarchive
-codesign --force --sign - --entitlements ios/Runner/Runner.entitlements \
-  "$archive/Products/Applications/Runner.app"
 
 # The key, not an Apple account added in Xcode's settings: the sign-in
 # Xcode saved for one stopped working within the hour, twice (Xcode 27.1,
@@ -49,6 +37,6 @@ xcodebuild -exportArchive -allowProvisioningUpdates \
   -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8" \
   -authenticationKeyID "$ASC_KEY_ID" \
   -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
-  -archivePath "$archive" \
+  -archivePath build/ios/archive/Runner.xcarchive \
   -exportOptionsPlist ios/ExportOptions.plist \
   -exportPath build/ios/ipa

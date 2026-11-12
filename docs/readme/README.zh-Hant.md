@@ -94,7 +94,11 @@ GR Lab 還很年輕。硬體記錄中收錄的是以韌體 1.20 的 GR IV HDF �
 
 ## 安裝
 
-目前還沒有打包好的發行版本，因此要安裝 GR Lab 得從原始碼建置。建置需要 [Flutter](https://flutter.dev) 3.47 或更新版本，並已設定好 Android SDK 或 Xcode。
+在 Android 上，用手機從[最新發行版本](https://github.com/jeph/gr-lab/releases/latest)下載 `gr-lab-v<version>.apk` 並打開它。Android 會請你允許一次從瀏覽器安裝 App。每個發行版本都以同一把金鑰簽署，因此較新的版本會直接安裝並覆蓋你現有的版本，同時保留你的相機和設定。
+
+在 iOS 上，每個發行版本都會送到 TestFlight，目前只開放給本專案自己的測試人員。現在還沒有公開的 TestFlight 連結，因此在 iPhone 上要安裝 GR Lab 得從原始碼建置。
+
+從原始碼建置需要 [Flutter](https://flutter.dev) 3.47 或更新版本，並已設定好 Android SDK 或 Xcode。
 
 ```sh
 git clone https://github.com/jeph/gr-lab.git
@@ -102,7 +106,7 @@ cd gr-lab/app
 flutter run --flavor prod --release
 ```
 
-`flutter run` 會將 App 安裝到與電腦連接的手機上。iOS 版本需要你自己的簽署團隊，並具備 Hotspot Configuration 和 Access Wi-Fi Information 功能。
+`flutter run` 會將 App 安裝到與電腦連接的手機上。iOS 版本需要你自己的簽署團隊，並具備 Hotspot Configuration 和 Access Wi-Fi Information 功能。從原始碼建置的 Android 版本是以你電腦的除錯金鑰簽署，而不是發行金鑰，因此 Android 不會讓其中任何一個覆蓋安裝另一個：請先解除安裝你現有的那一個。
 
 如果想在沒有相機的情況下試用 App，可以用示範模式執行；它使用附範例照片的模擬 GR IV，可在 Android 模擬器和 iOS 模擬器上執行：
 
@@ -130,7 +134,7 @@ GR Lab 閒置一段時間後（預設為 5 分鐘），「設定」中的「自�
 | `packages/gr_fake_camera` | 模擬的 GR IV（BLE、Wi-Fi 加入、位於 loopback 的 HTTP 伺服器），供測試和示範模式使用 |
 | `app` | Flutter App，含用來儲存到照片圖庫的 Kotlin 和 Swift 程式碼 |
 | `research` | 協定研究：每個路由和特徵是如何找到的、韌體中的證據、硬體測試結果、尚待解答的問題 |
-| `tool` | `check.sh`：所有程式碼品質檢查；`testflight.sh`：iOS 上傳 |
+| `tool` | `check.sh`：所有程式碼品質檢查；建置、簽署並上傳發行版本的指令碼；`testflight.sh`：從 Mac 進行的 iOS 上傳 |
 
 ### 執行
 
@@ -186,13 +190,17 @@ flutter test integration_test --dart-define=GR_DEMO=true -d <simulator>
 
 「設定 > 啟用除錯記錄」開啟時，GR Lab 會保留除錯記錄：它傳送給相機和從相機收到的一切（Bluetooth 掃描、讀取、寫入和通知，每一個 HTTP 請求和回應，WebSocket 訊息，即時取景的影格大小，以及加入 Wi-Fi 的各個步驟）、App 印出的每一行、未攔截的錯誤，以及原生 Wi-Fi 程式碼輸出的內容。這項設定在 `dev` 中預設開啟，在 `prod` 中預設關閉。關閉時不會記錄任何內容，連 logcat 或主控台也不會有，只有一個例外：Flutter 引擎仍會自行在那裡回報未攔截的錯誤，所以當機仍然看得到。「設定 > 除錯記錄」會透過分享表單將記錄匯出為 JSON Lines 檔案，並清除記錄。記錄大約保留 50 MB。其中包含相機的 Wi-Fi 密碼。
 
-### TestFlight
+### 發行版本
+
+每次推送到 `main` 都會產生一個發行版本，由 [`.github/workflows/release.yml`](../../.github/workflows/release.yml) 完成。它將發行版本編號為 0.0.N，比上一個多一，執行 `tool/check.sh`，並以 release 模式建置兩個 App 的 `prod` flavor。Android APK 以 GR Lab 的發行金鑰簽署，並連同它的 SHA-256 檢查碼、建置來源證明，以及用來解讀其 Kotlin 堆疊追蹤的 R8 對應檔，一起發佈在[發行版本頁面](https://github.com/jeph/gr-lab/releases)上。iOS App 會針對 App Store 簽署並上傳到 TestFlight。金鑰保存在只有 `main` 能使用的 GitHub 環境中，而建置 App 的工作不持有其中任何一把。
+
+`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab` 可檢查某個 APK 是否由該工作流程從這個儲存庫建置而成。
 
 ```sh
 tool/testflight.sh       # 建置 prod 版 iOS App 並上傳到 TestFlight
 ```
 
-這個指令碼會建置 `prod` flavor，以上傳時間作為建置版本號碼，並送到 App Store Connect；處理完成後，它就會出現在 TestFlight 底下。內部測試人員可從 TestFlight App 安裝，不需要接線。Xcode 會用 App Store Connect API 金鑰簽署並上傳這個版本，因此在 Mac 上要準備的是：放在 `~/.appstoreconnect/private_keys` 中的金鑰檔案 `AuthKey_<key id>.p8`，以及 `~/.appstoreconnect/gr-lab.env` 中的 `ASC_KEY_ID` 和 `ASC_ISSUER_ID`。金鑰需要「管理」角色：Apple 不允許「App 管理」角色的金鑰使用團隊的發佈憑證。封存檔在建置時不簽署，匯出時才針對 App Store 簽署（`app/ios/ExportOptions.plist`），因為直接簽署封存檔需要團隊中有已註冊的測試裝置。
+這個指令碼會從 Mac 把不屬於發行版本的版本放上 TestFlight。它會建置 `prod` flavor，以上傳時間作為建置版本號碼，並送到 App Store Connect；處理完成後，它就會出現在 TestFlight 底下。內部測試人員可從 TestFlight App 安裝，不需要接線。Xcode 會用 App Store Connect API 金鑰簽署並上傳這個版本，因此在 Mac 上要準備的是：放在 `~/.appstoreconnect/private_keys` 中的金鑰檔案 `AuthKey_<key id>.p8`，以及 `~/.appstoreconnect/gr-lab.env` 中的 `ASC_KEY_ID` 和 `ASC_ISSUER_ID`。金鑰需要「管理」角色：Apple 不允許「App 管理」角色的金鑰使用團隊的發佈憑證。封存檔在建置時不簽署，匯出時才針對 App Store 簽署（`app/ios/ExportOptions.plist`），因為直接簽署封存檔需要團隊中有已註冊的測試裝置。
 
 ## 參與貢獻
 

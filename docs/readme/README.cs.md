@@ -138,9 +138,17 @@ testována nebyla. Co bylo pozorováno, najdete v souboru
 
 ## Instalace
 
-Hotová vydání zatím nejsou k dispozici, takže se GR Lab instaluje sestavením ze zdrojového kódu.
-K sestavení je potřeba [Flutter](https://flutter.dev) 3.47 nebo novější a nastavené Android SDK
-nebo Xcode.
+V Androidu si v telefonu stáhněte `gr-lab-v<version>.apk` z
+[nejnovějšího vydání](https://github.com/jeph/gr-lab/releases/latest) a otevřete jej. Android se
+jednou zeptá na oprávnění instalovat aplikace z vašeho prohlížeče. Každé vydání je podepsáno
+stejným klíčem, takže se novější nainstaluje přes to, které už máte, a zachová vaše fotoaparáty
+i nastavení.
+
+V iOS jde každé vydání do TestFlight, zatím jen vlastním testerům projektu. Veřejný odkaz na
+TestFlight zatím neexistuje, takže se GR Lab na iPhonu instaluje sestavením ze zdrojového kódu.
+
+K sestavení ze zdrojového kódu je potřeba [Flutter](https://flutter.dev) 3.47 nebo novější
+a nastavené Android SDK nebo Xcode.
 
 ```sh
 git clone https://github.com/jeph/gr-lab.git
@@ -150,6 +158,8 @@ flutter run --flavor prod --release
 
 `flutter run` nainstaluje aplikaci do telefonu, který je připojen k počítači. Sestavení pro iOS
 vyžadují váš vlastní podpisový tým s funkcemi Hotspot Configuration a Access Wi-Fi Information.
+Sestavení pro Android ze zdrojového kódu je podepsáno ladicím klíčem vašeho počítače, ne klíčem pro
+vydání, takže Android nenainstaluje jedno přes druhé: to, které máte, nejprve odinstalujte.
 
 Chcete-li aplikaci vyzkoušet bez fotoaparátu, spusťte ji v ukázkovém režimu, který používá
 simulovaný GR IV s ukázkovými fotkami a funguje v emulátoru Androidu i v simulátoru iOS:
@@ -189,7 +199,7 @@ popisuje každou obrazovku a každý stav připojení.
 | `packages/gr_fake_camera` | Simulovaný GR IV (BLE, připojení k Wi-Fi, HTTP server na zpětné smyčce) pro testy a ukázkový režim |
 | `app` | Aplikace ve Flutteru s kódem v Kotlinu a Swiftu pro ukládání do knihovny fotek |
 | `research` | Výzkum protokolu: jak byla každá cesta a charakteristika nalezena, doklady z firmwaru, výsledky na hardwaru, otevřené otázky |
-| `tool` | `check.sh`, všechny kontroly kvality kódu; `testflight.sh`, nahrání aplikace pro iOS |
+| `tool` | `check.sh`, všechny kontroly kvality kódu; skripty, které sestaví, podepíší a nahrají vydání; `testflight.sh`, nahrání aplikace pro iOS z Macu |
 
 ### Spuštění
 
@@ -270,15 +280,28 @@ Flutteru hlásí sám, takže pády zůstávají viditelné. Nastavení > Protok
 přes list sdílení jako soubory JSON Lines a vymaže ho. Protokol uchovává asi 50 MB. Obsahuje heslo
 k Wi-Fi fotoaparátu.
 
-### TestFlight
+### Vydání
+
+Každý push do `main` je vydání, které vytváří
+[`.github/workflows/release.yml`](../../.github/workflows/release.yml). Workflow vydání očísluje
+0.0.N, o jedna více než to poslední, spustí `tool/check.sh` a sestaví variantu `prod` obou aplikací
+v režimu release. APK pro Android je podepsáno klíčem GR Lab pro vydání a zveřejněno na
+[stránce vydání](https://github.com/jeph/gr-lab/releases) s kontrolním součtem SHA-256, atestací
+původu sestavení a mapováním R8, podle kterého se čtou jeho výpisy zásobníku z Kotlinu. Aplikace
+pro iOS je podepsána pro App Store a nahrána do TestFlight. Klíče jsou uloženy v prostředích
+GitHubu, která smí používat jen `main`, a úlohy, které aplikace sestavují, nemají žádný z nich.
+
+`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab` ověří, že APK sestavil tento
+workflow z tohoto repozitáře.
 
 ```sh
 tool/testflight.sh       # sestaví aplikaci prod pro iOS a nahraje ji do TestFlight
 ```
 
-Skript sestaví variantu `prod`, jako číslo sestavení použije čas nahrání a odešle ji do App Store
-Connect, kde se po zpracování objeví v části TestFlight. Interní testeři si ji nainstalují
-z aplikace TestFlight, bez kabelu. Xcode sestavení podepisuje a nahrává pomocí klíče API pro App
+Skript nahraje do TestFlight z Macu sestavení, které není vydáním. Sestaví variantu `prod`, jako
+číslo sestavení použije čas nahrání a odešle ji do App Store Connect, kde se po zpracování objeví
+v části TestFlight. Interní testeři si ji nainstalují z aplikace TestFlight, bez kabelu. Xcode
+sestavení podepisuje a nahrává pomocí klíče API pro App
 Store Connect, takže nastavení na Macu tvoří soubor klíče `AuthKey_<key id>.p8` ve složce
 `~/.appstoreconnect/private_keys` a proměnné `ASC_KEY_ID` a `ASC_ISSUER_ID` v souboru
 `~/.appstoreconnect/gr-lab.env`. Klíč potřebuje roli Admin: Apple nedovolí, aby klíč s rolí App

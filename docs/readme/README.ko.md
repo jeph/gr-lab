@@ -133,8 +133,16 @@ GR III와 GR IIIx 지원은 프로토콜 조사를 바탕으로 한 것이며 �
 
 ## 설치
 
-아직 패키지로 배포되는 릴리스가 없으므로 GR Lab은 소스에서 직접 빌드해 설치합니다. 빌드하려면
-[Flutter](https://flutter.dev) 3.47 이상과 Android SDK 또는 Xcode가 설정되어 있어야 합니다.
+Android에서는 휴대전화에서 [최신 릴리스](https://github.com/jeph/gr-lab/releases/latest)의
+`gr-lab-v<version>.apk`를 내려받아 엽니다. Android가 브라우저에서 받은 앱을 설치할 권한을 한 번
+요청합니다. 모든 릴리스는 같은 키로 서명되므로, 새 릴리스는 이미 설치된 앱 위에 그대로 설치되고
+카메라와 설정도 유지됩니다.
+
+iOS에서는 모든 릴리스가 TestFlight로 올라가지만, 지금은 프로젝트 자체 테스터에게만 제공됩니다. 공개
+TestFlight 링크는 아직 없으므로 iPhone에서는 GR Lab을 소스에서 직접 빌드해 설치합니다.
+
+소스에서 빌드하려면 [Flutter](https://flutter.dev) 3.47 이상과 Android SDK 또는 Xcode가 설정되어
+있어야 합니다.
 
 ```sh
 git clone https://github.com/jeph/gr-lab.git
@@ -143,7 +151,9 @@ flutter run --flavor prod --release
 ```
 
 `flutter run`은 컴퓨터에 연결된 휴대전화에 앱을 설치합니다. iOS 빌드에는 Hotspot Configuration과
-Access Wi-Fi Information 기능(capability)이 있는 본인의 서명 팀이 필요합니다.
+Access Wi-Fi Information 기능(capability)이 있는 본인의 서명 팀이 필요합니다. 소스에서 빌드한
+Android 빌드는 릴리스 키가 아니라 컴퓨터의 디버그 키로 서명되므로, Android는 둘 중 어느 쪽도 다른 쪽
+위에 설치하지 않습니다. 먼저 설치되어 있는 앱을 삭제하세요.
 
 카메라 없이 앱을 써 보려면 데모 모드로 실행하세요. 데모 모드는 샘플 사진이 들어 있는 시뮬레이션
 GR IV를 사용하며 Android 에뮬레이터와 iOS 시뮬레이터에서 작동합니다.
@@ -181,7 +191,7 @@ flutter run --dart-define=GR_DEMO=true
 | `packages/gr_fake_camera` | 테스트와 데모 모드용 시뮬레이션 GR IV(BLE, Wi-Fi 연결, 루프백 HTTP 서버) |
 | `app` | Flutter 앱. 사진 보관함에 저장하는 Kotlin 및 Swift 코드 포함 |
 | `research` | 프로토콜 조사: 각 경로와 특성(characteristic)을 찾아낸 과정, 펌웨어에서 얻은 근거, 하드웨어 결과, 미해결 질문 |
-| `tool` | `check.sh`: 모든 코드 품질 검사, `testflight.sh`: iOS 업로드 |
+| `tool` | `check.sh`: 모든 코드 품질 검사, 릴리스를 빌드하고 서명해 업로드하는 스크립트, `testflight.sh`: Mac에서 하는 iOS 업로드 |
 
 ### 실행
 
@@ -262,13 +272,26 @@ GR Lab은 설정 > 디버그 로그 사용이 켜져 있는 동안 디버그 로
 설정 > 디버그 로그는 공유 시트를 통해 로그를 JSON Lines 파일로 내보낸 뒤 로그를 삭제합니다. 로그는
 약 50 MB까지 보관됩니다. 로그에는 카메라의 Wi-Fi 암호가 들어 있습니다.
 
-### TestFlight
+### 릴리스
+
+`main`에 푸시할 때마다 릴리스가 만들어지며, 이 작업은
+[`.github/workflows/release.yml`](../../.github/workflows/release.yml)이 맡습니다. 이 워크플로는
+릴리스에 직전보다 하나 큰 0.0.N 번호를 붙이고, `tool/check.sh`를 실행한 뒤, 두 앱의 `prod` flavor를
+릴리스 모드로 빌드합니다. Android APK는 GR Lab의 릴리스 키로 서명되어 SHA-256 체크섬, 빌드 출처
+증명(attestation), Kotlin 스택 트레이스를 해독하는 R8 매핑과 함께
+[릴리스 페이지](https://github.com/jeph/gr-lab/releases)에 게시됩니다. iOS 앱은 App Store용으로
+서명되어 TestFlight에 업로드됩니다. 키는 `main`만 사용할 수 있는 GitHub 환경(environment)에
+보관되며, 앱을 빌드하는 작업(job)은 어떤 키도 갖지 않습니다.
+
+`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab`은 APK가 이 저장소에서 해당
+워크플로로 빌드되었는지 확인합니다.
 
 ```sh
 tool/testflight.sh       # prod iOS 앱을 빌드해 TestFlight에 업로드
 ```
 
-이 스크립트는 업로드 시각을 빌드 번호로 삼아 `prod` flavor를 빌드하고 App Store Connect로 보내며,
+이 스크립트는 릴리스가 아닌 빌드를 Mac에서 TestFlight에 올립니다. 업로드 시각을 빌드 번호로 삼아
+`prod` flavor를 빌드하고 App Store Connect로 보내며,
 처리가 끝나면 TestFlight 항목에 나타납니다. 내부 테스터는 케이블 없이 TestFlight 앱에서
 설치합니다. Xcode는 App Store Connect API 키로 빌드에 서명하고 업로드하므로, Mac에서 설정할 것은
 `~/.appstoreconnect/private_keys`에 넣는 키 파일 `AuthKey_<key id>.p8`과

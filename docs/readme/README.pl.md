@@ -138,9 +138,17 @@ nad protokołem i nie została jeszcze sprawdzona na aparacie. To, co zaobserwow
 
 ## Instalacja
 
-Nie ma jeszcze gotowych wydań, więc GR Lab instaluje się, budując go ze źródeł. Do zbudowania
-potrzebny jest [Flutter](https://flutter.dev) 3.47 lub nowszy ze skonfigurowanym Android SDK albo
-Xcode.
+Na Androidzie pobierz na telefonie `gr-lab-v<version>.apk` z
+[najnowszego wydania](https://github.com/jeph/gr-lab/releases/latest) i otwórz go. Android jeden
+raz poprosi o zgodę na instalowanie aplikacji z przeglądarki. Każde wydanie jest podpisane tym
+samym kluczem, więc nowsze instaluje się na tym, które już masz, i zachowuje twoje aparaty oraz
+ustawienia.
+
+Na iOS każde wydanie trafia do TestFlight, na razie tylko do testerów samego projektu. Publicznego
+linku do TestFlight jeszcze nie ma, więc na iPhonie GR Lab instaluje się, budując go ze źródeł.
+
+Do zbudowania ze źródeł potrzebny jest [Flutter](https://flutter.dev) 3.47 lub nowszy ze
+skonfigurowanym Android SDK albo Xcode.
 
 ```sh
 git clone https://github.com/jeph/gr-lab.git
@@ -150,7 +158,9 @@ flutter run --flavor prod --release
 
 `flutter run` instaluje aplikację na telefonie podłączonym do komputera. Kompilacje na iOS wymagają
 własnego zespołu do podpisywania z uprawnieniami (capabilities) Hotspot Configuration i Access
-Wi-Fi Information.
+Wi-Fi Information. Kompilacja na Androida zbudowana ze źródeł jest podpisana kluczem debugowania
+twojego komputera, a nie kluczem wydań, więc Android nie zainstaluje jednej na drugiej: najpierw
+odinstaluj tę, którą masz.
 
 Aby wypróbować aplikację bez aparatu, uruchom ją w trybie demonstracyjnym, który korzysta
 z symulowanego GR IV z przykładowymi zdjęciami i działa w emulatorze Androida oraz symulatorze iOS:
@@ -190,7 +200,7 @@ opisuje każdy ekran i każdy stan połączenia.
 | `packages/gr_fake_camera` | Symulowany GR IV (BLE, łączenie z Wi-Fi, serwer HTTP na interfejsie pętli zwrotnej) na potrzeby testów i trybu demonstracyjnego |
 | `app` | Aplikacja Flutter z kodem w Kotlinie i Swifcie do zapisywania w bibliotece zdjęć |
 | `research` | Badania nad protokołem: jak znaleziono każdą trasę i charakterystykę, dowody z oprogramowania sprzętowego, wyniki testów sprzętowych, otwarte pytania |
-| `tool` | `check.sh`, wszystkie kontrole jakości kodu; `testflight.sh`, wysyłanie kompilacji iOS |
+| `tool` | `check.sh`, wszystkie kontrole jakości kodu; skrypty, które budują, podpisują i wysyłają wydanie; `testflight.sh`, wysyłanie kompilacji iOS z Maca |
 
 ### Uruchamianie
 
@@ -274,15 +284,29 @@ awarie pozostają widoczne. Ustawienia > Dziennik debugowania eksportuje dzienni
 udostępniania jako pliki JSON Lines i go czyści. Dziennik przechowuje około 50 MB. Zawiera hasło
 Wi-Fi aparatu.
 
-### TestFlight
+### Wydania
+
+Każdy push do `main` jest wydaniem, które tworzy
+[`.github/workflows/release.yml`](../../.github/workflows/release.yml). Workflow nadaje wydaniu
+numer 0.0.N, o jeden większy od poprzedniego, uruchamia `tool/check.sh` i buduje wariant `prod` obu
+aplikacji w trybie release. APK na Androida jest podpisywany kluczem wydań GR Lab i publikowany na
+[stronie wydań](https://github.com/jeph/gr-lab/releases) wraz z sumą kontrolną SHA-256, atestacją
+pochodzenia kompilacji oraz mapowaniem R8, które pozwala odczytać jego ślady stosu Kotlina.
+Aplikacja na iOS jest podpisywana dla App Store i wysyłana do TestFlight. Klucze są przechowywane
+w środowiskach GitHub, z których może korzystać tylko `main`, a zadania budujące aplikacje nie mają
+żadnego z nich.
+
+`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab` sprawdza, czy APK został zbudowany
+przez ten workflow z tego repozytorium.
 
 ```sh
 tool/testflight.sh       # buduje aplikację iOS w wariancie prod i wysyła ją do TestFlight
 ```
 
-Skrypt buduje wariant `prod`, używając czasu wysyłki jako numeru kompilacji, i przesyła go do App
-Store Connect, gdzie po przetworzeniu pojawia się w sekcji TestFlight. Testerzy wewnętrzni
-instalują go z aplikacji TestFlight, bez kabla. Xcode podpisuje i wysyła kompilację za pomocą
+Skrypt umieszcza w TestFlight z Maca kompilację, która nie jest wydaniem. Buduje wariant `prod`,
+używając czasu wysyłki jako numeru kompilacji, i przesyła go do App Store Connect, gdzie po
+przetworzeniu pojawia się w sekcji TestFlight. Testerzy wewnętrzni instalują go z aplikacji
+TestFlight, bez kabla. Xcode podpisuje i wysyła kompilację za pomocą
 klucza API App Store Connect, więc konfiguracja na Macu sprowadza się do pliku klucza
 `AuthKey_<key id>.p8` w `~/.appstoreconnect/private_keys` oraz zmiennych `ASC_KEY_ID`
 i `ASC_ISSUER_ID` w `~/.appstoreconnect/gr-lab.env`. Klucz musi mieć rolę Admin: Apple nie pozwala,
