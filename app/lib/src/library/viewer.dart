@@ -15,6 +15,7 @@ import 'package:grlab/src/library/format.dart';
 import 'package:grlab/src/library/image_orientation.dart';
 import 'package:grlab/src/library/library_model.dart';
 import 'package:grlab/src/library/library_scope.dart';
+import 'package:grlab/src/library/movie_scrubber.dart';
 import 'package:grlab/src/library/shot.dart';
 import 'package:grlab/src/library/shot_cell.dart';
 import 'package:grlab/src/looks/look_photo.dart';
@@ -821,10 +822,7 @@ class _VideoPageState extends State<_VideoPage> {
             aspectRatio: video.value.aspectRatio,
             child: Stack(
               alignment: Alignment.bottomCenter,
-              children: [
-                VideoPlayer(video),
-                VideoProgressIndicator(video, allowScrubbing: true),
-              ],
+              children: [VideoPlayer(video), MovieScrubber(video)],
             ),
           ),
         ),
@@ -846,7 +844,9 @@ class _VideoPageState extends State<_VideoPage> {
             child: download != null
                 ? _Copying(download: download, onCancel: _cancel)
                 : video != null || _checking
-                ? const CircularProgressIndicator()
+                ? const _OverPhoto(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  )
                 : ValueListenableBuilder(
                     valueListenable: _library.link,
                     builder: (context, link, _) => _PlayPrompt(
@@ -915,6 +915,24 @@ class _PlayPrompt extends StatelessWidget {
   }
 }
 
+/// A panel over the movie's still on the scrim of the badges over photos
+/// ([GrColors.photoBadgeScrim]), so what it holds reads on a bright frame
+/// and a dark one, in every theme. Its content is white.
+class _OverPhoto extends StatelessWidget {
+  const new({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: GrColors.photoBadgeScrim,
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Padding(padding: const EdgeInsets.all(20), child: child),
+  );
+}
+
 /// Progress while the movie is copied from the camera, with Cancel.
 class _Copying extends StatelessWidget {
   const new({required this.download, required this.onCancel});
@@ -923,9 +941,8 @@ class _Copying extends StatelessWidget {
   final VoidCallback onCancel;
 
   @override
-  Widget build(BuildContext context) {
-    final c = GrColors.of(context);
-    return ValueListenableBuilder(
+  Widget build(BuildContext context) => _OverPhoto(
+    child: ValueListenableBuilder(
       valueListenable: download.progress,
       builder: (context, fraction, _) => Column(
         key: const ValueKey('viewer-movie-copy'),
@@ -934,7 +951,11 @@ class _Copying extends StatelessWidget {
           SizedBox(
             width: 48,
             height: 48,
-            child: CircularProgressIndicator(value: fraction),
+            child: CircularProgressIndicator(
+              value: fraction,
+              color: Colors.white,
+              backgroundColor: Colors.white24,
+            ),
           ),
           const SizedBox(height: 12),
           Text(
@@ -942,17 +963,18 @@ class _Copying extends StatelessWidget {
                 ? context.l10n.viewerCopying
                 : context.l10n.viewerCopyingProgress(fraction),
             textAlign: TextAlign.center,
-            style: TextStyle(color: c.t2),
+            style: const TextStyle(color: Colors.white),
           ),
           const SizedBox(height: 4),
           TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.white),
             onPressed: onCancel,
             child: Text(context.l10n.viewerCancel),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
 }
 
 /// Format, size and date of the shot.
