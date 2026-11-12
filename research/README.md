@@ -1,6 +1,6 @@
 # GR camera protocol research
 
-How Ricoh GR cameras talk to phones, reverse-engineered for GR Lab. Sources include the official Android app **RICOH GR WORLD 2.0.0** (`com.ricohimaging.grworld`, versionCode 26101500), Ricoh's older Image Sync 2.1.32, and extracted GR III/IIIx and GR IV firmware. Findings come from static analysis unless the [hardware results log](hardware-validation.md#4-results-log) or a file's own "observed" note says otherwise. On a GR IV HDF (fw 1.20) the following has been run end to end: pairing from a Mac, BLE identity and Wi-Fi credential reads, WLAN-on, joining the camera AP, `/v1/props`, photo listing and download, power-on from off (Android), and live view, focus and exposure changes (GR Lab on Android). No GR III/IIIx has been tested.
+How Ricoh GR cameras talk to phones, reverse-engineered for GR Photo. Sources include the official Android app **RICOH GR WORLD 2.0.0** (`com.ricohimaging.grworld`, versionCode 26101500), Ricoh's older Image Sync 2.1.32, and extracted GR III/IIIx and GR IV firmware. Findings come from static analysis unless the [hardware results log](hardware-validation.md#4-results-log) or a file's own "observed" note says otherwise. On a GR IV HDF (fw 1.20) the following has been run end to end: pairing from a Mac, BLE identity and Wi-Fi credential reads, WLAN-on, joining the camera AP, `/v1/props`, photo listing and download, power-on from off (Android), and live view, focus and exposure changes (GR Photo on Android). No GR III/IIIx has been tested.
 
 Paths such as `apk/…`, `work/…`, `firmware/…`, `captures/…` and `tools/blutter/` refer to the local research workspace (`../gr` beside this repository). It holds Ricoh's APKs, their decompilation, the extracted firmware and its decompiled evidence; those are Ricoh's copyrighted files and are not in this repository. See `AGENTS.md` for how to keep these notes current.
 
@@ -14,10 +14,10 @@ Paths such as `apk/…`, `work/…`, `firmware/…`, `captures/…` and `tools/b
 | [protocol/http-api.md](protocol/http-api.md) | Camera HTTP API at `http://192.168.0.1/v1/...` (18 endpoints), photo import and auto-transfer flows, WebSocket `ws://192.168.0.1/v1/changes`, error codes |
 | [protocol/firmware-update.md](protocol/firmware-update.md) | Firmware update from the phone (GR IV family only): GR WORLD's cloud lookup and package, the prepare/upload/cancel routes and what the GR IV firmware does with them, the BLE start/result characteristics, error reasons, and the WebSocket open/close that cancels an upload |
 | [protocol/remote-shooting.md](protocol/remote-shooting.md) | Wi-Fi remote shooting from Ricoh's Image Sync 2.1.32: live view MJPEG stream, HTTP shutter/focus/compose/cancel, exposure writes and value tables, WebSocket completion tracking, per-model behaviour, firmware cross-check, GR IV observations |
-| [protocol/image-control.md](protocol/image-control.md) | Image Control looks: GR WORLD never builds a blob (it copies camera bytes), the parameters of each base image from GR IV firmware keys, value ranges and names, slot-name rules, and GR Lab's choices where facts stop |
+| [protocol/image-control.md](protocol/image-control.md) | Image Control looks: GR WORLD never builds a blob (it copies camera bytes), the parameters of each base image from GR IV firmware keys, value ranges and names, slot-name rules, and GR Photo's choices where facts stop |
 | [image-control-processing.md](image-control-processing.md) | How the GR IV and GR III/IIIx render each Image Control base and parameter, from the firmware: processing only (the capture is unchanged), pipeline order, tone curve and its four sliders, per-base colour matrices, saturation and hue, multi-axis colour correction, per-channel curves (Cinema, Cross Processing, Hi-Contrast B&W, Solarized), monochrome conversion and toning, each base's default values, Shading, Clarity, Grain, HDR Tone and Sharpness, the side effect on noise reduction, how to approximate them in a preview, and the independent second pass that checked the GR IV findings |
 | [protocol/usb.md](protocol/usb.md) | Wired support: GR WORLD has none; camera USB is a read-only PTP device (VID/PIDs, supported ops, unreachable Pentax tether code), wired-vs-wireless feature parity and per-platform effort |
-| [protocol/connection-lifecycle.md](protocol/connection-lifecycle.md) | How the app joins and loses camera Wi-Fi, connection state machine, observed defects versus causal hypotheses, per-platform fixes, how GR Lab keeps downloads running in the background |
+| [protocol/connection-lifecycle.md](protocol/connection-lifecycle.md) | How the app joins and loses camera Wi-Fi, connection state machine, observed defects versus causal hypotheses, per-platform fixes, how GR Photo keeps downloads running in the background |
 | [protocol/connection-imagesync.md](protocol/connection-imagesync.md) | How Ricoh's Image Sync keeps the link: 2 Hz `/v1/props` heartbeat, loss rule, WebSocket auto-reopen, BSSID pinning, 60 s background WLAN-off, BLE↔Wi-Fi handoff, per-model capability matrix, liveness comparison with GR WORLD |
 | [protocol/grworld-connect-flow.md](protocol/grworld-connect-flow.md) | GR WORLD's connect sequence step by step, from the decompiled app |
 | [protocol/power-on-grworld.md](protocol/power-on-grworld.md) | How GR WORLD powers an off camera on over BLE |
@@ -27,7 +27,7 @@ Paths such as `apk/…`, `work/…`, `firmware/…`, `captures/…` and `tools/b
 | [firmware-network-config.md](firmware-network-config.md) | Camera boot/AP startup, hostapd generation, DHCP, radio power settings and timeout distinctions |
 | [hardware-validation.md](hardware-validation.md) | Phone/Mac traffic-capture setup (iPhone PacketLogger + `rvictl`, Android HCI snoop), capture sessions, safe direct probes and a results log |
 | [burst-grouping.md](burst-grouping.md) | Idea: grouping continuous shots in the library. What the camera exposes per photo, what is unknown (GR IV drive-mode values, thumbnail EXIF, range requests) and the test to settle it |
-| [camera-menu-languages.md](camera-menu-languages.md) | The 21 languages of the camera's menus (GR Lab's languages), where the firmware keeps the menu text of each, how GR Lab's translations use it, and what a camera still has to settle |
+| [camera-menu-languages.md](camera-menu-languages.md) | The 21 languages of the camera's menus (GR Photo's languages), where the firmware keeps the menu text of each, how GR Photo's translations use it, and what a camera still has to settle |
 | [notes/](notes) | Working notes behind the documents above: per-service BLE analysis of GR WORLD (`notes/ble/`), HTTP notes, and public-source history of the extra HTTP routes. Superseded where a document says otherwise |
 | [tools/dartdis.py](tools/dartdis.py) | Linear disassembler for GR WORLD's Dart AOT snapshot (see "Reproducing the analysis") |
 | [tools/menu_strings.py](tools/menu_strings.py) | Prints an entry of the camera's menu text in every language from a firmware RTOS image (see [camera-menu-languages.md](camera-menu-languages.md)) |
@@ -57,16 +57,18 @@ From the [results log](hardware-validation.md#4-results-log); rules for clients 
 
 ## Recommended stack
 
-Flutter for the UI on all four platforms, a pure-Dart `gr_protocol` package for BLE + HTTP + the connection state machine (BLE through `universal_ble`, BSD-3-Clause; `flutter_blue_plus` 2.x needs a paid licence for for-profit use), and a small native `camera_wifi` plugin per platform for joining the AP and, on Android, binding camera sockets to that network. A Rust core (btleplug + UniFFI behind native UIs) is the alternative if native UIs or a headless CLI matter more than a single UI codebase. See [framework.md](framework.md). GR Lab follows this: `packages/gr_protocol`, and `packages/gr_camera` as the plugin and camera layer.
+Flutter for the UI on all four platforms, a pure-Dart `gr_protocol` package for BLE + HTTP + the connection state machine (BLE through `universal_ble`, BSD-3-Clause; `flutter_blue_plus` 2.x needs a paid licence for for-profit use), and a small native `camera_wifi` plugin per platform for joining the AP and, on Android, binding camera sockets to that network. A Rust core (btleplug + UniFFI behind native UIs) is the alternative if native UIs or a headless CLI matter more than a single UI codebase. See [framework.md](framework.md). GR Photo follows this: `packages/gr_protocol`, and `packages/gr_camera` as the plugin and camera layer.
 
 ## Code
 
-GR Lab's own code is in this repository (`packages/gr_protocol`, `packages/gr_camera`, `packages/gr_fake_camera`, `app`). The early prototypes used for the first hardware runs stay in the local research workspace (`../gr`):
+GR Photo's own code is in this repository (`packages/gr_protocol`, `packages/gr_camera`, `packages/gr_fake_camera`, `app`). The early prototypes used for the first hardware runs stay in the local research workspace (`../gr`):
+
+GR Photo was named GR Lab until 2026-11-12, with the application ID `io.jeph.grlab`. In these notes "GR Lab" now means only the Mac prototype below (`apps/gr_lab`), and names quoted from that time, such as the client name `GR Lab Mac` it registered on the camera, are left as they were.
 
 | Path in `../gr` | What |
 |---|---|
 | `packages/gr_cli` | `gr` command-line tool for the camera's HTTP/WebSocket API (`dart run gr_cli:gr --help`). |
-| `apps/gr_lab` | Flutter test app: `universal_ble` transport, scan, BLE-only or full sessions, camera actions and a trace file. Wi-Fi join is automatic on macOS (`networksetup`, so the macOS app is not sandboxed) and manual elsewhere. `flutter run -d macos`. |
+| `apps/gr_lab` | GR Lab, a Flutter test app: `universal_ble` transport, scan, BLE-only or full sessions, camera actions and a trace file. Wi-Fi join is automatic on macOS (`networksetup`, so the macOS app is not sandboxed) and manual elsewhere. `flutter run -d macos`. |
 | `packages/gr_protocol` | The prototype of this repository's `gr_protocol`. |
 
 How to use them against a camera: [hardware validation §1.1](hardware-validation.md#11-repo-tools).
@@ -76,10 +78,10 @@ How to use them against a camera: [hardware validation §1.1](hardware-validatio
 Each document ends with "Open questions". The highest-value remaining checks:
 1. A GR III/IIIx: GATT discovery, bonding rules and Wi-Fi hand-off (only GR IV has been tested).
 2. iOS and Windows reconnects to a bonded camera (the Mac fails; static analysis of iOS `bluetoothd` suggests iOS does not force the public address, untested: [firmware bonding §7(a)](protocol/firmware-bonding.md#a-the-mac-cannot-reconnect-after-pairing)).
-3. Whether the camera drops idle HTTP/WebSocket clients, and its Wi-Fi idle timeout with and without periodic probes. GR Lab probes `GET /v1/ping` every 5 s, which a GR IV HDF answers (fw 1.20, 2026-11-11); no GR III has been tried ([connection lifecycle §9, What GR Lab does, open questions 12 and 13](protocol/connection-lifecycle.md#what-gr-lab-does)).
+3. Whether the camera drops idle HTTP/WebSocket clients, and its Wi-Fi idle timeout with and without periodic probes. GR Photo probes `GET /v1/ping` every 5 s, which a GR IV HDF answers (fw 1.20, 2026-11-11); no GR III has been tried ([connection lifecycle §9, What GR Photo does, open questions 12 and 13](protocol/connection-lifecycle.md#what-gr-photo-does)).
 4. HTTP proxy capture of GR WORLD's own `/v1/transfers` and WebSocket traffic.
-5. iOS with Tailscale, and another VPN, on: does a GR Lab join reach the camera at `192.168.0.1`, with and without the VPN routing the camera's subnet, and what does the app show if it fails? Android refuses the camera network under a VPN that apps cannot bypass, and GR Lab now says so there; iOS has no VPN check yet ([connection lifecycle §9 iOS, open question 9](protocol/connection-lifecycle.md#9-recommendations-for-a-robust-client)).
-6. GR Lab's background downloads with a real camera: on an iPhone with iOS 26 or later, whether the continued processing task starts, shows its Live Activity and keeps the transfer going with the app in the background and the phone locked (it cannot run on the simulator); on an Android phone, whether the camera network stays up through a long download with the screen off ([connection lifecycle §9, open questions 10 and 11](protocol/connection-lifecycle.md#9-recommendations-for-a-robust-client)).
+5. iOS with Tailscale, and another VPN, on: does a GR Photo join reach the camera at `192.168.0.1`, with and without the VPN routing the camera's subnet, and what does the app show if it fails? Android refuses the camera network under a VPN that apps cannot bypass, and GR Photo now says so there; iOS has no VPN check yet ([connection lifecycle §9 iOS, open question 9](protocol/connection-lifecycle.md#9-recommendations-for-a-robust-client)).
+6. GR Photo's background downloads with a real camera: on an iPhone with iOS 26 or later, whether the continued processing task starts, shows its Live Activity and keeps the transfer going with the app in the background and the phone locked (it cannot run on the simulator); on an Android phone, whether the camera network stays up through a long download with the screen off ([connection lifecycle §9, open questions 10 and 11](protocol/connection-lifecycle.md#9-recommendations-for-a-robust-client)).
 
 Two in-app inconsistencies to keep in mind: the firmware gate in code requires GR II ≥ "3.00" (`0x54b6c0`) while the UI text says 1.10; and the gate compares model strings exactly against "GR IV", "GR IIIx", "GR III", "GR II".
 
@@ -92,6 +94,6 @@ Binaries and derived output live only in the local research workspace (`../gr`: 
 3. **blutter** (github.com/worawit/blutter, built for Dart 3.11.1) for the object pool (`pp.txt`), const objects (`objs.txt`) and names. Run it on a **case-sensitive** volume: obfuscated library names differ only by case and overwrite each other on default macOS APFS (`hdiutil create -fs "Case-sensitive APFS" …`). blutter only emits asm for functions that still have Code objects (~3 % here).
 4. **`research/tools/dartdis.py`** for full coverage: linear Capstone disassembly of `_kDartIsolateSnapshotInstructions`, with object-pool loads (x27) resolved against `pp.txt` and call targets named from blutter's `addNames.py`.
    ```
-   tools/blutter/.venv/bin/python ../gr-lab/research/tools/dartdis.py work/lib/arm64-v8a/libapp.so work/cs/blutter_out work/dis
+   tools/blutter/.venv/bin/python ../gr-photo/research/tools/dartdis.py work/lib/arm64-v8a/libapp.so work/cs/blutter_out work/dis
    ```
    Outputs `dis.txt`, `xrefs.json` (pool offset → referencing functions). The docs cite `0x…` addresses in `dis.txt` and `pp+0x…` offsets in `pp.txt`.

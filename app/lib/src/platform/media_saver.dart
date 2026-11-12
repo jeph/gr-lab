@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
-import 'package:grlab/src/services.dart';
+import 'package:grphoto/src/services.dart';
 
-/// [MediaSaver] over the `io.jeph.grlab/media` method channel.
+/// [MediaSaver] over the `io.jeph.grphoto/media` method channel.
 ///
 /// The shot is sent as `{album, files: [{path, name, kind, mimeType}]}`
 /// with the JPEG before the DNG, because iOS makes the first file of a pair
@@ -14,7 +14,7 @@ import 'package:grlab/src/services.dart';
 /// that title, which takes full access to Photos; with limited or add-only
 /// access it saves the shot outside the album.
 final class PlatformMediaSaver implements MediaSaver {
-  new({this._channel = const MethodChannel('io.jeph.grlab/media')});
+  new({this._channel = const MethodChannel('io.jeph.grphoto/media')});
 
   final MethodChannel _channel;
 

@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="../icon.png" alt="Icône de GR Lab" width="128" height="128">
+  <img src="../icon.png" alt="Icône de GR Photo" width="128" height="128">
 </p>
 
-<h1 align="center">GR Lab</h1>
+<h1 align="center">GR Photo</h1>
 
 <p align="center">
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="Licence : MIT"></a>
@@ -33,14 +33,14 @@
   <a href="README.ja.md">日本語</a>
 </p>
 
-**GR Lab** est une application compagnon pour les appareils photo Ricoh GR (GR III, GR IIIx et
+**GR Photo** est une application compagnon pour les appareils photo Ricoh GR (GR III, GR IIIx et
 GR IV), sur iOS et Android. Elle parcourt et télécharge les photos de votre appareil photo, sert de
 déclencheur à distance avec visée directe et garde vos styles Contrôle de l'image au même endroit.
 Elle est conçue pour être rapide et simple à utiliser, et pour gérer correctement les profils de
 couleur de l'appareil photo : enregistrez le style avec lequel une photo a été prise, modifiez-le
 avec un aperçu sous les yeux et chargez-le dans les emplacements Personnalisé de l'appareil photo.
 
-GR Lab est un projet indépendant, sans lien avec Ricoh. L'application communique avec l'appareil
+GR Photo est un projet indépendant, sans lien avec Ricoh. L'application communique avec l'appareil
 photo au moyen d'un protocole obtenu par rétro-ingénierie des applications de Ricoh et du firmware
 de l'appareil photo ; les résultats sont consignés dans [`research/`](../../research/README.md).
 
@@ -77,10 +77,10 @@ de l'appareil photo ; les résultats sont consignés dans [`research/`](../../re
 
 ## Fonctionnalités
 
-GR Lab a trois priorités : vous amener vite à vos photos, se faire oublier et traiter les styles
+GR Photo a trois priorités : vous amener vite à vos photos, se faire oublier et traiter les styles
 Contrôle de l'image comme quelque chose qui mérite d'être géré.
 
-- **Rapide.** À l'ouverture, GR Lab se connecte à votre appareil photo en Bluetooth s'il est à
+- **Rapide.** À l'ouverture, GR Photo se connecte à votre appareil photo en Bluetooth s'il est à
   proximité. Ouvrir la Bibliothèque réveille l'appareil photo, active son Wi-Fi et le rejoint d'une
   seule traite ; le Wi-Fi reste ensuite actif quand vous passez d'une page à l'autre, si bien que
   rien ne se connecte deux fois et qu'un téléchargement se poursuit. Les listes de fichiers, les
@@ -88,7 +88,7 @@ Contrôle de l'image comme quelque chose qui mérite d'être géré.
   rapidement. Avec un GR IV HDF et un téléphone Android, un appareil photo éteint a affiché sa
   Bibliothèque en 13 secondes environ.
 - **Simple à utiliser.** Un seul écran réunit vos appareils photo, et Bibliothèque, Prise de vue et
-  Styles en sont à un toucher. GR Lab allume l'appareil photo, active son Wi-Fi et le rejoint pour
+  Styles en sont à un toucher. GR Photo allume l'appareil photo, active son Wi-Fi et le rejoint pour
   vous : après le jumelage, il n'y a plus rien à régler sur l'appareil photo. En cas d'échec,
   l'application indique pourquoi et ce qu'il faut vérifier, avec un bouton Réessayer. Une connexion
   qui tombe se rétablit toute seule.
@@ -110,7 +110,7 @@ Contrôle de l'image comme quelque chose qui mérite d'être géré.
   photo.
 - **Bibliothèque.** Parcourez les photos et les vidéos de l'appareil photo par jour, filtrez par
   JPEG, RAW, vidéo ou non téléchargées, et ouvrez n'importe quelle vue en plein écran avec ses
-  détails. Téléchargez une vue ou une sélection, en JPEG, en RAW ou les deux, dans un album GR Lab
+  détails. Téléchargez une vue ou une sélection, en JPEG, en RAW ou les deux, dans un album GR Photo
   de la photothèque de votre téléphone. Les téléchargements continuent pendant que vous utilisez une
   autre application ou verrouillez le téléphone : Android les affiche dans une notification avec
   Mettre en pause et Tout annuler, et iOS 26 ou version ultérieure affiche leur progression sur
@@ -127,7 +127,7 @@ Contrôle de l'image comme quelque chose qui mérite d'être géré.
 - **Thèmes et langues.** Les thèmes Clair, Sombre, Chambre noire, Papier et Cyanotype, et les
   21 langues des menus de l'appareil photo.
 - **Respect de la vie privée.** Ni compte, ni mesure d'audience, ni publicité, ni rapport de
-  plantage. GR Lab ne communique qu'avec votre appareil photo ; consultez la
+  plantage. GR Photo ne communique qu'avec votre appareil photo ; consultez la
   [politique de confidentialité](../../app/assets/privacy.md).
 
 ## Configuration requise
@@ -138,7 +138,7 @@ Contrôle de l'image comme quelque chose qui mérite d'être géré.
   Contrôle de l'image depuis un téléphone.
 - Android 12 ou version ultérieure, ou iOS 15 ou version ultérieure.
 
-GR Lab est un projet jeune. Le journal des essais sur matériel consigne des sessions avec un GR IV
+GR Photo est un projet jeune. Le journal des essais sur matériel consigne des sessions avec un GR IV
 HDF sous firmware 1.20 : jumelage, connexion, réveil de l'appareil photo, navigation,
 téléchargement, visée directe, mise au point et changements d'exposition. La prise en charge des
 GR III et GR IIIx découle de l'étude du protocole et n'a pas encore été testée sur un appareil
@@ -147,22 +147,22 @@ photo. Voir [`research/hardware-validation.md`](../../research/hardware-validati
 
 ## Installation
 
-Sur Android, téléchargez `gr-lab-v<version>.apk` depuis la
-[dernière version](https://github.com/jeph/gr-lab/releases/latest) sur votre téléphone et
+Sur Android, téléchargez `gr-photo-v<version>.apk` depuis la
+[dernière version](https://github.com/jeph/gr-photo/releases/latest) sur votre téléphone et
 ouvrez-le. Android demande une fois l'autorisation d'installer des applications depuis votre
 navigateur. Toutes les versions sont signées avec la même clé : une version plus récente s'installe
 donc par-dessus celle que vous avez et conserve vos appareils photo et vos réglages.
 
 Sur iOS, chaque version est envoyée à TestFlight, pour l'instant uniquement aux testeurs du projet.
-Il n'existe pas encore de lien TestFlight public : sur un iPhone, GR Lab s'installe donc en le
+Il n'existe pas encore de lien TestFlight public : sur un iPhone, GR Photo s'installe donc en le
 compilant à partir des sources.
 
 La compilation à partir des sources nécessite [Flutter](https://flutter.dev) 3.47 ou ultérieur,
 avec le SDK Android ou Xcode configuré.
 
 ```sh
-git clone https://github.com/jeph/gr-lab.git
-cd gr-lab/app
+git clone https://github.com/jeph/gr-photo.git
+cd gr-photo/app
 flutter run --flavor prod --release
 ```
 
@@ -185,12 +185,12 @@ flutter run --dart-define=GR_DEMO=true
    l'appareil photo, le jumelage se trouve sous MENU, E6, Communication sans fil : réglez Mode de
    fonctionnement sur Marche, ouvrez Jumelage et choisissez Exécuter le jumelage, puis confirmez le
    code sur le téléphone et appuyez sur OK sur l'appareil photo. L'appareil photo figure alors sur
-   l'écran Appareils photo, et GR Lab s'y connecte tout seul lorsqu'il s'ouvre avec l'appareil photo
-   à proximité.
-2. **Ouvrez la Bibliothèque.** GR Lab allume l'appareil photo s'il est éteint et rejoint son Wi-Fi.
-   Android vous demande une fois d'approuver le réseau de l'appareil photo. Touchez une vue pour
-   l'afficher, maintenez l'appui pour en sélectionner plusieurs, et téléchargez ce que vous voulez
-   garder.
+   l'écran Appareils photo, et GR Photo s'y connecte tout seul lorsqu'il s'ouvre avec l'appareil
+   photo à proximité.
+2. **Ouvrez la Bibliothèque.** GR Photo allume l'appareil photo s'il est éteint et rejoint son
+   Wi-Fi. Android vous demande une fois d'approuver le réseau de l'appareil photo. Touchez une vue
+   pour l'afficher, maintenez l'appui pour en sélectionner plusieurs, et téléchargez ce que vous
+   voulez garder.
 3. **Prenez des photos.** Télécommande est un déclencheur qui passe par le Bluetooth. Visée directe
    rejoint le Wi-Fi de l'appareil photo et affiche son image, avec les commandes de mise au point et
    d'exposition.
@@ -198,10 +198,9 @@ flutter run --dart-define=GR_DEMO=true
    ou créez-en un de toutes pièces avec + sur la page Styles. Touchez un style pour le modifier, et
    faites-le glisser sur C1, C2 ou C3 pour le charger dans l'appareil photo.
 
-L'option Déconnexion automatique des Réglages quitte le Wi-Fi de l'appareil photo lorsque GR Lab est
-resté inutilisé un certain temps (5 minutes par défaut).
-[Le comportement de GR Lab](../behaviour.md) décrit en détail chaque écran et chaque état de
-connexion.
+L'option Déconnexion automatique des Réglages quitte le Wi-Fi de l'appareil photo lorsque GR Photo
+est resté inutilisé un certain temps (5 minutes par défaut). [Le comportement de
+GR Photo](../behaviour.md) décrit en détail chaque écran et chaque état de connexion.
 
 ## Développement
 
@@ -226,8 +225,9 @@ flutter run --flavor prod --release          # le build destiné aux utilisateur
 flutter run --dart-define=GR_DEMO=true       # appareil photo simulé, fonctionne sur l'émulateur Android et le simulateur iOS
 ```
 
-Il existe deux builds. `dev` (`io.jeph.grlab.dev`, nommé « GR Lab Dev ») s'installe à côté de `prod`
-(`io.jeph.grlab`, « GR Lab »). Sans `--flavor`, `flutter run` et `flutter build` produisent `dev`.
+Il existe deux builds. `dev` (`io.jeph.grphoto.dev`, nommé « GR Photo Dev ») s'installe à côté de
+`prod` (`io.jeph.grphoto`, « GR Photo »). Sans `--flavor`, `flutter run` et `flutter build`
+produisent `dev`.
 
 `flutter run` seul produit un build debug, qui met plusieurs fois plus de temps à construire chaque
 image qu'un build profile ou release (3 à 4 fois dans la Bibliothèque sur un émulateur Android,
@@ -270,7 +270,7 @@ l'identifiant de l'application : il lui faut donc `--flavor dev` et un APK compi
 sans eux, il s'arrête sur « No application found ».
 
 Sur le simulateur iOS, l'application doit être installée au moment où l'accès à Photos est accordé,
-et `flutter test` la désinstalle ensuite, ce qui supprime l'autorisation. GR Lab demande l'accès
+et `flutter test` la désinstalle ensuite, ce qui supprime l'autorisation. GR Photo demande l'accès
 complet, afin de conserver son album, et sur le simulateur iOS 26.3, `simctl privacy grant photos`
 seul n'a pas empêché iOS de poser la question : l'autorisation qu'il enregistre a un `auth_version`
 de 1, et iOS ne la considère comme un accès complet qu'à 2. Accordez-la et réglez cette valeur avant
@@ -280,15 +280,15 @@ chaque exécution :
 cd app
 flutter build ios --simulator --debug --dart-define=GR_DEMO=true
 xcrun simctl install booted build/ios/iphonesimulator/Runner.app
-xcrun simctl privacy booted grant photos io.jeph.grlab.dev
+xcrun simctl privacy booted grant photos io.jeph.grphoto.dev
 sqlite3 "$(xcrun simctl getenv booted HOME)/Library/TCC/TCC.db" \
-  "UPDATE access SET auth_version = 2 WHERE service = 'kTCCServicePhotos' AND client = 'io.jeph.grlab.dev'"
+  "UPDATE access SET auth_version = 2 WHERE service = 'kTCCServicePhotos' AND client = 'io.jeph.grphoto.dev'"
 flutter test integration_test --dart-define=GR_DEMO=true -d <simulator>
 ```
 
 ### Journal de débogage
 
-GR Lab tient des journaux de débogage tant que Réglages > Activer le journal de débogage est
+GR Photo tient des journaux de débogage tant que Réglages > Activer le journal de débogage est
 activé : tout ce qu'il envoie à l'appareil photo et en reçoit (recherches, lectures, écritures et
 notifications Bluetooth, chaque requête HTTP et sa réponse, messages WebSocket, tailles des images
 de la visée directe et étapes de la connexion au Wi-Fi), chaque ligne affichée par l'application,
@@ -305,13 +305,13 @@ Chaque push sur `main` est une version, produite par
 [`.github/workflows/release.yml`](../../.github/workflows/release.yml). Le workflow numérote la
 version 0.0.N, soit un de plus que la précédente, exécute `tool/check.sh` et compile le flavor
 `prod` des deux applications en mode release. L'APK Android est signé avec la clé de publication de
-GR Lab et publié sur la [page des versions](https://github.com/jeph/gr-lab/releases) avec sa somme
-de contrôle SHA-256, une attestation de provenance du build et le mapping R8 qui permet de lire ses
-traces de pile Kotlin. L'application iOS est signée pour l'App Store et envoyée à TestFlight. Les
-clés sont conservées dans des environnements GitHub que seule `main` peut utiliser, et les jobs qui
-compilent les applications n'en détiennent aucune.
+GR Photo et publié sur la [page des versions](https://github.com/jeph/gr-photo/releases) avec sa
+somme de contrôle SHA-256, une attestation de provenance du build et le mapping R8 qui permet de
+lire ses traces de pile Kotlin. L'application iOS est signée pour l'App Store et envoyée à
+TestFlight. Les clés sont conservées dans des environnements GitHub que seule `main` peut utiliser,
+et les jobs qui compilent les applications n'en détiennent aucune.
 
-`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab` vérifie qu'un APK a été compilé
+`gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo` vérifie qu'un APK a été compilé
 par ce workflow à partir de ce dépôt.
 
 ```sh
@@ -324,7 +324,7 @@ Store Connect, où il apparaît sous TestFlight une fois traité. Les testeurs i
 depuis l'application TestFlight, sans câble. Xcode signe et envoie le build avec une clé d'API App
 Store Connect : la configuration sur un Mac se résume donc au fichier `AuthKey_<key id>.p8` de la
 clé dans `~/.appstoreconnect/private_keys`, ainsi qu'à `ASC_KEY_ID` et `ASC_ISSUER_ID` dans
-`~/.appstoreconnect/gr-lab.env`. La clé doit avoir le rôle Admin : Apple ne permet pas à une clé
+`~/.appstoreconnect/gr-photo.env`. La clé doit avoir le rôle Admin : Apple ne permet pas à une clé
 Gestionnaire d'apps d'utiliser le certificat de distribution de l'équipe. L'archive est compilée
 sans signature et signée pour l'App Store à l'exportation (`app/ios/ExportOptions.plist`), car
 signer l'archive elle-même exigerait un appareil de test enregistré dans l'équipe.
@@ -332,8 +332,8 @@ signer l'archive elle-même exigerait un appareil de test enregistré dans l'éq
 ## Contribuer
 
 Les rapports de bug et les pull requests sont les bienvenus. La plupart des bugs n'apparaissent que
-sur du matériel réel : lorsque vous [ouvrez une issue](https://github.com/jeph/gr-lab/issues), merci
-d'indiquer le modèle de votre appareil photo et la version de son firmware, le modèle de votre
+sur du matériel réel : lorsque vous [ouvrez une issue](https://github.com/jeph/gr-photo/issues),
+merci d'indiquer le modèle de votre appareil photo et la version de son firmware, le modèle de votre
 téléphone et sa version d'Android ou d'iOS, et ce que vous avez fait. Un journal de débogage exporté
 (Réglages, Journal de débogage, Exporter le journal) montre généralement ce qui s'est passé, mais il
 contient le numéro de série et le mot de passe Wi-Fi de votre appareil photo : ne le joignez que si
@@ -348,7 +348,7 @@ privé.
 
 ## Remerciements
 
-GR Lab est développé avec [Flutter](https://flutter.dev) et utilise
+GR Photo est développé avec [Flutter](https://flutter.dev) et utilise
 [universal_ble](https://pub.dev/packages/universal_ble) pour le Bluetooth,
 [image](https://pub.dev/packages/image), [video_player](https://pub.dev/packages/video_player),
 [share_plus](https://pub.dev/packages/share_plus) et
@@ -361,7 +361,7 @@ concernant les réglages Contrôle de l'image du GR IIIx.
 
 ## Licence
 
-GR Lab est publié sous [licence MIT](../../LICENSE). Les paquets et les polices tiers que GR Lab
+GR Photo est publié sous [licence MIT](../../LICENSE). Les paquets et les polices tiers que GR Photo
 intègre conservent leurs propres licences. L'application les répertorie sous
 **Réglages › À propos › Licences**, et les textes des licences des polices se trouvent dans
 [`app/assets/fonts/`](../../app/assets/fonts/).

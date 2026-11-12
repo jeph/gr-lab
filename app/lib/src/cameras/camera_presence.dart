@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
 
-import 'package:grlab/src/data/cameras.dart';
+import 'package:grphoto/src/data/cameras.dart';
 
 /// What the scan says about one paired camera.
 enum Presence {

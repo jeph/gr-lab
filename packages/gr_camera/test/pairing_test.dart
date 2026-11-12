@@ -60,7 +60,7 @@ void main() {
   /// Starts a run; its error, once it fails, goes to the returned list.
   List<Object> pair({void Function(PairingRun run)? started}) {
     final errors = <Object>[];
-    final run = PairingRun(environment, target: target, clientName: 'GR Lab');
+    final run = PairingRun(environment, target: target, clientName: 'GR Photo');
     run.start().then<void>((_) {}, onError: errors.add).ignore();
     started?.call(run);
     return errors;

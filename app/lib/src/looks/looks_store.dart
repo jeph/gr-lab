@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
 
-import 'package:grlab/src/data/json_file.dart';
+import 'package:grphoto/src/data/json_file.dart';
 
 /// A look in the user's library: an Image Control (base image and
 /// parameters) under a name the user chose, with the photo it came from.
@@ -47,13 +47,13 @@ final class SavedLook {
 
   /// The Image Control blob the look's photo was developed with, which
   /// stays as it was when the look is edited; null for a look without a
-  /// photo, and for one saved before GR Lab kept this.
+  /// photo, and for one saved before GR Photo kept this.
   final Uint8List? photoData;
 
   /// The EXIF orientation (1–8) that shows the look's photo upright: a
   /// camera stores its previews in the sensor's layout however it was
   /// held (`orientationToApply`). Null shows the photo as stored: a look
-  /// without a photo, or one saved before GR Lab kept this.
+  /// without a photo, or one saved before GR Photo kept this.
   final int? photoOrientation;
 
   /// [data] read as a look; null when it is not one.

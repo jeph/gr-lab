@@ -9,7 +9,7 @@
 RTOS_BIN is the RTOS image of a firmware package, such as
 `firmware/gr4_v120/rtos.bin` in the research workspace. How the tables are
 laid out is in research/camera-menu-languages.md. The output is Ricoh's
-text: use it to word GR Lab's translations as the camera does, and do not
+text: use it to word GR Photo's translations as the camera does, and do not
 commit it.
 """
 

@@ -8,7 +8,7 @@ plugins {
 }
 
 configure<ApplicationExtension> {
-    namespace = "io.jeph.grlab"
+    namespace = "io.jeph.grphoto"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -18,7 +18,7 @@ configure<ApplicationExtension> {
     }
 
     defaultConfig {
-        applicationId = "io.jeph.grlab"
+        applicationId = "io.jeph.grphoto"
         // Android 12: Nearby-devices Bluetooth permissions without location,
         // WifiNetworkSpecifier, and MediaStore inserts without storage access.
         minSdk = 31
@@ -41,18 +41,18 @@ configure<ApplicationExtension> {
         create("dev") {
             dimension = "variant"
             applicationIdSuffix = ".dev"
-            resValue("string", "app_name", "GR Lab Dev")
+            resValue("string", "app_name", "GR Photo Dev")
         }
         create("prod") {
             dimension = "variant"
-            resValue("string", "app_name", "GR Lab")
+            resValue("string", "app_name", "GR Photo")
         }
     }
 
     buildTypes {
         release {
             // The debug key, so `flutter run --release` works without a key of
-            // one's own. A released APK is signed again with GR Lab's release
+            // one's own. A released APK is signed again with GR Photo's release
             // key, which the build never holds (tool/sign_release_apk.sh).
             signingConfig = signingConfigs.getByName("debug")
         }

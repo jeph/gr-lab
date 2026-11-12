@@ -12,7 +12,7 @@ Future<GrPairing> pair(
   Duration confirmationTimeout = const Duration(seconds: 2),
 }) => pairCamera(
   camera.transport,
-  clientName: 'GR Lab Test',
+  clientName: 'GR Photo Test',
   scanTimeout: ms(300),
   confirmationTimeout: confirmationTimeout,
   onStage: onStage,
@@ -42,7 +42,7 @@ void main() {
     expect(result.camera.bluetoothDeviceName, camera.config.bluetoothName);
     expect(stages, GrPairingStage.values);
     expect(camera.bonded, isTrue);
-    expect(camera.registeredClientName, 'GR Lab Test');
+    expect(camera.registeredClientName, 'GR Photo Test');
     expect(camera.executePairingOpen, isFalse);
     expect(camera.linkCount, 1, reason: 'the pairing link stays open');
     await result.client.connection.disconnect();
@@ -70,7 +70,7 @@ void main() {
     final result = await pairing;
     expect(result.camera.serialNumber, '1234567');
     expect(camera.bonded, isTrue);
-    expect(camera.registeredClientName, 'GR Lab Test');
+    expect(camera.registeredClientName, 'GR Photo Test');
   });
 
   test('cancelled on the camera: notConfirmed, no bond', () async {

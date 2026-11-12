@@ -4,19 +4,19 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/connection/camera_pill.dart';
-import 'package:grlab/src/connection/connect_failure_view.dart';
-import 'package:grlab/src/connection/connect_steps.dart';
-import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/data/settings.dart';
-import 'package:grlab/src/shoot/live_view_controller.dart';
-import 'package:grlab/src/shoot/shoot_format.dart';
-import 'package:grlab/src/shoot/shoot_model.dart';
-import 'package:grlab/src/shoot/shoot_screen.dart';
-import 'package:grlab/src/shoot/shoot_widgets.dart';
-import 'package:grlab/src/theme/tokens.dart';
-import 'package:grlab/src/widgets/pressable.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/connection/camera_pill.dart';
+import 'package:grphoto/src/connection/connect_failure_view.dart';
+import 'package:grphoto/src/connection/connect_steps.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/data/settings.dart';
+import 'package:grphoto/src/shoot/live_view_controller.dart';
+import 'package:grphoto/src/shoot/shoot_format.dart';
+import 'package:grphoto/src/shoot/shoot_model.dart';
+import 'package:grphoto/src/shoot/shoot_screen.dart';
+import 'package:grphoto/src/shoot/shoot_widgets.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/pressable.dart';
 
 /// Live view (mock `b-shoot`): a viewfinder, always dark, in the chosen
 /// theme when that is dark and in the Dark theme otherwise. The picture is

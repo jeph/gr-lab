@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
 
-import 'package:grlab/src/data/cameras.dart';
-import 'package:grlab/src/services.dart';
+import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/services.dart';
 
 enum ConnectionStatus {
   /// No session (never connected, or ended by switching or forgetting the
@@ -59,12 +59,12 @@ enum ConnectFailureKind {
   /// The camera's Wi-Fi could not be joined or verified, or it was lost.
   wifi,
 
-  /// The user chose not to join the camera's Wi-Fi (GR Lab's explanation or
+  /// The user chose not to join the camera's Wi-Fi (GR Photo's explanation or
   /// the OS prompt). Only the user asking again continues.
   wifiDeclined,
 
-  /// The phone joined the camera's Wi-Fi, but Android would not let GR Lab
-  /// use it while a VPN carried GR Lab's traffic: a VPN may be blocking it.
+  /// The phone joined the camera's Wi-Fi, but Android would not let GR Photo
+  /// use it while a VPN carried GR Photo's traffic: a VPN may be blocking it.
   /// Retried like [wifi].
   wifiVpn,
 
@@ -408,7 +408,7 @@ final class ConnectionController extends ChangeNotifier {
   /// saved camera), else as last saved.
   CameraBody get body => _session?.body ?? camera?.body ?? CameraBody.unknown;
 
-  /// The tabs of [camera]'s pages: Looks only on a model GR Lab can load
+  /// The tabs of [camera]'s pages: Looks only on a model GR Photo can load
   /// looks into ([CameraFeature.lookSlots]). A camera whose firmware is too
   /// old for it keeps the tab, which asks for the update.
   List<CameraTab> get tabs {

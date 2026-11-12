@@ -4,11 +4,11 @@ import 'package:flutter/services.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 
-import 'package:grlab/src/data/cameras.dart';
-import 'package:grlab/src/platform/app_dirs.dart';
-import 'package:grlab/src/platform/background_downloads.dart';
-import 'package:grlab/src/platform/media_saver.dart';
-import 'package:grlab/src/services.dart';
+import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/platform/app_dirs.dart';
+import 'package:grphoto/src/platform/background_downloads.dart';
+import 'package:grphoto/src/platform/media_saver.dart';
+import 'package:grphoto/src/services.dart';
 
 /// Services backed by a simulated GR IV, for the emulator/simulator and for
 /// trying the app without a camera (`--dart-define=GR_DEMO=true`).
@@ -65,7 +65,7 @@ Future<AppServices> buildDemoServices() async {
     trace: trace,
     media: PlatformMediaSaver(),
     background: PlatformBackgroundDownloads(),
-    clientName: 'GR Lab',
+    clientName: 'GR Photo',
     dataDir: data,
     cacheDir: cache,
     debugLogDir: Directory('${data.path}/debug-log'),

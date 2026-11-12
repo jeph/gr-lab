@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/widgets/dock.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/widgets/dock.dart';
 
 /// The [Dock] switching the camera's pages: [tabs], the ones the camera
 /// has ([ConnectionController.tabs]).

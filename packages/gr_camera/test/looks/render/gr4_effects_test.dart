@@ -122,7 +122,7 @@ void main() {
       expect(_worst(picture, roughEighth), lessThan(0.1));
     });
 
-    test("HDR Tone follows within half a code with curves of GR Lab's "
+    test("HDR Tone follows within half a code with curves of GR Photo's "
         'own', () {
       expect(
         _worst(_applied(const Gr4Effects(hdr: 3), 4), hdrQuarterHigh),

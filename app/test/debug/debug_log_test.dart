@@ -4,8 +4,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/src/data/settings.dart';
-import 'package:grlab/src/debug/debug_log.dart';
+import 'package:grphoto/src/data/settings.dart';
+import 'package:grphoto/src/debug/debug_log.dart';
 
 void main() {
   late Directory temp;

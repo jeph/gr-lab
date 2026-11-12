@@ -1,20 +1,20 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/app_scope.dart';
-import 'package:grlab/src/data/settings.dart';
-import 'package:grlab/src/pairing/pairing_widgets.dart';
-import 'package:grlab/src/settings/debug_log_group.dart';
-import 'package:grlab/src/settings/privacy_policy_screen.dart';
-import 'package:grlab/src/theme/tokens.dart';
-import 'package:grlab/src/widgets/group.dart';
-import 'package:grlab/src/widgets/pressable.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/app_scope.dart';
+import 'package:grphoto/src/data/settings.dart';
+import 'package:grphoto/src/pairing/pairing_widgets.dart';
+import 'package:grphoto/src/settings/debug_log_group.dart';
+import 'package:grphoto/src/settings/privacy_policy_screen.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/group.dart';
+import 'package:grphoto/src/widgets/pressable.dart';
 
 /// App settings (subset of mock `b-settings`): appearance and language,
 /// connecting to the camera when the app opens, leaving its Wi-Fi when the
 /// app is not used, the debug log, licenses, the privacy policy and the note
-/// that GR Lab is not Ricoh's.
+/// that GR Photo is not Ricoh's.
 class SettingsScreen extends StatelessWidget {
   const new({super.key});
 

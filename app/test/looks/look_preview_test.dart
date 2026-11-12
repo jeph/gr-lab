@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/src/looks/look_preview.dart';
+import 'package:grphoto/src/looks/look_preview.dart';
 
 import '../support/test_app.dart';
 

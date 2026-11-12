@@ -6,16 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:grlab/src/camera/camera_top_bar.dart';
-import 'package:grlab/src/connection/camera_pill.dart';
-import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/connection/link_state.dart';
-import 'package:grlab/src/data/cameras.dart';
-import 'package:grlab/src/library/library_screen.dart';
-import 'package:grlab/src/looks/looks_screen.dart';
-import 'package:grlab/src/pairing/pairing_flow.dart';
-import 'package:grlab/src/sample_photos.dart';
-import 'package:grlab/src/shoot/shoot_screen.dart';
+import 'package:grphoto/src/camera/camera_top_bar.dart';
+import 'package:grphoto/src/connection/camera_pill.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/connection/link_state.dart';
+import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/library/library_screen.dart';
+import 'package:grphoto/src/looks/looks_screen.dart';
+import 'package:grphoto/src/pairing/pairing_flow.dart';
+import 'package:grphoto/src/sample_photos.dart';
+import 'package:grphoto/src/shoot/shoot_screen.dart';
 
 import '../support/test_app.dart';
 
@@ -186,7 +186,7 @@ void main() {
     await app.dispose();
   });
 
-  testWidgets("Welcome shows GR Lab's photos one after another, each fading "
+  testWidgets("Welcome shows GR Photo's photos one after another, each fading "
       'in over the one before, and taking its place at once where the '
       'phone asks for less motion', (tester) async {
     tester.view

@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grlab/src/data/settings.dart';
-import 'package:grlab/src/settings/settings_screen.dart';
-import 'package:grlab/src/theme/tokens.dart';
+import 'package:grphoto/src/data/settings.dart';
+import 'package:grphoto/src/settings/settings_screen.dart';
+import 'package:grphoto/src/theme/tokens.dart';
 
 import '../support/test_app.dart';
 

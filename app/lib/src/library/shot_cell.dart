@@ -3,13 +3,13 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/library/format.dart';
-import 'package:grlab/src/library/image_orientation.dart';
-import 'package:grlab/src/library/library_scope.dart';
-import 'package:grlab/src/library/shot.dart';
-import 'package:grlab/src/theme/tokens.dart';
-import 'package:grlab/src/widgets/pressable.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/library/format.dart';
+import 'package:grphoto/src/library/image_orientation.dart';
+import 'package:grphoto/src/library/library_scope.dart';
+import 'package:grphoto/src/library/shot.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/pressable.dart';
 
 /// Badge in a cell's top-right corner.
 enum CellMark { none, downloaded, queued, selected, unselected }

@@ -7,10 +7,10 @@ import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart'
     show BleAdvertisement, BleConnection, BleTransport, grRicohCompanyId;
-import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/library/library_screen.dart';
-import 'package:grlab/src/pairing/pairing_flow.dart';
-import 'package:grlab/src/theme/tokens.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/library/library_screen.dart';
+import 'package:grphoto/src/pairing/pairing_flow.dart';
+import 'package:grphoto/src/theme/tokens.dart';
 
 import '../support/test_app.dart';
 

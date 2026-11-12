@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
 
 /// Explains the camera network before Android's own approval screen, the
 /// first time a camera's Wi-Fi is joined, or after Android showed that

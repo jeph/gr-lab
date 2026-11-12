@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/pairing/pairing_failure.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/pairing/pairing_failure.dart';
 
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));

@@ -1,17 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/app_scope.dart';
-import 'package:grlab/src/downloads/download_engine.dart';
-import 'package:grlab/src/library/format.dart';
-import 'package:grlab/src/services.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/app_scope.dart';
+import 'package:grphoto/src/downloads/download_engine.dart';
+import 'package:grphoto/src/library/format.dart';
+import 'package:grphoto/src/services.dart';
 
 /// How often transfer progress alone refreshes what the platform shows.
 /// Android drops notification updates that come much faster.
 const _progressInterval = Duration(seconds: 1);
 
-/// Keeps the download queue going while GR Lab is not in front
+/// Keeps the download queue going while GR Photo is not in front
 /// ([BackgroundDownloads]), and tells the platform what to show of it: the
 /// download bar's texts, with the camera's name and the progress across
 /// the batch. Wraps the app below its localizations, since the texts are

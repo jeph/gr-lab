@@ -1,12 +1,12 @@
-/// GR Lab's own curves for the GR IV family's tone rendering \[design\].
+/// GR Photo's own curves for the GR IV family's tone rendering \[design\].
 ///
 /// The camera's firmware holds its tone tables as 256 values each; those
-/// are Ricoh's and are not copied here. Each curve below is a fit of GR
-/// Lab's own: a monotone cubic through a few knots, with the knots placed
-/// where a curve needs them and their values found by least squares over
-/// the whole table (research/image-control-processing.md §10). The tone
-/// tables are matched to within half an 8-bit code, the Cross Processing
-/// curves, which are not smooth in the camera, to within one.
+/// are Ricoh's and are not copied here. Each curve below is a fit of
+/// GR Photo's own: a monotone cubic through a few knots, with the knots
+/// placed where a curve needs them and their values found by least squares
+/// over the whole table (research/image-control-processing.md §10). The
+/// tone tables are matched to within half an 8-bit code, the Cross
+/// Processing curves, which are not smooth in the camera, to within one.
 library;
 
 import 'package:gr_camera/src/looks/render/render_maths.dart';

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  GR Lab's app icon: a Ricoh GR seen from the front. The camera is black on
+  GR Photo's app icon: a Ricoh GR seen from the front. The camera is black on
   a light grey ground on both platforms and in light and dark appearance alike,
   because the cameras are black.
 
@@ -63,7 +63,7 @@
       <circle r="151" fill="none" stroke="#6EA8FF" stroke-width="10"/>
       <circle r="126" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="3"/>
       <circle r="100" fill="none" stroke="#fff" stroke-opacity=".16" stroke-width="3"/>
-      <text font-family="JetBrains Mono" font-weight="500" font-size="15" letter-spacing="2" fill="#fff" fill-opacity=".8" text-anchor="middle"><textPath href="#engraving-arc" startOffset="50%">GR LAB f=18.3mm 1:2.8</textPath></text>
+      <text font-family="JetBrains Mono" font-weight="500" font-size="15" letter-spacing="2" fill="#fff" fill-opacity=".8" text-anchor="middle"><textPath href="#engraving-arc" startOffset="50%">GR PHOTO f=18.3mm 1:2.8</textPath></text>
       <rect x="-62" y="-55" width="124" height="110" rx="28" fill="#050507" stroke="#45454D" stroke-width="4"/>
       <circle r="32" fill="url(#glass)"/>
       <circle r="32" fill="none" stroke="#fff" stroke-opacity=".2" stroke-width="3"/>

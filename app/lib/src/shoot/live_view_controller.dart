@@ -4,8 +4,8 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
 
-import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/shoot/camera_error_code.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/shoot/camera_error_code.dart';
 
 /// Where live view is.
 enum LiveViewPhase {

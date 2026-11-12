@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/app_scope.dart';
-import 'package:grlab/src/connection/camera_sheet.dart';
-import 'package:grlab/src/connection/link_state.dart';
-import 'package:grlab/src/theme/tokens.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/app_scope.dart';
+import 'package:grphoto/src/connection/camera_sheet.dart';
+import 'package:grphoto/src/connection/link_state.dart';
+import 'package:grphoto/src/theme/tokens.dart';
 import 'package:intl/intl.dart';
 
 /// Camera name, link state and battery at the top of the Library (mock

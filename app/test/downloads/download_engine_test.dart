@@ -7,9 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart' show GrHttpClient;
-import 'package:grlab/src/downloads/download_engine.dart';
-import 'package:grlab/src/library/shot.dart';
-import 'package:grlab/src/services.dart';
+import 'package:grphoto/src/downloads/download_engine.dart';
+import 'package:grphoto/src/library/shot.dart';
+import 'package:grphoto/src/services.dart';
 
 import '../support/test_app.dart';
 
@@ -81,7 +81,7 @@ final class Harness {
     );
     await camera.startHttp();
     final http = camera.httpClient('127.0.0.1', null);
-    final root = await Directory.systemTemp.createTemp('grlab_dl_');
+    final root = await Directory.systemTemp.createTemp('grphoto_dl_');
     return Harness._(
       camera,
       http,
@@ -167,7 +167,7 @@ void main() {
         expect(await engine.enqueue(serial, [pair], kinds: {kind}), 1);
         await engine.whenIdle();
         expect(h.saved, [expected]);
-        expect(h.media.shots.single.album, 'GR Lab');
+        expect(h.media.shots.single.album, 'GR Photo');
         expect(engine.jobs, isEmpty);
         expect(engine.isShotDownloaded(serial, pair), isTrue);
       });

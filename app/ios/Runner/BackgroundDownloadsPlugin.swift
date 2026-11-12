@@ -2,7 +2,7 @@ import BackgroundTasks
 import Flutter
 import UIKit
 
-/// `io.jeph.grlab/downloads`: keeps the download queue running after GR Lab
+/// `io.jeph.grphoto/downloads`: keeps the download queue running after GR Photo
 /// leaves the screen, as far as iOS allows.
 ///
 /// On iOS 26 and later a running queue is a continued processing task
@@ -33,7 +33,7 @@ final class BackgroundDownloadsPlugin: NSObject, FlutterPlugin {
 
   /// One task at a time, so one name: iOS wants it to begin with the app's
   /// identifier and to be listed in `BGTaskSchedulerPermittedIdentifiers`.
-  private let taskIdentifier = "\(Bundle.main.bundleIdentifier ?? "io.jeph.grlab").downloads"
+  private let taskIdentifier = "\(Bundle.main.bundleIdentifier ?? "io.jeph.grphoto").downloads"
 
   /// What the running queue shows; nil while it is hidden or paused.
   private var status: Status?
@@ -50,7 +50,7 @@ final class BackgroundDownloadsPlugin: NSObject, FlutterPlugin {
 
   static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(
-      name: "io.jeph.grlab/downloads", binaryMessenger: registrar.messenger())
+      name: "io.jeph.grphoto/downloads", binaryMessenger: registrar.messenger())
     registrar.addMethodCallDelegate(BackgroundDownloadsPlugin(channel: channel), channel: channel)
   }
 
@@ -213,7 +213,7 @@ final class BackgroundDownloadsPlugin: NSObject, FlutterPlugin {
 
   @objc private func didEnterBackground() {
     guard status != nil, task == nil, grace == .invalid else { return }
-    grace = UIApplication.shared.beginBackgroundTask(withName: "GR Lab downloads") { [weak self] in
+    grace = UIApplication.shared.beginBackgroundTask(withName: "GR Photo downloads") { [weak self] in
       self?.endGrace()
     }
   }

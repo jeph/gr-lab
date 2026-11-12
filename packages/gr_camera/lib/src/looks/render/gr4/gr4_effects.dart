@@ -519,7 +519,7 @@ const List<double> _hdrBlur = [
 ];
 
 /// What HDR Tone makes of the difference between a level and the next one
-/// (§8.4), in 8-bit codes each way: a curve of GR Lab's own \[design\],
+/// (§8.4), in 8-bit codes each way: a curve of GR Photo's own \[design\],
 /// straight between a few points fitted to the camera's 256-entry tables
 /// by least squares (within 0.2 of a code). The two finest levels of the
 /// camera's pyramid raise the smallest differences a little further than

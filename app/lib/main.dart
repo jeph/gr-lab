@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-import 'package:grlab/src/app.dart';
-import 'package:grlab/src/app_scope.dart';
-import 'package:grlab/src/debug/debug_log.dart';
-import 'package:grlab/src/demo/demo_services.dart';
-import 'package:grlab/src/platform/device_services.dart';
-import 'package:grlab/src/settings/bundled_licenses.dart';
+import 'package:grphoto/src/app.dart';
+import 'package:grphoto/src/app_scope.dart';
+import 'package:grphoto/src/debug/debug_log.dart';
+import 'package:grphoto/src/demo/demo_services.dart';
+import 'package:grphoto/src/platform/device_services.dart';
+import 'package:grphoto/src/settings/bundled_licenses.dart';
 
 /// `--dart-define=GR_DEMO=true` runs against the simulated camera, for the
 /// emulator and for trying the app without a GR.
@@ -25,6 +25,6 @@ Future<void> main() async {
     final models = await AppModels.load(services);
     log = models.debugLog;
     PlatformDispatcher.instance.onError = models.debugLog.onUncaughtError;
-    runApp(GrLabApp(models: models));
+    runApp(GrPhotoApp(models: models));
   });
 }

@@ -1,6 +1,6 @@
-# Agent instructions for GR Lab
+# Agent instructions for GR Photo
 
-GR Lab talks to Ricoh GR cameras over a protocol that was reverse-engineered, not documented by Ricoh. Most bugs show up only on real hardware. These rules exist so that a log from a tester's phone is enough to see what happened.
+GR Photo talks to Ricoh GR cameras over a protocol that was reverse-engineered, not documented by Ricoh. Most bugs show up only on real hardware. These rules exist so that a log from a tester's phone is enough to see what happened.
 
 ## Layout
 
@@ -15,7 +15,7 @@ GR Lab talks to Ricoh GR cameras over a protocol that was reverse-engineered, no
 
 ## Branches and worktrees
 
-Several agents work on this repository at once, so make every change in its own git worktree instead of in the main checkout at `~/Developer/gr-lab`. Create the worktree next to the main checkout on a new branch from `dev`, for example `git worktree add ../gr-lab-<branch> -b <branch> dev`, and leave the main checkout on `dev`.
+Several agents work on this repository at once, so make every change in its own git worktree instead of in the main checkout at `~/Developer/gr-photo`. Create the worktree next to the main checkout on a new branch from `dev`, for example `git worktree add ../gr-photo-<branch> -b <branch> dev`, and leave the main checkout on `dev`.
 
 Documentation changes are the exception. Edit Markdown files such as `AGENTS.md`, `README.md` and the files in `research/` directly in the main checkout on `dev`; they don't need a worktree. The exception covers documentation only: changes to the build system or toolchain, such as `pubspec.yaml` files, `analysis_options.yaml`, the Gradle files, the Xcode project, `Package.swift` or `tool/`, go in a worktree like any code change, even though they aren't application logic.
 
@@ -23,7 +23,7 @@ Development is trunk-based: `dev` is the trunk and the repository's default bran
 
 Finished work goes directly to `dev`; this project doesn't use pull requests. Once your work is finished and `tool/check.sh` passes, rebase the branch onto `origin/dev` and run `git push origin HEAD:dev` from the worktree. Never push to `main` without the user's explicit approval; `main` only moves when the user asks for `dev` to be promoted to it. Never force push, to any branch, with `--force`, `--force-with-lease` or a `+` refspec. If the push is rejected because `dev` moved, fetch, rebase onto `origin/dev` again, fix any conflicts or breakage, and push again. Worktree branches stay local: never push them under their own names.
 
-Once the push has landed, remove the worktree and its branch. Confirm the work is on `dev` with `git fetch origin && git merge-base --is-ancestor HEAD origin/dev`, then from the main checkout run `git worktree remove ../gr-lab-<branch>` and `git branch -D <branch>`. Finally, bring the main checkout up to date with `git pull --ff-only origin dev`.
+Once the push has landed, remove the worktree and its branch. Confirm the work is on `dev` with `git fetch origin && git merge-base --is-ancestor HEAD origin/dev`, then from the main checkout run `git worktree remove ../gr-photo-<branch>` and `git branch -D <branch>`. Finally, bring the main checkout up to date with `git pull --ff-only origin dev`.
 
 ## Commits
 
@@ -81,7 +81,7 @@ Leave code you change better than you found it, and limit the cleanup to that co
 
 ## iOS and Android
 
-GR Lab ships on iOS and Android, and every change has to work on both. A fix or feature aimed at one platform must not break or degrade the other, and shared Dart code must suit both platforms' native paths: for example, Android joins the camera network with a `WifiNetworkSpecifier` request and iOS with an `NEHotspotConfiguration`, and they differ in approval prompts, timing and errors. Keep platform differences inside the platform adapters and native code in `gr_camera`, behind one API for the UI. When one platform can't do what the other does, give it the closest equivalent and say why in the code and in `research/`. Before finishing, check what the change does on the other platform; test it on both where you can, and say in your summary which platforms you verified and which you couldn't.
+GR Photo ships on iOS and Android, and every change has to work on both. A fix or feature aimed at one platform must not break or degrade the other, and shared Dart code must suit both platforms' native paths: for example, Android joins the camera network with a `WifiNetworkSpecifier` request and iOS with an `NEHotspotConfiguration`, and they differ in approval prompts, timing and errors. Keep platform differences inside the platform adapters and native code in `gr_camera`, behind one API for the UI. When one platform can't do what the other does, give it the closest equivalent and say why in the code and in `research/`. Before finishing, check what the change does on the other platform; test it on both where you can, and say in your summary which platforms you verified and which you couldn't.
 
 ## Checks
 
@@ -93,18 +93,18 @@ Run `tool/check.sh` before considering any change done. It runs the formatter, t
 
 ## Builds
 
-- Flavors: `dev` (application ID `io.jeph.grlab.dev`, "GR Lab Dev") and `prod` (`io.jeph.grlab`, "GR Lab"). `flutter run` and `flutter build` without `--flavor` build `dev`.
+- Flavors: `dev` (application ID `io.jeph.grphoto.dev`, "GR Photo Dev") and `prod` (`io.jeph.grphoto`, "GR Photo"). `flutter run` and `flutter build` without `--flavor` build `dev`.
 - Demo mode: `--dart-define=GR_DEMO=true` runs against the simulated camera.
 - Releases: every push to `main` runs `.github/workflows/release.yml`, which releases that commit as version 0.0.N, one more than the last: a signed APK on the GitHub releases page and an iOS build on TestFlight (see `README.md`). Promoting `dev` to `main` therefore publishes to users and testers. The signing keys are in the `release` and `testflight` GitHub environments, which only `main` can use; never print them, copy them into the repository or widen those environments. Lint a change to a workflow with `actionlint` and `zizmor --pedantic`, and to a script in `tool/` with `shellcheck` and `shfmt -i 2`.
 - TestFlight from a Mac: `tool/testflight.sh` builds the `prod` iOS app and uploads it to App Store Connect outside a release (see `README.md`). Uploading publishes a build to the user's testers, so run it only when the user asks.
 
 ## Testing on devices
 
-Most of GR Lab needs a real camera, but demo mode (`--dart-define=GR_DEMO=true`) runs the whole app against the simulated camera on an Android emulator. Several agents work at once, so each worktree gets its own emulator, and agents never share one: installs, app data and taps from one agent would otherwise overwrite or interrupt another's test. Don't install on, drive or shut down an emulator that another worktree or project is using.
+Most of GR Photo needs a real camera, but demo mode (`--dart-define=GR_DEMO=true`) runs the whole app against the simulated camera on an Android emulator. Several agents work at once, so each worktree gets its own emulator, and agents never share one: installs, app data and taps from one agent would otherwise overwrite or interrupt another's test. Don't install on, drive or shut down an emulator that another worktree or project is using.
 
-Before testing, create an emulator for the worktree, named after its branch, with the Pixel 9 hardware profile and a system image under `~/Library/Android/sdk/system-images`, for example `echo no | avdmanager create avd -n gr-lab-<branch> -d pixel_9 -k "system-images;android-36;google_apis_playstore;arm64-v8a"` (the `echo no` answers its custom hardware profile prompt). Boot it on a free even port with `emulator -avd gr-lab-<branch> -port <port> -memory 4096`, and pass `-s emulator-<port>` to every `adb` command and `-d emulator-<port>` to `flutter` so it can't reach another agent's emulator or the phone. When you remove the worktree, shut the emulator down with `adb -s emulator-<port> emu kill` and delete it with `avdmanager delete avd -n gr-lab-<branch>`.
+Before testing, create an emulator for the worktree, named after its branch, with the Pixel 9 hardware profile and a system image under `~/Library/Android/sdk/system-images`, for example `echo no | avdmanager create avd -n gr-photo-<branch> -d pixel_9 -k "system-images;android-36;google_apis_playstore;arm64-v8a"` (the `echo no` answers its custom hardware profile prompt). Boot it on a free even port with `emulator -avd gr-photo-<branch> -port <port> -memory 4096`, and pass `-s emulator-<port>` to every `adb` command and `-d emulator-<port>` to `flutter` so it can't reach another agent's emulator or the phone. When you remove the worktree, shut the emulator down with `adb -s emulator-<port> emu kill` and delete it with `avdmanager delete avd -n gr-photo-<branch>`.
 
-The user's phone is sometimes reachable over `adb`, and it's the only way to test with the user's camera, but it's their own phone, not a test device. Ask the user before you install a build on it, run commands on it (pulling a log included) or test on it, and do only what they agreed to. Install the `dev` build (`io.jeph.grlab.dev`) unless the user asks for `prod`. Never change settings on the phone, whether in Android, GR Lab or any other app, without asking first.
+The user's phone is sometimes reachable over `adb`, and it's the only way to test with the user's camera, but it's their own phone, not a test device. Ask the user before you install a build on it, run commands on it (pulling a log included) or test on it, and do only what they agreed to. Install the `dev` build (`io.jeph.grphoto.dev`) unless the user asks for `prod`. Never change settings on the phone, whether in Android, GR Photo or any other app, without asking first.
 
 ## Tests
 
@@ -115,28 +115,28 @@ The user's phone is sometimes reachable over `adb`, and it's the only way to tes
 
 ## Text the user sees
 
-GR Lab is set up for translation, so every text the app itself shows comes from the localized messages in `app/lib/l10n/app_en.arb`: labels, buttons, errors, notices, dialogs and snackbars alike. Read them through `context.l10n` (the generated `AppLocalizations`). Text from the camera, such as its name, file names and setting values, is shown as the camera sends it. The camera layer reports failures as typed values, never as English sentences; the app turns each into a message. Give every message an `@` description, and describe each placeholder. Format numbers, sizes, times and dates with the locale (`intl`'s `NumberFormat` and `DateFormat`), not fixed patterns or English suffixes.
+GR Photo is set up for translation, so every text the app itself shows comes from the localized messages in `app/lib/l10n/app_en.arb`: labels, buttons, errors, notices, dialogs and snackbars alike. Read them through `context.l10n` (the generated `AppLocalizations`). Text from the camera, such as its name, file names and setting values, is shown as the camera sends it. The camera layer reports failures as typed values, never as English sentences; the app turns each into a message. Give every message an `@` description, and describe each placeholder. Format numbers, sizes, times and dates with the locale (`intl`'s `NumberFormat` and `DateFormat`), not fixed patterns or English suffixes.
 
-`tool/check_strings.dart` fails when a string literal with words in it goes straight to a widget that shows text (`Text('…')`, `title: '…'`, `tooltip: '…'` and similar) in `app/lib`. It matches common shapes, so passing it doesn't prove a screen is translated. A literal that truly must not be translated, such as the GR Lab brand name, carries `// not-translated: <why>` on the same line; like any escape hatch, it is a last resort.
+`tool/check_strings.dart` fails when a string literal with words in it goes straight to a widget that shows text (`Text('…')`, `title: '…'`, `tooltip: '…'` and similar) in `app/lib`. It matches common shapes, so passing it doesn't prove a screen is translated. A literal that truly must not be translated, such as the GR Photo brand name, carries `// not-translated: <why>` on the same line; like any escape hatch, it is a last resort.
 
-GR Lab is translated into the 21 languages of the camera's own menus (`research/camera-menu-languages.md`), one `app/lib/l10n/app_<locale>.arb` each, listed in `app/l10n.yaml`. It follows the phone's language, falls back to English when the phone's is none of them, and lets the user choose one in Settings.
+GR Photo is translated into the 21 languages of the camera's own menus (`research/camera-menu-languages.md`), one `app/lib/l10n/app_<locale>.arb` each, listed in `app/l10n.yaml`. It follows the phone's language, falls back to English when the phone's is none of them, and lets the user choose one in Settings.
 
 Everything a user reads is kept in all 21 languages. A change to text the app shows, to text iOS shows on its behalf or to the README is made in every language in the same change, never in English alone with the translations left for later.
 
 - A new or changed message is translated into every language in the same change; `tool/check_translations.dart` fails when a translation lacks a message or doesn't keep its placeholders, plural and select cases, `<b>` tags and line breaks. Translations hold the texts only: descriptions stay in `app_en.arb`. After editing an ARB file, run `flutter pub get` in `app` to regenerate `AppLocalizations`.
 - Word camera things as the camera does in each language: menu entries, Image Control names and their values come from the camera's firmware, which `research/tools/menu_strings.py` prints for every language. Write everything else the way the phone's own system text reads in that language, and build sentences so a name the user typed (`{cameraName}`) needs no case ending.
-- Texts that iOS shows on GR Lab's behalf, the permission explanations in `app/ios/Runner/Info.plist`, are translated in `app/ios/Runner/InfoPlist.xcstrings`.
+- Texts that iOS shows on GR Photo's behalf, the permission explanations in `app/ios/Runner/Info.plist`, are translated in `app/ios/Runner/InfoPlist.xcstrings`.
 - `README.md` is translated in `docs/readme/README.<locale>.md`, one file per language (`README.zh-Hant.md` for `zh_Hant`). A change to `README.md` is made in every translation in the same change, the Development section included, so each stays a complete translation with the same sections, lists, tables, code blocks and links. Name the app's screens, buttons and settings as that language's ARB file does and camera menu entries as the camera does. Relative links are rewritten for where the file is (`../../LICENSE`, `../screenshots/…`), and the Contents list uses the anchors of the translated headings. Every README, the English one included, opens with the same list of languages in the order of `app/l10n.yaml`; a new language gets a file and an entry in each list.
 - Capitals for a label go through `AppLocalizations.upperCase`, not `toUpperCase`, which is wrong for Turkish and Greek.
 - The privacy policy (`app/assets/privacy.md`) is in English only.
 
 ## Privacy policy
 
-`app/assets/privacy.md` is GR Lab's privacy policy, which Settings › About shows. App stores require it to be accurate, so when you add a feature or change behaviour, check whether the policy still describes what GR Lab does. Update it when a change affects what data GR Lab stores, where it stores it, or what it sends off the phone and to whom, or when GR Lab asks for a new permission or uses one for something new. Examples are a new network request other than to the camera, a new kind of file kept on the phone, a new export or share, or telemetry. When you update the policy, change the date at its top in the same commit.
+`app/assets/privacy.md` is GR Photo's privacy policy, which Settings › About shows. App stores require it to be accurate, so when you add a feature or change behaviour, check whether the policy still describes what GR Photo does. Update it when a change affects what data GR Photo stores, where it stores it, or what it sends off the phone and to whom, or when GR Photo asks for a new permission or uses one for something new. Examples are a new network request other than to the camera, a new kind of file kept on the phone, a new export or share, or telemetry. When you update the policy, change the date at its top in the same commit.
 
 ## Third-party licenses
 
-Before adding a dependency, whether a Dart or Flutter package in a `pubspec.yaml`, a Gradle dependency, or a Swift package, check its license. Don't add copyleft code (GPL, LGPL, AGPL) without asking first, since it would change how GR Lab can be distributed.
+Before adding a dependency, whether a Dart or Flutter package in a `pubspec.yaml`, a Gradle dependency, or a Swift package, check its license. Don't add copyleft code (GPL, LGPL, AGPL) without asking first, since it would change how GR Photo can be distributed.
 
 When you copy or adapt code, icons or other assets from another project, keep a header in the copied file naming the source, version and license.
 

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grlab/src/data/json_file.dart';
+import 'package:grphoto/src/data/json_file.dart';
 
 void main() {
   late Directory temp;

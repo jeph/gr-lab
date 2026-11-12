@@ -7,7 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart';
-import 'package:grlab/src/library/image_orientation.dart';
+import 'package:grphoto/src/library/image_orientation.dart';
 
 /// 32×16 baseline JPEG without EXIF, four 16×8 quadrants: red top-left,
 /// green top-right, blue bottom-left, yellow bottom-right.

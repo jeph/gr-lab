@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grlab/src/settings/privacy_policy_screen.dart';
-import 'package:grlab/src/settings/settings_screen.dart';
+import 'package:grphoto/src/settings/privacy_policy_screen.dart';
+import 'package:grphoto/src/settings/settings_screen.dart';
 
 import '../support/test_app.dart';
 
@@ -20,7 +20,7 @@ void main() {
     await tester.scrollUntilVisible(row, 200);
     expect(find.text('Privacy policy'), findsOneWidget);
     await tester.tap(row);
-    await pumpUntilFound(tester, find.text('GR Lab privacy policy'));
+    await pumpUntilFound(tester, find.text('GR Photo privacy policy'));
     await tester.pumpAndSettle();
 
     expect(find.byType(PrivacyPolicyScreen), findsOneWidget);

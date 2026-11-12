@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
 
-/// One of GR Lab's own photos: a picture of the welcome screen and a photo
+/// One of GR Photo's own photos: a picture of the welcome screen and a photo
 /// the look editor can preview a look on.
 @immutable
 final class SamplePhoto {
@@ -19,11 +19,11 @@ final class SamplePhoto {
 
   /// The look the photo was developed with: [base] with every adjustment
   /// at 0 \[inferred\], as the file does not say what they were in a form
-  /// GR Lab reads.
+  /// GR Photo reads.
   Look get look => Look.onBase(base);
 }
 
-/// GR Lab's own photos, taken with a GR IV and a GR IV HDF, in the order
+/// GR Photo's own photos, taken with a GR IV and a GR IV HDF, in the order
 /// the welcome screen shows them and the look editor offers them. The
 /// first is taller than wide.
 const List<SamplePhoto> samplePhotos = [

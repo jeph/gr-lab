@@ -1,5 +1,5 @@
 name: gr_camera
-description: The camera layer of GR Lab. Talks to Ricoh GR cameras over the phone's Bluetooth and Wi-Fi, and traces every exchange.
+description: The camera layer of GR Photo. Talks to Ricoh GR cameras over the phone's Bluetooth and Wi-Fi, and traces every exchange.
 publish_to: none
 
 environment:
@@ -28,7 +28,7 @@ flutter:
   plugin:
     platforms:
       android:
-        package: io.jeph.grlab.gr_camera
+        package: io.jeph.grphoto.gr_camera
         pluginClass: GrCameraPlugin
       ios:
         pluginClass: GrCameraPlugin

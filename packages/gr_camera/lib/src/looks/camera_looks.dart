@@ -18,15 +18,15 @@ final lookNameCharacters = RegExp(
 
 /// [CameraLooks.load] refused a look the connected camera does not offer
 /// ([Look.offeredBy]): its base image is not one the camera's model has,
-/// or is one GR Lab does not know. Nothing was written.
+/// or is one GR Photo does not know. Nothing was written.
 final class LookNotOffered implements Exception {
   /// A look on [base] refused by a camera of [model].
   const new({required this.base, required this.model});
 
-  /// The look's base image; null when GR Lab does not know it.
+  /// The look's base image; null when GR Photo does not know it.
   final LookBase? base;
 
-  /// The connected camera's model; null when GR Lab does not know it.
+  /// The connected camera's model; null when GR Photo does not know it.
   final GrModel? model;
 
   @override

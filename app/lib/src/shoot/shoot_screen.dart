@@ -3,22 +3,23 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/app_scope.dart';
-import 'package:grlab/src/camera/camera_top_bar.dart';
-import 'package:grlab/src/connection/camera_pill.dart' show formatBattery;
-import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/connection/idle_disconnect.dart' show IdleDisconnect;
-import 'package:grlab/src/connection/storage_counts.dart';
-import 'package:grlab/src/data/settings.dart';
-import 'package:grlab/src/pairing/pairing_widgets.dart' show TrailingFit;
-import 'package:grlab/src/shoot/live_view_controller.dart';
-import 'package:grlab/src/shoot/live_view_page.dart';
-import 'package:grlab/src/shoot/shoot_format.dart';
-import 'package:grlab/src/shoot/shoot_model.dart';
-import 'package:grlab/src/shoot/shoot_widgets.dart';
-import 'package:grlab/src/theme/tokens.dart';
-import 'package:grlab/src/widgets/group.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/app_scope.dart';
+import 'package:grphoto/src/camera/camera_top_bar.dart';
+import 'package:grphoto/src/connection/camera_pill.dart' show formatBattery;
+import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/connection/idle_disconnect.dart'
+    show IdleDisconnect;
+import 'package:grphoto/src/connection/storage_counts.dart';
+import 'package:grphoto/src/data/settings.dart';
+import 'package:grphoto/src/pairing/pairing_widgets.dart' show TrailingFit;
+import 'package:grphoto/src/shoot/live_view_controller.dart';
+import 'package:grphoto/src/shoot/live_view_page.dart';
+import 'package:grphoto/src/shoot/shoot_format.dart';
+import 'package:grphoto/src/shoot/shoot_model.dart';
+import 'package:grphoto/src/shoot/shoot_widgets.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/group.dart';
 
 /// Android delivers the volume buttons to the app as key events; iOS does
 /// not, so the hint only promises them on Android.

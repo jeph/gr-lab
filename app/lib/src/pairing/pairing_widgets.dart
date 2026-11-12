@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/theme/tokens.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/theme/tokens.dart';
 import 'package:intl/intl.dart';
 
 /// Round button of the mock top bars (`.iconbtn`), 36 px unless [size]

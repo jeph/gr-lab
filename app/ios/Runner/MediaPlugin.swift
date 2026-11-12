@@ -1,7 +1,7 @@
 import Flutter
 import Photos
 
-/// `io.jeph.grlab/media`: saves one shot as one Photos asset in the album
+/// `io.jeph.grphoto/media`: saves one shot as one Photos asset in the album
 /// the Dart side names, which is created when the library has none of that
 /// title. A RAW+JPEG pair becomes a JPEG photo with the DNG as its RAW
 /// alternate, a lone DNG a RAW photo, a MOV a video.
@@ -19,7 +19,7 @@ final class MediaPlugin: NSObject, FlutterPlugin {
 
   static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(
-      name: "io.jeph.grlab/media", binaryMessenger: registrar.messenger())
+      name: "io.jeph.grphoto/media", binaryMessenger: registrar.messenger())
     registrar.addMethodCallDelegate(MediaPlugin(), channel: channel)
   }
 
@@ -59,7 +59,7 @@ final class MediaPlugin: NSObject, FlutterPlugin {
       guard mayAdd else {
         reply(FlutterError(
           code: "permissionDenied",
-          message: "GR Lab may not add to Photos; allow it under Settings › GR Lab › Photos",
+          message: "GR Photo may not add to Photos; allow it under Settings › GR Photo › Photos",
           details: nil))
         return
       }
@@ -130,7 +130,7 @@ final class MediaPlugin: NSObject, FlutterPlugin {
         || error.code == PHPhotosError.Code.accessRestricted.rawValue
     {
       return FlutterError(
-        code: "permissionDenied", message: "GR Lab may not add to Photos", details: nil)
+        code: "permissionDenied", message: "GR Photo may not add to Photos", details: nil)
     }
     return FlutterError(
       code: "failed",

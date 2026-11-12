@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="../icon.png" alt="GR Labin kuvake" width="128" height="128">
+  <img src="../icon.png" alt="GR Photon kuvake" width="128" height="128">
 </p>
 
-<h1 align="center">GR Lab</h1>
+<h1 align="center">GR Photo</h1>
 
 <p align="center">
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="Lisenssi: MIT"></a>
@@ -33,13 +33,13 @@
   <a href="README.ja.md">日本語</a>
 </p>
 
-**GR Lab** on Ricoh GR ‑kameroiden (GR III, GR IIIx ja GR IV) kumppanisovellus iOS:lle ja
+**GR Photo** on Ricoh GR ‑kameroiden (GR III, GR IIIx ja GR IV) kumppanisovellus iOS:lle ja
 Androidille. Sillä selaat ja lataat kamerassa olevia kuvia, käytät puhelinta kaukolaukaisimena
 live-kuvan kera ja pidät Kuvansäätö-tyylisi yhdessä paikassa. Sovellus on tehty nopeaksi ja
 helppokäyttöiseksi, ja se hallitsee kameran väriprofiileja kunnolla: tallenna tyyli, jolla kuva
 otettiin, muokkaa sitä esikatselun avulla ja siirrä se kameran Mukautettu-paikkoihin.
 
-GR Lab on itsenäinen projekti, eikä sillä ole yhteyttä Ricohiin. Se viestii kameran kanssa
+GR Photo on itsenäinen projekti, eikä sillä ole yhteyttä Ricohiin. Se viestii kameran kanssa
 protokollalla, joka on selvitetty takaisinmallintamalla Ricohin omia sovelluksia ja kameran
 laiteohjelmistoa; havainnot on kirjattu kansioon [`research/`](../../research/README.md).
 
@@ -76,17 +76,17 @@ laiteohjelmistoa; havainnot on kirjattu kansioon [`research/`](../../research/RE
 
 ## Ominaisuudet
 
-GR Labissa kolme asiaa on etusijalla: kuviin pääsee käsiksi nopeasti, sovellus pysyy poissa
+GR Photossa kolme asiaa on etusijalla: kuviin pääsee käsiksi nopeasti, sovellus pysyy poissa
 tieltäsi, ja Kuvansäätö-tyylejä kohdellaan asiana, jota kannattaa hallita.
 
-- **Nopea.** GR Lab yhdistää kameraan Bluetoothilla heti avautuessaan, jos kamera on lähellä.
+- **Nopea.** GR Photo yhdistää kameraan Bluetoothilla heti avautuessaan, jos kamera on lähellä.
   Kirjaston avaaminen herättää kameran, kytkee sen Wi-Fin päälle ja liittyy siihen yhdellä kertaa,
   ja Wi-Fi pysyy sen jälkeen päällä, kun siirryt sivulta toiselle, joten mihinkään ei liitytä
   kahdesti ja lataus jatkuu keskeytyksettä. Tiedostoluettelot, pienoiskuvat ja esikatselukuvat
   tallennetaan puhelimen välimuistiin, joten Kirjasto avautuu nopeasti. GR IV HDF ‑kameralla ja
   Android-puhelimella sammutetusta kamerasta päästiin Kirjastoon noin 13 sekunnissa.
 - **Helppokäyttöinen.** Kamerasi ovat yhdellä näytöllä, ja Kirjasto, Kuvaus ja Tyylit ovat siltä
-  yhden napautuksen päässä. GR Lab käynnistää kameran, kytkee sen Wi-Fin päälle ja liittyy siihen
+  yhden napautuksen päässä. GR Photo käynnistää kameran, kytkee sen Wi-Fin päälle ja liittyy siihen
   puolestasi, joten kamerasta ei tarvitse säätää mitään parinmuodostuksen jälkeen. Kun jokin
   epäonnistuu, sovellus kertoo syyn ja sen, mitä kannattaa tarkistaa, ja tarjoaa painikkeen Yritä
   uudelleen. Katkennut yhteys palautuu itsestään.
@@ -106,7 +106,7 @@ tieltäsi, ja Kuvansäätö-tyylejä kohdellaan asiana, jota kannattaa hallita.
   Bluetoothilla, liittymättä kameran Wi-Fi-verkkoon.
 - **Kirjasto.** Selaa kameran kuvia ja videoita päivittäin ryhmiteltyinä, suodata valinnoilla JPEG,
   RAW, Video tai Lataamatta ja avaa mikä tahansa otos koko näytölle tietoineen. Lataa yksi otos tai
-  valitsemasi joukko JPEG- tai RAW-muodossa tai molempina GR Lab ‑albumiin puhelimesi
+  valitsemasi joukko JPEG- tai RAW-muodossa tai molempina GR Photo ‑albumiin puhelimesi
   kuvakirjastoon. Lataukset jatkuvat, kun käytät toista sovellusta tai lukitset puhelimen: Android
   näyttää ne ilmoituksessa, jossa on Keskeytä ja Peruuta kaikki, ja iOS 26 tai uudempi näyttää
   niiden edistymisen lukitulla näytöllä ja Dynamic Islandissa. Videot toistetaan sovelluksessa.
@@ -120,8 +120,8 @@ tieltäsi, ja Kuvansäätö-tyylejä kohdellaan asiana, jota kannattaa hallita.
   välillä; voit nimetä jokaisen uudelleen tai unohtaa sen.
 - **Teemat ja kielet.** Teemat Vaalea, Tumma, Pimiö, Paperi ja Sinikopio sekä kameran omien
   valikoiden 21 kieltä.
-- **Yksityinen.** Ei tilejä, analytiikkaa, mainoksia eikä kaatumisraportointia. GR Lab viestii vain
-  kamerasi kanssa; katso [tietosuojakäytäntö](../../app/assets/privacy.md).
+- **Yksityinen.** Ei tilejä, analytiikkaa, mainoksia eikä kaatumisraportointia. GR Photo viestii
+  vain kamerasi kanssa; katso [tietosuojakäytäntö](../../app/assets/privacy.md).
 
 ## Vaatimukset
 
@@ -131,7 +131,7 @@ tieltäsi, ja Kuvansäätö-tyylejä kohdellaan asiana, jota kannattaa hallita.
   tai kirjoittaa Kuvansäätö-asetuksia puhelimesta.
 - Android 12 tai uudempi taikka iOS 15 tai uudempi.
 
-GR Lab on nuori. Laitteistolokiin on kirjattu ajoja GR IV HDF ‑kameralla, jossa on laiteohjelmisto
+GR Photo on nuori. Laitteistolokiin on kirjattu ajoja GR IV HDF ‑kameralla, jossa on laiteohjelmisto
 1.20: parinmuodostus, yhdistäminen, kameran herättäminen, selaus, lataus, live-kuva sekä
 tarkennuksen ja valotuksen muutokset. GR III- ja GR IIIx ‑tuki perustuu protokollatutkimukseen, eikä
 sitä ole vielä testattu kameralla. Tehdyt havainnot löytyvät tiedostosta
@@ -139,21 +139,21 @@ sitä ole vielä testattu kameralla. Tehdyt havainnot löytyvät tiedostosta
 
 ## Asennus
 
-Androidissa lataa `gr-lab-v<version>.apk` puhelimeesi
-[uusimmasta julkaisusta](https://github.com/jeph/gr-lab/releases/latest) ja avaa se. Android kysyy
+Androidissa lataa `gr-photo-v<version>.apk` puhelimeesi
+[uusimmasta julkaisusta](https://github.com/jeph/gr-photo/releases/latest) ja avaa se. Android kysyy
 kerran lupaa asentaa sovelluksia selaimestasi. Jokainen julkaisu on allekirjoitettu samalla
 avaimella, joten uudempi asentuu nykyisen päälle ja säilyttää kamerasi ja asetuksesi.
 
 iOS:ssä jokainen julkaisu menee TestFlightiin, toistaiseksi vain projektin omille testaajille.
-Julkista TestFlight-linkkiä ei vielä ole, joten iPhoneen GR Lab asennetaan kääntämällä se
+Julkista TestFlight-linkkiä ei vielä ole, joten iPhoneen GR Photo asennetaan kääntämällä se
 lähdekoodista.
 
 Lähdekoodista kääntämiseen tarvitaan [Flutter](https://flutter.dev) 3.47 tai uudempi sekä
 käyttövalmis Android SDK tai Xcode.
 
 ```sh
-git clone https://github.com/jeph/gr-lab.git
-cd gr-lab/app
+git clone https://github.com/jeph/gr-photo.git
+cd gr-photo/app
 flutter run --flavor prod --release
 ```
 
@@ -175,9 +175,9 @@ flutter run --dart-define=GR_DEMO=true
 1. **Muodosta pari kamerasi kanssa.** Napauta Lisää kamera ja seuraa ohjeita. Kamerassa
    parinmuodostus löytyy kohdasta MENU → E6 → Langaton viestintä: valitse Toimintatila-asetukseksi
    Päällä, avaa Muodostetaan laitepari ja valitse Muodosta laitepari, vahvista sitten koodi
-   puhelimessa ja paina kamerassa OK. Kamera näkyy sen jälkeen Kamerat-näytöllä, ja GR Lab yhdistää
-   siihen itsestään, kun sovellus avataan kameran ollessa lähellä.
-2. **Avaa Kirjasto.** GR Lab käynnistää kameran, jos se on sammutettu, ja liittyy sen
+   puhelimessa ja paina kamerassa OK. Kamera näkyy sen jälkeen Kamerat-näytöllä, ja GR Photo
+   yhdistää siihen itsestään, kun sovellus avataan kameran ollessa lähellä.
+2. **Avaa Kirjasto.** GR Photo käynnistää kameran, jos se on sammutettu, ja liittyy sen
    Wi-Fi-verkkoon. Android pyytää hyväksymään kameran verkon kerran. Katso otosta napauttamalla
    sitä, valitse useita painamalla pitkään ja lataa ne, jotka haluat säilyttää.
 3. **Kuvaa.** Kaukolaukaisin on Bluetoothilla toimiva laukaisin. Live-kuva liittyy kameran
@@ -186,8 +186,8 @@ flutter run --dart-define=GR_DEMO=true
    Tyylit-sivun painikkeella +. Muokkaa tyyliä napauttamalla sitä ja siirrä se kameraan vetämällä se
    paikan C1, C2 tai C3 päälle.
 
-Asetusten Automaattinen katkaisu poistuu kameran Wi-Fi-verkosta, kun GR Lab on ollut jonkin aikaa
-käyttämättä (oletuksena 5 minuuttia). [Näin GR Lab toimii](../behaviour.md) kuvaa jokaisen näytön
+Asetusten Automaattinen katkaisu poistuu kameran Wi-Fi-verkosta, kun GR Photo on ollut jonkin aikaa
+käyttämättä (oletuksena 5 minuuttia). [Näin GR Photo toimii](../behaviour.md) kuvaa jokaisen näytön
 ja jokaisen yhteystilan yksityiskohtaisesti.
 
 ## Kehitys
@@ -213,9 +213,9 @@ flutter run --flavor prod --release          # käännös, jonka käyttäjät sa
 flutter run --dart-define=GR_DEMO=true       # simuloitu kamera, toimii Android-emulaattorissa ja iOS-simulaattorissa
 ```
 
-Käännöksiä on kaksi. `dev` (`io.jeph.grlab.dev`, nimeltään ”GR Lab Dev”) asentuu `prod`-käännöksen
-(`io.jeph.grlab`, ”GR Lab”) rinnalle. Ilman valitsinta `--flavor` komennot `flutter run` ja
-`flutter build` kääntävät `dev`-käännöksen.
+Käännöksiä on kaksi. `dev` (`io.jeph.grphoto.dev`, nimeltään ”GR Photo Dev”) asentuu
+`prod`-käännöksen (`io.jeph.grphoto`, ”GR Photo”) rinnalle. Ilman valitsinta `--flavor` komennot
+`flutter run` ja `flutter build` kääntävät `dev`-käännöksen.
 
 Pelkkä `flutter run` tekee debug-käännöksen, joka piirtää jokaisen ruudun moninkertaisesti hitaammin
 kuin profile- tai release-käännös (3–4 kertaa hitaammin Kirjastossa Android-emulaattorilla,
@@ -257,7 +257,7 @@ tunnusta, joten se tarvitsee valitsimen `--flavor dev` ja etukäteen käännetyn
 pysähtyy ilmoitukseen ”No application found”.
 
 iOS-simulaattorissa sovelluksen on oltava asennettuna, kun Kuvat-käyttöoikeus myönnetään, ja
-`flutter test` poistaa sovelluksen ajon jälkeen, mikä poistaa myös käyttöoikeuden. GR Lab pyytää
+`flutter test` poistaa sovelluksen ajon jälkeen, mikä poistaa myös käyttöoikeuden. GR Photo pyytää
 täyttä käyttöoikeutta voidakseen ylläpitää albumiaan, eikä iOS 26.3 ‑simulaattorissa pelkkä
 `simctl privacy grant photos` estänyt iOS:ää kysymästä: sen tallentamassa käyttöoikeudessa
 `auth_version` on 1, ja iOS tulkitsee sen täydeksi käyttöoikeudeksi vasta arvolla 2. Myönnä oikeus
@@ -267,23 +267,23 @@ ja aseta arvo ennen jokaista ajoa:
 cd app
 flutter build ios --simulator --debug --dart-define=GR_DEMO=true
 xcrun simctl install booted build/ios/iphonesimulator/Runner.app
-xcrun simctl privacy booted grant photos io.jeph.grlab.dev
+xcrun simctl privacy booted grant photos io.jeph.grphoto.dev
 sqlite3 "$(xcrun simctl getenv booted HOME)/Library/TCC/TCC.db" \
-  "UPDATE access SET auth_version = 2 WHERE service = 'kTCCServicePhotos' AND client = 'io.jeph.grlab.dev'"
+  "UPDATE access SET auth_version = 2 WHERE service = 'kTCCServicePhotos' AND client = 'io.jeph.grphoto.dev'"
 flutter test integration_test --dart-define=GR_DEMO=true -d <simulator>
 ```
 
 ### Vianetsintäloki
 
-GR Lab kirjoittaa vianetsintälokia, kun Asetukset > Ota vianetsintäloki käyttöön on päällä: kaiken,
-mitä se lähettää kameralle ja vastaanottaa siltä (Bluetooth-haut, luvut, kirjoitukset ja
+GR Photo kirjoittaa vianetsintälokia, kun Asetukset > Ota vianetsintäloki käyttöön on päällä:
+kaiken, mitä se lähettää kameralle ja vastaanottaa siltä (Bluetooth-haut, luvut, kirjoitukset ja
 ilmoitukset, jokaisen HTTP-pyynnön ja ‑vastauksen, WebSocket-viestit, live-kuvan ruutujen koot ja
 Wi-Fi-verkkoon liittymisen vaiheet), jokaisen sovelluksen tulostaman rivin, sieppaamattomat virheet
 ja natiivin Wi-Fi-koodin rivit. Asetus on oletuksena päällä `dev`-käännöksessä ja pois päältä
-`prod`-käännöksessä. Kun se on pois päältä, mitään ei kirjata, ei edes logcatiin tai konsoliin,
-yhtä poikkeusta lukuun ottamatta: Flutter-moottori raportoi sieppaamattomat virheet sinne edelleen
-itse, joten kaatumiset pysyvät näkyvissä. Asetukset > Vianetsintäloki vie lokin jakovalikon kautta
-JSON Lines ‑tiedostoina ja tyhjentää sen. Lokia säilytetään noin 50 Mt. Se sisältää kameran
+`prod`-käännöksessä. Kun se on pois päältä, mitään ei kirjata, ei edes logcatiin tai konsoliin, yhtä
+poikkeusta lukuun ottamatta: Flutter-moottori raportoi sieppaamattomat virheet sinne edelleen itse,
+joten kaatumiset pysyvät näkyvissä. Asetukset > Vianetsintäloki vie lokin jakovalikon kautta JSON
+Lines ‑tiedostoina ja tyhjentää sen. Lokia säilytetään noin 50 Mt. Se sisältää kameran
 Wi-Fi-salasanan.
 
 ### Julkaisut
@@ -291,15 +291,15 @@ Wi-Fi-salasanan.
 Jokainen push `main`-haaraan on julkaisu, jonka tekee
 [`.github/workflows/release.yml`](../../.github/workflows/release.yml). Työnkulku numeroi julkaisun
 0.0.N, yhtä suuremmaksi kuin edellinen, ajaa `tool/check.sh`-skriptin ja kääntää kummankin
-sovelluksen `prod`-flavorin release-tilassa. Androidin APK allekirjoitetaan GR Labin
-julkaisuavaimella ja julkaistaan [julkaisusivulla](https://github.com/jeph/gr-lab/releases)
+sovelluksen `prod`-flavorin release-tilassa. Androidin APK allekirjoitetaan GR Photon
+julkaisuavaimella ja julkaistaan [julkaisusivulla](https://github.com/jeph/gr-photo/releases)
 SHA-256-tarkistussummansa, käännöksen alkuperätodistuksen ja sen R8-mappingin kanssa, jolla APK:n
 Kotlin-kutsupinot voi lukea. iOS-sovellus allekirjoitetaan App Storea varten ja lähetetään
 TestFlightiin. Avaimet säilytetään GitHub-ympäristöissä, joita vain `main` voi käyttää, eikä
 sovellukset kääntävillä töillä ole niistä yhtäkään.
 
-`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab` tarkistaa, että APK on käännetty
-kyseisellä työnkululla tästä repositoriosta.
+`gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo` tarkistaa, että APK on
+käännetty kyseisellä työnkululla tästä repositoriosta.
 
 ```sh
 tool/testflight.sh       # kääntää iOS-sovelluksen prod-version ja lähettää sen TestFlightiin
@@ -311,8 +311,8 @@ se ilmestyy käsittelyn jälkeen TestFlightin alle. Sisäiset testaajat asentava
 TestFlight-sovelluksesta ilman kaapelia. Xcode allekirjoittaa ja lähettää
 käännöksen App Store Connectin API-avaimella, joten Macissa tarvitaan avaimen tiedosto
 `AuthKey_<key id>.p8` kansiossa `~/.appstoreconnect/private_keys` sekä `ASC_KEY_ID` ja
-`ASC_ISSUER_ID` tiedostossa `~/.appstoreconnect/gr-lab.env`. Avaimella on oltava Admin-rooli: Apple
-ei anna App Manager ‑avaimen käyttää tiimin jakeluvarmennetta. Arkisto käännetään
+`ASC_ISSUER_ID` tiedostossa `~/.appstoreconnect/gr-photo.env`. Avaimella on oltava Admin-rooli:
+Apple ei anna App Manager ‑avaimen käyttää tiimin jakeluvarmennetta. Arkisto käännetään
 allekirjoittamattomana ja allekirjoitetaan App Storea varten viennin yhteydessä
 (`app/ios/ExportOptions.plist`), koska itse arkiston allekirjoittaminen vaatisi tiimiin
 rekisteröidyn testilaitteen.
@@ -320,10 +320,11 @@ rekisteröidyn testilaitteen.
 ## Osallistuminen
 
 Vikailmoitukset ja pull requestit ovat tervetulleita. Useimmat viat ilmenevät vain oikealla
-laitteistolla, joten kun [avaat issuen](https://github.com/jeph/gr-lab/issues), kerro kamerasi malli
-ja laiteohjelmistoversio, puhelimesi malli ja sen Android- tai iOS-versio sekä se, mitä teit. Viety
-vianetsintäloki (Asetukset, Vianetsintäloki, Vie loki) näyttää yleensä, mitä tapahtui, mutta se
-sisältää kamerasi sarjanumeron ja Wi-Fi-salasanan, joten liitä se vain, jos sinulle sopii jakaa ne.
+laitteistolla, joten kun [avaat issuen](https://github.com/jeph/gr-photo/issues), kerro kamerasi
+malli ja laiteohjelmistoversio, puhelimesi malli ja sen Android- tai iOS-versio sekä se, mitä teit.
+Viety vianetsintäloki (Asetukset, Vianetsintäloki, Vie loki) näyttää yleensä, mitä tapahtui, mutta
+se sisältää kamerasi sarjanumeron ja Wi-Fi-salasanan, joten liitä se vain, jos sinulle sopii jakaa
+ne.
 
 Aja `tool/check.sh` ennen kuin lähetät muutoksen; jokaisen tarkistuksen on mentävä läpi.
 [`AGENTS.md`](../../AGENTS.md) kuvaa, miten koodi on järjestetty ja mitä sääntöjä se noudattaa.
@@ -333,7 +334,7 @@ haavoittuvuusilmoitus [tietoturvakäytännön](../../.github/SECURITY.md) mukais
 
 ## Kiitokset
 
-GR Lab on tehty [Flutterilla](https://flutter.dev), ja se käyttää Bluetoothiin pakettia
+GR Photo on tehty [Flutterilla](https://flutter.dev), ja se käyttää Bluetoothiin pakettia
 [universal_ble](https://pub.dev/packages/universal_ble) sekä paketteja
 [image](https://pub.dev/packages/image), [video_player](https://pub.dev/packages/video_player),
 [share_plus](https://pub.dev/packages/share_plus) ja
@@ -346,9 +347,9 @@ Kuvansäätö-asetuksista.
 
 ## Lisenssi
 
-GR Lab julkaistaan [MIT-lisenssillä](../../LICENSE). GR Labin sisältämät kolmannen osapuolen paketit
-ja fontit säilyttävät omat lisenssinsä. Sovellus luettelee ne kohdassa
-**Asetukset › Tietoja › Lisenssit**, ja fonttien lisenssitekstit ovat kansiossa
+GR Photo julkaistaan [MIT-lisenssillä](../../LICENSE). GR Photon sisältämät kolmannen osapuolen
+paketit ja fontit säilyttävät omat lisenssinsä. Sovellus luettelee ne kohdassa **Asetukset › Tietoja
+› Lisenssit**, ja fonttien lisenssitekstit ovat kansiossa
 [`app/assets/fonts/`](../../app/assets/fonts/).
 
 Esittelytilan esimerkkikuvat ovat peräisin [Unsplashista](https://unsplash.com), ja niitä käytetään

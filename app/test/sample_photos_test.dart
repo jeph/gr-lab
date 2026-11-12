@@ -2,8 +2,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grlab/src/library/image_orientation.dart';
-import 'package:grlab/src/sample_photos.dart';
+import 'package:grphoto/src/library/image_orientation.dart';
+import 'package:grphoto/src/sample_photos.dart';
 
 /// The application segments (APP0–APP15) and comments ahead of the picture
 /// data of [jpeg], as marker and length: where EXIF, XMP, a colour profile

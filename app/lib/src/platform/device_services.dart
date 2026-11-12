@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/src/debug/debug_log.dart';
-import 'package:grlab/src/platform/app_dirs.dart';
-import 'package:grlab/src/platform/background_downloads.dart';
-import 'package:grlab/src/platform/media_saver.dart';
-import 'package:grlab/src/services.dart';
+import 'package:grphoto/src/debug/debug_log.dart';
+import 'package:grphoto/src/platform/app_dirs.dart';
+import 'package:grphoto/src/platform/background_downloads.dart';
+import 'package:grphoto/src/platform/media_saver.dart';
+import 'package:grphoto/src/services.dart';
 
 /// Services for a real camera: the camera layer on the phone's Bluetooth
 /// and Wi-Fi, downloads saved to the photo library.
@@ -29,11 +29,11 @@ Future<AppServices> buildDeviceServices() async {
 /// The phone's name as the camera lists it under Paired Devices: the
 /// user-set device name on Android, the generic model name on iOS, cleaned
 /// up the way GR WORLD does (printable ASCII, at most 32 characters).
-/// Falls back to 'GR Lab' when the platform gives nothing usable.
+/// Falls back to 'GR Photo' when the platform gives nothing usable.
 Future<String> deviceClientName({
-  MethodChannel channel = const MethodChannel('io.jeph.grlab/device'),
+  MethodChannel channel = const MethodChannel('io.jeph.grphoto/device'),
 }) async {
-  const fallback = 'GR Lab';
+  const fallback = 'GR Photo';
   String? name;
   try {
     name = await channel.invokeMethod<String>('name');

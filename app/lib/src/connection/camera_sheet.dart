@@ -2,19 +2,19 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/app_scope.dart';
-import 'package:grlab/src/cameras/camera_drawing.dart';
-import 'package:grlab/src/cameras/camera_identity.dart';
-import 'package:grlab/src/connection/camera_pill.dart';
-import 'package:grlab/src/connection/connect_failure_view.dart';
-import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/connection/storage_counts.dart';
-import 'package:grlab/src/data/cameras.dart';
-import 'package:grlab/src/pairing/pairing_flow.dart';
-import 'package:grlab/src/pairing/pairing_widgets.dart';
-import 'package:grlab/src/theme/tokens.dart';
-import 'package:grlab/src/widgets/group.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/app_scope.dart';
+import 'package:grphoto/src/cameras/camera_drawing.dart';
+import 'package:grphoto/src/cameras/camera_identity.dart';
+import 'package:grphoto/src/connection/camera_pill.dart';
+import 'package:grphoto/src/connection/connect_failure_view.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/connection/storage_counts.dart';
+import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/pairing/pairing_flow.dart';
+import 'package:grphoto/src/pairing/pairing_widgets.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/group.dart';
 
 /// Opens the camera sheet over the current screen.
 Future<void> showCameraSheet(BuildContext context) =>

@@ -4,8 +4,8 @@ library;
 
 import 'package:flutter/widgets.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/library/shot.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/library/shot.dart';
 import 'package:intl/intl.dart';
 
 String _locale(BuildContext context) =>

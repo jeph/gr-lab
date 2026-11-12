@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "appTitle": "GR Lab",
+  "appTitle": "GR Photo",
   "@appTitle": {
     "description": "The app's name, shown by the system (task switcher, window title)."
   },
@@ -38,7 +38,7 @@
   },
   "camerasChipIdle": "Left Wi-Fi after {minutes} min",
   "@camerasChipIdle": {
-    "description": "On the camera card's chip after GR Lab left the camera's Wi-Fi because the app was not used; Bluetooth stays connected. Keep it short: the chip is one line. \"min\" is the abbreviation for minutes.",
+    "description": "On the camera card's chip after GR Photo left the camera's Wi-Fi because the app was not used; Bluetooth stays connected. Keep it short: the chip is one line. \"min\" is the abbreviation for minutes.",
     "placeholders": {
       "minutes": {
         "type": "int",
@@ -53,7 +53,7 @@
   },
   "camerasDetailsForget": "Forget camera",
   "@camerasDetailsForget": {
-    "description": "Row on the camera details screen that removes the camera from GR Lab."
+    "description": "Row on the camera details screen that removes the camera from GR Photo."
   },
   "camerasDetailsForgetCancel": "Cancel",
   "@camerasDetailsForgetCancel": {
@@ -63,7 +63,7 @@
   "@camerasDetailsForgetConfirm": {
     "description": "Button of the forget-camera confirmation that removes the camera."
   },
-  "camerasDetailsForgetMessage": "GR Lab stops connecting to this camera and deletes its file list, thumbnails, previews, videos and download history from this phone. Photos already saved to your photo library stay there, and so do your saved looks.",
+  "camerasDetailsForgetMessage": "GR Photo stops connecting to this camera and deletes its file list, thumbnails, previews, videos and download history from this phone. Photos already saved to your photo library stay there, and so do your saved looks.",
   "@camerasDetailsForgetMessage": {
     "description": "Body of the forget-camera confirmation."
   },
@@ -195,7 +195,7 @@
   },
   "camerasPowerOn": "Turn {cameraName} on",
   "@camerasPowerOn": {
-    "description": "Tooltip and accessibility label of the camera card's power button while the camera is off, or while GR Lab does not know whether it is on.",
+    "description": "Tooltip and accessibility label of the camera card's power button while the camera is off, or while GR Photo does not know whether it is on.",
     "placeholders": {
       "cameraName": {
         "type": "String",
@@ -305,35 +305,35 @@
   },
   "camerasWelcomeModelGr3": "GR III",
   "@camerasWelcomeModelGr3": {
-    "description": "Chip on the welcome page naming a camera model GR Lab works with. Keep Ricoh's spelling of the model name; do not translate it."
+    "description": "Chip on the welcome page naming a camera model GR Photo works with. Keep Ricoh's spelling of the model name; do not translate it."
   },
   "camerasWelcomeModelGr3x": "GR IIIx",
   "@camerasWelcomeModelGr3x": {
-    "description": "Chip on the welcome page naming a camera model GR Lab works with. Keep Ricoh's spelling of the model name; do not translate it."
+    "description": "Chip on the welcome page naming a camera model GR Photo works with. Keep Ricoh's spelling of the model name; do not translate it."
   },
   "camerasWelcomeModelGr4": "GR IV",
   "@camerasWelcomeModelGr4": {
-    "description": "Chip on the welcome page naming a camera model GR Lab works with. Keep Ricoh's spelling of the model name; do not translate it."
+    "description": "Chip on the welcome page naming a camera model GR Photo works with. Keep Ricoh's spelling of the model name; do not translate it."
   },
   "camerasWelcomeTitle": "Your GR,\non your phone",
   "@camerasWelcomeTitle": {
     "description": "Large title of the welcome page; the line break is part of the layout."
   },
-  "camerasWelcomeWordmark": "GR LAB",
+  "camerasWelcomeWordmark": "GR PHOTO",
   "@camerasWelcomeWordmark": {
-    "description": "Wordmark above the welcome page title: the app's name in capitals. Keep the name GR Lab; only change the capitalization if the script needs it."
+    "description": "Wordmark above the welcome page title: the app's name in capitals. Keep the name GR Photo; only change the capitalization if the script needs it."
   },
   "commonCancel": "Cancel",
   "@commonCancel": {
     "description": "Button that closes a dialog without doing anything."
   },
-  "connectionFailureBluetoothDeniedBody": "Allow Bluetooth (on Android: Nearby devices) for GR Lab in the phone's settings, then try again.",
+  "connectionFailureBluetoothDeniedBody": "Allow Bluetooth (on Android: Nearby devices) for GR Photo in the phone's settings, then try again.",
   "@connectionFailureBluetoothDeniedBody": {
-    "description": "Body of the connection failure when GR Lab may not use Bluetooth. Nearby devices is Android's name for the permission."
+    "description": "Body of the connection failure when GR Photo may not use Bluetooth. Nearby devices is Android's name for the permission."
   },
-  "connectionFailureBluetoothDeniedTitle": "GR Lab can't use Bluetooth",
+  "connectionFailureBluetoothDeniedTitle": "GR Photo can't use Bluetooth",
   "@connectionFailureBluetoothDeniedTitle": {
-    "description": "Title of the connection failure when GR Lab may not use Bluetooth."
+    "description": "Title of the connection failure when GR Photo may not use Bluetooth."
   },
   "connectionFailureBluetoothOffBody": "Turn on Bluetooth on this phone, then try again.",
   "@connectionFailureBluetoothOffBody": {
@@ -345,11 +345,11 @@
   },
   "connectionFailureCameraOffBody": "The camera turned off, so its Wi-Fi went with it. Turn it on to connect again.",
   "@connectionFailureCameraOffBody": {
-    "description": "Body of the notice on the Library, live view and the camera sheet after the camera turned off (its power button, or by itself) while GR Lab was using its Wi-Fi. GR Lab leaves it off; the button below, Turn on, turns it on and joins its Wi-Fi again."
+    "description": "Body of the notice on the Library, live view and the camera sheet after the camera turned off (its power button, or by itself) while GR Photo was using its Wi-Fi. GR Photo leaves it off; the button below, Turn on, turns it on and joins its Wi-Fi again."
   },
   "connectionFailureCameraOffTitle": "{cameraName} is off",
   "@connectionFailureCameraOffTitle": {
-    "description": "Title of the notice shown after the camera turned off while GR Lab was using its Wi-Fi; also on the camera card's chip.",
+    "description": "Title of the notice shown after the camera turned off while GR Photo was using its Wi-Fi; also on the camera card's chip.",
     "placeholders": {
       "cameraName": {
         "type": "String",
@@ -385,13 +385,13 @@
   "@connectionFailureCheckStayClose": {
     "description": "Check in the list under a failed join of the camera's Wi-Fi."
   },
-  "connectionFailureCheckVpnExclude": "In the VPN app's settings, exclude GR Lab (often called split tunneling)",
+  "connectionFailureCheckVpnExclude": "In the VPN app's settings, exclude GR Photo (often called split tunneling)",
   "@connectionFailureCheckVpnExclude": {
-    "description": "Check in the list under a camera Wi-Fi join a VPN may be blocking: let GR Lab bypass the VPN."
+    "description": "Check in the list under a camera Wi-Fi join a VPN may be blocking: let GR Photo bypass the VPN."
   },
   "connectionFailureCheckVpnOff": "Or turn the VPN off while you use the camera",
   "@connectionFailureCheckVpnOff": {
-    "description": "Check in the list under a camera Wi-Fi join a VPN may be blocking, after the one about excluding GR Lab."
+    "description": "Check in the list under a camera Wi-Fi join a VPN may be blocking, after the one about excluding GR Photo."
   },
   "connectionFailureDetailBluetoothDenied": "Bluetooth permission was denied",
   "@connectionFailureDetailBluetoothDenied": {
@@ -507,7 +507,7 @@
       }
     }
   },
-  "connectionFailureWifiVpnBody": "The phone joined the camera's Wi-Fi, but Android didn't let GR Lab use it while a VPN was on. If connecting keeps failing:",
+  "connectionFailureWifiVpnBody": "The phone joined the camera's Wi-Fi, but Android didn't let GR Photo use it while a VPN was on. If connecting keeps failing:",
   "@connectionFailureWifiVpnBody": {
     "description": "Body of the connection failure when the phone joined the camera's Wi-Fi but Android would not let the app use it while a VPN was on; the checks to try follow."
   },
@@ -585,7 +585,7 @@
   },
   "connectionRenameTitle": "Camera name",
   "@connectionRenameTitle": {
-    "description": "Title of the dialog that renames a camera in GR Lab."
+    "description": "Title of the dialog that renames a camera in GR Photo."
   },
   "connectionSheetBattery": "Battery",
   "@connectionSheetBattery": {
@@ -643,7 +643,7 @@
   "@connectionStepWifi": {
     "description": "Step of the connection progress shown in the Library and live view: joining the camera's Wi-Fi."
   },
-  "connectionWifiConsentAgainBody": "Android needs you to choose the camera's network in its list again. It asks after that network was disconnected in Wi-Fi settings. Choose \"{ssid}\" once and GR Lab joins it by itself again.",
+  "connectionWifiConsentAgainBody": "Android needs you to choose the camera's network in its list again. It asks after that network was disconnected in Wi-Fi settings. Choose \"{ssid}\" once and GR Photo joins it by itself again.",
   "@connectionWifiConsentAgainBody": {
     "description": "Body of the dialog shown before Android's network list appears again for a camera network it had approved.",
     "placeholders": {
@@ -663,7 +663,7 @@
       }
     }
   },
-  "connectionWifiConsentBody": "Photos come over the camera's own Wi-Fi network, \"{ssid}\". Android asks you to approve it once; after that GR Lab joins it by itself.",
+  "connectionWifiConsentBody": "Photos come over the camera's own Wi-Fi network, \"{ssid}\". Android asks you to approve it once; after that GR Photo joins it by itself.",
   "@connectionWifiConsentBody": {
     "description": "Body of the dialog shown before the first join of a camera's Wi-Fi.",
     "placeholders": {
@@ -875,7 +875,7 @@
   },
   "downloadErrorNoPhotoAccess": "No access to the photo library",
   "@downloadErrorNoPhotoAccess": {
-    "description": "Why a download failed: the user has not allowed GR Lab to add to the photo library."
+    "description": "Why a download failed: the user has not allowed GR Photo to add to the photo library."
   },
   "downloadErrorNotOnCamera": "No longer on the camera",
   "@downloadErrorNotOnCamera": {
@@ -913,7 +913,7 @@
   "@downloadErrorSaveFailed": {
     "description": "Why a download failed: the phone failed to save the shot to its photo library."
   },
-  "downloadErrorSaveInterrupted": "GR Lab closed while saving; the shot may already be in your photo library",
+  "downloadErrorSaveInterrupted": "GR Photo closed while saving; the shot may already be in your photo library",
   "@downloadErrorSaveInterrupted": {
     "description": "Why a download stopped: the app closed while handing the shot to the photo library, so it cannot tell whether the save happened. Retrying saves it again."
   },
@@ -1136,11 +1136,11 @@
   "@libraryOk": {
     "description": "Button that closes the photo access dialog."
   },
-  "libraryPhotoAccessAndroid": "GR Lab needs permission to save photos and videos. Open Settings › Apps › GR Lab › Permissions, allow Photos and videos, then retry the downloads.",
+  "libraryPhotoAccessAndroid": "GR Photo needs permission to save photos and videos. Open Settings › Apps › GR Photo › Permissions, allow Photos and videos, then retry the downloads.",
   "@libraryPhotoAccessAndroid": {
     "description": "Body of the photo access dialog on Android. Name the Settings path as Android shows it in the language."
   },
-  "libraryPhotoAccessIos": "GR Lab needs permission to add photos. Open Settings › GR Lab › Photos, allow access, then retry the downloads.",
+  "libraryPhotoAccessIos": "GR Photo needs permission to add photos. Open Settings › GR Photo › Photos, allow access, then retry the downloads.",
   "@libraryPhotoAccessIos": {
     "description": "Body of the photo access dialog on iOS. Name the Settings path as iOS shows it in the language."
   },
@@ -1461,7 +1461,7 @@
   },
   "looksBaseUnknown": "Base {number}",
   "@looksBaseUnknown": {
-    "description": "Name of a base image GR Lab doesn't know, with its number.",
+    "description": "Name of a base image GR Photo doesn't know, with its number.",
     "placeholders": {
       "number": {
         "type": "int",
@@ -1543,7 +1543,7 @@
   "@looksDelete": {
     "description": "Menu item and confirmation button that delete a saved look."
   },
-  "looksDeleteBody": "The look is removed from GR Lab. Custom slots that hold it keep it.",
+  "looksDeleteBody": "The look is removed from GR Photo. Custom slots that hold it keep it.",
   "@looksDeleteBody": {
     "description": "Body of the delete confirmation."
   },
@@ -1709,7 +1709,7 @@
   },
   "looksMadeInApp": "Made in app",
   "@looksMadeInApp": {
-    "description": "Where a saved look came from, for one made in GR Lab."
+    "description": "Where a saved look came from, for one made in GR Photo."
   },
   "looksMore": "More",
   "@looksMore": {
@@ -1787,7 +1787,7 @@
   },
   "looksParamFixed": "Kept as set on the camera",
   "@looksParamFixed": {
-    "description": "Under a look parameter that GR Lab shows but can't change."
+    "description": "Under a look parameter that GR Photo shows but can't change."
   },
   "looksParamGrain": "Grain Effect",
   "@looksParamGrain": {
@@ -1855,7 +1855,7 @@
   },
   "looksPhotoSample": "Sample photo {number}",
   "@looksPhotoSample": {
-    "description": "Tooltip and accessibility label of a small picture in the look editor that puts the preview on one of GR Lab's own sample photos.",
+    "description": "Tooltip and accessibility label of a small picture in the look editor that puts the preview on one of GR Photo's own sample photos.",
     "placeholders": {
       "number": {
         "type": "int",
@@ -1865,7 +1865,7 @@
   },
   "looksPreview": "Approximate",
   "@looksPreview": {
-    "description": "Tag on the look editor's preview: GR Lab only approximates how the camera renders the look."
+    "description": "Tag on the look editor's preview: GR Photo only approximates how the camera renders the look."
   },
   "looksPreviewAsTaken": "This photo's own look can't be undone for this look, so the photo is shown as it was taken.",
   "@looksPreviewAsTaken": {
@@ -1887,7 +1887,7 @@
   "@looksPreviewSample": {
     "description": "Note under the look editor's preview when the editor opens on a sample photo instead of the photo the look was saved from, because undoing that photo's own look would give a rougher preview or none (a black-and-white or heavily processed photo, for example). The user can pick their own photo from the small pictures next to the note."
   },
-  "looksPreviewUnknownLook": "GR Lab doesn't know which look this photo was taken with, so the preview treats it as Standard.",
+  "looksPreviewUnknownLook": "GR Photo doesn't know which look this photo was taken with, so the preview treats it as Standard.",
   "@looksPreviewUnknownLook": {
     "description": "Note under the look editor's preview when the look the photo was taken with was not kept. Standard is the camera's name for its default look."
   },
@@ -1959,7 +1959,7 @@
   },
   "looksSlotsNeedFirmware": "Update this camera to firmware {version} or later to load looks into its Custom slots.",
   "@looksSlotsNeedFirmware": {
-    "description": "Shown instead of the slots for a camera whose firmware is older than the first version GR Lab can load looks into.",
+    "description": "Shown instead of the slots for a camera whose firmware is older than the first version GR Photo can load looks into.",
     "placeholders": {
       "version": {
         "type": "String",
@@ -2003,9 +2003,9 @@
   "@looksTryAgain": {
     "description": "Button that reads the Custom slots again after a failure."
   },
-  "looksUnreadable": "GR Lab can't read this look.",
+  "looksUnreadable": "GR Photo can't read this look.",
   "@looksUnreadable": {
-    "description": "Shown for a look whose Image Control data GR Lab can't decode."
+    "description": "Shown for a look whose Image Control data GR Photo can't decode."
   },
   "looksValueBasic": "Basic",
   "@looksValueBasic": {
@@ -2101,11 +2101,11 @@
   "@pairingBack": {
     "description": "Tooltip of the pairing flow's back button."
   },
-  "pairingBluetoothDeniedBody": "Allow Bluetooth (on Android: Nearby devices) for GR Lab in the phone's settings, then try again.",
+  "pairingBluetoothDeniedBody": "Allow Bluetooth (on Android: Nearby devices) for GR Photo in the phone's settings, then try again.",
   "@pairingBluetoothDeniedBody": {
     "description": "Explains how to grant the Bluetooth permission. 'Nearby devices' is Android's name for the permission; use Android's wording in this language."
   },
-  "pairingBluetoothDeniedTitle": "GR Lab can't use Bluetooth",
+  "pairingBluetoothDeniedTitle": "GR Photo can't use Bluetooth",
   "@pairingBluetoothDeniedTitle": {
     "description": "Title when the Bluetooth permission is denied."
   },
@@ -2351,9 +2351,9 @@
   "@pairingNearbyOff": {
     "description": "Note on a nearby camera that is switched off."
   },
-  "pairingNearbyPaired": "Paired with GR Lab",
+  "pairingNearbyPaired": "Paired with GR Photo",
   "@pairingNearbyPaired": {
-    "description": "Note on a nearby camera that GR Lab already paired with."
+    "description": "Note on a nearby camera that GR Photo already paired with."
   },
   "pairingNearbySection": "Nearby",
   "@pairingNearbySection": {
@@ -2532,11 +2532,11 @@
   },
   "privacyLicensesRow": "Licenses",
   "@privacyLicensesRow": {
-    "description": "Settings › About: row that opens the licenses of the software GR Lab ships."
+    "description": "Settings › About: row that opens the licenses of the software GR Photo ships."
   },
-  "privacyNotAffiliated": "GR Lab is an independent app. It is not affiliated with or endorsed by Ricoh. Ricoh and GR are trademarks of their owner.",
+  "privacyNotAffiliated": "GR Photo is an independent app. It is not affiliated with or endorsed by Ricoh. Ricoh and GR are trademarks of their owner.",
   "@privacyNotAffiliated": {
-    "description": "Settings › About: note under the section saying that GR Lab does not come from Ricoh, the maker of the GR cameras, and that the names Ricoh and GR belong to their trademark owner. Keep Ricoh and GR as they are."
+    "description": "Settings › About: note under the section saying that GR Photo does not come from Ricoh, the maker of the GR cameras, and that the names Ricoh and GR belong to their trademark owner. Keep Ricoh and GR as they are."
   },
   "privacyPolicyLoadFailed": "The privacy policy could not be shown.",
   "@privacyPolicyLoadFailed": {
@@ -2544,11 +2544,11 @@
   },
   "privacyPolicyRow": "Privacy policy",
   "@privacyPolicyRow": {
-    "description": "Settings › About: row that opens GR Lab's privacy policy."
+    "description": "Settings › About: row that opens GR Photo's privacy policy."
   },
   "privacyPolicyTitle": "Privacy policy",
   "@privacyPolicyTitle": {
-    "description": "Title of the screen that shows GR Lab's privacy policy. The policy text itself stays in English."
+    "description": "Title of the screen that shows GR Photo's privacy policy. The policy text itself stays in English."
   },
   "settingsAppearance": "Appearance",
   "@settingsAppearance": {
@@ -2577,7 +2577,7 @@
   "@settingsAutoDisconnectSheetTitle": {
     "description": "Heading of the Auto-disconnect picker."
   },
-  "settingsAutoDisconnectSubtitle": "Leaves the camera's Wi-Fi when GR Lab isn't used",
+  "settingsAutoDisconnectSubtitle": "Leaves the camera's Wi-Fi when GR Photo isn't used",
   "@settingsAutoDisconnectSubtitle": {
     "description": "Settings: explanation under Auto-disconnect."
   },
@@ -2587,9 +2587,9 @@
   },
   "settingsConnectNearby": "Connect when nearby",
   "@settingsConnectNearby": {
-    "description": "Settings switch: connect over Bluetooth to the camera used last when GR Lab opens and the camera is nearby."
+    "description": "Settings switch: connect over Bluetooth to the camera used last when GR Photo opens and the camera is nearby."
   },
-  "settingsConnectNearbySubtitle": "Connects to the camera used last when GR Lab opens",
+  "settingsConnectNearbySubtitle": "Connects to the camera used last when GR Photo opens",
   "@settingsConnectNearbySubtitle": {
     "description": "Settings: explanation under Connect when nearby."
   },
@@ -2599,11 +2599,11 @@
   },
   "settingsLanguage": "Language",
   "@settingsLanguage": {
-    "description": "Settings: title of the row that chooses the language GR Lab is shown in, and heading of the list of languages it opens."
+    "description": "Settings: title of the row that chooses the language GR Photo is shown in, and heading of the list of languages it opens."
   },
   "settingsLanguageName": "English",
   "@settingsLanguageName": {
-    "description": "The name of the language this file is written in, in that language itself (Deutsch in the German file, 日本語 in the Japanese one). Settings lists every language by this name, whatever language GR Lab is shown in. Use the name the GR shows in its Language menu."
+    "description": "The name of the language this file is written in, in that language itself (Deutsch in the German file, 日本語 in the Japanese one). Settings lists every language by this name, whatever language GR Photo is shown in. Use the name the GR shows in its Language menu."
   },
   "settingsLanguageSystem": "System default",
   "@settingsLanguageSystem": {

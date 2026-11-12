@@ -1,7 +1,7 @@
 // Reference values for the GR IV renderer's tests: what the camera's own
 // tables give, worked out offline by the reference model in the research
 // workspace (work/ic-indep/scratch/render/gen_golden.py; firmware 1.20).
-// The renderer uses curves of GR Lab's own fitted to those tables, so it
+// The renderer uses curves of GR Photo's own fitted to those tables, so it
 // matches these within a tolerance, not exactly.
 
 import 'package:gr_camera/gr_camera.dart';

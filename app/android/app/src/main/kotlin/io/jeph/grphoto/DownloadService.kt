@@ -1,4 +1,4 @@
-package io.jeph.grlab
+package io.jeph.grphoto
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -14,7 +14,7 @@ import android.os.PowerManager
 import kotlin.math.roundToInt
 
 /**
- * Keeps GR Lab running while it downloads with the app not in front, and
+ * Keeps GR Photo running while it downloads with the app not in front, and
  * shows the download queue as a notification with its progress, a Pause or
  * Resume button and Cancel all.
  *
@@ -45,8 +45,8 @@ class DownloadService : Service() {
     companion object {
         private const val CHANNEL_ID = "downloads"
         private const val NOTIFICATION_ID = 1
-        private const val ACTION_TOGGLE = "io.jeph.grlab.downloads.TOGGLE"
-        private const val ACTION_CANCEL = "io.jeph.grlab.downloads.CANCEL"
+        private const val ACTION_TOGGLE = "io.jeph.grphoto.downloads.TOGGLE"
+        private const val ACTION_CANCEL = "io.jeph.grphoto.downloads.CANCEL"
         private const val PROGRESS_STEPS = 1000
 
         // Renewed with every status, about once a second while a file
@@ -91,7 +91,7 @@ class DownloadService : Service() {
     private val notifications by lazy { getSystemService(NotificationManager::class.java) }
     private val wakeLock by lazy {
         getSystemService(PowerManager::class.java)
-            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "grlab:downloads")
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "grphoto:downloads")
             .apply { setReferenceCounted(false) }
     }
     private var channelName: String? = null

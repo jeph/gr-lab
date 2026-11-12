@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/l10n/l10n.dart';
+import 'package:grphoto/l10n/l10n.dart';
 
 /// What the failure page shows for one failed pairing run: a title, a
 /// sentence on what happened, numbered steps for the next attempt and an

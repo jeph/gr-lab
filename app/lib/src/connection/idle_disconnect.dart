@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:clock/clock.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/data/settings.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/data/settings.dart';
 
 /// Leaves the camera's Wi-Fi ([ConnectionController.leaveUnusedWifi])
 /// after [SettingsController.autoDisconnect] without use, keeping

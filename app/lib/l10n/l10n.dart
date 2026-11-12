@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
-import 'package:grlab/l10n/app_localizations.dart';
+import 'package:grphoto/l10n/app_localizations.dart';
 
-export 'package:grlab/l10n/app_localizations.dart';
+export 'package:grphoto/l10n/app_localizations.dart';
 
 /// The app's localized messages (AGENTS.md, "Text the user sees").
 extension L10n on BuildContext {
@@ -9,9 +9,9 @@ extension L10n on BuildContext {
   AppLocalizations get l10n => AppLocalizations.of(this);
 }
 
-/// The language GR Lab is shown in while the user has not chosen one in
+/// The language GR Photo is shown in while the user has not chosen one in
 /// Settings: the first of the phone's languages ([preferred], the most
-/// wanted first) that GR Lab is translated into. When none is, the first
+/// wanted first) that GR Photo is translated into. When none is, the first
 /// of [supported], which `l10n.yaml` keeps English.
 Locale resolveAppLocale(List<Locale>? preferred, Iterable<Locale> supported) =>
     basicLocaleListResolution(

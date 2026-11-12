@@ -131,7 +131,7 @@ The camera enumerates as a standard PTP device (class 6) with vendor ID `0x25FB`
 ## 5. Recommendations for the client
 
 1. Treat model as an enum keyed by advertising code with a string fallback: `{1: GR III, 5: GR III HDF, 3: GR IIIx, 6: GR IIIx HDF, 7: GR IV, 8: GR IV HDF, 9: GR IV Monochrome, 10: GR IVx (unreleased)}`; GR II only from `/v1/props`.
-2. Capability flags per family, not per body: `gr3family` (codes 1, 3, 5, 6 — identical `bled`/`webapid`) and `gr4family` (7, 8, 9, 10 — identical firmware file). Add body-specific flags only where hardware differs (e.g. Monochrome image controls, HDF filter), and confirm them on hardware. GR Lab keeps these flags in its `CameraFeature` table (`packages/gr_camera/lib/src/camera_features.dart`), as the oldest firmware version of each model that has each feature. Since the version line differs by body (item 3), each model gets its own minimum.
+2. Capability flags per family, not per body: `gr3family` (codes 1, 3, 5, 6 — identical `bled`/`webapid`) and `gr4family` (7, 8, 9, 10 — identical firmware file). Add body-specific flags only where hardware differs (e.g. Monochrome image controls, HDF filter), and confirm them on hardware. GR Photo keeps these flags in its `CameraFeature` table (`packages/gr_camera/lib/src/camera_features.dart`), as the oldest firmware version of each model that has each feature. Since the version line differs by body (item 3), each model gets its own minimum.
 3. Minimum firmware: follow GR WORLD (GR III ≥ 2.00, GR IIIx ≥ 1.50, GR II ≥ 3.00, GR IV any). Compare versions per model: GR IV Monochrome's version line is 0.10 behind GR IV for the same image (1.10 vs 1.20).
 4. Persist `(model code, serial, BLE address)` at pairing; re-check `serialNo` and `model` from `/v1/props` after every Wi-Fi join, as GR WORLD does.
 
@@ -143,7 +143,7 @@ The camera enumerates as a standard PTP device (class 6) with vendor ID `0x25FB`
 
 ## 7. Exterior differences
 
-What tells the bodies apart by eye. GR Lab's drawing of the camera shows the front, so it carries the lens, shutter-button and finish differences (`CameraFeature.lens40mm`, `silverShutterButton` and `blackFinish`, drawn by `app/lib/src/cameras/camera_drawing.dart`). Source: Ricoh's product pages and photos, read 2026-11-09. No camera was examined.
+What tells the bodies apart by eye. GR Photo's drawing of the camera shows the front, so it carries the lens, shutter-button and finish differences (`CameraFeature.lens40mm`, `silverShutterButton` and `blackFinish`, drawn by `app/lib/src/cameras/camera_drawing.dart`). Source: Ricoh's product pages and photos, read 2026-11-09. No camera was examined.
 
 | Difference | What differs outside | Source |
 |---|---|---|
@@ -151,7 +151,7 @@ What tells the bodies apart by eye. GR Lab's drawing of the camera shows the fro
 | 28 mm ↔ 40 mm (GR IIIx, GR IIIx HDF) | The lens only: 26.1 mm in place of 18.3 mm, with a larger front element, and a lens part 2 mm deeper (35.2 mm against 33.2 mm). The front of the lens is engraved `GR LENS f=18.3mm 1:2.8` on the GR III and GR IV; the GR IIIx engraving is too small to read in Ricoh's photos, so its `f=26.1mm` is **[inferred]** from the specification. | [GR III / IIIx specifications](https://www.ricoh-imaging.co.jp/english/products/gr-3/spec/) and front photos |
 | HDF (GR III HDF, GR IIIx HDF, GR IV HDF) | "The release button is painted a grayish silver color." Ricoh lists nothing else under the design of the HDF models. | HDF pages: [GR III / IIIx](https://www.ricoh-imaging.co.jp/english/products/gr-3/special/hdf/), [GR IV](https://www.ricoh-imaging.co.jp/english/products/gr-4/special/hdf/) |
 | GR IV Monochrome | Body, shutter button and ring cap in matte black; the front GR logo in semi-gloss black, so it shows only by its sheen. The power button's lamp is a different colour from the GR IV's green; which one was not confirmed here. | [GR IV Monochrome](https://www.ricoh-imaging.co.jp/english/products/gr-4-mono/) |
-| GR IVx | **[unknown]**: not announced, so there is nothing to draw from. Its 40 mm lens is **[inferred]** from the GR IIIx's name, and GR Lab draws it that way. | §3 |
+| GR IVx | **[unknown]**: not announced, so there is nothing to draw from. Its 40 mm lens is **[inferred]** from the GR IIIx's name, and GR Photo draws it that way. | §3 |
 
 ## Evidence
 

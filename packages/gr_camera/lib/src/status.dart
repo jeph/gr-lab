@@ -37,10 +37,10 @@ final class CameraStorage {
   });
 
   /// [kind]'s `/v1/props` name, or the name or BLE type the camera sent
-  /// when GR Lab does not know it.
+  /// when GR Photo does not know it.
   final String id;
 
-  /// Null for a storage GR Lab does not know.
+  /// Null for a storage GR Photo does not know.
   final CameraStorageKind? kind;
 
   /// The medium is there (BLE `exists`, `/v1/props` `equipped`).

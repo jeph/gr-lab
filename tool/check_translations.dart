@@ -1,4 +1,4 @@
-// GR Lab is translated into every language of the camera's menus (AGENTS.md,
+// GR Photo is translated into every language of the camera's menus (AGENTS.md,
 // "Text the user sees"). gen-l10n shows the English text for a message a
 // translation lacks and accepts a translation that drops a placeholder, so
 // this fails when a translation in app/lib/l10n:

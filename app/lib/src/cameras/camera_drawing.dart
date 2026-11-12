@@ -3,7 +3,7 @@ import 'dart:ui' show PointMode;
 
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/src/theme/tokens.dart';
+import 'package:grphoto/src/theme/tokens.dart';
 
 /// A line drawing of a GR seen from the front (mock direction B, "Front",
 /// in `design/mockups/camera-drawings.html` in the local research

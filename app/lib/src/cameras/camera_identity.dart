@@ -1,5 +1,5 @@
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/data/cameras.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/data/cameras.dart';
 
 /// The line under a camera's name.
 extension CameraIdentity on SavedCamera {

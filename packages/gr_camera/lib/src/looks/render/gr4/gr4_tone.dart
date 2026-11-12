@@ -16,7 +16,7 @@ const int gr4CurveWhite = 0x4000;
 ///
 /// The camera blends tables it stores: three contrast sets (high, neutral,
 /// low), each with a table per mid-grey level. This follows its arithmetic
-/// step by step, in integers as the camera does it, on GR Lab's own curves
+/// step by step, in integers as the camera does it, on GR Photo's own curves
 /// fitted to those tables ([gr4ToneKnots]) \[design\], so the result is
 /// within about half an 8-bit code of the camera's curve
 /// (image-control-processing.md §10). The per-shot gain that moves the

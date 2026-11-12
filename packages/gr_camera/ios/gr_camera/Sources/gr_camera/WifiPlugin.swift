@@ -2,7 +2,7 @@ import Flutter
 import NetworkExtension
 import os
 
-/// `io.jeph.grlab/wifi`: joins the camera access point with a persistent
+/// `io.jeph.grphoto/wifi`: joins the camera access point with a persistent
 /// `NEHotspotConfiguration`. `joinOnce = false` keeps the association while
 /// the app is in the background; `leave` removes the configuration again.
 /// iOS chooses WPA2 or WPA3 itself, so the requested security is unused.
@@ -23,7 +23,7 @@ final class WifiPlugin: NSObject, FlutterPlugin {
     }
   }
 
-  private static let logger = Logger(subsystem: "io.jeph.grlab", category: "wifi")
+  private static let logger = Logger(subsystem: "io.jeph.grphoto", category: "wifi")
 
   private let channel: FlutterMethodChannel
   private var pending: Attempt?
@@ -38,7 +38,7 @@ final class WifiPlugin: NSObject, FlutterPlugin {
 
   static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(
-      name: "io.jeph.grlab/wifi", binaryMessenger: registrar.messenger())
+      name: "io.jeph.grphoto/wifi", binaryMessenger: registrar.messenger())
     registrar.addMethodCallDelegate(WifiPlugin(channel: channel), channel: channel)
   }
 
@@ -215,7 +215,7 @@ final class WifiPlugin: NSObject, FlutterPlugin {
         details: nil)
     case .applicationIsNotInForeground:
       return FlutterError(
-        code: "background", message: "iOS only joins camera networks while GR Lab is open",
+        code: "background", message: "iOS only joins camera networks while GR Photo is open",
         details: nil)
     default:
       return FlutterError(code: "failed", message: error.localizedDescription, details: nil)

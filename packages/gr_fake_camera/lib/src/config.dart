@@ -224,7 +224,7 @@ final class FakeLook {
 
   /// Looks for the demo and tests. Each carries every parameter its base
   /// has in the GR IV firmware's settings (research/protocol/image-control.md
-  /// §3), with values in GR Lab's ranges, in format version 1 as a GR IV
+  /// §3), with values in GR Photo's ranges, in format version 1 as a GR IV
   /// HDF on firmware 1.20 stores its looks (observed 2026-11-09). The first
   /// three fill C1–C3 by default.
   static final presets = List<FakeLook>.unmodifiable([

@@ -2,8 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:grlab/src/library/image_orientation.dart';
-import 'package:grlab/src/looks/look_photo.dart';
+import 'package:grphoto/src/library/image_orientation.dart';
+import 'package:grphoto/src/looks/look_photo.dart';
 import 'package:image/image.dart' as img;
 
 /// A JPEG of [width] by [height] pixels, red on its left half and blue on

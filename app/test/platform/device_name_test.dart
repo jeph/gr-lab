@@ -1,12 +1,12 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grlab/src/platform/device_services.dart';
+import 'package:grphoto/src/platform/device_services.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('deviceClientName', () {
-    const channel = MethodChannel('io.jeph.grlab/device');
+    const channel = MethodChannel('io.jeph.grphoto/device');
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
@@ -30,15 +30,15 @@ void main() {
       );
     });
 
-    test('falls back to GR Lab when there is nothing usable', () async {
-      expect(await nameFor(() => null), 'GR Lab');
-      expect(await nameFor(() => '   '), 'GR Lab');
+    test('falls back to GR Photo when there is nothing usable', () async {
+      expect(await nameFor(() => null), 'GR Photo');
+      expect(await nameFor(() => '   '), 'GR Photo');
       expect(
         await nameFor(() => throw PlatformException(code: 'failed')),
-        'GR Lab',
+        'GR Photo',
       );
       messenger.setMockMethodCallHandler(channel, null);
-      expect(await deviceClientName(), 'GR Lab');
+      expect(await deviceClientName(), 'GR Photo');
     });
   });
 }

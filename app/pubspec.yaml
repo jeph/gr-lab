@@ -1,4 +1,4 @@
-name: grlab
+name: grphoto
 description: Companion app for Ricoh GR cameras (pairing, photo browsing and download).
 publish_to: none
 version: 0.1.0+1

@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:grlab/src/library/library_screen.dart';
-import 'package:grlab/src/services.dart';
+import 'package:grphoto/src/library/library_screen.dart';
+import 'package:grphoto/src/services.dart';
 
 import '../support/test_app.dart';
 

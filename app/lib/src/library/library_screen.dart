@@ -1,22 +1,22 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/app_scope.dart';
-import 'package:grlab/src/camera/camera_top_bar.dart';
-import 'package:grlab/src/connection/connect_failure_view.dart';
-import 'package:grlab/src/connection/connect_steps.dart';
-import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/downloads/download_bar.dart';
-import 'package:grlab/src/downloads/download_engine.dart';
-import 'package:grlab/src/library/format.dart';
-import 'package:grlab/src/library/library_model.dart';
-import 'package:grlab/src/library/library_scope.dart';
-import 'package:grlab/src/library/shot.dart';
-import 'package:grlab/src/library/shot_cell.dart';
-import 'package:grlab/src/library/viewer.dart';
-import 'package:grlab/src/theme/tokens.dart';
-import 'package:grlab/src/widgets/group.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/app_scope.dart';
+import 'package:grphoto/src/camera/camera_top_bar.dart';
+import 'package:grphoto/src/connection/connect_failure_view.dart';
+import 'package:grphoto/src/connection/connect_steps.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/downloads/download_bar.dart';
+import 'package:grphoto/src/downloads/download_engine.dart';
+import 'package:grphoto/src/library/format.dart';
+import 'package:grphoto/src/library/library_model.dart';
+import 'package:grphoto/src/library/library_scope.dart';
+import 'package:grphoto/src/library/shot.dart';
+import 'package:grphoto/src/library/shot_cell.dart';
+import 'package:grphoto/src/library/viewer.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/group.dart';
 
 /// The camera's photos (mocks `b-library-ios` / `b-library-android`): the
 /// top bar with the camera pill and settings, filter chips, a grid by day,

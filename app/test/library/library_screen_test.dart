@@ -5,12 +5,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:grlab/src/camera/camera_top_bar.dart';
-import 'package:grlab/src/library/library_screen.dart';
-import 'package:grlab/src/library/shot.dart' show Shot;
-import 'package:grlab/src/library/viewer.dart';
-import 'package:grlab/src/services.dart';
-import 'package:grlab/src/widgets/group.dart';
+import 'package:grphoto/src/camera/camera_top_bar.dart';
+import 'package:grphoto/src/library/library_screen.dart';
+import 'package:grphoto/src/library/shot.dart' show Shot;
+import 'package:grphoto/src/library/viewer.dart';
+import 'package:grphoto/src/services.dart';
+import 'package:grphoto/src/widgets/group.dart';
 
 import '../support/test_app.dart';
 

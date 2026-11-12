@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/app_scope.dart';
-import 'package:grlab/src/cameras/camera_identity.dart';
-import 'package:grlab/src/cameras/camera_rename.dart';
-import 'package:grlab/src/data/cameras.dart';
-import 'package:grlab/src/library/format.dart';
-import 'package:grlab/src/pairing/pairing_widgets.dart';
-import 'package:grlab/src/theme/tokens.dart';
-import 'package:grlab/src/widgets/group.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/app_scope.dart';
+import 'package:grphoto/src/cameras/camera_identity.dart';
+import 'package:grphoto/src/cameras/camera_rename.dart';
+import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/library/format.dart';
+import 'package:grphoto/src/pairing/pairing_widgets.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/group.dart';
 
 /// One paired camera, from ⋯ on the Cameras screen (mock
 /// `b-camera-detail`): rename it or forget it. Connecting is on the

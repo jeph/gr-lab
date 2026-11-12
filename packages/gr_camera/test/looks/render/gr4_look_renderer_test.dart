@@ -469,7 +469,7 @@ void main() {
     );
   });
 
-  test('HDR Tone, Solarized Effect and bases GR Lab does not know cannot '
+  test('HDR Tone, Solarized Effect and bases GR Photo does not know cannot '
       'be undone', () {
     final unknownBase = Look.fromBytes(Uint8List.fromList([1, 0, 0x7f, 0]))!;
     for (final source in [

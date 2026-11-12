@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
 
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/looks/look_spec.dart';
-import 'package:grlab/src/theme/tokens.dart';
-import 'package:grlab/src/widgets/pressable.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/looks/look_spec.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/pressable.dart';
 
 /// A look's base image in the look editor: [name] and its place among
 /// [bases], between arrows that move the look to the base before and the
@@ -13,7 +13,7 @@ import 'package:grlab/src/widgets/pressable.dart';
 /// them all ([showLookBaseList]).
 ///
 /// [selected] is null, or not one of [bases], for a base the camera does
-/// not offer or GR Lab does not know: [name] then stands without a place,
+/// not offer or GR Photo does not know: [name] then stands without a place,
 /// and the arrow forward goes to the first of [bases].
 class LookBaseStepper extends StatelessWidget {
   const new({

@@ -7,14 +7,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 
-import 'package:grlab/src/camera/camera_pages.dart';
-import 'package:grlab/src/camera/camera_top_bar.dart';
-import 'package:grlab/src/library/image_orientation.dart';
-import 'package:grlab/src/looks/look_compare.dart';
-import 'package:grlab/src/looks/look_preview.dart';
-import 'package:grlab/src/looks/looks_store.dart';
-import 'package:grlab/src/sample_photos.dart';
-import 'package:grlab/src/widgets/skeleton.dart';
+import 'package:grphoto/src/camera/camera_pages.dart';
+import 'package:grphoto/src/camera/camera_top_bar.dart';
+import 'package:grphoto/src/library/image_orientation.dart';
+import 'package:grphoto/src/looks/look_compare.dart';
+import 'package:grphoto/src/looks/look_preview.dart';
+import 'package:grphoto/src/looks/looks_store.dart';
+import 'package:grphoto/src/sample_photos.dart';
+import 'package:grphoto/src/widgets/skeleton.dart';
 
 import '../support/test_app.dart';
 
@@ -527,7 +527,7 @@ void main() {
         data: Uint8List.fromList(app.camera.lookSlot(3).data),
         photo: jpeg,
       );
-      // As a look saved before GR Lab kept the photo's own look.
+      // As a look saved before GR Photo kept the photo's own look.
       final older = SavedLook(
         id: added.id,
         name: added.name,
@@ -682,7 +682,7 @@ void main() {
     await open(older);
     expect(
       noteSaying(
-        "GR Lab doesn't know which look this photo was taken with, so the "
+        "GR Photo doesn't know which look this photo was taken with, so the "
         'preview treats it as Standard.',
       ),
       findsOneWidget,

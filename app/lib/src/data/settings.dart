@@ -4,9 +4,9 @@ import 'dart:ui' show Locale;
 
 import 'package:flutter/foundation.dart';
 
-import 'package:grlab/l10n/app_localizations.dart';
-import 'package:grlab/src/data/json_file.dart';
-import 'package:grlab/src/theme/tokens.dart';
+import 'package:grphoto/l10n/app_localizations.dart';
+import 'package:grphoto/src/data/json_file.dart';
+import 'package:grphoto/src/theme/tokens.dart';
 
 /// How long the camera's Wi-Fi stays connected without use before the app
 /// leaves it.
@@ -53,7 +53,7 @@ final class SettingsController extends ChangeNotifier {
       final debugLogging = json['debugLogging'];
       c
         .._debugLogging = debugLogging is bool ? debugLogging : null
-        // A language GR Lab is no longer translated into follows the phone.
+        // A language GR Photo is no longer translated into follows the phone.
         .._language = AppLocalizations.supportedLocales
             .where((locale) => locale.toLanguageTag() == json[_languageKey])
             .firstOrNull;

@@ -1,4 +1,4 @@
-package io.jeph.grlab.gr_camera
+package io.jeph.grphoto.gr_camera
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -21,7 +21,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
 /**
- * `io.jeph.grlab/wifi`: joins the camera access point with a
+ * `io.jeph.grphoto/wifi`: joins the camera access point with a
  * [WifiNetworkSpecifier] request and binds the process to it, so dart:io
  * sockets reach 192.168.0.1 over the camera network rather than mobile data
  * (the camera network has no internet, so Android never makes it the
@@ -67,7 +67,7 @@ import io.flutter.plugin.common.MethodChannel
 class WifiChannel(private val context: Context, messenger: BinaryMessenger) :
     MethodChannel.MethodCallHandler {
     private val connectivity = context.getSystemService(ConnectivityManager::class.java)
-    private val channel = MethodChannel(messenger, "io.jeph.grlab/wifi")
+    private val channel = MethodChannel(messenger, "io.jeph.grphoto/wifi")
     private val main = Handler(Looper.getMainLooper())
 
     /** The live request; callbacks from any older request are ignored. */
@@ -296,7 +296,7 @@ class WifiChannel(private val context: Context, messenger: BinaryMessenger) :
      * bypassable, so a VPN on this app's traffic with the camera network
      * still present is reported as `vpnSuspected`, not as the cause.
      * [ConnectivityManager.getActiveNetwork] returns a VPN only when it
-     * applies to this app, so one that excludes GR Lab is not suspected.
+     * applies to this app, so one that excludes GR Photo is not suspected.
      */
     private fun failUnbound(n: Network, ssid: String?) {
         val present = connectivity.getNetworkCapabilities(n) != null
@@ -445,7 +445,7 @@ class WifiChannel(private val context: Context, messenger: BinaryMessenger) :
 /** Longer than the camera network takes to reach [WifiChannel] once connected (~20 ms seen). */
 private const val OTHER_NETWORK_MS = 2_500L
 
-private const val TAG = "GrLabWifi"
+private const val TAG = "GrPhotoWifi"
 
 /** Longer than one scan and connect (≤ 4.8 s and ≤ 1.2 s observed). */
 private const val RESCAN_MS = 7_000L

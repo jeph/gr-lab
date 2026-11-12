@@ -1,6 +1,6 @@
 name: Release
 
-# Every push to main releases GR Lab 0.0.N: the Android app as a signed APK on GitHub release v0.0.N, and the iOS app
+# Every push to main releases GR Photo 0.0.N: the Android app as a signed APK on GitHub release v0.0.N, and the iOS app
 # on TestFlight. N, also the APK's versionCode and the iOS build number, is one more than the latest release's. A
 # rerun for a commit that already has a release reuses its version. The jobs split the work so that each credential
 # is held by as little as possible:
@@ -52,14 +52,14 @@ env:
   FLUTTER_SHA256_LINUX_X64: 25ed8c3c29d51a7353f2a944310b478af8214920639524b19c50a19e6c044c5a
   FLUTTER_SHA256_MACOS_ARM64: 6545b85938745dc5070e9faf2adf70233c1811009d87fe6d27bfcda5a04b7698
   BUILD_TOOLS_VERSION: 37.0.0
-  # The Xcode that GR Lab's TestFlight builds are made with.
+  # The Xcode that GR Photo's TestFlight builds are made with.
   DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
 
 jobs:
   version:
     name: Choose version
     # A fork has neither the keys nor the app's place on TestFlight.
-    if: github.repository == 'jeph/gr-lab'
+    if: github.repository == 'jeph/gr-photo'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -137,13 +137,13 @@ jobs:
       - name: Verify APK
         run: |
           mkdir dist
-          cp app/build/app/outputs/flutter-apk/app-prod-release.apk dist/gr-lab-built.apk
+          cp app/build/app/outputs/flutter-apk/app-prod-release.apk dist/gr-photo-built.apk
           # R8 writes the mapping, so a build it did not shrink has none to copy.
-          gzip -9c app/build/app/outputs/mapping/prodRelease/mapping.txt > "dist/gr-lab-v$VERSION_NAME-mapping.txt.gz"
-          badging=$("$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/aapt2" dump badging dist/gr-lab-built.apk)
-          package="package: name='io.jeph.grlab' versionCode='$VERSION_CODE' versionName='$VERSION_NAME'"
+          gzip -9c app/build/app/outputs/mapping/prodRelease/mapping.txt > "dist/gr-photo-v$VERSION_NAME-mapping.txt.gz"
+          badging=$("$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/aapt2" dump badging dist/gr-photo-built.apk)
+          package="package: name='io.jeph.grphoto' versionCode='$VERSION_CODE' versionName='$VERSION_NAME'"
           if ! grep -q "^$package" <<< "$badging"; then
-            echo "The APK isn't io.jeph.grlab $VERSION_NAME ($VERSION_CODE)" >&2
+            echo "The APK isn't io.jeph.grphoto $VERSION_NAME ($VERSION_CODE)" >&2
             exit 1
           fi
           if grep -q '^application-debuggable' <<< "$badging"; then
@@ -152,7 +152,7 @@ jobs:
           fi
           # A release build holds the Dart code compiled (libapp.so) for each processor; a debug build holds it as a
           # kernel file.
-          files=$(unzip -Z1 dist/gr-lab-built.apk)
+          files=$(unzip -Z1 dist/gr-photo-built.apk)
           for abi in arm64-v8a armeabi-v7a x86_64; do
             if ! grep -q "^lib/$abi/libapp\.so$" <<< "$files"; then
               echo "The APK lacks the compiled Dart code for $abi" >&2
@@ -167,15 +167,16 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: built-apk
-          path: dist/gr-lab-built.apk
+          path: dist/gr-photo-built.apk
           if-no-files-found: error
           retention-days: 7
 
-      # R8 renames the release's classes; the mapping turns a Kotlin stack trace from the APK back into GR Lab's names.
+      # R8 renames the release's classes; the mapping turns a Kotlin stack trace from the APK back into GR Photo's
+      # names.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mapping
-          path: dist/gr-lab-v*-mapping.txt.gz
+          path: dist/gr-photo-v*-mapping.txt.gz
           if-no-files-found: error
           retention-days: 7
 
@@ -213,12 +214,12 @@ jobs:
         run: |
           mkdir dist
           BUILD_TOOLS="$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION" \
-            tool/sign_release_apk.sh built/gr-lab-built.apk "dist/gr-lab-v$VERSION_NAME.apk"
+            tool/sign_release_apk.sh built/gr-photo-built.apk "dist/gr-photo-v$VERSION_NAME.apk"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: signed-apk
-          path: dist/gr-lab-v*.apk
+          path: dist/gr-photo-v*.apk
           if-no-files-found: error
           retention-days: 7
 
@@ -257,7 +258,7 @@ jobs:
           properties() {
             /usr/libexec/PlistBuddy -c "Print :ApplicationProperties:$1" "$archive/Info.plist"
           }
-          test "$(properties CFBundleIdentifier)" = io.jeph.grlab
+          test "$(properties CFBundleIdentifier)" = io.jeph.grphoto
           test "$(properties CFBundleShortVersionString)" = "$VERSION_NAME"
           test "$(properties CFBundleVersion)" = "$VERSION_CODE"
           test "$(lipo -archs "$app/Runner")" = arm64
@@ -311,12 +312,12 @@ jobs:
           tar -xf built/Runner.xcarchive.tar -C built
           tool/sign_ios_archive.sh built/Runner.xcarchive app/ios/Runner/Runner.entitlements exported
           mkdir dist
-          mv exported/*.ipa "dist/gr-lab-v$VERSION_NAME.ipa"
+          mv exported/*.ipa "dist/gr-photo-v$VERSION_NAME.ipa"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: signed-ipa
-          path: dist/gr-lab-v*.ipa
+          path: dist/gr-photo-v*.ipa
           if-no-files-found: error
           retention-days: 7
 
@@ -361,7 +362,7 @@ jobs:
             exit 0
           fi
           gh release create "v$VERSION_NAME" dist/*.apk dist/*-mapping.txt.gz dist/SHA256SUMS \
-            --title "GR Lab $VERSION_NAME" \
+            --title "GR Photo $VERSION_NAME" \
             --target "$GITHUB_SHA" \
             --generate-notes \
             --latest
@@ -393,4 +394,4 @@ jobs:
           APP_STORE_CONNECT_API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
-        run: tool/upload_testflight.sh "dist/gr-lab-v$VERSION_NAME.ipa"
+        run: tool/upload_testflight.sh "dist/gr-photo-v$VERSION_NAME.ipa"

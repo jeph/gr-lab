@@ -3,12 +3,12 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/library/image_orientation.dart';
-import 'package:grlab/src/looks/look_preview.dart';
-import 'package:grlab/src/looks/look_widgets.dart';
-import 'package:grlab/src/theme/tokens.dart';
-import 'package:grlab/src/widgets/pressable.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/library/image_orientation.dart';
+import 'package:grphoto/src/looks/look_preview.dart';
+import 'package:grphoto/src/looks/look_widgets.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/pressable.dart';
 import 'package:intl/intl.dart';
 
 /// A photo looks are previewed on, with what undoes its own rendering.

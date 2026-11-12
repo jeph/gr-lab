@@ -31,7 +31,7 @@ void main() {
     );
     final pairing = await pairCamera(
       camera.transport,
-      clientName: 'GR Lab Test',
+      clientName: 'GR Photo Test',
       scanTimeout: ms(300),
     );
     await pairing.client.connection.disconnect();

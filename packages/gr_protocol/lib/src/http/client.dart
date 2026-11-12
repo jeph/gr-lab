@@ -155,7 +155,7 @@ final class GrHttpClient {
 
   /// `GET /v1/ping`: registered by GR III/IV firmware; it reads the camera
   /// datetime (firmware-protocol-inventory.md "Additional-route
-  /// verification"). Not used by either of Ricoh's apps on III/IV; GR Lab's
+  /// verification"). Not used by either of Ricoh's apps on III/IV; GR Photo's
   /// liveness probe. Answered by a GR IV HDF (fw 1.20, 2026-11-11,
   /// hardware-validation.md §4).
   Future<GrPing> ping({Duration? connectTimeout, Duration? timeout}) async =>

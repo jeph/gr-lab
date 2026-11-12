@@ -3,11 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/data/settings.dart';
-import 'package:grlab/src/debug/debug_log.dart';
-import 'package:grlab/src/settings/debug_log_group.dart';
-import 'package:grlab/src/theme/tokens.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/data/settings.dart';
+import 'package:grphoto/src/debug/debug_log.dart';
+import 'package:grphoto/src/settings/debug_log_group.dart';
+import 'package:grphoto/src/theme/tokens.dart';
 
 void main() {
   late Directory temp;

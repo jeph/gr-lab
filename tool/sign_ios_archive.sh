@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Signs an archive from tool/build_ios_archive.sh for the App Store with
-# GR Lab's distribution certificate and provisioning profile, and checks the
+# GR Photo's distribution certificate and provisioning profile, and checks the
 # app that comes out. .github/workflows/release.yml runs this in a job that
 # holds the certificate and nothing else.
 #

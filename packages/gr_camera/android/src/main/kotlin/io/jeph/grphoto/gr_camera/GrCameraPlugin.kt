@@ -1,4 +1,4 @@
-package io.jeph.grlab.gr_camera
+package io.jeph.grphoto.gr_camera
 
 import android.app.Activity
 import android.app.Application
@@ -9,7 +9,7 @@ import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 
 /**
  * Registers the camera layer's native code: the camera Wi-Fi join
- * ([WifiChannel], `io.jeph.grlab/wifi`).
+ * ([WifiChannel], `io.jeph.grphoto/wifi`).
  *
  * [WifiChannel] needs to know when the app's activity is in front: Android
  * only joins camera networks for the foreground app, and its approval

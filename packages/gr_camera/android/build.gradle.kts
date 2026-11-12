@@ -1,4 +1,4 @@
-group = "io.jeph.grlab.gr_camera"
+group = "io.jeph.grphoto.gr_camera"
 version = "1.0-SNAPSHOT"
 
 buildscript {
@@ -26,7 +26,7 @@ plugins {
 }
 
 android {
-    namespace = "io.jeph.grlab.gr_camera"
+    namespace = "io.jeph.grphoto.gr_camera"
 
     compileSdk = 36
 

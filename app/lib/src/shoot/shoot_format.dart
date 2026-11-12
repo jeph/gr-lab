@@ -1,5 +1,5 @@
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/l10n/l10n.dart';
+import 'package:grphoto/l10n/l10n.dart';
 
 /// Self-timer choices of the Shoot screen.
 enum ShootTimer {

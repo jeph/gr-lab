@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/data/settings.dart';
-import 'package:grlab/src/shoot/shoot_format.dart';
-import 'package:grlab/src/shoot/shoot_model.dart';
-import 'package:grlab/src/theme/tokens.dart';
-import 'package:grlab/src/widgets/pressable.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/data/settings.dart';
+import 'package:grphoto/src/shoot/shoot_format.dart';
+import 'package:grphoto/src/shoot/shoot_model.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/pressable.dart';
 import 'package:intl/intl.dart';
 
 /// Remote / Live view, at the top of Shoot in both modes (mock `.modeseg`).

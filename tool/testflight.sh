@@ -9,11 +9,11 @@
 # the Admin role (a lesser role may not use the team's distribution
 # certificate): its AuthKey_<key id>.p8 file in
 # ~/.appstoreconnect/private_keys, and ASC_KEY_ID and ASC_ISSUER_ID set in
-# ~/.appstoreconnect/gr-lab.env.
+# ~/.appstoreconnect/gr-photo.env.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-config="$HOME/.appstoreconnect/gr-lab.env"
+config="$HOME/.appstoreconnect/gr-photo.env"
 
 if [[ ! -f "$config" ]]; then
   echo "missing $config (ASC_KEY_ID and ASC_ISSUER_ID)" >&2

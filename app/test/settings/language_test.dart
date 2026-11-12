@@ -3,17 +3,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/data/settings.dart';
-import 'package:grlab/src/library/library_screen.dart';
-import 'package:grlab/src/looks/looks_screen.dart';
-import 'package:grlab/src/settings/settings_screen.dart';
-import 'package:grlab/src/shoot/shoot_screen.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/data/settings.dart';
+import 'package:grphoto/src/library/library_screen.dart';
+import 'package:grphoto/src/looks/looks_screen.dart';
+import 'package:grphoto/src/settings/settings_screen.dart';
+import 'package:grphoto/src/shoot/shoot_screen.dart';
 
 import '../support/test_app.dart';
 
 void main() {
-  testWidgets("GR Lab starts in the phone's language, changes to the one "
+  testWidgets("GR Photo starts in the phone's language, changes to the one "
       'chosen in Settings and keeps it, and System default returns to the '
       "phone's", (tester) async {
     tester.view

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/src/cameras/camera_drawing.dart';
-import 'package:grlab/src/theme/tokens.dart';
+import 'package:grphoto/src/cameras/camera_drawing.dart';
+import 'package:grphoto/src/theme/tokens.dart';
 
 /// What the drawing of [model] puts on a canvas [width] wide, in the
 /// theme of [colors].

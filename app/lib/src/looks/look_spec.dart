@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/l10n/l10n.dart';
+import 'package:grphoto/l10n/l10n.dart';
 import 'package:intl/intl.dart';
 
 /// The tabs of the look editor (mock `b-look-edit`).
@@ -82,7 +82,7 @@ bool isMonoBase(LookBase base) => switch (base) {
 };
 
 /// The name of [look]'s base image as the camera's menu shows it, or its
-/// number when GR Lab does not know it.
+/// number when GR Photo does not know it.
 String lookBaseLabel(AppLocalizations l10n, Look look) => switch (look.base) {
   final base? => baseLabel(l10n, base),
   null => l10n.looksBaseUnknown(look.unknownBaseNumber!),

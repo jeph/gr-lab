@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/src/library/library_model.dart';
-import 'package:grlab/src/library/shot.dart';
+import 'package:grphoto/src/library/library_model.dart';
+import 'package:grphoto/src/library/shot.dart';
 
 CameraFile f(String path, {String? storage = 'sd1'}) =>
     CameraFile(storage, GrPhotoPath.parse(path));

@@ -1,4 +1,4 @@
-package io.jeph.grlab
+package io.jeph.grphoto
 
 import android.content.ContentResolver
 import android.content.ContentValues
@@ -17,7 +17,7 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 /**
- * `io.jeph.grlab/media`: copies downloaded camera files into MediaStore,
+ * `io.jeph.grphoto/media`: copies downloaded camera files into MediaStore,
  * one entry per file, under `Pictures/<album>`. Gallery apps show a folder
  * as an album under the folder's name, so movies go there too rather than
  * to `Movies/<album>`, which would be a second album of the same name.
@@ -26,7 +26,7 @@ import java.util.concurrent.Executors
  */
 class MediaChannel(context: Context, messenger: BinaryMessenger) : MethodChannel.MethodCallHandler {
     private val resolver: ContentResolver = context.contentResolver
-    private val channel = MethodChannel(messenger, "io.jeph.grlab/media")
+    private val channel = MethodChannel(messenger, "io.jeph.grphoto/media")
     private val main = Handler(Looper.getMainLooper())
     private val io: ExecutorService = Executors.newSingleThreadExecutor()
 

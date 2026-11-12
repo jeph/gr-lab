@@ -145,7 +145,7 @@ final class CameraLibrary {
 
   /// The Image Control [f] was shot with, from `/imgctrl` (http-api.md
   /// §4.3), as GR WORLD reads it to save a look from a photo. Throws
-  /// [NoImageControl] when the camera's answer is not a blob GR Lab can
+  /// [NoImageControl] when the camera's answer is not a blob GR Photo can
   /// read, and the HTTP client's errors otherwise.
   Future<Look> imageControl(CameraFile f) async {
     final bytes = await _http.imageControl(f.path, storage: f.storage);

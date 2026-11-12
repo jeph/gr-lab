@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="../icon.png" alt="A GR Lab ikonja" width="128" height="128">
+  <img src="../icon.png" alt="A GR Photo ikonja" width="128" height="128">
 </p>
 
-<h1 align="center">GR Lab</h1>
+<h1 align="center">GR Photo</h1>
 
 <p align="center">
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="Licenc: MIT"></a>
@@ -33,15 +33,15 @@
   <a href="README.ja.md">日本語</a>
 </p>
 
-A **GR Lab** a Ricoh GR kamerák (GR III, GR IIIx és GR IV) társalkalmazása iOS és Android
+A **GR Photo** a Ricoh GR kamerák (GR III, GR IIIx és GR IV) társalkalmazása iOS és Android
 rendszerre. Böngészheti és letöltheti vele a kamerán lévő fotókat, élőképes távkioldóként
 használhatja, és egy helyen tarthatja benne a Képvezérlés stílusait. Úgy készült, hogy gyors és
 könnyen kezelhető legyen, és rendesen kezelje a kamera színprofiljait: elmentheti azt a stílust,
 amellyel egy fotó készült, előnézet mellett szerkesztheti, és betöltheti a kamera egyéni helyeire.
 
-A GR Lab független projekt, nem áll kapcsolatban a Ricoh vállalattal. A kamerával olyan protokollon
-kommunikál, amelyet a Ricoh saját alkalmazásaiból és a kamera firmware-éből fejtettünk vissza; az
-eredmények leírása a [`research/`](../../research/README.md) mappában található.
+A GR Photo független projekt, nem áll kapcsolatban a Ricoh vállalattal. A kamerával olyan
+protokollon kommunikál, amelyet a Ricoh saját alkalmazásaiból és a kamera firmware-éből fejtettünk
+vissza; az eredmények leírása a [`research/`](../../research/README.md) mappában található.
 
 <p align="center">
   <picture>
@@ -76,10 +76,10 @@ eredmények leírása a [`research/`](../../research/README.md) mappában talál
 
 ## Funkciók
 
-A GR Lab számára három dolog a legfontosabb: hogy gyorsan eljusson a fotóihoz, hogy az alkalmazás
+A GR Photo számára három dolog a legfontosabb: hogy gyorsan eljusson a fotóihoz, hogy az alkalmazás
 ne legyen útban, és hogy a Képvezérlés stílusait érdemes legyen benne kezelni.
 
-- **Gyors.** A GR Lab megnyitáskor Bluetooth-kapcsolaton csatlakozik a kamerához, ha az a közelben
+- **Gyors.** A GR Photo megnyitáskor Bluetooth-kapcsolaton csatlakozik a kamerához, ha az a közelben
   van. A Könyvtár megnyitása egyetlen lépésben felébreszti a kamerát, bekapcsolja a Wi-Fi-jét és
   csatlakozik hozzá, a Wi-Fi-kapcsolat pedig megmarad, amíg Ön az oldalak között vált, így semmi sem
   csatlakozik kétszer, és a letöltés nem szakad meg. A fájllistákat, a bélyegképeket és az
@@ -87,7 +87,7 @@ ne legyen útban, és hogy a Képvezérlés stílusait érdemes legyen benne kez
   GR IV HDF és egy androidos telefon esetében a kikapcsolt kamera Könyvtára körülbelül
   13 másodperc alatt jelent meg.
 - **Könnyen kezelhető.** A kamerái egyetlen képernyőn láthatók, ahonnan a Könyvtár, a Fotózás és a
-  Stílusok egy koppintással elérhető. A GR Lab bekapcsolja a kamerát, bekapcsolja a Wi-Fi-jét, és
+  Stílusok egy koppintással elérhető. A GR Photo bekapcsolja a kamerát, bekapcsolja a Wi-Fi-jét, és
   csatlakozik hozzá Ön helyett, így a párosítás után semmit sem kell beállítani a kamerán. Ha
   valami nem sikerül, megmondja, miért, és mit érdemes ellenőrizni, és felkínálja a Próbálja újra
   gombot. A megszakadt kapcsolat magától helyreáll.
@@ -108,7 +108,7 @@ ne legyen útban, és hogy a Képvezérlés stílusait érdemes legyen benne kez
 - **Könyvtár.** Böngészheti a kamera fotóit és videóit napok szerint, szűrhet a JPEG, a RAW, a Videó
   és a Nincs letöltve szűrővel, és bármelyik felvételt megnyithatja teljes képernyőn, a részleteivel
   együtt. Letölthet egyetlen felvételt vagy egy kijelölést, JPEG-ként, RAW-ként vagy mindkettőként,
-  a telefon fotókönyvtárának GR Lab albumába. A letöltések akkor is folytatódnak, ha másik
+  a telefon fotókönyvtárának GR Photo albumába. A letöltések akkor is folytatódnak, ha másik
   alkalmazást használ vagy lezárja a telefont: az Android értesítésben mutatja őket Szüneteltetés és
   Összes megszakítása gombbal, az iOS 26 vagy újabb pedig a zárolási képernyőn és a Dynamic Islanden
   mutatja az állapotukat. A videók az alkalmazásban játszhatók le.
@@ -122,7 +122,7 @@ ne legyen útban, és hogy a Képvezérlés stílusait érdemes legyen benne kez
   átnevezheti vagy elfelejtetheti.
 - **Témák és nyelvek.** Világos, Sötét, Sötétkamra, Papír és Cianotípia téma, valamint a kamera
   saját menüinek 21 nyelve.
-- **Bizalmas.** Nincs fiók, analitika, hirdetés vagy összeomlás-jelentés. A GR Lab kizárólag az Ön
+- **Bizalmas.** Nincs fiók, analitika, hirdetés vagy összeomlás-jelentés. A GR Photo kizárólag az Ön
   kamerájával kommunikál; lásd az [adatvédelmi irányelveket](../../app/assets/privacy.md).
 
 ## Követelmények
@@ -133,7 +133,7 @@ ne legyen útban, és hogy a Képvezérlés stílusait érdemes legyen benne kez
   telefonról történő olvasására vagy írására.
 - Android 12 vagy újabb, illetve iOS 15 vagy újabb.
 
-A GR Lab fiatal projekt. A hardvernapló 1.20-s firmware-rel futó GR IV HDF kamerával végzett
+A GR Photo fiatal projekt. A hardvernapló 1.20-s firmware-rel futó GR IV HDF kamerával végzett
 próbákat rögzít: párosítás, csatlakozás, a kamera felébresztése, böngészés, letöltés, élőkép, a
 fókusz és az expozíció módosítása. A GR III és a GR IIIx támogatása a protokollkutatásból
 származik, kamerán még nem teszteltük. A megfigyelt eredményeket lásd itt:
@@ -141,22 +141,22 @@ származik, kamerán még nem teszteltük. A megfigyelt eredményeket lásd itt:
 
 ## Telepítés
 
-Androidon töltse le a telefonjára a `gr-lab-v<version>.apk` fájlt a
-[legújabb kiadásból](https://github.com/jeph/gr-lab/releases/latest), és nyissa meg. Az Android
+Androidon töltse le a telefonjára a `gr-photo-v<version>.apk` fájlt a
+[legújabb kiadásból](https://github.com/jeph/gr-photo/releases/latest), és nyissa meg. Az Android
 egyszer engedélyt kér ahhoz, hogy a böngészőjéből alkalmazásokat telepíthessen. Minden kiadás
 ugyanazzal a kulccsal van aláírva, így az újabb a meglévőre települ, és megőrzi a kameráit és a
 beállításait.
 
 iOS-en minden kiadás a TestFlightra kerül, egyelőre csak a projekt saját tesztelőihez. Nyilvános
-TestFlight-hivatkozás még nincs, ezért iPhone-on a GR Lab úgy telepíthető, hogy a forráskódból
+TestFlight-hivatkozás még nincs, ezért iPhone-on a GR Photo úgy telepíthető, hogy a forráskódból
 lefordítja.
 
 A forráskódból történő fordításhoz [Flutter](https://flutter.dev) 3.47 vagy újabb szükséges,
 beállított Android SDK-val vagy Xcode-dal.
 
 ```sh
-git clone https://github.com/jeph/gr-lab.git
-cd gr-lab/app
+git clone https://github.com/jeph/gr-photo.git
+cd gr-photo/app
 flutter run --flavor prod --release
 ```
 
@@ -179,21 +179,21 @@ flutter run --dart-define=GR_DEMO=true
    kamerán a párosítás itt található: MENU → E6 → Vez. nélk. kom. Állítsa a Működési mód beállítást
    Be értékre, nyissa meg a Párosítás menüpontot, és válassza a Párosítás végrehajtása lehetőséget,
    majd erősítse meg a kódot a telefonon, és nyomja meg a kamerán az OK gombot. A kamera ezután
-   megjelenik a Kamerák képernyőn, és a GR Lab magától csatlakozik hozzá, ha megnyitáskor a kamera
+   megjelenik a Kamerák képernyőn, és a GR Photo magától csatlakozik hozzá, ha megnyitáskor a kamera
    a közelben van.
-2. **Nyissa meg a Könyvtárat.** A GR Lab bekapcsolja a kamerát, ha ki van kapcsolva, és csatlakozik
-   a Wi-Fi-hálózatához. Az Android egyszer a jóváhagyását kéri a kamera hálózatához. Koppintson
-   egy felvételre a megtekintéséhez, tartsa nyomva több felvétel kijelöléséhez, és töltse le, amit
-   meg szeretne tartani.
+2. **Nyissa meg a Könyvtárat.** A GR Photo bekapcsolja a kamerát, ha ki van kapcsolva, és
+   csatlakozik a Wi-Fi-hálózatához. Az Android egyszer a jóváhagyását kéri a kamera hálózatához.
+   Koppintson egy felvételre a megtekintéséhez, tartsa nyomva több felvétel kijelöléséhez, és töltse
+   le, amit meg szeretne tartani.
 3. **Fotózzon.** A Távkioldó Bluetooth-kapcsolaton működő zárkioldó. Az Élőkép csatlakozik a kamera
    Wi-Fi-hálózatához, és megjeleníti a kamera képét, fókusz- és expozícióvezérlőkkel.
 4. **Mentsen egy stílust.** Nyisson meg egy fotót a Könyvtárban, és koppintson a Stílus mentése
    gombra, vagy készítsen egyet a nulláról a Stílusok oldal + gombjával. Koppintson egy stílusra a
    szerkesztéséhez, és húzza a C1, C2 vagy C3 helyre, ha be szeretné tölteni a kamerába.
 
-A Beállítások Automatikus leválasztás funkciója kilép a kamera Wi-Fi-hálózatából, ha a GR Lab egy
-ideje nincs használatban (alapértelmezés szerint 5 perc után). [A GR Lab működése](../behaviour.md)
-részletesen leírja az egyes képernyőket és minden kapcsolati állapotot.
+A Beállítások Automatikus leválasztás funkciója kilép a kamera Wi-Fi-hálózatából, ha a GR Photo egy
+ideje nincs használatban (alapértelmezés szerint 5 perc után). [A GR Photo
+működése](../behaviour.md) részletesen leírja az egyes képernyőket és minden kapcsolati állapotot.
 
 ## Fejlesztés
 
@@ -218,9 +218,9 @@ flutter run --flavor prod --release          # a felhasználóknak szánt build
 flutter run --dart-define=GR_DEMO=true       # szimulált kamera, Android-emulátoron és iOS-szimulátoron is működik
 ```
 
-Két build létezik. A `dev` (`io.jeph.grlab.dev`, a neve „GR Lab Dev”) a `prod` (`io.jeph.grlab`,
-„GR Lab”) mellé települ. `--flavor` nélkül a `flutter run` és a `flutter build` a `dev` változatot
-fordítja.
+Két build létezik. A `dev` (`io.jeph.grphoto.dev`, a neve „GR Photo Dev”) a `prod`
+(`io.jeph.grphoto`, „GR Photo”) mellé települ. `--flavor` nélkül a `flutter run` és a `flutter
+build` a `dev` változatot fordítja.
 
 A `flutter run` önmagában hibakeresési buildet készít, amely az egyes képkockákat többször
 lassabban állítja elő, mint a profil- vagy a kiadási build (a Könyvtárban, Android-emulátoron
@@ -264,8 +264,8 @@ van a `--flavor dev` kapcsolóra és egy előre lefordított APK-ra; ezek nélk�
 found” üzenettel leáll.
 
 Az iOS-szimulátoron az alkalmazásnak telepítve kell lennie, amikor megkapja a Fotók-hozzáférést, a
-`flutter test` pedig utána eltávolítja, ami az engedélyt is törli. A GR Lab teljes hozzáférést kér,
-hogy megtarthassa az albumát, és az iOS 26.3-as szimulátoron a `simctl privacy grant photos`
+`flutter test` pedig utána eltávolítja, ami az engedélyt is törli. A GR Photo teljes hozzáférést
+kér, hogy megtarthassa az albumát, és az iOS 26.3-as szimulátoron a `simctl privacy grant photos`
 önmagában nem akadályozta meg, hogy az iOS rákérdezzen: az általa rögzített engedélyben az
 `auth_version` értéke 1, az iOS pedig csak 2-es értéknél tekinti teljes hozzáférésnek. Minden
 futtatás előtt adja meg az engedélyt, és állítsa be ezt az értéket:
@@ -274,15 +274,15 @@ futtatás előtt adja meg az engedélyt, és állítsa be ezt az értéket:
 cd app
 flutter build ios --simulator --debug --dart-define=GR_DEMO=true
 xcrun simctl install booted build/ios/iphonesimulator/Runner.app
-xcrun simctl privacy booted grant photos io.jeph.grlab.dev
+xcrun simctl privacy booted grant photos io.jeph.grphoto.dev
 sqlite3 "$(xcrun simctl getenv booted HOME)/Library/TCC/TCC.db" \
-  "UPDATE access SET auth_version = 2 WHERE service = 'kTCCServicePhotos' AND client = 'io.jeph.grlab.dev'"
+  "UPDATE access SET auth_version = 2 WHERE service = 'kTCCServicePhotos' AND client = 'io.jeph.grphoto.dev'"
 flutter test integration_test --dart-define=GR_DEMO=true -d <simulator>
 ```
 
 ### Hibakeresési napló
 
-A GR Lab hibakeresési naplót vezet, amíg a Beállítások > Hibakeresési naplózás bekapcsolása
+A GR Photo hibakeresési naplót vezet, amíg a Beállítások > Hibakeresési naplózás bekapcsolása
 beállítás be van kapcsolva: mindent, amit a kamerának küld és tőle fogad (Bluetooth-keresések,
 olvasások, írások és értesítések, minden HTTP-kérés és -válasz, WebSocket-üzenetek, az élőkép
 képkockáinak mérete és a Wi-Fi-csatlakozás lépései), az alkalmazás által kiírt minden sort, a
@@ -298,16 +298,16 @@ körülbelül 50 MB-ot őriz meg. Tartalmazza a kamera Wi-Fi-jelszavát.
 A `main` ágra érkező minden push egy kiadás, amelyet a
 [`.github/workflows/release.yml`](../../.github/workflows/release.yml) készít el. A munkafolyamat a
 kiadásnak a 0.0.N számot adja, eggyel nagyobbat az előzőnél, lefuttatja a `tool/check.sh` szkriptet,
-és mindkét alkalmazás `prod` flavorját kiadási módban fordítja le. Az Android APK-t a GR Lab
-kiadási kulcsa írja alá, és a [kiadások oldalán](https://github.com/jeph/gr-lab/releases) jelenik
+és mindkét alkalmazás `prod` flavorját kiadási módban fordítja le. Az Android APK-t a GR Photo
+kiadási kulcsa írja alá, és a [kiadások oldalán](https://github.com/jeph/gr-photo/releases) jelenik
 meg, az SHA-256 ellenőrzőösszegével, a build eredetét igazoló tanúsítással és azzal az
 R8-leképezéssel együtt, amellyel a Kotlin-veremkiírásai olvashatók. Az iOS-alkalmazás az App Store
 számára van aláírva, és a TestFlightra kerül feltöltésre. A kulcsok olyan GitHub-környezetekben
 vannak, amelyeket csak a `main` használhat, és az alkalmazásokat fordító feladatok egyiket sem
 kapják meg.
 
-A `gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab` azt ellenőrzi, hogy egy APK-t ez
-a munkafolyamat fordított-e le ebből a tárolóból.
+A `gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo` azt ellenőrzi, hogy egy APK-t
+ez a munkafolyamat fordított-e le ebből a tárolóból.
 
 ```sh
 tool/testflight.sh       # lefordítja a prod iOS-alkalmazást, és feltölti a TestFlightra
@@ -319,7 +319,7 @@ feldolgozás után megjelenik a TestFlight alatt. A belső tesztelők a TestFlig
 telepítik, kábel nélkül. Az Xcode egy App Store Connect API-kulccsal írja
 alá és tölti fel a buildet, így a Macen a beállítás a kulcs `AuthKey_<key id>.p8` fájljából áll a
 `~/.appstoreconnect/private_keys` mappában, valamint az `ASC_KEY_ID` és az `ASC_ISSUER_ID`
-értékéből a `~/.appstoreconnect/gr-lab.env` fájlban. A kulcsnak Admin szerepkörre van szüksége: az
+értékéből a `~/.appstoreconnect/gr-photo.env` fájlban. A kulcsnak Admin szerepkörre van szüksége: az
 Apple nem engedi, hogy egy App Manager szerepkörű kulcs a csapat terjesztési tanúsítványát
 használja. Az archívum aláírás nélkül készül, és exportáláskor kap App Store-aláírást
 (`app/ios/ExportOptions.plist`), mert magának az archívumnak az aláírásához regisztrált
@@ -328,10 +328,10 @@ teszteszközre volna szükség a csapatban.
 ## Közreműködés
 
 A hibajelentéseket és a pull requesteket szívesen fogadjuk. A legtöbb hiba csak valódi hardveren
-jelentkezik, ezért amikor [hibajegyet nyit](https://github.com/jeph/gr-lab/issues), kérjük, adja meg
-a kamera típusát és firmware-verzióját, a telefon típusát és Android- vagy iOS-verzióját, valamint
-azt, hogy mit csinált. Egy exportált hibakeresési napló (Beállítások, Hibakeresési napló, Napló
-exportálása) általában megmutatja, mi történt, de tartalmazza a kamera gyári számát és
+jelentkezik, ezért amikor [hibajegyet nyit](https://github.com/jeph/gr-photo/issues), kérjük, adja
+meg a kamera típusát és firmware-verzióját, a telefon típusát és Android- vagy iOS-verzióját,
+valamint azt, hogy mit csinált. Egy exportált hibakeresési napló (Beállítások, Hibakeresési napló,
+Napló exportálása) általában megmutatja, mi történt, de tartalmazza a kamera gyári számát és
 Wi-Fi-jelszavát, ezért csak akkor csatolja, ha ezeket nyugodt szívvel megosztja.
 
 Mielőtt módosítást küld be, futtassa a `tool/check.sh` szkriptet; minden ellenőrzésnek sikeresnek
@@ -343,7 +343,7 @@ A feltételezett biztonsági réseket ne nyilvános hibajegyben jelentse. Köves
 
 ## Köszönetnyilvánítás
 
-A GR Lab [Flutter](https://flutter.dev) keretrendszerrel készült, a Bluetooth-kapcsolathoz a
+A GR Photo [Flutter](https://flutter.dev) keretrendszerrel készült, a Bluetooth-kapcsolathoz a
 [universal_ble](https://pub.dev/packages/universal_ble) csomagot használja, emellett az
 [image](https://pub.dev/packages/image), a [video_player](https://pub.dev/packages/video_player),
 a [share_plus](https://pub.dev/packages/share_plus) és a
@@ -357,7 +357,7 @@ jegyzeteire támaszkodik.
 
 ## Licenc
 
-A GR Lab az [MIT-licenc](../../LICENSE) alatt jelenik meg. A GR Lab által tartalmazott, harmadik
+A GR Photo az [MIT-licenc](../../LICENSE) alatt jelenik meg. A GR Photo által tartalmazott, harmadik
 féltől származó csomagokra és betűtípusokra a saját licencük vonatkozik. Az alkalmazás ezeket a
 **Beállítások › Névjegy › Licencek** alatt sorolja fel, a betűtípusok licencszövegei pedig az
 [`app/assets/fonts/`](../../app/assets/fonts/) mappában találhatók.

@@ -1,4 +1,4 @@
-package io.jeph.grlab
+package io.jeph.grphoto
 
 import android.Manifest
 import android.app.Activity
@@ -9,7 +9,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 
 /**
- * `io.jeph.grlab/downloads`: `show` puts the download queue up as
+ * `io.jeph.grphoto/downloads`: `show` puts the download queue up as
  * [DownloadService]'s notification and `hide` takes it down; the
  * notification's buttons come back as `action` with `pause`, `resume` or
  * `cancel`.
@@ -25,7 +25,7 @@ class DownloadChannel(private val activity: Activity, messenger: BinaryMessenger
         const val NOTIFICATION_REQUEST = 1
     }
 
-    private val channel = MethodChannel(messenger, "io.jeph.grlab/downloads")
+    private val channel = MethodChannel(messenger, "io.jeph.grphoto/downloads")
     private var askedToNotify = false
 
     init {

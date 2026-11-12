@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/shoot/camera_error_code.dart';
-import 'package:grlab/src/shoot/shoot_model.dart';
-import 'package:grlab/src/shoot/shoot_screen.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/shoot/camera_error_code.dart';
+import 'package:grphoto/src/shoot/shoot_model.dart';
+import 'package:grphoto/src/shoot/shoot_screen.dart';
 
 void main() {
   final en = lookupAppLocalizations(const Locale('en'));

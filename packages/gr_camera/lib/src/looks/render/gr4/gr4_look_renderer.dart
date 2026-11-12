@@ -235,7 +235,7 @@ Float64List _blockZero(List<double> base, {bool sumRowsToOne = true}) {
   return m;
 }
 
-/// The multi-axis hue correction (§4.5) as GR Lab models it \[design\]:
+/// The multi-axis hue correction (§4.5) as GR Photo models it \[design\]:
 /// the camera gives each of 12 hue areas of the (Cb, Cr) plane a matrix
 /// that leaves luma alone, and neighbouring areas agree on the axis
 /// between them. So the whole map is fixed by what it does to each of the
@@ -327,7 +327,7 @@ final class _HueAxes {
 }
 
 // What the correction does on each axis, chroma gain then turn in degrees,
-// for the four bases that have it (§4.5): GR Lab's own reduction of the
+// for the four bases that have it (§4.5): GR Photo's own reduction of the
 // camera's matrices.
 final _HueAxes _standardAxes = _HueAxes(const [
   0.9865, 0.38, 0.9713, -3.11, 0.9961, -5.54, 1.0175, 1.64, //
@@ -376,7 +376,7 @@ const List<double> _hdrGrey = [
 /// What the camera's saturation matrices hold besides the scaling
 /// (§4.2): every one but the neutral step's is the scaling applied after
 /// this fixed matrix, which leaks a little Cr into the luma and turns the
-/// chroma by a tenth of a degree. The values are GR Lab's fit over the
+/// chroma by a tenth of a degree. The values are GR Photo's fit over the
 /// camera's eight matrices, good to 0.0002 an entry.
 const List<double> _saturationSkew = [
   1.0020, -0.0002, -0.0018, //
@@ -429,7 +429,7 @@ final class _Stages {
        cb = chroma.$1 / 1024,
        cr = chroma.$2 / 1024;
 
-  /// The stages for [look]; null when GR Lab does not know how its base
+  /// The stages for [look]; null when GR Photo does not know how its base
   /// image is processed.
   static _Stages? of(Look look) {
     final base = look.base;

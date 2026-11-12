@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:grlab/src/app_scope.dart';
-import 'package:grlab/src/camera/camera_tab_bar.dart';
-import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/data/settings.dart';
-import 'package:grlab/src/library/library_screen.dart';
-import 'package:grlab/src/looks/looks_model.dart';
-import 'package:grlab/src/looks/looks_screen.dart';
-import 'package:grlab/src/shoot/shoot_model.dart';
-import 'package:grlab/src/shoot/shoot_screen.dart';
-import 'package:grlab/src/widgets/dock.dart';
+import 'package:grphoto/src/app_scope.dart';
+import 'package:grphoto/src/camera/camera_tab_bar.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/data/settings.dart';
+import 'package:grphoto/src/library/library_screen.dart';
+import 'package:grphoto/src/looks/looks_model.dart';
+import 'package:grphoto/src/looks/looks_screen.dart';
+import 'package:grphoto/src/shoot/shoot_model.dart';
+import 'package:grphoto/src/shoot/shoot_screen.dart';
+import 'package:grphoto/src/widgets/dock.dart';
 
 /// The camera's pages, Library, Shoot and Looks (when the camera has
 /// Custom slots to load looks into, [ConnectionController.tabs]), switched

@@ -9,7 +9,7 @@ abstract interface class MediaSaver {
   /// album when the photo library has none of that name. [files] holds a
   /// JPEG, a DNG, both halves of a RAW+JPEG pair (same base name), or one
   /// movie. iOS stores a pair as one Photos asset (JPEG primary, DNG
-  /// alternate) and leaves the shot out of the album unless GR Lab has full
+  /// alternate) and leaves the shot out of the album unless GR Photo has full
   /// access to Photos; Android writes one MediaStore entry per file under
   /// `Pictures/<album>`. Throws [MediaSaveException].
   Future<void> saveShot(List<File> files, {required String album});
@@ -17,10 +17,10 @@ abstract interface class MediaSaver {
 
 /// Why the photo library did not take a shot.
 enum MediaSaveFailure {
-  /// The user has not allowed GR Lab to add to the photo library.
+  /// The user has not allowed GR Photo to add to the photo library.
   permissionDenied,
 
-  /// The files are not one shot GR Lab can save, or the platform cannot
+  /// The files are not one shot GR Photo can save, or the platform cannot
   /// save to its photo library.
   unsupported,
 
@@ -43,7 +43,7 @@ final class MediaSaveException implements Exception {
   String toString() => 'MediaSaveException(${failure.name}): $detail';
 }
 
-/// Keeps the download queue running while GR Lab is not in front, and
+/// Keeps the download queue running while GR Photo is not in front, and
 /// shows it outside the app, each platform in its own way. Android runs a
 /// foreground service, whose notification carries the progress and the
 /// buttons. iOS 26 and later runs a continued processing task, which the
@@ -71,7 +71,7 @@ abstract interface class BackgroundDownloads {
 /// A button of the platform's download display.
 enum BackgroundDownloadAction { pause, resume, cancel }
 
-/// The download queue as the platform shows it while GR Lab is not in
+/// The download queue as the platform shows it while GR Photo is not in
 /// front. The texts are in the app's language.
 @immutable
 final class BackgroundDownloadStatus {
@@ -173,7 +173,7 @@ final class AppServices {
   final TraceRelay trace;
   final MediaSaver media;
 
-  /// Downloads while GR Lab is not in front (`DownloadBackground`).
+  /// Downloads while GR Photo is not in front (`DownloadBackground`).
   final BackgroundDownloads background;
 
   /// Written to the camera's Paired Devices list during pairing.

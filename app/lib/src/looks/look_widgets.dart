@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gr_camera/gr_camera.dart';
 
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/library/image_orientation.dart';
-import 'package:grlab/src/looks/look_spec.dart';
-import 'package:grlab/src/looks/looks_model.dart';
-import 'package:grlab/src/looks/looks_store.dart';
-import 'package:grlab/src/theme/tokens.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/library/image_orientation.dart';
+import 'package:grphoto/src/looks/look_spec.dart';
+import 'package:grphoto/src/looks/looks_model.dart';
+import 'package:grphoto/src/looks/looks_store.dart';
+import 'package:grphoto/src/theme/tokens.dart';
 
 /// The picture standing for a look: the photo it was saved from, turned
 /// upright by [orientation] ([SavedLook.photoOrientation]), or a swatch in

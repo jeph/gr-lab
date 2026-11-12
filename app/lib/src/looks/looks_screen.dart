@@ -4,18 +4,18 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
 
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/app_scope.dart';
-import 'package:grlab/src/camera/camera_top_bar.dart';
-import 'package:grlab/src/looks/look_editor.dart';
-import 'package:grlab/src/looks/look_spec.dart';
-import 'package:grlab/src/looks/look_widgets.dart';
-import 'package:grlab/src/looks/looks_model.dart';
-import 'package:grlab/src/looks/looks_store.dart';
-import 'package:grlab/src/theme/tokens.dart';
-import 'package:grlab/src/widgets/group.dart';
-import 'package:grlab/src/widgets/pressable.dart';
-import 'package:grlab/src/widgets/skeleton.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/app_scope.dart';
+import 'package:grphoto/src/camera/camera_top_bar.dart';
+import 'package:grphoto/src/looks/look_editor.dart';
+import 'package:grphoto/src/looks/look_spec.dart';
+import 'package:grphoto/src/looks/look_widgets.dart';
+import 'package:grphoto/src/looks/looks_model.dart';
+import 'package:grphoto/src/looks/looks_store.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/group.dart';
+import 'package:grphoto/src/widgets/pressable.dart';
+import 'package:grphoto/src/widgets/skeleton.dart';
 
 /// Which saved looks the list shows.
 enum LooksFilter { all, mono, colour }

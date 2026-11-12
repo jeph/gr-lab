@@ -3,8 +3,8 @@ import 'dart:ui' show Locale;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grlab/src/data/settings.dart';
-import 'package:grlab/src/theme/tokens.dart';
+import 'package:grphoto/src/data/settings.dart';
+import 'package:grphoto/src/theme/tokens.dart';
 
 void main() {
   late Directory temp;
@@ -47,7 +47,7 @@ void main() {
     ]);
   });
 
-  test('the language is saved with its script, and a saved language GR Lab '
+  test('the language is saved with its script, and a saved language GR Photo '
       'is not translated into follows the phone', () async {
     const traditionalChinese = Locale.fromSubtags(
       languageCode: 'zh',

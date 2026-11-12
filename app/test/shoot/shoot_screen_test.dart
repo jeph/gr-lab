@@ -6,12 +6,12 @@ import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 // Only to check the simulated camera's Operation Mode.
 import 'package:gr_protocol/gr_protocol.dart' show BleOperationMode;
-import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/library/library_screen.dart';
-import 'package:grlab/src/shoot/live_view_controller.dart';
-import 'package:grlab/src/shoot/shoot_screen.dart';
-import 'package:grlab/src/theme/tokens.dart';
-import 'package:grlab/src/widgets/pressable.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/library/library_screen.dart';
+import 'package:grphoto/src/shoot/live_view_controller.dart';
+import 'package:grphoto/src/shoot/shoot_screen.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/pressable.dart';
 
 import '../support/test_app.dart';
 

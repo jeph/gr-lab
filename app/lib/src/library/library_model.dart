@@ -5,8 +5,8 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
 
-import 'package:grlab/src/data/cameras.dart';
-import 'package:grlab/src/library/shot.dart';
+import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/library/shot.dart';
 
 enum LibraryFilter { all, jpeg, raw, video, notDownloaded }
 

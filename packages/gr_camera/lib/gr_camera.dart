@@ -1,4 +1,4 @@
-/// The camera layer of GR Lab: the only code that talks to Ricoh GR cameras
+/// The camera layer of GR Photo: the only code that talks to Ricoh GR cameras
 /// or to the phone's Bluetooth and Wi-Fi on their behalf. Every exchange is
 /// reported to the environment's `TraceSink`.
 ///

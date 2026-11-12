@@ -1,4 +1,4 @@
-package io.jeph.grlab
+package io.jeph.grphoto
 
 import android.os.Build
 import android.provider.Settings
@@ -17,7 +17,7 @@ class MainActivity : FlutterActivity() {
         downloads = DownloadChannel(this, messenger)
         // The name the camera shows under Paired Devices: the user-set device
         // name where there is one, otherwise the model.
-        MethodChannel(messenger, "io.jeph.grlab/device").setMethodCallHandler { call, result ->
+        MethodChannel(messenger, "io.jeph.grphoto/device").setMethodCallHandler { call, result ->
             if (call.method == "name") {
                 result.success(Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL)
             } else {

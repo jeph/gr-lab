@@ -173,9 +173,9 @@ Phone                                         Camera (GR IV)
   BLE  W B58CE84C = 00 (power off, GR WORLD on success)
 ```
 
-## 5. GR Lab
+## 5. GR Photo
 
-GR Lab does not implement firmware updates. To build it without Ricoh's cloud, the app would have to take the `fwdc248b.bin` from Ricoh's public download page, which is the same file name and format but not proven to be the same bytes the cloud serves (§2.2). The checks the camera runs before accepting a file (§3.3) make a wrong file fail with 400 rather than be flashed **[inferred]**.
+GR Photo does not implement firmware updates. To build it without Ricoh's cloud, the app would have to take the `fwdc248b.bin` from Ricoh's public download page, which is the same file name and format but not proven to be the same bytes the cloud serves (§2.2). The checks the camera runs before accepting a file (§3.3) make a wrong file fail with 400 rather than be flashed **[inferred]**.
 
 ## 6. Open questions
 

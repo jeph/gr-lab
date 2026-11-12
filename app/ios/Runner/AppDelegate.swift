@@ -11,7 +11,7 @@ import UIKit
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
-  /// Keeps everything GR Lab stores (Application Support: settings, paired
+  /// Keeps everything GR Photo stores (Application Support: settings, paired
   /// cameras, downloads and the debug log, which holds the camera's Wi-Fi
   /// passphrase) out of iCloud and computer backups. The cache is never
   /// backed up. Android turns backup off with `android:allowBackup`.
@@ -24,23 +24,23 @@ import UIKit
       values.isExcludedFromBackup = true
       try url.setResourceValues(values)
     } catch {
-      NSLog("GR Lab: could not exclude app data from backup: \(error)")
+      NSLog("GR Photo: could not exclude app data from backup: \(error)")
     }
   }
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     let registry = engineBridge.pluginRegistry
     GeneratedPluginRegistrant.register(with: registry)
-    if let registrar = registry.registrar(forPlugin: "GrLabMediaPlugin") {
+    if let registrar = registry.registrar(forPlugin: "GrPhotoMediaPlugin") {
       MediaPlugin.register(with: registrar)
     }
-    if let registrar = registry.registrar(forPlugin: "GrLabBackgroundDownloadsPlugin") {
+    if let registrar = registry.registrar(forPlugin: "GrPhotoBackgroundDownloadsPlugin") {
       BackgroundDownloadsPlugin.register(with: registrar)
     }
-    if let registrar = registry.registrar(forPlugin: "GrLabDevicePlugin") {
+    if let registrar = registry.registrar(forPlugin: "GrPhotoDevicePlugin") {
       // The name the camera shows under Paired Devices. Since iOS 16 this
       // is the model ("iPhone") unless the app holds a special entitlement.
-      FlutterMethodChannel(name: "io.jeph.grlab/device", binaryMessenger: registrar.messenger())
+      FlutterMethodChannel(name: "io.jeph.grphoto/device", binaryMessenger: registrar.messenger())
         .setMethodCallHandler { call, result in
           if call.method == "name" {
             result(UIDevice.current.name)

@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="../icon.png" alt="GR Lab simgesi" width="128" height="128">
+  <img src="../icon.png" alt="GR Photo simgesi" width="128" height="128">
 </p>
 
-<h1 align="center">GR Lab</h1>
+<h1 align="center">GR Photo</h1>
 
 <p align="center">
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="Lisans: MIT"></a>
@@ -33,14 +33,14 @@
   <a href="README.ja.md">日本語</a>
 </p>
 
-**GR Lab**, Ricoh GR kameralar (GR III, GR IIIx ve GR IV) için iOS ve Android’de çalışan bir
+**GR Photo**, Ricoh GR kameralar (GR III, GR IIIx ve GR IV) için iOS ve Android’de çalışan bir
 yardımcı uygulamadır. Kameranızdaki fotoğraflara göz atıp onları indirir, canlı görüntülü bir
 uzaktan deklanşör olarak çalışır ve Görüntü Kontrolü stillerinizi tek bir yerde tutar. Hızlı ve
 kullanımı kolay olacak, kameranın renk profillerini de hakkıyla yönetecek şekilde tasarlanmıştır:
 bir fotoğrafın çekildiği stili kaydedin, bir önizleme eşliğinde düzenleyin ve kameranın Özel
 yuvalarına yükleyin.
 
-GR Lab bağımsız bir projedir ve Ricoh ile bağlantılı değildir. Kamerayla, Ricoh’un kendi
+GR Photo bağımsız bir projedir ve Ricoh ile bağlantılı değildir. Kamerayla, Ricoh’un kendi
 uygulamalarından ve kamera yazılımından tersine mühendislikle çıkarılmış bir protokol üzerinden
 haberleşir; bulgular [`research/`](../../research/README.md) klasöründe belgelenmiştir.
 
@@ -77,17 +77,17 @@ haberleşir; bulgular [`research/`](../../research/README.md) klasöründe belge
 
 ## Özellikler
 
-GR Lab üç şeyi ön planda tutar: fotoğraflarınıza çabucak ulaşmak, size ayak bağı olmamak ve Görüntü
-Kontrolü stillerini yönetilmeye değer bir şey olarak görmek.
+GR Photo üç şeyi ön planda tutar: fotoğraflarınıza çabucak ulaşmak, size ayak bağı olmamak ve
+Görüntü Kontrolü stillerini yönetilmeye değer bir şey olarak görmek.
 
-- **Hızlı.** GR Lab açıldığında, kamera yakındaysa onunla Bluetooth üzerinden bağlantı kurar.
+- **Hızlı.** GR Photo açıldığında, kamera yakındaysa onunla Bluetooth üzerinden bağlantı kurar.
   Arşiv’i açmak kamerayı uyandırır, Wi-Fi’sini açar ve tek seferde bu ağa bağlanır; ardından siz
   sayfalar arasında gezinirken Wi-Fi açık kalır, böylece hiçbir şey iki kez bağlanmaz ve süren bir
   indirme yarıda kalmaz. Dosya listeleri, küçük resimler ve önizlemeler telefonda önbelleğe alınır;
   bu sayede Arşiv hızlı açılır. Bir Android telefonla denenen GR IV HDF’de, kapalı kameradan
   Arşiv’e ulaşmak yaklaşık 13 saniye sürdü.
 - **Kullanımı kolay.** Kameralarınız tek bir ekranda durur; Arşiv, Çekim ve Stiller oradan tek
-  dokunuş uzaklıktadır. GR Lab kamerayı açar, Wi-Fi’sini etkinleştirir ve ağına sizin yerinize
+  dokunuş uzaklıktadır. GR Photo kamerayı açar, Wi-Fi’sini etkinleştirir ve ağına sizin yerinize
   bağlanır; yani eşleştirmeden sonra kamerada ayarlanacak bir şey kalmaz. Bir şey başarısız
   olduğunda nedenini ve neyi kontrol etmeniz gerektiğini söyler, yanında da Yeniden dene seçeneğini
   sunar. Kopan bağlantı kendiliğinden geri gelir.
@@ -108,10 +108,10 @@ Kontrolü stillerini yönetilmeye değer bir şey olarak görmek.
 - **Arşiv.** Kameradaki fotoğraf ve videolara gün gün göz atın; JPEG, RAW, video veya henüz
   indirilmemiş olanlara göre filtreleyin ve istediğiniz çekimi ayrıntılarıyla birlikte tam ekranda
   açın. Tek bir çekimi ya da bir seçimi JPEG, RAW veya her ikisi olarak telefonunuzun fotoğraf
-  arşivindeki bir GR Lab albümüne indirin. İndirmeler, başka bir uygulama kullanırken veya telefonu
-  kilitlediğinizde de sürer: Android bunları Duraklat ve Tümünü iptal et düğmeli bir bildirimde, iOS
-  26 ve sonrası ise ilerlemeyi kilit ekranında ve Dynamic Island'da gösterir. Videolar uygulamanın
-  içinde oynatılır.
+  arşivindeki bir GR Photo albümüne indirin. İndirmeler, başka bir uygulama kullanırken veya
+  telefonu kilitlediğinizde de sürer: Android bunları Duraklat ve Tümünü iptal et düğmeli bir
+  bildirimde, iOS 26 ve sonrası ise ilerlemeyi kilit ekranında ve Dynamic Island'da gösterir.
+  Videolar uygulamanın içinde oynatılır.
 - **Uzaktan deklanşör.** Yalnızca Bluetooth üzerinden çalışan büyük bir deklanşör düğmesi; yanında
   zamanlayıcı, geçiş modu, mod kadranı, kalan çekim sayısı ve pil durumu. Android’de ses düğmeleri
   de deklanşöre basar.
@@ -122,7 +122,7 @@ Kontrolü stillerini yönetilmeye değer bir şey olarak görmek.
   birini yeniden adlandırın ya da unutun.
 - **Temalar ve diller.** Açık, Koyu, Karanlık oda, Kâğıt ve Siyanotip temaları ile kameranın kendi
   menülerindeki 21 dil.
-- **Gizliliğinize saygılı.** Hesap, analiz, reklam veya çökme raporlaması yoktur. GR Lab yalnızca
+- **Gizliliğinize saygılı.** Hesap, analiz, reklam veya çökme raporlaması yoktur. GR Photo yalnızca
   kameranızla haberleşir; [gizlilik politikasına](../../app/assets/privacy.md) bakın.
 
 ## Gereksinimler
@@ -133,7 +133,7 @@ Kontrolü stillerini yönetilmeye değer bir şey olarak görmek.
   veya yazmanın bir yolunu sunmaz.
 - Android 12 veya sonrası ya da iOS 15 veya sonrası.
 
-GR Lab henüz yeni bir uygulamadır. Donanım günlüğünde, yazılım sürümü 1.20 olan bir GR IV HDF ile
+GR Photo henüz yeni bir uygulamadır. Donanım günlüğünde, yazılım sürümü 1.20 olan bir GR IV HDF ile
 yapılan denemeler kayıtlıdır: eşleştirme, bağlanma, kamerayı uyandırma, göz atma, indirme, canlı
 görüntü, odak ve pozlama değişiklikleri. GR III ve GR IIIx desteği protokol araştırmasına dayanır
 ve henüz bir kamerada test edilmemiştir. Nelerin gözlemlendiğini görmek için
@@ -141,21 +141,21 @@ ve henüz bir kamerada test edilmemiştir. Nelerin gözlemlendiğini görmek iç
 
 ## Kurulum
 
-Android’de `gr-lab-v<version>.apk` dosyasını telefonunuzda
-[en son sürümden](https://github.com/jeph/gr-lab/releases/latest) indirin ve açın. Android,
+Android’de `gr-photo-v<version>.apk` dosyasını telefonunuzda
+[en son sürümden](https://github.com/jeph/gr-photo/releases/latest) indirin ve açın. Android,
 tarayıcınızdan uygulama kurma izni için bir kez sorar. Her sürüm aynı anahtarla imzalanır; bu
 yüzden yeni sürüm elinizdekinin üzerine kurulur ve kameralarınızı ve ayarlarınızı korur.
 
 iOS’te her sürüm TestFlight’a gider; şimdilik yalnızca projenin kendi test kullanıcılarına. Henüz
-herkese açık bir TestFlight bağlantısı yoktur; bu yüzden GR Lab bir iPhone’a kaynak koddan
+herkese açık bir TestFlight bağlantısı yoktur; bu yüzden GR Photo bir iPhone’a kaynak koddan
 derlenerek kurulur.
 
 Kaynak koddan derleme için Android SDK’sı veya Xcode kurulu olan [Flutter](https://flutter.dev)
 3.47 veya sonrası gerekir.
 
 ```sh
-git clone https://github.com/jeph/gr-lab.git
-cd gr-lab/app
+git clone https://github.com/jeph/gr-photo.git
+cd gr-photo/app
 flutter run --flavor prod --release
 ```
 
@@ -177,9 +177,9 @@ flutter run --dart-define=GR_DEMO=true
 1. **Kameranızı eşleştirin.** Kamera ekle’ye dokunun ve yönergeleri izleyin. Kamerada eşleştirme,
    MENU → E6 → Kablosuz İletişim Ayarı altında yer alır: İşlem Modu ayarını Açık yapın,
    Eşleştirme’yi açıp Eşleştirme Yap öğesini seçin, ardından kodu telefonda onaylayın ve kamerada
-   OK düğmesine basın. Kamera artık Kameralar ekranındadır ve GR Lab, kamera yakındayken
+   OK düğmesine basın. Kamera artık Kameralar ekranındadır ve GR Photo, kamera yakındayken
    açıldığında ona kendiliğinden bağlanır.
-2. **Arşiv’i açın.** GR Lab, kamera kapalıysa onu açar ve Wi-Fi ağına bağlanır. Android, kameranın
+2. **Arşiv’i açın.** GR Photo, kamera kapalıysa onu açar ve Wi-Fi ağına bağlanır. Android, kameranın
    ağını bir kez onaylamanızı ister. Bir çekimi görüntülemek için ona dokunun, birden çok çekim
    seçmek için basılı tutun ve saklamak istediklerinizi indirin.
 3. **Çekim yapın.** Kumanda, Bluetooth üzerinden çalışan bir deklanşördür. Canlı görüntü ise
@@ -189,9 +189,9 @@ flutter run --dart-define=GR_DEMO=true
    sayfasındaki + ile sıfırdan bir stil oluşturun. Düzenlemek için bir stile dokunun; kameraya
    yüklemek için de onu C1, C2 veya C3’e sürükleyin.
 
-Ayarlar’daki Otomatik bağlantı kesme, GR Lab bir süre (varsayılan olarak 5 dakika) kullanılmadığında
-kameranın Wi-Fi ağından çıkar. [GR Lab nasıl davranır](../behaviour.md) belgesi, her ekranı ve her
-bağlantı durumunu ayrıntılı olarak anlatır.
+Ayarlar’daki Otomatik bağlantı kesme, GR Photo bir süre (varsayılan olarak 5 dakika)
+kullanılmadığında kameranın Wi-Fi ağından çıkar. [GR Photo nasıl davranır](../behaviour.md) belgesi,
+her ekranı ve her bağlantı durumunu ayrıntılı olarak anlatır.
 
 ## Geliştirme
 
@@ -216,8 +216,8 @@ flutter run --flavor prod --release          # kullanıcıların aldığı derle
 flutter run --dart-define=GR_DEMO=true       # simüle edilmiş kamera, Android emülatöründe ve iOS simülatöründe çalışır
 ```
 
-İki derleme vardır. `dev` (`io.jeph.grlab.dev`, adı “GR Lab Dev”), `prod` (`io.jeph.grlab`,
-“GR Lab”) ile yan yana kurulur. `--flavor` verilmezse `flutter run` ve `flutter build`, `dev`
+İki derleme vardır. `dev` (`io.jeph.grphoto.dev`, adı “GR Photo Dev”), `prod` (`io.jeph.grphoto`,
+“GR Photo”) ile yan yana kurulur. `--flavor` verilmezse `flutter run` ve `flutter build`, `dev`
 derlemesini oluşturur.
 
 `flutter run` tek başına bir hata ayıklama derlemesi oluşturur; bu derleme her kareyi profil veya
@@ -260,7 +260,7 @@ kimliğini projeden alır; bu yüzden `--flavor dev` ve önceden derlenmiş bir 
 olmadan “No application found” iletisiyle durur.
 
 iOS simülatöründe, Fotoğraflar erişimi verilirken uygulamanın kurulu olması gerekir; `flutter test`
-ise sonrasında uygulamayı kaldırır ve bu da verilen izni siler. GR Lab, albümünü tutabilmek için
+ise sonrasında uygulamayı kaldırır ve bu da verilen izni siler. GR Photo, albümünü tutabilmek için
 tam erişim ister; iOS 26.3 simülatöründe ise `simctl privacy grant photos` tek başına iOS’in
 sormasını engellemedi: kaydettiği iznin `auth_version` değeri 1’dir, iOS ise bunu ancak 2
 olduğunda tam erişim sayar. Her çalıştırmadan önce izni verin ve bu değeri ayarlayın:
@@ -269,15 +269,15 @@ olduğunda tam erişim sayar. Her çalıştırmadan önce izni verin ve bu değe
 cd app
 flutter build ios --simulator --debug --dart-define=GR_DEMO=true
 xcrun simctl install booted build/ios/iphonesimulator/Runner.app
-xcrun simctl privacy booted grant photos io.jeph.grlab.dev
+xcrun simctl privacy booted grant photos io.jeph.grphoto.dev
 sqlite3 "$(xcrun simctl getenv booted HOME)/Library/TCC/TCC.db" \
-  "UPDATE access SET auth_version = 2 WHERE service = 'kTCCServicePhotos' AND client = 'io.jeph.grlab.dev'"
+  "UPDATE access SET auth_version = 2 WHERE service = 'kTCCServicePhotos' AND client = 'io.jeph.grphoto.dev'"
 flutter test integration_test --dart-define=GR_DEMO=true -d <simulator>
 ```
 
 ### Hata ayıklama günlüğü
 
-GR Lab, Ayarlar > Hata ayıklama günlüğünü etkinleştir açıkken hata ayıklama günlükleri tutar:
+GR Photo, Ayarlar > Hata ayıklama günlüğünü etkinleştir açıkken hata ayıklama günlükleri tutar:
 kameraya gönderdiği ve kameradan aldığı her şey (Bluetooth taramaları, okumaları, yazmaları ve
 bildirimleri, her HTTP isteği ve yanıtı, WebSocket iletileri, canlı görüntü kare boyutları ve
 Wi-Fi’ye bağlanma adımları), uygulamanın yazdırdığı her satır, yakalanmamış hatalar ve yerel Wi-Fi
@@ -294,14 +294,14 @@ Wi-Fi parolasını içerir.
 [`.github/workflows/release.yml`](../../.github/workflows/release.yml) tarafından oluşturulur. Bu
 iş akışı sürüme, bir öncekinden bir fazla olacak şekilde 0.0.N numarasını verir, `tool/check.sh`
 betiğini çalıştırır ve her iki uygulamanın `prod` çeşidini yayın modunda derler. Android APK’sı
-GR Lab’ın yayın anahtarıyla imzalanır ve SHA-256 sağlama toplamı, bir derleme kaynağı doğrulaması
+GR Photo’nun yayın anahtarıyla imzalanır ve SHA-256 sağlama toplamı, bir derleme kaynağı doğrulaması
 ve Kotlin yığın izlerini okunur kılan R8 eşlemesiyle birlikte
-[sürümler sayfasında](https://github.com/jeph/gr-lab/releases) yayımlanır. iOS uygulaması App Store
-için imzalanır ve TestFlight’a yüklenir. Anahtarlar yalnızca `main`’in kullanabildiği GitHub
+[sürümler sayfasında](https://github.com/jeph/gr-photo/releases) yayımlanır. iOS uygulaması App
+Store için imzalanır ve TestFlight’a yüklenir. Anahtarlar yalnızca `main`’in kullanabildiği GitHub
 ortamlarında tutulur ve uygulamaları derleyen işlerin hiçbirinde bu anahtarlar bulunmaz.
 
-`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab`, bir APK’nın bu depodan o iş akışı
-tarafından derlendiğini doğrular.
+`gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo`, bir APK’nın bu depodan o iş
+akışı tarafından derlendiğini doğrular.
 
 ```sh
 tool/testflight.sh       # prod iOS uygulamasını derler ve TestFlight’a yükler
@@ -313,7 +313,7 @@ sonra orada TestFlight altında görünür. Dahili test kullanıcıları onu kab
 uygulamasından kurar. Xcode, derlemeyi bir App Store
 Connect API anahtarıyla imzalayıp yükler; dolayısıyla bir Mac’teki kurulum, anahtarın
 `~/.appstoreconnect/private_keys` içindeki `AuthKey_<key id>.p8` dosyasından ve
-`~/.appstoreconnect/gr-lab.env` içindeki `ASC_KEY_ID` ile `ASC_ISSUER_ID` değerlerinden ibarettir.
+`~/.appstoreconnect/gr-photo.env` içindeki `ASC_KEY_ID` ile `ASC_ISSUER_ID` değerlerinden ibarettir.
 Anahtarın Admin rolüne sahip olması gerekir: Apple, bir App Manager anahtarının ekibin dağıtım
 sertifikasını kullanmasına izin vermez. Derleme arşivi imzasız oluşturulur ve dışa aktarılırken
 App Store için imzalanır (`app/ios/ExportOptions.plist`); çünkü arşivin kendisini imzalamak, ekipte
@@ -322,7 +322,7 @@ kayıtlı bir test cihazı gerektirirdi.
 ## Katkıda bulunma
 
 Hata bildirimleri ve çekme istekleri memnuniyetle karşılanır. Hataların çoğu yalnızca gerçek
-donanımda ortaya çıkar; bu yüzden [bir sorun kaydı açarken](https://github.com/jeph/gr-lab/issues)
+donanımda ortaya çıkar; bu yüzden [bir sorun kaydı açarken](https://github.com/jeph/gr-photo/issues)
 lütfen kamera modelinizi ve yazılım sürümünü, telefon modelinizi ve Android ya da iOS sürümünü, bir
 de ne yaptığınızı belirtin. Dışa aktarılmış bir hata ayıklama günlüğü (Ayarlar, Hata ayıklama
 günlüğü, Günlüğü dışa aktar) genellikle ne olduğunu gösterir; ancak kameranızın seri numarasını ve
@@ -337,7 +337,7 @@ izleyin.
 
 ## Teşekkürler
 
-GR Lab, [Flutter](https://flutter.dev) ile geliştirilmiştir; Bluetooth için
+GR Photo, [Flutter](https://flutter.dev) ile geliştirilmiştir; Bluetooth için
 [universal_ble](https://pub.dev/packages/universal_ble), ayrıca
 [image](https://pub.dev/packages/image), [video_player](https://pub.dev/packages/video_player),
 [share_plus](https://pub.dev/packages/share_plus) ve
@@ -351,7 +351,7 @@ ilişkin notlarına dayanır.
 
 ## Lisans
 
-GR Lab, [MIT Lisansı](../../LICENSE) ile yayımlanmıştır. GR Lab ile birlikte gelen üçüncü taraf
+GR Photo, [MIT Lisansı](../../LICENSE) ile yayımlanmıştır. GR Photo ile birlikte gelen üçüncü taraf
 paketler ve yazı tipleri kendi lisanslarını korur. Uygulama bunları **Ayarlar › Hakkında ›
 Lisanslar** altında listeler; yazı tiplerinin lisans metinleri ise
 [`app/assets/fonts/`](../../app/assets/fonts/) klasöründedir.

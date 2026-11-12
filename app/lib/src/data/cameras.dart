@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
 
-import 'package:grlab/src/data/json_file.dart';
+import 'package:grphoto/src/data/json_file.dart';
 
 /// A paired camera as the app keeps it.
 @immutable
@@ -28,7 +28,7 @@ final class SavedCamera {
   final String name;
   final DateTime pairedAt;
 
-  /// The phone has joined this camera's Wi-Fi through GR Lab, so the OS
+  /// The phone has joined this camera's Wi-Fi through GR Photo, so the OS
   /// approval is in place and joins need no explanation first.
   final bool wifiApproved;
 

@@ -365,12 +365,12 @@ const List<LookBase> _monochromeBases = [
 /// with [CameraFeature.monochromeLooks] (the GR IV Monochrome) its
 /// monochrome bases (0x11–0x16, its manual p.90) and Solarized, every
 /// other camera the 14 colour bases. GR WORLD gives Pictorialist to the GR
-/// IVx Monochrome only, a body GR Lab does not know. The colour list is the
+/// IVx Monochrome only, a body GR Photo does not know. The colour list is the
 /// GR IV manual's (p.94), and a GR IV HDF on firmware 1.20 offered exactly
 /// it in its `/v1/props` effectList (observed 2026-11-09). GR WORLD adds
 /// Palette for the GR IVx; it is left out here because its parameters are
 /// \[unknown\]. Cameras without [CameraFeature.lookSlots] have no slots to
-/// load into, so GR Lab edits looks for them only away from a camera
+/// load into, so GR Photo edits looks for them only away from a camera
 /// ([lookBasesWith]).
 List<LookBase> lookBases(CameraBody camera) =>
     camera.supports(CameraFeature.monochromeLooks)

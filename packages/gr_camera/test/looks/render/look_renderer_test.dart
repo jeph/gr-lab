@@ -95,7 +95,7 @@ void main() {
   });
 
   test('a photo that cannot be shown under the target look, or a target '
-      'base GR Lab does not know, leaves the photo as it is', () {
+      'base GR Photo does not know, leaves the photo as it is', () {
     final identity = LookLut.identity(size: 5).rgba;
     final monotone = LookRerender(
       _renderer,

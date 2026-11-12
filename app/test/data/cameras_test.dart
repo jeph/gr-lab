@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/src/data/cameras.dart';
+import 'package:grphoto/src/data/cameras.dart';
 
 SavedCamera _camera(String serial) => SavedCamera(
   paired: GrPairedCamera(

@@ -6,10 +6,10 @@ template-arb-file: app_en.arb
 output-localization-file: app_localizations.dart
 output-class: AppLocalizations
 nullable-getter: false
-# GR Lab is translated into the languages of the camera's own menus
+# GR Photo is translated into the languages of the camera's own menus
 # (research/camera-menu-languages.md), listed here in the order Ricoh lists
 # them; Settings shows them in this order. English stays first: it is the
-# language GR Lab falls back to when the phone's language is none of these
+# language GR Photo falls back to when the phone's language is none of these
 # (resolveAppLocale in lib/l10n/l10n.dart), and `zh` stays before `zh_Hant`
 # so that Chinese without a script resolves to Simplified.
 preferred-supported-locales:

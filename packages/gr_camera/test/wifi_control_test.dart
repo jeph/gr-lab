@@ -7,7 +7,7 @@ import 'package:gr_protocol/gr_protocol.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  const channel = MethodChannel('io.jeph.grlab/wifi');
+  const channel = MethodChannel('io.jeph.grphoto/wifi');
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   late List<MethodCall> calls;

@@ -6,7 +6,7 @@ import 'dart:ui' show Rect;
 
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart' show TraceEvent, TraceSink;
-import 'package:grlab/src/data/settings.dart';
+import 'package:grphoto/src/data/settings.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 

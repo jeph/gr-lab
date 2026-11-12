@@ -5,8 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart'
     show BleAdvertisement, BleTransport, WifiNetworkControl, grRicohCompanyId;
-import 'package:grlab/src/cameras/camera_presence.dart';
-import 'package:grlab/src/data/cameras.dart';
+import 'package:grphoto/src/cameras/camera_presence.dart';
+import 'package:grphoto/src/data/cameras.dart';
 
 /// Hands the scan's advertisements to the test.
 final class _ScanTransport implements BleTransport {

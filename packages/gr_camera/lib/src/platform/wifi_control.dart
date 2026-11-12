@@ -23,7 +23,7 @@ final class WifiJoinException implements Exception {
   String toString() => 'WifiJoinException($code): $message';
 }
 
-/// [WifiNetworkControl] over the `io.jeph.grlab/wifi` method channel, served
+/// [WifiNetworkControl] over the `io.jeph.grphoto/wifi` method channel, served
 /// by this package's native code.
 ///
 /// Android requests the camera AP with a `WifiNetworkSpecifier` and binds
@@ -44,7 +44,7 @@ final class PlatformWifiControl implements WifiNetworkControl {
   /// A control on the native method channel, logging to the trace sink.
   new({
     required this._trace,
-    this._channel = const MethodChannel('io.jeph.grlab/wifi'),
+    this._channel = const MethodChannel('io.jeph.grphoto/wifi'),
   }) {
     // Android calls `lost` when the joined camera network goes away and
     // `approvalShown` when its network screen covers a join; iOS has

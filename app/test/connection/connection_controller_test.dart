@@ -16,9 +16,9 @@ import 'package:gr_protocol/gr_protocol.dart'
         WifiJoinVpnSuspected,
         WifiNetworkControl,
         WifiSecurity;
-import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/connection/link_state.dart';
-import 'package:grlab/src/data/cameras.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/connection/link_state.dart';
+import 'package:grphoto/src/data/cameras.dart';
 
 import '../support/test_app.dart';
 

@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-import 'package:grlab/src/services.dart';
+import 'package:grphoto/src/services.dart';
 
-/// [BackgroundDownloads] over the `io.jeph.grlab/downloads` method channel.
+/// [BackgroundDownloads] over the `io.jeph.grphoto/downloads` method channel.
 ///
 /// `show` sends `{paused, title, detail, camera, fraction, toggle, cancel,
 /// channel}` and `hide` `{finished}`; the platform calls `action` back with
@@ -16,7 +16,7 @@ import 'package:grlab/src/services.dart';
 /// call's error, which goes to the debug log: the download itself carries
 /// on for as long as the system lets the app run.
 final class PlatformBackgroundDownloads implements BackgroundDownloads {
-  new({this._channel = const MethodChannel('io.jeph.grlab/downloads')}) {
+  new({this._channel = const MethodChannel('io.jeph.grphoto/downloads')}) {
     _channel.setMethodCallHandler(_onCall);
   }
 

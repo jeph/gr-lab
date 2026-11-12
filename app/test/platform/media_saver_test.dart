@@ -2,12 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grlab/src/platform/media_saver.dart';
-import 'package:grlab/src/services.dart';
+import 'package:grphoto/src/platform/media_saver.dart';
+import 'package:grphoto/src/services.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  const channel = MethodChannel('io.jeph.grlab/media');
+  const channel = MethodChannel('io.jeph.grphoto/media');
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   late List<MethodCall> calls;
@@ -35,11 +35,11 @@ void main() {
     await PlatformMediaSaver().saveShot([
       file('R0001234.DNG'),
       file('R0001234.JPG'),
-    ], album: 'GR Lab');
+    ], album: 'GR Photo');
 
     expect(calls.single.method, 'saveShot');
     final args = calls.single.arguments as Map<Object?, Object?>;
-    expect(args['album'], 'GR Lab');
+    expect(args['album'], 'GR Photo');
     expect(sentFiles(), [
       {
         'path': '/cache/downloads/R0001234.JPG',
@@ -58,9 +58,9 @@ void main() {
 
   test('single files carry their kind and MIME type', () async {
     final saver = PlatformMediaSaver();
-    await saver.saveShot([file('R0001235.jpeg')], album: 'GR Lab');
-    await saver.saveShot([file('R0001236.dng')], album: 'GR Lab');
-    await saver.saveShot([file('R0001237.MOV')], album: 'GR Lab');
+    await saver.saveShot([file('R0001235.jpeg')], album: 'GR Photo');
+    await saver.saveShot([file('R0001236.dng')], album: 'GR Photo');
+    await saver.saveShot([file('R0001237.MOV')], album: 'GR Photo');
 
     expect(
       [
@@ -90,7 +90,7 @@ void main() {
       [file('README')],
     ]) {
       await expectLater(
-        saver.saveShot(shot, album: 'GR Lab'),
+        saver.saveShot(shot, album: 'GR Photo'),
         throwsA(
           isA<MediaSaveException>().having(
             (e) => e.failure,
@@ -107,17 +107,17 @@ void main() {
   test('a native permission denial maps to permissionDenied', () async {
     reply = (_) async => throw PlatformException(
       code: 'permissionDenied',
-      message: 'GR Lab may not add to Photos',
+      message: 'GR Photo may not add to Photos',
     );
     await expectLater(
-      PlatformMediaSaver().saveShot([file('R0001234.JPG')], album: 'GR Lab'),
+      PlatformMediaSaver().saveShot([file('R0001234.JPG')], album: 'GR Photo'),
       throwsA(
         isA<MediaSaveException>()
             .having((e) => e.permissionDenied, 'permissionDenied', isTrue)
             .having(
               (e) => e.detail,
               'detail',
-              'permissionDenied: GR Lab may not add to Photos',
+              'permissionDenied: GR Photo may not add to Photos',
             ),
       ),
     );
@@ -126,7 +126,7 @@ void main() {
   test('unknown native errors map to failed', () async {
     reply = (_) async => throw PlatformException(code: 'IOException');
     await expectLater(
-      PlatformMediaSaver().saveShot([file('R0001234.JPG')], album: 'GR Lab'),
+      PlatformMediaSaver().saveShot([file('R0001234.JPG')], album: 'GR Photo'),
       throwsA(
         isA<MediaSaveException>()
             .having((e) => e.failure, 'failure', MediaSaveFailure.failed)
@@ -138,7 +138,7 @@ void main() {
   test('a missing native side is reported as unsupported', () async {
     messenger.setMockMethodCallHandler(channel, null);
     await expectLater(
-      PlatformMediaSaver().saveShot([file('R0001234.JPG')], album: 'GR Lab'),
+      PlatformMediaSaver().saveShot([file('R0001234.JPG')], album: 'GR Photo'),
       throwsA(
         isA<MediaSaveException>().having(
           (e) => e.failure,

@@ -1,12 +1,12 @@
 # Camera menu languages and menu text
 
-GR Lab is translated into the languages the camera's own menus offer, and words camera things (menu entries, Image Control names, values) as the camera does in each language. This file records which languages those are, where the camera's text is, and what is still unknown.
+GR Photo is translated into the languages the camera's own menus offer, and words camera things (menu entries, Image Control names, values) as the camera does in each language. This file records which languages those are, where the camera's text is, and what is still unknown.
 
 ## The languages
 
 Twenty-one, on every body examined:
 
-| Ricoh's name | GR Lab locale | The camera's name for it |
+| Ricoh's name | GR Photo locale | The camera's name for it |
 |---|---|---|
 | English | `en` | English |
 | French | `fr` | Français |
@@ -30,10 +30,10 @@ Twenty-one, on every body examined:
 | Traditional Chinese | `zh_Hant` | 中文繁體 |
 | Japanese | `ja` | 日本語 |
 
-- **Found in Ricoh's published specifications** (read 2026-11-10): the "Language" row of the GR IV specifications (`ricoh-imaging.co.jp/english/products/gr-4/spec/`) lists these 21 in the order above, which is the order of GR Lab's `app/l10n.yaml` and of its language list in Settings. The GR III page lists the same languages.
+- **Found in Ricoh's published specifications** (read 2026-11-10): the "Language" row of the GR IV specifications (`ricoh-imaging.co.jp/english/products/gr-4/spec/`) lists these 21 in the order above, which is the order of GR Photo's `app/l10n.yaml` and of its language list in Settings. The GR III page lists the same languages.
 - **Found in firmware**: the RTOS image of GR IV 1.20, GR III 2.20 and GR IIIx 1.70 holds one table of menu text per language, 21 tables each (see below). The names in the third column are entry 598 of the GR IV tables, the name each language gives itself in the camera's Language menu.
-- The GR IV manual says the languages offered can depend on where the camera was bought. Which bodies ship with fewer is **[unknown]**; GR Lab offers all 21 regardless.
-- **The camera's Portuguese is European** (found in firmware: `ecrã`, `ficheiro`, `definições`, `câmara`, `comunicação sem fios`), so GR Lab's `pt` is European Portuguese and is what a phone set to Brazilian Portuguese gets too.
+- The GR IV manual says the languages offered can depend on where the camera was bought. Which bodies ship with fewer is **[unknown]**; GR Photo offers all 21 regardless.
+- **The camera's Portuguese is European** (found in firmware: `ecrã`, `ficheiro`, `definições`, `câmara`, `comunicação sem fios`), so GR Photo's `pt` is European Portuguese and is what a phone set to Brazilian Portuguese gets too.
 - GR IV Monochrome 1.10 was not examined: its RTOS image is not extracted in the workspace. It shares the GR IV firmware family ([camera-models.md](camera-models.md)), so the same tables are expected **[inferred]**.
 
 ## Where the menu text is
@@ -53,16 +53,16 @@ Found in code, in `firmware/gr4_v120/rtos.bin` (GR IV 1.20):
 python3 research/tools/menu_strings.py ../gr/firmware/gr4_v120/rtos.bin "Paired Devices"
 ```
 
-The tables are Ricoh's text. GR Lab's translations use individual terms from them so that the app matches the camera; the tables themselves are not in this repository.
+The tables are Ricoh's text. GR Photo's translations use individual terms from them so that the app matches the camera; the tables themselves are not in this repository.
 
-## How GR Lab uses it
+## How GR Photo uses it
 
 - A message whose description in `app/lib/l10n/app_en.arb` says it is the camera's wording ("as Ricoh names it", "Use the text the GR shows in this language") carries the camera's text for that entry in each translation, abbreviations included, because that is what the user sees on the camera.
 - Sentences that name a camera menu entry use the written-out title.
-- Texts the tables do not hold are GR Lab's own wording in every language **[design]**: the values of Toning, Color Tone, Grain Effect size and Filter Effect (Sepia, Cool, Warm, Basic, the colours, Large, Small), Astro, and everything about GR Lab itself.
-- The translations were made from the GR IV 1.20 tables. Where a GR III words an entry differently, GR Lab follows the GR IV **[design]**; the differences were not compared.
+- Texts the tables do not hold are GR Photo's own wording in every language **[design]**: the values of Toning, Color Tone, Grain Effect size and Filter Effect (Sepia, Cool, Warm, Basic, the colours, Large, Small), Astro, and everything about GR Photo itself.
+- The translations were made from the GR IV 1.20 tables. Where a GR III words an entry differently, GR Photo follows the GR IV **[design]**; the differences were not compared.
 
 ## Unknown, for a hardware check
 
-- **The name of the E6 menu page.** The GR IV manual (English) calls it "E6 Wireless Connection", and GR Lab's English says so. No GR IV 1.20 table has that text; where the other pages' names sit (File Setting, Display Settings, LCD Setting, Sound Effects Setting, Power Supply Settings, About This Device), the entry before USB Setting, Bluetooth Settings, Wireless LAN Settings and Wireless Communication is "Communication Settings" (entry 670). What the camera shows as the E6 page's name is **[unknown]**. Until a camera settles it, the translations name the page by its number alone (`MENU → E6 → Wireless Communication`), which holds either way. Test: open MENU, go to E6 on a GR IV with firmware 1.20, read the page title, in English and in one other language.
-- **Which OK the pairing code screen shows.** The tables have two entries reading "OK" in English (867 beside a "Cancel", 869 alone); in Japanese, Korean, Chinese and Turkish they differ (`決定` and `了解` in Japanese). GR Lab's drawing of that screen uses 867 **[inferred]** because the screen offers a cancel too. Test: start pairing with the camera set to Japanese and read the button.
+- **The name of the E6 menu page.** The GR IV manual (English) calls it "E6 Wireless Connection", and GR Photo's English says so. No GR IV 1.20 table has that text; where the other pages' names sit (File Setting, Display Settings, LCD Setting, Sound Effects Setting, Power Supply Settings, About This Device), the entry before USB Setting, Bluetooth Settings, Wireless LAN Settings and Wireless Communication is "Communication Settings" (entry 670). What the camera shows as the E6 page's name is **[unknown]**. Until a camera settles it, the translations name the page by its number alone (`MENU → E6 → Wireless Communication`), which holds either way. Test: open MENU, go to E6 on a GR IV with firmware 1.20, read the page title, in English and in one other language.
+- **Which OK the pairing code screen shows.** The tables have two entries reading "OK" in English (867 beside a "Cancel", 869 alone); in Japanese, Korean, Chinese and Turkish they differ (`決定` and `了解` in Japanese). GR Photo's drawing of that screen uses 867 **[inferred]** because the screen offers a cancel too. Test: start pairing with the camera set to Japanese and read the button.

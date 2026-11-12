@@ -1,3 +1,3 @@
-# grlab
+# grphoto
 
 A new Flutter project.

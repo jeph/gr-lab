@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:grlab/src/looks/looks_store.dart';
+import 'package:grphoto/src/looks/looks_store.dart';
 
 void main() {
   late Directory dataDir;
@@ -18,7 +18,7 @@ void main() {
   );
 
   setUp(() async {
-    dataDir = await Directory.systemTemp.createTemp('grlab_looks_');
+    dataDir = await Directory.systemTemp.createTemp('grphoto_looks_');
   });
   tearDown(() => dataDir.delete(recursive: true));
 
@@ -152,7 +152,7 @@ void main() {
   });
 
   test("a look saved from a photo keeps the photo's own look through edits "
-      'and restarts; a look without a photo, or saved before GR Lab kept '
+      'and restarts; a look without a photo, or saved before GR Photo kept '
       'it, has none', () async {
     final store = await LooksStore.load(dataDir);
     final fromPhoto = await store.add(

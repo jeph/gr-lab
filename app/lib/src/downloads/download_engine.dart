@@ -4,9 +4,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
 
-import 'package:grlab/src/data/json_file.dart';
-import 'package:grlab/src/library/shot.dart';
-import 'package:grlab/src/services.dart';
+import 'package:grphoto/src/data/json_file.dart';
+import 'package:grphoto/src/library/shot.dart';
+import 'package:grphoto/src/services.dart';
 
 enum DownloadState {
   /// Waiting for its turn, for its camera to connect, or for
@@ -252,7 +252,7 @@ final class DownloadEngine extends ChangeNotifier {
     required this.cacheDir,
     required this.media,
     required this.link,
-    this.album = 'GR Lab',
+    this.album = 'GR Photo',
     this.transportGrace = const Duration(seconds: 3),
     this.progressInterval = const Duration(milliseconds: 100),
   }) {

@@ -168,7 +168,7 @@ Future<GrPairing> pair(
   TraceSink? trace,
 }) => pairCamera(
   camera,
-  clientName: 'GR Lab Mac',
+  clientName: 'GR Photo Mac',
   serial: serial,
   scanTimeout: ms(200),
   onStage: stages?.add,
@@ -188,7 +188,7 @@ void main() {
     expect(result.camera.deviceId, 'cam');
     expect(result.camera.serialNumber, '1234567');
     expect(result.camera.model, GrModel.gr4Hdf);
-    expect(camera.registered, ['GR Lab Mac']);
+    expect(camera.registered, ['GR Photo Mac']);
     expect(camera.connects, 1);
     expect(camera.connections.single.disconnects, 0);
     expect(

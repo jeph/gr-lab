@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/shoot/shoot_format.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/shoot/shoot_format.dart';
 
 void main() {
   final en = lookupAppLocalizations(const Locale('en'));

@@ -3,16 +3,16 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/connection/idle_disconnect.dart';
-import 'package:grlab/src/data/cameras.dart';
-import 'package:grlab/src/data/settings.dart';
-import 'package:grlab/src/debug/debug_log.dart';
-import 'package:grlab/src/downloads/download_engine.dart';
-import 'package:grlab/src/library/camera_link.dart';
-import 'package:grlab/src/library/library_scope.dart';
-import 'package:grlab/src/looks/looks_store.dart';
-import 'package:grlab/src/services.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/connection/idle_disconnect.dart';
+import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/data/settings.dart';
+import 'package:grphoto/src/debug/debug_log.dart';
+import 'package:grphoto/src/downloads/download_engine.dart';
+import 'package:grphoto/src/library/camera_link.dart';
+import 'package:grphoto/src/library/library_scope.dart';
+import 'package:grphoto/src/looks/looks_store.dart';
+import 'package:grphoto/src/services.dart';
 
 /// App-wide models, created once in `main` and reached through
 /// [AppScope.of]. Widgets listen to the individual notifiers.

@@ -1,12 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:grlab/l10n/l10n.dart';
+import 'package:grphoto/l10n/l10n.dart';
 
-import 'package:grlab/src/debug/debug_log.dart';
-import 'package:grlab/src/pairing/pairing_widgets.dart';
-import 'package:grlab/src/theme/tokens.dart';
-import 'package:grlab/src/widgets/group.dart';
+import 'package:grphoto/src/debug/debug_log.dart';
+import 'package:grphoto/src/pairing/pairing_widgets.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/group.dart';
 
 /// The debug logging switch, export and clear, so a bug report can carry
 /// the app's debug logs, including what went to and from the camera.

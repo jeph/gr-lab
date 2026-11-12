@@ -7,127 +7,127 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab používá Bluetooth ke spárování s vaším fotoaparátem Ricoh GR, k jeho vyhledání poblíž, probuzení, zapnutí jeho Wi-Fi a k funkci dálkové spouště."
+            "value" : "GR Photo používá Bluetooth ke spárování s vaším fotoaparátem Ricoh GR, k jeho vyhledání poblíž, probuzení, zapnutí jeho Wi-Fi a k funkci dálkové spouště."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab bruger Bluetooth til at parre med dit Ricoh GR, finde det i nærheden, vække det, slå dets Wi-Fi til og fungere som fjernudløser."
+            "value" : "GR Photo bruger Bluetooth til at parre med dit Ricoh GR, finde det i nærheden, vække det, slå dets Wi-Fi til og fungere som fjernudløser."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab verwendet Bluetooth, um sich mit deiner Ricoh GR zu koppeln, sie in der Nähe zu finden, sie aufzuwecken, ihr WLAN einzuschalten und als ihr Fernauslöser zu dienen."
+            "value" : "GR Photo verwendet Bluetooth, um sich mit deiner Ricoh GR zu koppeln, sie in der Nähe zu finden, sie aufzuwecken, ihr WLAN einzuschalten und als ihr Fernauslöser zu dienen."
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Το GR Lab χρησιμοποιεί το Bluetooth για αντιστοίχιση με τη Ricoh GR σας, για να τη βρίσκει όταν είναι κοντά, να την ενεργοποιεί, να ανοίγει το Wi-Fi της και να λειτουργεί ως τηλεχειριστήριο κλείστρου."
+            "value" : "Το GR Photo χρησιμοποιεί το Bluetooth για αντιστοίχιση με τη Ricoh GR σας, για να τη βρίσκει όταν είναι κοντά, να την ενεργοποιεί, να ανοίγει το Wi-Fi της και να λειτουργεί ως τηλεχειριστήριο κλείστρου."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab uses Bluetooth to pair with your Ricoh GR, find it nearby, wake it, turn on its Wi-Fi and act as its remote shutter."
+            "value" : "GR Photo uses Bluetooth to pair with your Ricoh GR, find it nearby, wake it, turn on its Wi-Fi and act as its remote shutter."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab usa Bluetooth para emparejarse con tu Ricoh GR, encontrarla cerca, activarla, encender su Wi-Fi y hacer de disparador remoto."
+            "value" : "GR Photo usa Bluetooth para emparejarse con tu Ricoh GR, encontrarla cerca, activarla, encender su Wi-Fi y hacer de disparador remoto."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab käyttää Bluetoothia muodostaakseen parin Ricoh GR ‑kamerasi kanssa, löytääkseen sen lähistöltä, herättääkseen sen, kytkeäkseen sen Wi-Fin päälle ja toimiakseen sen kaukolaukaisimena."
+            "value" : "GR Photo käyttää Bluetoothia muodostaakseen parin Ricoh GR ‑kamerasi kanssa, löytääkseen sen lähistöltä, herättääkseen sen, kytkeäkseen sen Wi-Fin päälle ja toimiakseen sen kaukolaukaisimena."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab utilise le Bluetooth pour se jumeler avec votre Ricoh GR, le détecter à proximité, le réveiller, activer son Wi-Fi et lui servir de télécommande."
+            "value" : "GR Photo utilise le Bluetooth pour se jumeler avec votre Ricoh GR, le détecter à proximité, le réveiller, activer son Wi-Fi et lui servir de télécommande."
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A GR Lab Bluetooth-kapcsolaton párosítja a Ricoh GR kamerát, megkeresi a közelben, felébreszti, bekapcsolja a Wi-Fi-hálózatát, és távkioldóként működik hozzá."
+            "value" : "A GR Photo Bluetooth-kapcsolaton párosítja a Ricoh GR kamerát, megkeresi a közelben, felébreszti, bekapcsolja a Wi-Fi-hálózatát, és távkioldóként működik hozzá."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab usa il Bluetooth per accoppiarsi con la tua Ricoh GR, trovarla nelle vicinanze, riattivarla, accenderne il Wi-Fi e farle da telecomando di scatto."
+            "value" : "GR Photo usa il Bluetooth per accoppiarsi con la tua Ricoh GR, trovarla nelle vicinanze, riattivarla, accenderne il Wi-Fi e farle da telecomando di scatto."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR LabはBluetoothを使用して、Ricoh GRとのペアリング、近くにあるカメラの検出、カメラの起動、カメラのWi-Fiの有効化、リモートシャッター操作を行います。"
+            "value" : "GR PhotoはBluetoothを使用して、Ricoh GRとのペアリング、近くにあるカメラの検出、カメラの起動、カメラのWi-Fiの有効化、リモートシャッター操作を行います。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab은 Bluetooth를 사용하여 Ricoh GR과 페어링하고, 근처에서 카메라를 찾고, 카메라를 깨우고, 카메라의 Wi-Fi를 켜고, 리모트 셔터로 작동합니다."
+            "value" : "GR Photo는 Bluetooth를 사용하여 Ricoh GR과 페어링하고, 근처에서 카메라를 찾고, 카메라를 깨우고, 카메라의 Wi-Fi를 켜고, 리모트 셔터로 작동합니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab gebruikt Bluetooth om met je Ricoh GR te koppelen, de camera in de buurt te vinden en te wekken, de Wi-Fi ervan in te schakelen en de camera op afstand te ontspannen."
+            "value" : "GR Photo gebruikt Bluetooth om met je Ricoh GR te koppelen, de camera in de buurt te vinden en te wekken, de Wi-Fi ervan in te schakelen en de camera op afstand te ontspannen."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab używa Bluetooth, aby sparować się z aparatem Ricoh GR, znajdować go w pobliżu, wybudzać go, włączać jego Wi-Fi i działać jako pilot migawki."
+            "value" : "GR Photo używa Bluetooth, aby sparować się z aparatem Ricoh GR, znajdować go w pobliżu, wybudzać go, włączać jego Wi-Fi i działać jako pilot migawki."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O GR Lab utiliza o Bluetooth para emparelhar com a sua Ricoh GR, encontrá-la por perto, ativá-la, ligar o Wi-Fi dela e servir de disparador remoto."
+            "value" : "O GR Photo utiliza o Bluetooth para emparelhar com a sua Ricoh GR, encontrá-la por perto, ativá-la, ligar o Wi-Fi dela e servir de disparador remoto."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab использует Bluetooth, чтобы создать пару с камерой Ricoh GR, находить ее поблизости, выводить из режима ожидания, включать ее Wi-Fi и работать как пульт спуска затвора."
+            "value" : "GR Photo использует Bluetooth, чтобы создать пару с камерой Ricoh GR, находить ее поблизости, выводить из режима ожидания, включать ее Wi-Fi и работать как пульт спуска затвора."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab använder Bluetooth för att parkoppla med din Ricoh GR, hitta den i närheten, väcka den, slå på dess Wi-Fi och fungera som fjärrutlösare."
+            "value" : "GR Photo använder Bluetooth för att parkoppla med din Ricoh GR, hitta den i närheten, väcka den, slå på dess Wi-Fi och fungera som fjärrutlösare."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab ใช้บลูทูธเพื่อจับคู่กับ Ricoh GR ของคุณ ค้นหากล้องที่อยู่ใกล้เคียง ปลุกกล้อง เปิด Wi-Fi ของกล้อง และทำหน้าที่เป็นรีโมตชัตเตอร์"
+            "value" : "GR Photo ใช้บลูทูธเพื่อจับคู่กับ Ricoh GR ของคุณ ค้นหากล้องที่อยู่ใกล้เคียง ปลุกกล้อง เปิด Wi-Fi ของกล้อง และทำหน้าที่เป็นรีโมตชัตเตอร์"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab, Ricoh GR kameranızla eşleşmek, onu yakınlarda bulmak, uyandırmak, Wi-Fi ağını açmak ve uzaktan deklanşör olarak çalışmak için Bluetooth’u kullanır."
+            "value" : "GR Photo, Ricoh GR kameranızla eşleşmek, onu yakınlarda bulmak, uyandırmak, Wi-Fi ağını açmak ve uzaktan deklanşör olarak çalışmak için Bluetooth’u kullanır."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab 使用蓝牙与你的 Ricoh GR 配对、在附近查找它、唤醒它、开启它的 Wi-Fi，并充当它的遥控快门。"
+            "value" : "GR Photo 使用蓝牙与你的 Ricoh GR 配对、在附近查找它、唤醒它、开启它的 Wi-Fi，并充当它的遥控快门。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab 會使用 Bluetooth 與你的 Ricoh GR 配對、尋找附近的相機、喚醒相機、開啟相機的 Wi-Fi，並作為遙控快門。"
+            "value" : "GR Photo 會使用 Bluetooth 與你的 Ricoh GR 配對、尋找附近的相機、喚醒相機、開啟相機的 Wi-Fi，並作為遙控快門。"
           }
         }
       }
@@ -138,127 +138,127 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab se k fotoaparátu připojuje přes jeho vlastní Wi-Fi síť, aby mohl procházet a stahovat fotky a videa a zobrazovat živý náhled."
+            "value" : "GR Photo se k fotoaparátu připojuje přes jeho vlastní Wi-Fi síť, aby mohlo procházet a stahovat fotky a videa a zobrazovat živý náhled."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab opretter forbindelse til dit kamera via kameraets eget Wi-Fi-netværk for at gennemse og downloade billeder og videoer og vise live view."
+            "value" : "GR Photo opretter forbindelse til dit kamera via kameraets eget Wi-Fi-netværk for at gennemse og downloade billeder og videoer og vise live view."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab verbindet sich über das eigene WLAN-Netzwerk der Kamera mit ihr, um Fotos und Videos anzusehen und herunterzuladen und ihren Live-View anzuzeigen."
+            "value" : "GR Photo verbindet sich über das eigene WLAN-Netzwerk der Kamera mit ihr, um Fotos und Videos anzusehen und herunterzuladen und ihren Live-View anzuzeigen."
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Το GR Lab συνδέεται στην κάμερά σας μέσω του δικού της δικτύου Wi-Fi, για να βλέπετε και να κατεβάζετε φωτογραφίες και βίντεο και για τη ζωντανή προβολή της."
+            "value" : "Το GR Photo συνδέεται στην κάμερά σας μέσω του δικού της δικτύου Wi-Fi, για να βλέπετε και να κατεβάζετε φωτογραφίες και βίντεο και για τη ζωντανή προβολή της."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab connects to your camera over its own Wi-Fi network to browse and download photos and videos and to show its live view."
+            "value" : "GR Photo connects to your camera over its own Wi-Fi network to browse and download photos and videos and to show its live view."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab se conecta a tu cámara por su propia red Wi-Fi para explorar y descargar fotos y vídeos y mostrar su vista en directo."
+            "value" : "GR Photo se conecta a tu cámara por su propia red Wi-Fi para explorar y descargar fotos y vídeos y mostrar su vista en directo."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab yhdistää kameraasi sen oman Wi-Fi-verkon kautta, jotta voit selata ja ladata kuvia ja videoita ja nähdä kameran live-kuvan."
+            "value" : "GR Photo yhdistää kameraasi sen oman Wi-Fi-verkon kautta, jotta voit selata ja ladata kuvia ja videoita ja nähdä kameran live-kuvan."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab se connecte à votre appareil photo via son propre réseau Wi-Fi pour parcourir et télécharger les photos et vidéos, et pour afficher sa visée directe."
+            "value" : "GR Photo se connecte à votre appareil photo via son propre réseau Wi-Fi pour parcourir et télécharger les photos et vidéos, et pour afficher sa visée directe."
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A GR Lab a kamera saját Wi-Fi-hálózatán csatlakozik a kamerához, hogy böngészhesse és letölthesse a fotókat és videókat, és megjeleníthesse az élőképet."
+            "value" : "A GR Photo a kamera saját Wi-Fi-hálózatán csatlakozik a kamerához, hogy böngészhesse és letölthesse a fotókat és videókat, és megjeleníthesse az élőképet."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab si connette alla fotocamera tramite la sua rete Wi-Fi per sfogliare e scaricare foto e video e per mostrare il live view."
+            "value" : "GR Photo si connette alla fotocamera tramite la sua rete Wi-Fi per sfogliare e scaricare foto e video e per mostrare il live view."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Labはカメラ自身のWi-Fiネットワークでカメラに接続し、写真や動画の閲覧とダウンロード、ライブビューの表示を行います。"
+            "value" : "GR Photoはカメラ自身のWi-Fiネットワークでカメラに接続し、写真や動画の閲覧とダウンロード、ライブビューの表示を行います。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab은 카메라의 자체 Wi-Fi 네트워크로 카메라에 연결하여 사진과 동영상을 둘러보고 다운로드하며 라이브 뷰를 표시합니다."
+            "value" : "GR Photo는 카메라의 자체 Wi-Fi 네트워크로 카메라에 연결하여 사진과 동영상을 둘러보고 다운로드하며 라이브 뷰를 표시합니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab maakt via het eigen Wi-Fi-netwerk van je camera verbinding om foto's en video's te bekijken en te downloaden en om de live view te tonen."
+            "value" : "GR Photo maakt via het eigen Wi-Fi-netwerk van je camera verbinding om foto's en video's te bekijken en te downloaden en om de live view te tonen."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab łączy się z aparatem przez jego własną sieć Wi-Fi, aby przeglądać i pobierać zdjęcia i filmy oraz wyświetlać podgląd na żywo."
+            "value" : "GR Photo łączy się z aparatem przez jego własną sieć Wi-Fi, aby przeglądać i pobierać zdjęcia i filmy oraz wyświetlać podgląd na żywo."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O GR Lab liga-se à câmara através da rede Wi-Fi da própria câmara para ver e transferir fotos e vídeos e para mostrar a vista ao vivo."
+            "value" : "O GR Photo liga-se à câmara através da rede Wi-Fi da própria câmara para ver e transferir fotos e vídeos e para mostrar a vista ao vivo."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab подключается к камере по ее собственной сети Wi-Fi, чтобы просматривать и загружать фото и видео и показывать Live View."
+            "value" : "GR Photo подключается к камере по ее собственной сети Wi-Fi, чтобы просматривать и загружать фото и видео и показывать Live View."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab ansluter till kameran via dess eget Wi-Fi-nätverk för att bläddra bland och hämta bilder och videor och för att visa kamerans livevisning."
+            "value" : "GR Photo ansluter till kameran via dess eget Wi-Fi-nätverk för att bläddra bland och hämta bilder och videor och för att visa kamerans livevisning."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab เชื่อมต่อกับกล้องผ่านเครือข่าย Wi-Fi ของกล้องเอง เพื่อเรียกดูและดาวน์โหลดภาพและวิดีโอ และแสดงไลฟ์วิว"
+            "value" : "GR Photo เชื่อมต่อกับกล้องผ่านเครือข่าย Wi-Fi ของกล้องเอง เพื่อเรียกดูและดาวน์โหลดภาพและวิดีโอ และแสดงไลฟ์วิว"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab, fotoğraflara ve videolara göz atıp onları indirmek ve canlı görüntüyü göstermek için kameranıza kendi Wi-Fi ağı üzerinden bağlanır."
+            "value" : "GR Photo, fotoğraflara ve videolara göz atıp onları indirmek ve canlı görüntüyü göstermek için kameranıza kendi Wi-Fi ağı üzerinden bağlanır."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab 通过相机自身的 Wi-Fi 网络与其连接，以便浏览和下载照片与影片，并显示实时取景。"
+            "value" : "GR Photo 通过相机自身的 Wi-Fi 网络与其连接，以便浏览和下载照片与影片，并显示实时取景。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab 會透過相機自己的 Wi-Fi 網路連接相機，以瀏覽和下載照片與影片，並顯示即時取景畫面。"
+            "value" : "GR Photo 會透過相機自己的 Wi-Fi 網路連接相機，以瀏覽和下載照片與影片，並顯示即時取景畫面。"
           }
         }
       }
@@ -269,127 +269,127 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab ukládá fotky a videa stažené z fotoaparátu do vaší knihovny fotek."
+            "value" : "GR Photo ukládá fotky a videa stažené z fotoaparátu do vaší knihovny fotek."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab gemmer de billeder og videoer, du downloader fra dit kamera, i dit fotobibliotek."
+            "value" : "GR Photo gemmer de billeder og videoer, du downloader fra dit kamera, i dit fotobibliotek."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab speichert die Fotos und Videos, die du von deiner Kamera herunterlädst, in deiner Fotomediathek."
+            "value" : "GR Photo speichert die Fotos und Videos, die du von deiner Kamera herunterlädst, in deiner Fotomediathek."
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Το GR Lab αποθηκεύει στη βιβλιοθήκη σας τις φωτογραφίες και τα βίντεο που κατεβάζετε από την κάμερα."
+            "value" : "Το GR Photo αποθηκεύει στη βιβλιοθήκη σας τις φωτογραφίες και τα βίντεο που κατεβάζετε από την κάμερα."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab saves the photos and videos you download from your camera to your library."
+            "value" : "GR Photo saves the photos and videos you download from your camera to your library."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab guarda en tu fototeca las fotos y los vídeos que descargas de la cámara."
+            "value" : "GR Photo guarda en tu fototeca las fotos y los vídeos que descargas de la cámara."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab tallentaa kamerasta lataamasi kuvat ja videot kuvakirjastoosi."
+            "value" : "GR Photo tallentaa kamerasta lataamasi kuvat ja videot kuvakirjastoosi."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab enregistre dans votre photothèque les photos et vidéos que vous téléchargez depuis votre appareil photo."
+            "value" : "GR Photo enregistre dans votre photothèque les photos et vidéos que vous téléchargez depuis votre appareil photo."
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A GR Lab a fotókönyvtárba menti a kameráról letöltött fotókat és videókat."
+            "value" : "A GR Photo a fotókönyvtárba menti a kameráról letöltött fotókat és videókat."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab salva nella tua libreria le foto e i video che scarichi dalla fotocamera."
+            "value" : "GR Photo salva nella tua libreria le foto e i video che scarichi dalla fotocamera."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Labは、カメラからダウンロードした写真や動画を写真ライブラリに保存します。"
+            "value" : "GR Photoは、カメラからダウンロードした写真や動画を写真ライブラリに保存します。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab은 카메라에서 다운로드한 사진과 동영상을 사진 보관함에 저장합니다."
+            "value" : "GR Photo는 카메라에서 다운로드한 사진과 동영상을 사진 보관함에 저장합니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab bewaart de foto's en video's die je van je camera downloadt in je fotobibliotheek."
+            "value" : "GR Photo bewaart de foto's en video's die je van je camera downloadt in je fotobibliotheek."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab zapisuje w bibliotece zdjęć zdjęcia i filmy pobrane z aparatu."
+            "value" : "GR Photo zapisuje w bibliotece zdjęć zdjęcia i filmy pobrane z aparatu."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O GR Lab guarda na sua biblioteca de fotografias as fotos e os vídeos que transfere da câmara."
+            "value" : "O GR Photo guarda na sua biblioteca de fotografias as fotos e os vídeos que transfere da câmara."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab сохраняет в медиатеку фото и видео, загруженные с камеры."
+            "value" : "GR Photo сохраняет в медиатеку фото и видео, загруженные с камеры."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab sparar de bilder och videor du hämtar från kameran i ditt bildbibliotek."
+            "value" : "GR Photo sparar de bilder och videor du hämtar från kameran i ditt bildbibliotek."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab บันทึกภาพและวิดีโอที่คุณดาวน์โหลดจากกล้องลงในคลังรูปภาพของคุณ"
+            "value" : "GR Photo บันทึกภาพและวิดีโอที่คุณดาวน์โหลดจากกล้องลงในคลังรูปภาพของคุณ"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab, kameranızdan indirdiğiniz fotoğrafları ve videoları fotoğraf arşivinize kaydeder."
+            "value" : "GR Photo, kameranızdan indirdiğiniz fotoğrafları ve videoları fotoğraf arşivinize kaydeder."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab 会把你从相机下载的照片和影片存入你的照片图库。"
+            "value" : "GR Photo 会把你从相机下载的照片和影片存入你的照片图库。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab 會將你從相機下載的照片和影片儲存到照片圖庫。"
+            "value" : "GR Photo 會將你從相機下載的照片和影片儲存到照片圖庫。"
           }
         }
       }
@@ -400,127 +400,127 @@
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab ukládá fotky a videa stažené z fotoaparátu do alba GR Lab ve vaší knihovně fotek, k čemuž potřebuje plný přístup. Na vaše ostatní fotky a videa se nedívá."
+            "value" : "GR Photo ukládá fotky a videa stažené z fotoaparátu do alba GR Photo ve vaší knihovně fotek, k čemuž potřebuje plný přístup. Na vaše ostatní fotky a videa se nedívá."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab gemmer de billeder og videoer, du downloader fra dit kamera, i et album med navnet GR Lab i dit fotobibliotek, hvilket kræver fuld adgang. Appen ser ikke på dine andre billeder og videoer."
+            "value" : "GR Photo gemmer de billeder og videoer, du downloader fra dit kamera, i et album med navnet GR Photo i dit fotobibliotek, hvilket kræver fuld adgang. Appen ser ikke på dine andre billeder og videoer."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab speichert die Fotos und Videos, die du von deiner Kamera herunterlädst, im Album „GR Lab“ in deiner Fotomediathek. Dafür ist voller Zugriff nötig. Deine anderen Fotos und Videos sieht sich GR Lab nicht an."
+            "value" : "GR Photo speichert die Fotos und Videos, die du von deiner Kamera herunterlädst, im Album „GR Photo“ in deiner Fotomediathek. Dafür ist voller Zugriff nötig. Deine anderen Fotos und Videos sieht sich GR Photo nicht an."
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Το GR Lab αποθηκεύει τις φωτογραφίες και τα βίντεο που κατεβάζετε από την κάμερα σε ένα άλμπουμ «GR Lab» στη βιβλιοθήκη σας, κάτι που απαιτεί πλήρη πρόσβαση. Δεν εξετάζει τις υπόλοιπες φωτογραφίες και τα βίντεό σας."
+            "value" : "Το GR Photo αποθηκεύει τις φωτογραφίες και τα βίντεο που κατεβάζετε από την κάμερα σε ένα άλμπουμ «GR Photo» στη βιβλιοθήκη σας, κάτι που απαιτεί πλήρη πρόσβαση. Δεν εξετάζει τις υπόλοιπες φωτογραφίες και τα βίντεό σας."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab saves the photos and videos you download from your camera to a GR Lab album in your library, which takes full access. It doesn't look at your other photos and videos."
+            "value" : "GR Photo saves the photos and videos you download from your camera to a GR Photo album in your library, which takes full access. It doesn't look at your other photos and videos."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab guarda las fotos y los vídeos que descargas de la cámara en un álbum «GR Lab» de tu fototeca, para lo que necesita acceso total. No mira tus demás fotos y vídeos."
+            "value" : "GR Photo guarda las fotos y los vídeos que descargas de la cámara en un álbum «GR Photo» de tu fototeca, para lo que necesita acceso total. No mira tus demás fotos y vídeos."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab tallentaa kamerasta lataamasi kuvat ja videot kuvakirjastosi GR Lab ‑albumiin, mikä edellyttää täyttä pääsyä. Se ei katso muita kuviasi tai videoitasi."
+            "value" : "GR Photo tallentaa kamerasta lataamasi kuvat ja videot kuvakirjastosi GR Photo ‑albumiin, mikä edellyttää täyttä pääsyä. Se ei katso muita kuviasi tai videoitasi."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab enregistre les photos et vidéos que vous téléchargez depuis votre appareil photo dans un album « GR Lab » de votre photothèque, ce qui nécessite un accès complet. L’app ne consulte pas vos autres photos et vidéos."
+            "value" : "GR Photo enregistre les photos et vidéos que vous téléchargez depuis votre appareil photo dans un album « GR Photo » de votre photothèque, ce qui nécessite un accès complet. L’app ne consulte pas vos autres photos et vidéos."
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A GR Lab a kameráról letöltött fotókat és videókat a fotókönyvtár GR Lab nevű albumába menti, amihez teljes hozzáférés szükséges. A többi fotót és videót nem nézi meg."
+            "value" : "A GR Photo a kameráról letöltött fotókat és videókat a fotókönyvtár GR Photo nevű albumába menti, amihez teljes hozzáférés szükséges. A többi fotót és videót nem nézi meg."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab salva le foto e i video che scarichi dalla fotocamera in un album “GR Lab” nella tua libreria, e per farlo serve l’accesso completo. Non guarda le altre tue foto e i tuoi altri video."
+            "value" : "GR Photo salva le foto e i video che scarichi dalla fotocamera in un album “GR Photo” nella tua libreria, e per farlo serve l’accesso completo. Non guarda le altre tue foto e i tuoi altri video."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Labは、カメラからダウンロードした写真や動画を写真ライブラリの「GR Lab」アルバムに保存します。これにはフルアクセスが必要です。ほかの写真や動画を見ることはありません。"
+            "value" : "GR Photoは、カメラからダウンロードした写真や動画を写真ライブラリの「GR Photo」アルバムに保存します。これにはフルアクセスが必要です。ほかの写真や動画を見ることはありません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab은 카메라에서 다운로드한 사진과 동영상을 사진 보관함의 ‘GR Lab’ 앨범에 저장하며, 이를 위해 전체 접근 권한이 필요합니다. 다른 사진과 동영상은 살펴보지 않습니다."
+            "value" : "GR Photo는 카메라에서 다운로드한 사진과 동영상을 사진 보관함의 ‘GR Photo’ 앨범에 저장하며, 이를 위해 전체 접근 권한이 필요합니다. 다른 사진과 동영상은 살펴보지 않습니다."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab bewaart de foto's en video's die je van je camera downloadt in een album 'GR Lab' in je fotobibliotheek. Daarvoor is volledige toegang nodig. GR Lab bekijkt je andere foto's en video's niet."
+            "value" : "GR Photo bewaart de foto's en video's die je van je camera downloadt in een album 'GR Photo' in je fotobibliotheek. Daarvoor is volledige toegang nodig. GR Photo bekijkt je andere foto's en video's niet."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab zapisuje zdjęcia i filmy pobrane z aparatu w albumie „GR Lab” w bibliotece zdjęć, do czego potrzebuje pełnego dostępu. Nie przegląda pozostałych zdjęć ani filmów."
+            "value" : "GR Photo zapisuje zdjęcia i filmy pobrane z aparatu w albumie „GR Photo” w bibliotece zdjęć, do czego potrzebuje pełnego dostępu. Nie przegląda pozostałych zdjęć ani filmów."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O GR Lab guarda as fotos e os vídeos que transfere da câmara num álbum “GR Lab” na sua biblioteca de fotografias, o que requer acesso total. Não vê as suas outras fotos e vídeos."
+            "value" : "O GR Photo guarda as fotos e os vídeos que transfere da câmara num álbum “GR Photo” na sua biblioteca de fotografias, o que requer acesso total. Não vê as suas outras fotos e vídeos."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab сохраняет фото и видео, загруженные с камеры, в альбом «GR Lab» в медиатеке. Для этого нужен полный доступ. Другие ваши фото и видео GR Lab не просматривает."
+            "value" : "GR Photo сохраняет фото и видео, загруженные с камеры, в альбом «GR Photo» в медиатеке. Для этого нужен полный доступ. Другие ваши фото и видео GR Photo не просматривает."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab sparar de bilder och videor du hämtar från kameran i ett album som heter GR Lab i ditt bildbibliotek, vilket kräver full åtkomst. Appen tittar inte på dina andra bilder och videor."
+            "value" : "GR Photo sparar de bilder och videor du hämtar från kameran i ett album som heter GR Photo i ditt bildbibliotek, vilket kräver full åtkomst. Appen tittar inte på dina andra bilder och videor."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab บันทึกภาพและวิดีโอที่คุณดาวน์โหลดจากกล้องลงในอัลบั้ม “GR Lab” ในคลังรูปภาพของคุณ ซึ่งต้องใช้สิทธิ์เข้าถึงแบบเต็ม และจะไม่ดูรูปภาพและวิดีโออื่นๆ ของคุณ"
+            "value" : "GR Photo บันทึกภาพและวิดีโอที่คุณดาวน์โหลดจากกล้องลงในอัลบั้ม “GR Photo” ในคลังรูปภาพของคุณ ซึ่งต้องใช้สิทธิ์เข้าถึงแบบเต็ม และจะไม่ดูรูปภาพและวิดีโออื่นๆ ของคุณ"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab, kameranızdan indirdiğiniz fotoğrafları ve videoları fotoğraf arşivinizdeki “GR Lab” albümüne kaydeder; bunun için tam erişim gerekir. Diğer fotoğraflarınıza ve videolarınıza bakmaz."
+            "value" : "GR Photo, kameranızdan indirdiğiniz fotoğrafları ve videoları fotoğraf arşivinizdeki “GR Photo” albümüne kaydeder; bunun için tam erişim gerekir. Diğer fotoğraflarınıza ve videolarınıza bakmaz."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab 会把你从相机下载的照片和影片存入照片图库中的“GR Lab”相簿，这需要完全访问权限。它不会查看你的其他照片和影片。"
+            "value" : "GR Photo 会把你从相机下载的照片和影片存入照片图库中的“GR Photo”相簿，这需要完全访问权限。它不会查看你的其他照片和影片。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "GR Lab 會將你從相機下載的照片和影片儲存到照片圖庫中的「GR Lab」相簿，這需要完整取用權限。它不會查看你的其他照片和影片。"
+            "value" : "GR Photo 會將你從相機下載的照片和影片儲存到照片圖庫中的「GR Photo」相簿，這需要完整取用權限。它不會查看你的其他照片和影片。"
           }
         }
       }

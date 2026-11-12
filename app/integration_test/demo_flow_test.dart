@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grlab/main.dart' as app;
-import 'package:grlab/src/library/shot_cell.dart';
-import 'package:grlab/src/platform/app_dirs.dart';
+import 'package:grphoto/main.dart' as app;
+import 'package:grphoto/src/library/shot_cell.dart';
+import 'package:grphoto/src/platform/app_dirs.dart';
 import 'package:integration_test/integration_test.dart';
 
 /// The whole app on a device or simulator against the demo camera:

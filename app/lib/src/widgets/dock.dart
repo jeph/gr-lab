@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'package:grlab/src/theme/tokens.dart';
-import 'package:grlab/src/widgets/pressable.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/pressable.dart';
 
 /// One page a [Dock] switches to.
 @immutable

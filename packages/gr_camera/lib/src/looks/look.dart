@@ -8,8 +8,8 @@ import 'package:gr_protocol/gr_protocol.dart';
 /// photo (research/protocol/image-control.md §1).
 ///
 /// A look keeps everything its bytes held: the header (format version and
-/// byte 1) and any base or parameter GR Lab does not know. A look read from
-/// a camera therefore writes back unchanged, and only what GR Lab knows is
+/// byte 1) and any base or parameter GR Photo does not know. A look read from
+/// a camera therefore writes back unchanged, and only what GR Photo knows is
 /// shown: [base], [values].
 @immutable
 final class Look {
@@ -36,7 +36,7 @@ final class Look {
 
   /// The look [bytes] hold, laid out as the Custom slots and `/imgctrl`
   /// carry it (ble.md § Image Control blob); null when they do not even
-  /// hold the header. Bytes shorter than a slot's, as GR Lab saved looks
+  /// hold the header. Bytes shorter than a slot's, as GR Photo saved looks
   /// before it padded them, still read.
   static Look? fromBytes(Uint8List bytes) {
     final blob = BleImageControlBlob.readFrom(BleByteReader(bytes), []);
@@ -45,14 +45,14 @@ final class Look {
 
   final BleImageControlBlob _blob;
 
-  /// The base image; null when it is one GR Lab does not know.
+  /// The base image; null when it is one GR Photo does not know.
   late final LookBase? base = LookBase._byWire[_blob.base.known];
 
-  /// The number of a base image GR Lab does not know, as the look holds
+  /// The number of a base image GR Photo does not know, as the look holds
   /// it, so it can still be named; null when [base] is known.
   int? get unknownBaseNumber => base == null ? _blob.base.raw : null;
 
-  /// The parameters GR Lab knows and their values, in the order the look
+  /// The parameters GR Photo knows and their values, in the order the look
   /// lists them; unmodifiable. Parameters it does not know are kept, but
   /// left out here. A parameter listed twice has its first value.
   late final Map<LookParameter, int> values = _knownValues();
@@ -90,7 +90,7 @@ final class Look {
   );
 
   /// Whether [camera] offers this look's base image ([lookBases]); false
-  /// when the base is one GR Lab does not know. GR WORLD offers a body only
+  /// when the base is one GR Photo does not know. GR WORLD offers a body only
   /// the looks of its own type (observed in GR WORLD 2.0.0's code,
   /// `findSupportedByCameraType` 0xda1db4).
   bool offeredBy(CameraBody camera) {
@@ -150,7 +150,7 @@ final class Look {
 ///   matches after a camera stored it in its own format version;
 /// - so are the order of the parameters, the zeros after them and the
 ///   length of the bytes;
-/// - a base image or parameter GR Lab does not know is compared by its
+/// - a base image or parameter GR Photo does not know is compared by its
 ///   number, so looks from a newer camera or firmware compare too;
 /// - a parameter listed twice has its first value, as in [Look.values].
 ///

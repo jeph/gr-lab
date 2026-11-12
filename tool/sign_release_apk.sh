@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Signs a release APK with GR Lab's release key and checks that the result
+# Signs a release APK with GR Photo's release key and checks that the result
 # carries the release certificate and nothing else. A signature the APK
 # already has, such as the debug key's that the build leaves on it, is
 # replaced. .github/workflows/release.yml runs this in a job that holds the

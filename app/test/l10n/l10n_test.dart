@@ -1,12 +1,12 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grlab/l10n/l10n.dart';
+import 'package:grphoto/l10n/l10n.dart';
 
 void main() {
   Locale resolve(List<Locale>? phone) =>
       resolveAppLocale(phone, AppLocalizations.supportedLocales);
 
-  test("the phone's first language that GR Lab is translated into is used, "
+  test("the phone's first language that GR Photo is translated into is used, "
       'and English when none is', () {
     expect(resolve(const [Locale('de', 'AT')]), const Locale('de'));
     expect(resolve(const [Locale('pt', 'BR')]), const Locale('pt'));

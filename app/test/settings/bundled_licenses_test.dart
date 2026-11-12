@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grlab/src/settings/bundled_licenses.dart';
+import 'package:grphoto/src/settings/bundled_licenses.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

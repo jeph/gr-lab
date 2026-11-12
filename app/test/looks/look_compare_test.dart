@@ -6,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/looks/look_compare.dart';
-import 'package:grlab/src/looks/look_preview.dart';
-import 'package:grlab/src/looks/look_widgets.dart';
-import 'package:grlab/src/theme/tokens.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/looks/look_compare.dart';
+import 'package:grphoto/src/looks/look_preview.dart';
+import 'package:grphoto/src/looks/look_widgets.dart';
+import 'package:grphoto/src/theme/tokens.dart';
 
 import '../support/test_app.dart';
 
@@ -400,7 +400,7 @@ void main() {
     expect(await colourAt(tester, across: .25, down: .3), grey);
     expect(await colourAt(tester, across: .75, down: .3), near(_blue));
 
-    // A base image GR Lab does not know: the look's picture is the photo
+    // A base image GR Photo does not know: the look's picture is the photo
     // as it is, and so is the one before.
     await show(
       tester,

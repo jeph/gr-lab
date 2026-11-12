@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/looks/look_spec.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/looks/look_spec.dart';
 
 void main() {
   final en = lookupAppLocalizations(const Locale('en'));

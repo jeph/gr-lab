@@ -2,17 +2,17 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/app_scope.dart';
-import 'package:grlab/src/camera/camera_pages.dart';
-import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/connection/idle_disconnect.dart';
-import 'package:grlab/src/connection/wifi_consent_dialog.dart';
-import 'package:grlab/src/downloads/download_background.dart';
-import 'package:grlab/src/home/home_pages.dart';
-import 'package:grlab/src/theme/tokens.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/app_scope.dart';
+import 'package:grphoto/src/camera/camera_pages.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/connection/idle_disconnect.dart';
+import 'package:grphoto/src/connection/wifi_consent_dialog.dart';
+import 'package:grphoto/src/downloads/download_background.dart';
+import 'package:grphoto/src/home/home_pages.dart';
+import 'package:grphoto/src/theme/tokens.dart';
 
-class GrLabApp extends StatelessWidget {
+class GrPhotoApp extends StatelessWidget {
   const new({required this.models, super.key});
 
   final AppModels models;

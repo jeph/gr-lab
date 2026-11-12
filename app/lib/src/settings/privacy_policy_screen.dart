@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/theme/tokens.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/theme/tokens.dart';
 
-/// GR Lab's privacy policy (Settings › About), rendered from the bundled
+/// GR Photo's privacy policy (Settings › About), rendered from the bundled
 /// `assets/privacy.md`. The policy is the legal text and stays in English;
 /// only the screen around it is translated.
 class PrivacyPolicyScreen extends StatefulWidget {

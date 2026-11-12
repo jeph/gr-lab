@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grlab/src/cameras/cameras_screen.dart';
+import 'package:grphoto/src/cameras/cameras_screen.dart';
 
 import 'support/test_app.dart';
 

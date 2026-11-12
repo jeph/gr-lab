@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
 
 /// What the camera pill and the camera sheet say about the link, derived
 /// from the controller in this one place.

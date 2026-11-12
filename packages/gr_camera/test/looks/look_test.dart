@@ -16,7 +16,7 @@ Uint8List _bytes(List<int> header, List<int> parameters) =>
 CameraBody _body(GrModel model) => CameraBody(model: model, firmware: '1.20');
 
 void main() {
-  test('a look reads its base and the parameters GR Lab knows, in the '
+  test('a look reads its base and the parameters GR Photo knows, in the '
       'order it lists them', () {
     final look = Look.fromBytes(
       _bytes([1, 0, 0x06], [3, 0x02, 0xff, 0x00, 0x01, 0x17, 0x02]),
@@ -41,7 +41,7 @@ void main() {
     ]);
   });
 
-  test('a camera look with a base, parameter and header GR Lab does not '
+  test('a camera look with a base, parameter and header GR Photo does not '
       'know writes back unchanged', () {
     final wire = Uint8List.fromList([
       4, 9, 0x7a, 3, 0x02, 0x01, 0x6f, 0x05, 0x14, 0xfd, //
@@ -64,7 +64,7 @@ void main() {
       0x14,
       0xfd,
       ...wire.skip(10),
-    ], reason: 'an edit keeps what GR Lab does not know');
+    ], reason: 'an edit keeps what GR Photo does not know');
   });
 
   test('a look saved shorter, before looks were padded, still reads and '
@@ -184,7 +184,7 @@ void main() {
     );
   });
 
-  test('settings compare a base and parameters GR Lab does not know, and '
+  test('settings compare a base and parameters GR Photo does not know, and '
       'take the first value of a parameter listed twice', () {
     Look read(List<int> header, List<int> parameters) =>
         Look.fromBytes(_bytes(header, parameters))!;

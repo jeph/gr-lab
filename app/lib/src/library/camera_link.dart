@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
 
-import 'package:grlab/src/connection/connection_controller.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
 
 /// The [CameraLibrary] of the [ConnectionController]'s session: non-null
 /// while the camera's Wi-Fi is up, so work stops when it goes, and a new

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:grlab/src/theme/tokens.dart';
+import 'package:grphoto/src/theme/tokens.dart';
 import 'package:video_player/video_player.dart';
 
 /// How far [video] has played, as a bar in the theme's accent along the

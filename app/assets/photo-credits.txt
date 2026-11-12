@@ -1,15 +1,15 @@
-Photos in GR Lab
+Photos in GR Photo
 
 The photos and video of the simulated camera in demo mode (assets/demo/) are
 from Unsplash (https://unsplash.com), fetched through Lorem Picsum
 (https://picsum.photos). They are used under the Unsplash License below, not
-under GR Lab's MIT License. Each was resized, some were cropped, the tall ones
+under GR Photo's MIT License. Each was resized, some were cropped, the tall ones
 are stored on their side as a camera stores them, and one was made into a short
 video.
 
 The photos of the welcome screen, which are also the look editor's sample
-photos, are GR Lab's own. Jeph took them with a GR IV and a GR IV HDF, and they
-are under GR Lab's MIT License like the rest of the app:
+photos, are GR Photo's own. Jeph took them with a GR IV and a GR IV HDF, and they
+are under GR Photo's MIT License like the rest of the app:
 assets/samples/sample01, assets/samples/sample02, assets/samples/sample03,
 assets/samples/sample04, assets/samples/sample05 and assets/samples/sample06.
 

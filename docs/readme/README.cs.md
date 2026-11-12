@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="../icon.png" alt="Ikona GR Lab" width="128" height="128">
+  <img src="../icon.png" alt="Ikona GR Photo" width="128" height="128">
 </p>
 
-<h1 align="center">GR Lab</h1>
+<h1 align="center">GR Photo</h1>
 
 <p align="center">
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="Licence: MIT"></a>
@@ -33,13 +33,13 @@
   <a href="README.ja.md">日本語</a>
 </p>
 
-**GR Lab** je doprovodná aplikace k fotoaparátům Ricoh GR (GR III, GR IIIx a GR IV) pro iOS
+**GR Photo** je doprovodná aplikace k fotoaparátům Ricoh GR (GR III, GR IIIx a GR IV) pro iOS
 a Android. Prohlíží a stahuje fotky z fotoaparátu, slouží jako dálková spoušť s živým náhledem
 a uchovává vaše vzhledy Ovládání obrazu na jednom místě. Je navržena tak, aby byla rychlá, snadno se
 používala a pořádně se starala o barevné profily fotoaparátu: uložte vzhled, se kterým byla fotka
 pořízena, upravte ho s náhledem před očima a načtěte ho do pozic Vlastní ve fotoaparátu.
 
-GR Lab je nezávislý projekt a není spojen se společností Ricoh. S fotoaparátem komunikuje
+GR Photo je nezávislý projekt a není spojeno se společností Ricoh. S fotoaparátem komunikuje
 protokolem, který byl získán reverzním inženýrstvím z vlastních aplikací Ricoh a z firmwaru
 fotoaparátu; zjištění jsou sepsána ve složce [`research/`](../../research/README.md).
 
@@ -76,17 +76,17 @@ fotoaparátu; zjištění jsou sepsána ve složce [`research/`](../../research/
 
 ## Funkce
 
-GR Lab klade na první místo tři věci: dostat vás rychle k fotkám, nepřekážet vám a brát vzhledy
+GR Photo klade na první místo tři věci: dostat vás rychle k fotkám, nepřekážet vám a brát vzhledy
 Ovládání obrazu jako něco, o co stojí za to se starat.
 
-- **Rychlost.** GR Lab se při otevření spojí s fotoaparátem přes Bluetooth, pokud je fotoaparát
+- **Rychlost.** GR Photo se při otevření spojí s fotoaparátem přes Bluetooth, pokud je fotoaparát
   poblíž. Otevření Knihovny fotoaparát probudí, zapne jeho Wi-Fi a připojí se k ní v jednom kroku
   a Wi-Fi pak zůstává aktivní, i když přecházíte mezi stránkami, takže se nic nepřipojuje dvakrát
   a stahování běží dál. Seznamy souborů, miniatury a náhledy se ukládají do mezipaměti v telefonu,
   aby se Knihovna otevírala rychle. S fotoaparátem GR IV HDF a telefonem s Androidem trvala cesta od
   vypnutého fotoaparátu do jeho Knihovny asi 13 sekund.
 - **Snadné používání.** Na jedné obrazovce máte své fotoaparáty a Knihovna, Snímání a Vzhledy jsou
-  od ní na jedno klepnutí. GR Lab fotoaparát zapne, zapne jeho Wi-Fi a připojí se k ní za vás,
+  od ní na jedno klepnutí. GR Photo fotoaparát zapne, zapne jeho Wi-Fi a připojí se k ní za vás,
   takže po spárování není potřeba na fotoaparátu nic nastavovat. Když se něco nepovede, aplikace
   řekne proč a co zkontrolovat, a nabídne Zkusit znovu. Přerušené spojení se obnoví samo.
 - **Vzhledy, které můžete spravovat.** U každé fotky v Knihovně je vidět, s jakým Ovládáním obrazu
@@ -105,7 +105,7 @@ Ovládání obrazu jako něco, o co stojí za to se starat.
   fotoaparátu.
 - **Knihovna.** Procházejte fotky a videa z fotoaparátu po dnech, filtrujte podle JPEG, RAW, videa
   nebo dosud nestažených a kterýkoli snímek si otevřete na celou obrazovku i s podrobnostmi.
-  Stáhněte jeden snímek nebo výběr, jako JPEG, RAW nebo obojí, do alba GR Lab v knihovně fotek
+  Stáhněte jeden snímek nebo výběr, jako JPEG, RAW nebo obojí, do alba GR Photo v knihovně fotek
   telefonu. Stahování pokračuje, i když používáte jinou aplikaci nebo zamknete telefon: Android ho
   ukazuje v oznámení s tlačítky Pozastavit a Zrušit vše, iOS 26 a novější ukazuje jeho průběh na
   zamčené obrazovce a v Dynamic Islandu. Videa se přehrávají přímo v aplikaci.
@@ -119,7 +119,7 @@ Ovládání obrazu jako něco, o co stojí za to se starat.
   přejmenovat nebo zapomenout.
 - **Motivy a jazyky.** Motivy Světlý, Tmavý, Temná komora, Papír a Kyanotypie a 21 jazyků, které
   nabízejí nabídky samotného fotoaparátu.
-- **Soukromí.** Žádné účty, analytika, reklama ani hlášení pádů. GR Lab komunikuje pouze s vaším
+- **Soukromí.** Žádné účty, analytika, reklama ani hlášení pádů. GR Photo komunikuje pouze s vaším
   fotoaparátem; viz [zásady ochrany soukromí](../../app/assets/privacy.md).
 
 ## Požadavky
@@ -130,7 +130,7 @@ Ovládání obrazu jako něco, o co stojí za to se starat.
   zapisovat.
 - Android 12 nebo novější, případně iOS 15 nebo novější.
 
-GR Lab je mladý projekt. Protokol testů na hardwaru zaznamenává běhy s GR IV HDF s firmwarem 1.20:
+GR Photo je mladý projekt. Protokol testů na hardwaru zaznamenává běhy s GR IV HDF s firmwarem 1.20:
 párování, připojování, probouzení fotoaparátu, procházení, stahování, živý náhled, ostření a změny
 expozice. Podpora modelů GR III a GR IIIx vychází z výzkumu protokolu a na fotoaparátu zatím
 testována nebyla. Co bylo pozorováno, najdete v souboru
@@ -138,21 +138,21 @@ testována nebyla. Co bylo pozorováno, najdete v souboru
 
 ## Instalace
 
-V Androidu si v telefonu stáhněte `gr-lab-v<version>.apk` z
-[nejnovějšího vydání](https://github.com/jeph/gr-lab/releases/latest) a otevřete jej. Android se
+V Androidu si v telefonu stáhněte `gr-photo-v<version>.apk` z
+[nejnovějšího vydání](https://github.com/jeph/gr-photo/releases/latest) a otevřete jej. Android se
 jednou zeptá na oprávnění instalovat aplikace z vašeho prohlížeče. Každé vydání je podepsáno
 stejným klíčem, takže se novější nainstaluje přes to, které už máte, a zachová vaše fotoaparáty
 i nastavení.
 
 V iOS jde každé vydání do TestFlight, zatím jen vlastním testerům projektu. Veřejný odkaz na
-TestFlight zatím neexistuje, takže se GR Lab na iPhonu instaluje sestavením ze zdrojového kódu.
+TestFlight zatím neexistuje, takže se GR Photo na iPhonu instaluje sestavením ze zdrojového kódu.
 
 K sestavení ze zdrojového kódu je potřeba [Flutter](https://flutter.dev) 3.47 nebo novější
 a nastavené Android SDK nebo Xcode.
 
 ```sh
-git clone https://github.com/jeph/gr-lab.git
-cd gr-lab/app
+git clone https://github.com/jeph/gr-photo.git
+cd gr-photo/app
 flutter run --flavor prod --release
 ```
 
@@ -173,9 +173,9 @@ flutter run --dart-define=GR_DEMO=true
 1. **Spárujte fotoaparát.** Klepněte na Přidat fotoaparát a postupujte podle průvodce. Ve
    fotoaparátu najdete párování v MENU, E6, Bezdrátová komunikace: nastavte Režim akce na Zapnuto,
    otevřete Párování a zvolte Provést párování, potom potvrďte kód v telefonu a stiskněte na
-   fotoaparátu OK. Fotoaparát se pak objeví na obrazovce Fotoaparáty a GR Lab se s ním spojí sám,
+   fotoaparátu OK. Fotoaparát se pak objeví na obrazovce Fotoaparáty a GR Photo se s ním spojí samo,
    kdykoli se otevře a fotoaparát je poblíž.
-2. **Otevřete Knihovnu.** GR Lab fotoaparát zapne, pokud je vypnutý, a připojí se k jeho Wi-Fi.
+2. **Otevřete Knihovnu.** GR Photo fotoaparát zapne, pokud je vypnutý, a připojí se k jeho Wi-Fi.
    Android vás jednou požádá o schválení sítě fotoaparátu. Klepnutím snímek zobrazíte, podržením
    jich vyberete víc a stáhnete si, co si chcete ponechat.
 3. **Foťte.** Ovladač je spoušť přes Bluetooth. Živý náhled se připojí k Wi-Fi fotoaparátu a ukáže
@@ -184,9 +184,9 @@ flutter run --dart-define=GR_DEMO=true
    úplně nový tlačítkem + na stránce Vzhledy. Klepnutím vzhled upravíte a přetažením na C1, C2 nebo
    C3 ho načtete do fotoaparátu.
 
-Automatické odpojení v Nastavení ukončí připojení k Wi-Fi fotoaparátu, když se GR Lab nějakou dobu
-nepoužívá (ve výchozím nastavení 5 minut). Dokument [Jak se GR Lab chová](../behaviour.md) podrobně
-popisuje každou obrazovku a každý stav připojení.
+Automatické odpojení v Nastavení ukončí připojení k Wi-Fi fotoaparátu, když se GR Photo nějakou dobu
+nepoužívá (ve výchozím nastavení 5 minut). Dokument [Jak se GR Photo chová](../behaviour.md)
+podrobně popisuje každou obrazovku a každý stav připojení.
 
 ## Vývoj
 
@@ -211,8 +211,9 @@ flutter run --flavor prod --release          # sestavení, které dostanou uživ
 flutter run --dart-define=GR_DEMO=true       # simulovaný fotoaparát, funguje v emulátoru Androidu i v simulátoru iOS
 ```
 
-Existují dvě sestavení. `dev` (`io.jeph.grlab.dev`, s názvem „GR Lab Dev“) se instaluje vedle `prod`
-(`io.jeph.grlab`, „GR Lab“). Bez `--flavor` sestavují `flutter run` a `flutter build` variantu `dev`.
+Existují dvě sestavení. `dev` (`io.jeph.grphoto.dev`, s názvem „GR Photo Dev“) se instaluje vedle
+`prod` (`io.jeph.grphoto`, „GR Photo“). Bez `--flavor` sestavují `flutter run` a `flutter build`
+variantu `dev`.
 
 Samotný `flutter run` vytvoří ladicí sestavení, které každý snímek obrazovky vykresluje několikrát
 pomaleji než sestavení profile nebo release (3krát až 4krát v Knihovně v emulátoru Androidu,
@@ -253,8 +254,8 @@ takže potřebuje `--flavor dev` a předem sestavený soubor APK; bez nich skon�
 „No application found“.
 
 V simulátoru iOS musí být aplikace v okamžiku udělení přístupu k Fotkám nainstalovaná a
-`flutter test` ji poté odinstaluje, čímž se udělený přístup smaže. GR Lab žádá o plný přístup, aby
-si mohl vést své album, a v simulátoru iOS 26.3 samotný příkaz `simctl privacy grant photos` dotazu
+`flutter test` ji poté odinstaluje, čímž se udělený přístup smaže. GR Photo žádá o plný přístup, aby
+si mohlo vést své album, a v simulátoru iOS 26.3 samotný příkaz `simctl privacy grant photos` dotazu
 iOS nezabránil: oprávnění, které zapíše, má `auth_version` 1 a iOS ho jako plný přístup bere až
 při hodnotě 2. Před každým spuštěním proto přístup udělte a tuto hodnotu nastavte:
 
@@ -262,15 +263,15 @@ při hodnotě 2. Před každým spuštěním proto přístup udělte a tuto hodn
 cd app
 flutter build ios --simulator --debug --dart-define=GR_DEMO=true
 xcrun simctl install booted build/ios/iphonesimulator/Runner.app
-xcrun simctl privacy booted grant photos io.jeph.grlab.dev
+xcrun simctl privacy booted grant photos io.jeph.grphoto.dev
 sqlite3 "$(xcrun simctl getenv booted HOME)/Library/TCC/TCC.db" \
-  "UPDATE access SET auth_version = 2 WHERE service = 'kTCCServicePhotos' AND client = 'io.jeph.grlab.dev'"
+  "UPDATE access SET auth_version = 2 WHERE service = 'kTCCServicePhotos' AND client = 'io.jeph.grphoto.dev'"
 flutter test integration_test --dart-define=GR_DEMO=true -d <simulator>
 ```
 
 ### Protokol ladění
 
-GR Lab vede protokoly ladění, dokud je zapnutá volba Nastavení > Zapnout protokol ladění: vše, co
+GR Photo vede protokoly ladění, dokud je zapnutá volba Nastavení > Zapnout protokol ladění: vše, co
 fotoaparátu posílá a co od něj přijímá (vyhledávání, čtení, zápisy a oznámení přes Bluetooth, každý
 požadavek HTTP a odpověď na něj, zprávy WebSocket, velikosti snímků živého náhledu a kroky
 připojování k Wi-Fi), každý řádek, který aplikace vypíše, nezachycené chyby a řádky nativního kódu
@@ -285,13 +286,13 @@ k Wi-Fi fotoaparátu.
 Každý push do `main` je vydání, které vytváří
 [`.github/workflows/release.yml`](../../.github/workflows/release.yml). Workflow vydání očísluje
 0.0.N, o jedna více než to poslední, spustí `tool/check.sh` a sestaví variantu `prod` obou aplikací
-v režimu release. APK pro Android je podepsáno klíčem GR Lab pro vydání a zveřejněno na
-[stránce vydání](https://github.com/jeph/gr-lab/releases) s kontrolním součtem SHA-256, atestací
+v režimu release. APK pro Android je podepsáno klíčem GR Photo pro vydání a zveřejněno na
+[stránce vydání](https://github.com/jeph/gr-photo/releases) s kontrolním součtem SHA-256, atestací
 původu sestavení a mapováním R8, podle kterého se čtou jeho výpisy zásobníku z Kotlinu. Aplikace
 pro iOS je podepsána pro App Store a nahrána do TestFlight. Klíče jsou uloženy v prostředích
 GitHubu, která smí používat jen `main`, a úlohy, které aplikace sestavují, nemají žádný z nich.
 
-`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab` ověří, že APK sestavil tento
+`gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo` ověří, že APK sestavil tento
 workflow z tohoto repozitáře.
 
 ```sh
@@ -304,7 +305,7 @@ v části TestFlight. Interní testeři si ji nainstalují z aplikace TestFlight
 sestavení podepisuje a nahrává pomocí klíče API pro App
 Store Connect, takže nastavení na Macu tvoří soubor klíče `AuthKey_<key id>.p8` ve složce
 `~/.appstoreconnect/private_keys` a proměnné `ASC_KEY_ID` a `ASC_ISSUER_ID` v souboru
-`~/.appstoreconnect/gr-lab.env`. Klíč potřebuje roli Admin: Apple nedovolí, aby klíč s rolí App
+`~/.appstoreconnect/gr-photo.env`. Klíč potřebuje roli Admin: Apple nedovolí, aby klíč s rolí App
 Manager použil distribuční certifikát týmu. Archiv se sestavuje nepodepsaný a pro App Store se
 podepisuje až při exportu (`app/ios/ExportOptions.plist`), protože podepsání samotného archivu by
 vyžadovalo, aby měl tým zaregistrované testovací zařízení.
@@ -312,7 +313,7 @@ vyžadovalo, aby měl tým zaregistrované testovací zařízení.
 ## Jak přispět
 
 Hlášení chyb a pull requesty jsou vítány. Většina chyb se projeví jen na skutečném hardwaru, takže
-až budete [zakládat issue](https://github.com/jeph/gr-lab/issues), uveďte prosím model fotoaparátu
+až budete [zakládat issue](https://github.com/jeph/gr-photo/issues), uveďte prosím model fotoaparátu
 a verzi firmwaru, model telefonu a jeho verzi Androidu nebo iOS a popište, co jste dělali.
 Exportovaný protokol ladění (Nastavení, Protokol ladění, Exportovat protokol) obvykle ukáže, co se
 stalo, obsahuje však sériové číslo vašeho fotoaparátu a heslo k jeho Wi-Fi, proto ho přikládejte
@@ -326,7 +327,7 @@ Podezření na bezpečnostní zranitelnosti nehlaste ve veřejných issues. Post
 
 ## Poděkování
 
-GR Lab je postaven na frameworku [Flutter](https://flutter.dev) a používá
+GR Photo je postaveno na frameworku [Flutter](https://flutter.dev) a používá
 [universal_ble](https://pub.dev/packages/universal_ble) pro Bluetooth,
 [image](https://pub.dev/packages/image), [video_player](https://pub.dev/packages/video_player),
 [share_plus](https://pub.dev/packages/share_plus) a
@@ -339,7 +340,7 @@ Ovládání obrazu u modelu GR IIIx.
 
 ## Licence
 
-GR Lab je vydán pod [licencí MIT](../../LICENSE). Balíčky a písma třetích stran, které GR Lab
+GR Photo je vydáno pod [licencí MIT](../../LICENSE). Balíčky a písma třetích stran, které GR Photo
 obsahuje, si ponechávají své vlastní licence. Aplikace je uvádí v části **Nastavení › O aplikaci ›
 Licence** a texty licencí písem jsou ve složce [`app/assets/fonts/`](../../app/assets/fonts/).
 

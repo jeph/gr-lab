@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-GR Lab is in early development. Security fixes land on the `dev` branch and reach users with the
-next [release](https://github.com/jeph/gr-lab/releases), so only the latest release and the latest
+GR Photo is in early development. Security fixes land on the `dev` branch and reach users with the
+next [release](https://github.com/jeph/gr-photo/releases), so only the latest release and the latest
 commit on `dev` are supported.
 
 | Version | Security updates |
@@ -19,16 +19,16 @@ commit when it is safe to do so.
 
 Do not disclose suspected vulnerabilities in a public issue, discussion, pull request, or social
 media post. Submit a
-[private vulnerability report](https://github.com/jeph/gr-lab/security/advisories/new) instead.
+[private vulnerability report](https://github.com/jeph/gr-photo/security/advisories/new) instead.
 
-If that page is not available to you, [open an issue](https://github.com/jeph/gr-lab/issues) that
+If that page is not available to you, [open an issue](https://github.com/jeph/gr-photo/issues) that
 asks the maintainer for a private way to reach them. Say only that you have a security report: leave
 out the details, logs and screenshots until you have that private channel.
 
 Include enough information to investigate without exposing private data:
 
-- The GR Lab release or commit, the build (`dev` or `prod`), your phone model and its Android or iOS
-  version.
+- The GR Photo release or commit, the build (`dev` or `prod`), your phone model and its Android or
+  iOS version.
 - The camera model and firmware version, if a camera is involved.
 - The security impact and who could exploit it.
 - Minimal reproduction steps or a proof of concept. Demo mode, which runs against the simulated
@@ -37,7 +37,7 @@ Include enough information to investigate without exposing private data:
 - Any suggested mitigation or fix.
 
 Never include your camera's Wi-Fi password, its serial number, its Bluetooth or Wi-Fi address or
-network name, or your photos. GR Lab's debug log holds all of those except the photos, so remove
+network name, or your photos. GR Photo's debug log holds all of those except the photos, so remove
 them from any part of the log you send. The maintainer will not ask you for them.
 
 Reports will be assessed privately. If the report is accepted, the maintainer will coordinate a fix
@@ -46,17 +46,17 @@ Reporters can be credited in a published advisory if they want attribution.
 
 ## In scope
 
-Examples of security issues in GR Lab include:
+Examples of security issues in GR Photo include:
 
-- GR Lab sending anything to a destination other than the camera, or keeping or sharing data beyond
-  what its [privacy policy](../app/assets/privacy.md) describes.
+- GR Photo sending anything to a destination other than the camera, or keeping or sharing data
+  beyond what its [privacy policy](../app/assets/privacy.md) describes.
 - The camera's Wi-Fi password, the debug log or other app data becoming readable by another app, a
   backup or the network in a way the privacy policy does not describe.
-- A way to make GR Lab join a network, or talk to a device, that is not the paired camera.
+- A way to make GR Photo join a network, or talk to a device, that is not the paired camera.
 - A file name, file list, image, look or other response from a camera, or from a device posing as
-  one, that makes GR Lab read, write or delete files outside its own storage and its album, or run
+  one, that makes GR Photo read, write or delete files outside its own storage and its album, or run
   code.
-- Another app on the phone controlling GR Lab or a camera through it.
+- Another app on the phone controlling GR Photo or a camera through it.
 - Build, signing or packaging issues that could allow code substitution.
 
 ## Out of scope
@@ -65,19 +65,19 @@ The following are not vulnerabilities in this project by themselves:
 
 - How the camera itself works: its Bluetooth pairing, its Wi-Fi network, and its HTTP interface,
   which is unencrypted and open to any device on the camera's network. That is Ricoh's firmware, and
-  GR Lab cannot change it.
+  GR Photo cannot change it.
 - The debug log holding the camera's Wi-Fi password and identifiers while debug logging is on, and
   whatever an exported log reveals to the person it was shared with. The privacy policy describes
   both.
 - The simulated camera and demo mode, which are test tools with sample data.
 - What `research/` documents about the camera's protocol and firmware.
-- Social engineering or phishing that does not exploit GR Lab.
+- Social engineering or phishing that does not exploit GR Photo.
 - Vulnerabilities that require root or jailbreak access, a compromised phone, or a user
   intentionally giving an attacker access to an unlocked phone.
 
 Vulnerabilities in the camera's firmware, Ricoh's apps, Android, iOS or Flutter are outside this
 project's control and should be reported through their own security processes. You may also notify
-this project privately when a GR Lab-side mitigation could protect its users.
+this project privately when a GR Photo-side mitigation could protect its users.
 
 ## Safe research
 

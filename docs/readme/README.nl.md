@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="../icon.png" alt="Pictogram van GR Lab" width="128" height="128">
+  <img src="../icon.png" alt="Pictogram van GR Photo" width="128" height="128">
 </p>
 
-<h1 align="center">GR Lab</h1>
+<h1 align="center">GR Photo</h1>
 
 <p align="center">
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="Licentie: MIT"></a>
@@ -33,13 +33,14 @@
   <a href="README.ja.md">日本語</a>
 </p>
 
-**GR Lab** is een companion-app voor Ricoh GR-camera's (GR III, GR IIIx en GR IV) op iOS en Android.
-Je bekijkt en downloadt er de foto's op je camera mee, gebruikt de app als afstandsontspanner met
-live view en bewaart je Beeldregeling-looks op één plek. De app is gemaakt om snel en eenvoudig te
-zijn en om de kleurprofielen van de camera goed te beheren: sla de look op waarmee een foto is
-gemaakt, bewerk hem met een voorvertoning erbij en laad hem in de Aangepast-plaatsen van de camera.
+**GR Photo** is een companion-app voor Ricoh GR-camera's (GR III, GR IIIx en GR IV) op iOS en
+Android. Je bekijkt en downloadt er de foto's op je camera mee, gebruikt de app als
+afstandsontspanner met live view en bewaart je Beeldregeling-looks op één plek. De app is gemaakt om
+snel en eenvoudig te zijn en om de kleurprofielen van de camera goed te beheren: sla de look op
+waarmee een foto is gemaakt, bewerk hem met een voorvertoning erbij en laad hem in de
+Aangepast-plaatsen van de camera.
 
-GR Lab is een onafhankelijk project en is niet verbonden aan Ricoh. De app communiceert met de
+GR Photo is een onafhankelijk project en is niet verbonden aan Ricoh. De app communiceert met de
 camera via een protocol dat door reverse-engineering uit Ricohs eigen apps en de camerafirmware is
 afgeleid; de bevindingen staan beschreven in [`research/`](../../research/README.md).
 
@@ -76,20 +77,20 @@ afgeleid; de bevindingen staan beschreven in [`research/`](../../research/README
 
 ## Functies
 
-Bij GR Lab staan drie dingen voorop: snel bij je foto's komen, je niet in de weg zitten en
+Bij GR Photo staan drie dingen voorop: snel bij je foto's komen, je niet in de weg zitten en
 Beeldregeling-looks behandelen als iets wat het beheren waard is.
 
-- **Snel.** GR Lab maakt bij het openen via Bluetooth verbinding met je camera, als die in de buurt
-  is. Als je de Bibliotheek opent, wordt de camera gewekt, gaat zijn Wi-Fi aan en maakt de telefoon
-  er verbinding mee, alles in één keer. De Wi-Fi blijft daarna actief terwijl je tussen pagina's
-  wisselt, zodat er niets twee keer verbinding maakt en een download gewoon doorloopt.
+- **Snel.** GR Photo maakt bij het openen via Bluetooth verbinding met je camera, als die in de
+  buurt is. Als je de Bibliotheek opent, wordt de camera gewekt, gaat zijn Wi-Fi aan en maakt de
+  telefoon er verbinding mee, alles in één keer. De Wi-Fi blijft daarna actief terwijl je tussen
+  pagina's wisselt, zodat er niets twee keer verbinding maakt en een download gewoon doorloopt.
   Bestandslijsten, miniaturen en voorvertoningen worden op de telefoon in de cache bewaard, zodat de
   Bibliotheek snel opent. Op een GR IV HDF met een Android-telefoon stond een uitgeschakelde camera
   na ongeveer 13 seconden in zijn Bibliotheek.
 - **Eenvoudig in gebruik.** Je camera's staan op één scherm, en Bibliotheek, Opname en Looks zijn
-  daarvandaan één tik verwijderd. GR Lab zet de camera aan, schakelt zijn Wi-Fi in en maakt er voor
-  je verbinding mee, zodat je na het koppelen niets meer op de camera hoeft in te stellen. Als er
-  iets misgaat, zegt de app waarom en wat je kunt controleren, met Opnieuw proberen erbij. Een
+  daarvandaan één tik verwijderd. GR Photo zet de camera aan, schakelt zijn Wi-Fi in en maakt er
+  voor je verbinding mee, zodat je na het koppelen niets meer op de camera hoeft in te stellen. Als
+  er iets misgaat, zegt de app waarom en wat je kunt controleren, met Opnieuw proberen erbij. Een
   verbinding die wegvalt, komt vanzelf terug.
 - **Looks die je kunt beheren.** Bij elke foto in de Bibliotheek zie je met welke Beeldregeling hij
   is gemaakt, en met één tik sla je die op als look. Looks staan op je telefoon, van welke camera ze
@@ -106,10 +107,11 @@ Beeldregeling-looks behandelen als iets wat het beheren waard is.
   alleen, zonder verbinding met de Wi-Fi van de camera.
 - **Bibliotheek.** Blader per dag door de foto's en video's op de camera, filter op JPEG, RAW, video
   of Niet gedownload, en open elke opname op volledig scherm met de details erbij. Download één
-  opname of een selectie, als JPEG, RAW of allebei, naar een GR Lab-album in de fotobibliotheek van
-  je telefoon. Downloads gaan door terwijl je een andere app gebruikt of de telefoon vergrendelt:
-  Android toont ze in een melding met Pauzeren en Alles annuleren, en iOS 26 of nieuwer toont de
-  voortgang op het toegangsscherm en in het Dynamic Island. Video's worden in de app afgespeeld.
+  opname of een selectie, als JPEG, RAW of allebei, naar een GR Photo-album in de fotobibliotheek
+  van je telefoon. Downloads gaan door terwijl je een andere app gebruikt of de telefoon
+  vergrendelt: Android toont ze in een melding met Pauzeren en Alles annuleren, en iOS 26 of nieuwer
+  toont de voortgang op het toegangsscherm en in het Dynamic Island. Video's worden in de app
+  afgespeeld.
 - **Afstandsontspanner.** Een grote ontspanknop via Bluetooth alleen, met de zelfontspanner, het
   opnametransport, de functiekiezer, het aantal opnamen dat over is en de batterij. Op Android
   maken ook de volumeknoppen de foto.
@@ -120,7 +122,7 @@ Beeldregeling-looks behandelen als iets wat het beheren waard is.
   andere naam of vergeet hem.
 - **Thema's en talen.** De thema's Licht, Donker, Doka, Papier en Cyanotypie, en de 21 talen van de
   menu's van de camera zelf.
-- **Privé.** Geen accounts, analyses, advertenties of crashrapportage. GR Lab communiceert alleen
+- **Privé.** Geen accounts, analyses, advertenties of crashrapportage. GR Photo communiceert alleen
   met je camera; zie het [privacybeleid](../../app/assets/privacy.md).
 
 ## Vereisten
@@ -131,7 +133,7 @@ Beeldregeling-looks behandelen als iets wat het beheren waard is.
   een telefoon te lezen of te schrijven.
 - Android 12 of nieuwer, of iOS 15 of nieuwer.
 
-GR Lab is nog jong. Het hardwarelogboek bevat tests met een GR IV HDF met firmware 1.20: koppelen,
+GR Photo is nog jong. Het hardwarelogboek bevat tests met een GR IV HDF met firmware 1.20: koppelen,
 verbinden, de camera wekken, bladeren, downloaden, live view en wijzigingen van scherpstelling en
 belichting. De ondersteuning voor de GR III en GR IIIx komt voort uit het protocolonderzoek en is
 nog niet op een camera getest. Zie
@@ -140,22 +142,22 @@ waargenomen.
 
 ## Installatie
 
-Op Android download je `gr-lab-v<version>.apk` uit de
-[nieuwste release](https://github.com/jeph/gr-lab/releases/latest) op je telefoon en open je het
+Op Android download je `gr-photo-v<version>.apk` uit de
+[nieuwste release](https://github.com/jeph/gr-photo/releases/latest) op je telefoon en open je het
 bestand. Android vraagt één keer om toestemming om apps vanuit je browser te installeren. Elke
 release is met dezelfde sleutel ondertekend, dus een nieuwere wordt over de bestaande heen
 geïnstalleerd en behoudt je camera's en instellingen.
 
 Op iOS gaat elke release naar TestFlight, voorlopig alleen naar de eigen testers van het project. Er
-is nog geen openbare TestFlight-link, dus op een iPhone installeer je GR Lab door de app vanuit de
+is nog geen openbare TestFlight-link, dus op een iPhone installeer je GR Photo door de app vanuit de
 broncode te bouwen.
 
 Voor het bouwen vanuit de broncode is [Flutter](https://flutter.dev) 3.47 of nieuwer nodig, met de
 Android SDK of Xcode geïnstalleerd en ingesteld.
 
 ```sh
-git clone https://github.com/jeph/gr-lab.git
-cd gr-lab/app
+git clone https://github.com/jeph/gr-photo.git
+cd gr-photo/app
 flutter run --flavor prod --release
 ```
 
@@ -177,20 +179,21 @@ flutter run --dart-define=GR_DEMO=true
 1. **Koppel je camera.** Tik op Camera toevoegen en volg de aanwijzingen. Op de camera vind je het
    koppelen onder MENU, E6, Draadloze comm.: zet Actiemodus op Aan, open Bezig met koppelen en kies
    Koppelen uitvoeren. Bevestig daarna de code op de telefoon en druk op OK op de camera. De camera
-   staat dan op het scherm Camera's, en GR Lab maakt er vanzelf verbinding mee wanneer de app wordt
-   geopend en de camera in de buurt is.
-2. **Open de Bibliotheek.** GR Lab zet de camera aan als die uit staat en maakt verbinding met zijn
-   Wi-Fi. Android vraagt je één keer om het netwerk van de camera goed te keuren. Tik op een opname
-   om hem te bekijken, houd ingedrukt om er meerdere te selecteren en download wat je wilt bewaren.
+   staat dan op het scherm Camera's, en GR Photo maakt er vanzelf verbinding mee wanneer de app
+   wordt geopend en de camera in de buurt is.
+2. **Open de Bibliotheek.** GR Photo zet de camera aan als die uit staat en maakt verbinding met
+   zijn Wi-Fi. Android vraagt je één keer om het netwerk van de camera goed te keuren. Tik op een
+   opname om hem te bekijken, houd ingedrukt om er meerdere te selecteren en download wat je wilt
+   bewaren.
 3. **Opname.** Op afstand is een ontspanknop via Bluetooth. Live view maakt verbinding met de Wi-Fi
    van de camera en toont zijn beeld, met bediening voor scherpstelling en belichting.
 4. **Sla een look op.** Open een foto in de Bibliotheek en tik op Look opslaan, of maak er zelf een
    vanaf nul met + op de pagina Looks. Tik op een look om hem te bewerken en sleep hem naar C1, C2
    of C3 om hem in de camera te laden.
 
-Automatisch verbreken in Instellingen verlaat de Wi-Fi van de camera nadat GR Lab een tijd niet is
-gebruikt (standaard 5 minuten). [Hoe GR Lab zich gedraagt](../behaviour.md) beschrijft elk scherm en
-elke verbindingsstatus in detail.
+Automatisch verbreken in Instellingen verlaat de Wi-Fi van de camera nadat GR Photo een tijd niet is
+gebruikt (standaard 5 minuten). [Hoe GR Photo zich gedraagt](../behaviour.md) beschrijft elk scherm
+en elke verbindingsstatus in detail.
 
 ## Ontwikkeling
 
@@ -215,9 +218,9 @@ flutter run --flavor prod --release          # de build die gebruikers krijgen
 flutter run --dart-define=GR_DEMO=true       # gesimuleerde camera, werkt op de Android-emulator en de iOS-simulator
 ```
 
-Er zijn twee builds. `dev` (`io.jeph.grlab.dev`, met de naam "GR Lab Dev") wordt naast `prod`
-(`io.jeph.grlab`, "GR Lab") geïnstalleerd. Zonder `--flavor` bouwen `flutter run` en `flutter build`
-de `dev`-build.
+Er zijn twee builds. `dev` (`io.jeph.grphoto.dev`, met de naam "GR Photo Dev") wordt naast `prod`
+(`io.jeph.grphoto`, "GR Photo") geïnstalleerd. Zonder `--flavor` bouwen `flutter run` en `flutter
+build` de `dev`-build.
 
 `flutter run` zonder meer maakt een debug-build, die elk frame een aantal keer trager opbouwt dan
 een profile- of release-build (3 tot 4 keer in de Bibliotheek op een Android-emulator, 2026-11-10).
@@ -259,7 +262,7 @@ stopt de opdracht met "No application found".
 
 Op de iOS-simulator moet de app geïnstalleerd zijn op het moment dat toegang tot Foto's wordt
 verleend, en `flutter test` verwijdert de app na afloop, waarmee ook die toestemming verdwijnt.
-GR Lab vraagt om volledige toegang, om zijn album te kunnen bijhouden, en op de simulator van
+GR Photo vraagt om volledige toegang, om zijn album te kunnen bijhouden, en op de simulator van
 iOS 26.3 was `simctl privacy grant photos` alleen niet genoeg om te voorkomen dat iOS het vroeg: de
 toestemming die het vastlegt heeft `auth_version` 1, en iOS beschouwt die pas bij 2 als volledige
 toegang. Verleen de toestemming en stel die waarde in vóór elke testrun:
@@ -268,15 +271,15 @@ toegang. Verleen de toestemming en stel die waarde in vóór elke testrun:
 cd app
 flutter build ios --simulator --debug --dart-define=GR_DEMO=true
 xcrun simctl install booted build/ios/iphonesimulator/Runner.app
-xcrun simctl privacy booted grant photos io.jeph.grlab.dev
+xcrun simctl privacy booted grant photos io.jeph.grphoto.dev
 sqlite3 "$(xcrun simctl getenv booted HOME)/Library/TCC/TCC.db" \
-  "UPDATE access SET auth_version = 2 WHERE service = 'kTCCServicePhotos' AND client = 'io.jeph.grlab.dev'"
+  "UPDATE access SET auth_version = 2 WHERE service = 'kTCCServicePhotos' AND client = 'io.jeph.grphoto.dev'"
 flutter test integration_test --dart-define=GR_DEMO=true -d <simulator>
 ```
 
 ### Debuglog
 
-GR Lab houdt debuglogs bij zolang Instellingen > Debuglog inschakelen aanstaat: alles wat de app
+GR Photo houdt debuglogs bij zolang Instellingen > Debuglog inschakelen aanstaat: alles wat de app
 naar de camera stuurt en ervan ontvangt (Bluetooth-scans, lees- en schrijfacties en meldingen, elk
 HTTP-verzoek en -antwoord, WebSocket-berichten, de grootte van live-view-frames en de stappen van
 het verbinden met Wi-Fi), elke regel die de app afdrukt, niet-afgevangen fouten en de regels van de
@@ -291,14 +294,14 @@ De log bewaart ongeveer 50 MB. Hij bevat het Wi-Fi-wachtwoord van de camera.
 Elke push naar `main` is een release, gemaakt door
 [`.github/workflows/release.yml`](../../.github/workflows/release.yml). De workflow nummert de
 release 0.0.N, één hoger dan de vorige, voert `tool/check.sh` uit en bouwt de `prod`-flavor van
-beide apps in releasemodus. De Android-APK wordt ondertekend met de releasesleutel van GR Lab en
-gepubliceerd op de [releasepagina](https://github.com/jeph/gr-lab/releases) met de
+beide apps in releasemodus. De Android-APK wordt ondertekend met de releasesleutel van GR Photo en
+gepubliceerd op de [releasepagina](https://github.com/jeph/gr-photo/releases) met de
 SHA-256-checksum, een attestatie van de herkomst van de build en de R8-mapping waarmee je de
 Kotlin-stacktraces ervan leest. De iOS-app wordt ondertekend voor de App Store en geüpload naar
 TestFlight. De sleutels staan in GitHub-omgevingen die alleen `main` kan gebruiken, en de jobs die
 de apps bouwen hebben er geen enkele van.
 
-`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab` controleert of een APK door die
+`gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo` controleert of een APK door die
 workflow vanuit deze repository is gebouwd.
 
 ```sh
@@ -311,7 +314,7 @@ waar hij na verwerking onder TestFlight verschijnt. Interne testers installeren 
 TestFlight-app, zonder kabel. Xcode ondertekent en uploadt de build met een API-sleutel
 van App Store Connect, dus de configuratie op een Mac bestaat uit het bestand `AuthKey_<key id>.p8`
 van de sleutel in `~/.appstoreconnect/private_keys`, en `ASC_KEY_ID` en `ASC_ISSUER_ID` in
-`~/.appstoreconnect/gr-lab.env`. De sleutel heeft de rol Admin nodig: Apple staat niet toe dat een
+`~/.appstoreconnect/gr-photo.env`. De sleutel heeft de rol Admin nodig: Apple staat niet toe dat een
 sleutel met de rol App Manager het distributiecertificaat van het team gebruikt. Het archief wordt
 zonder ondertekening gebouwd en bij het exporteren voor de App Store ondertekend
 (`app/ios/ExportOptions.plist`), omdat voor het ondertekenen van het archief zelf een geregistreerd
@@ -320,7 +323,7 @@ testapparaat in het team nodig zou zijn.
 ## Bijdragen
 
 Bugmeldingen en pull-requests zijn welkom. De meeste bugs komen alleen op echte hardware aan het
-licht, dus als je [een issue opent](https://github.com/jeph/gr-lab/issues), vermeld dan je
+licht, dus als je [een issue opent](https://github.com/jeph/gr-photo/issues), vermeld dan je
 cameramodel en firmwareversie, het model van je telefoon met de Android- of iOS-versie, en wat je
 hebt gedaan. Een geëxporteerde debuglog (Instellingen, Debuglog, Log exporteren) laat meestal zien
 wat er is gebeurd, maar bevat het serienummer en het Wi-Fi-wachtwoord van je camera; voeg hem dus
@@ -334,7 +337,7 @@ Meld vermoedelijke beveiligingslekken niet in openbare issues. Volg het
 
 ## Dankbetuiging
 
-GR Lab is gebouwd met [Flutter](https://flutter.dev) en gebruikt
+GR Photo is gebouwd met [Flutter](https://flutter.dev) en gebruikt
 [universal_ble](https://pub.dev/packages/universal_ble) voor Bluetooth,
 [image](https://pub.dev/packages/image), [video_player](https://pub.dev/packages/video_player),
 [share_plus](https://pub.dev/packages/share_plus) en
@@ -347,9 +350,9 @@ Beeldregeling-instellingen van de GR IIIx.
 
 ## Licentie
 
-GR Lab wordt uitgebracht onder de [MIT-licentie](../../LICENSE). Pakketten en lettertypen van derden
-die GR Lab bevat, behouden hun eigen licentie. De app toont ze onder
-**Instellingen › Over › Licenties**, en de licentieteksten van de lettertypen staan in
+GR Photo wordt uitgebracht onder de [MIT-licentie](../../LICENSE). Pakketten en lettertypen van
+derden die GR Photo bevat, behouden hun eigen licentie. De app toont ze onder **Instellingen › Over
+› Licenties**, en de licentieteksten van de lettertypen staan in
 [`app/assets/fonts/`](../../app/assets/fonts/).
 
 De voorbeeldfoto's van de demomodus komen van [Unsplash](https://unsplash.com) en worden gebruikt

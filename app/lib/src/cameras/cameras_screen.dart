@@ -1,26 +1,26 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/app_scope.dart';
-import 'package:grlab/src/camera/camera_tab_bar.dart';
-import 'package:grlab/src/camera/camera_top_bar.dart';
-import 'package:grlab/src/cameras/camera_details.dart';
-import 'package:grlab/src/cameras/camera_drawing.dart';
-import 'package:grlab/src/cameras/camera_identity.dart';
-import 'package:grlab/src/cameras/camera_presence.dart';
-import 'package:grlab/src/connection/camera_pill.dart';
-import 'package:grlab/src/connection/camera_sheet.dart';
-import 'package:grlab/src/connection/connect_failure_view.dart';
-import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/connection/link_state.dart';
-import 'package:grlab/src/data/cameras.dart';
-import 'package:grlab/src/pairing/pairing_flow.dart';
-import 'package:grlab/src/pairing/pairing_widgets.dart';
-import 'package:grlab/src/sample_photos.dart';
-import 'package:grlab/src/settings/settings_screen.dart';
-import 'package:grlab/src/theme/tokens.dart';
-import 'package:grlab/src/widgets/group.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/app_scope.dart';
+import 'package:grphoto/src/camera/camera_tab_bar.dart';
+import 'package:grphoto/src/camera/camera_top_bar.dart';
+import 'package:grphoto/src/cameras/camera_details.dart';
+import 'package:grphoto/src/cameras/camera_drawing.dart';
+import 'package:grphoto/src/cameras/camera_identity.dart';
+import 'package:grphoto/src/cameras/camera_presence.dart';
+import 'package:grphoto/src/connection/camera_pill.dart';
+import 'package:grphoto/src/connection/camera_sheet.dart';
+import 'package:grphoto/src/connection/connect_failure_view.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/connection/link_state.dart';
+import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/pairing/pairing_flow.dart';
+import 'package:grphoto/src/pairing/pairing_widgets.dart';
+import 'package:grphoto/src/sample_photos.dart';
+import 'package:grphoto/src/settings/settings_screen.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/group.dart';
 
 /// Where the app opens and where it returns whenever no camera is
 /// connected (mock `b-home` … `b-home-lost`, and `b-welcome` before any
@@ -322,7 +322,7 @@ class _Welcome extends StatelessWidget {
   }
 }
 
-/// GR Lab's own photos ([samplePhotos]) one after another, each fading in
+/// GR Photo's own photos ([samplePhotos]) one after another, each fading in
 /// over the one before \[design\]. Where the phone asks for less motion
 /// the next photo takes its place at once.
 class _WelcomePhotos extends StatefulWidget {

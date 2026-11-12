@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 
-/// Something GR Lab does with a camera that not every GR model or firmware
+/// Something GR Photo does with a camera that not every GR model or firmware
 /// version can do.
 ///
 /// `_minimumFirmware` is the one place that decides which camera has which
@@ -80,7 +80,7 @@ final class CameraBody {
   /// A camera whose model and firmware are not known; it has no feature.
   static const unknown = CameraBody(model: null, firmware: null);
 
-  /// The camera's model; null when it was not reported or is one GR Lab
+  /// The camera's model; null when it was not reported or is one GR Photo
   /// does not know.
   final GrModel? model;
 

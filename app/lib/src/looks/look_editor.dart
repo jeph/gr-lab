@@ -7,17 +7,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gr_camera/gr_camera.dart';
 
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/looks/look_base_stepper.dart';
-import 'package:grlab/src/looks/look_compare.dart';
-import 'package:grlab/src/looks/look_spec.dart';
-import 'package:grlab/src/looks/look_widgets.dart';
-import 'package:grlab/src/looks/looks_model.dart';
-import 'package:grlab/src/looks/looks_store.dart';
-import 'package:grlab/src/sample_photos.dart';
-import 'package:grlab/src/shoot/shoot_widgets.dart';
-import 'package:grlab/src/theme/tokens.dart';
-import 'package:grlab/src/widgets/pressable.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/looks/look_base_stepper.dart';
+import 'package:grphoto/src/looks/look_compare.dart';
+import 'package:grphoto/src/looks/look_spec.dart';
+import 'package:grphoto/src/looks/look_widgets.dart';
+import 'package:grphoto/src/looks/looks_model.dart';
+import 'package:grphoto/src/looks/looks_store.dart';
+import 'package:grphoto/src/sample_photos.dart';
+import 'package:grphoto/src/shoot/shoot_widgets.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/pressable.dart';
 
 /// Opens the editor on [look] under [name]. [saved] is the library entry
 /// it edits, if any; [slot] is the Custom slot it was opened from, which
@@ -171,7 +171,7 @@ class _LookEditorState extends State<LookEditor>
   late final LookRenderer _renderer = lookRendererFor(_model.body);
 
   /// The photos the look can be previewed on: the one it was saved from,
-  /// when it has one, then GR Lab's sample photos, each with the look its
+  /// when it has one, then GR Photo's sample photos, each with the look its
   /// camera developed it with ([SamplePhoto.look]).
   ///
   /// A sample's own look has nothing to do with the look being edited, so

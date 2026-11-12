@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="../icon.png" alt="GR Lab 아이콘" width="128" height="128">
+  <img src="../icon.png" alt="GR Photo 아이콘" width="128" height="128">
 </p>
 
-<h1 align="center">GR Lab</h1>
+<h1 align="center">GR Photo</h1>
 
 <p align="center">
   <a href="../../LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="라이선스: MIT"></a>
@@ -33,13 +33,13 @@
   <a href="README.ja.md">日本語</a>
 </p>
 
-**GR Lab**은 Ricoh GR 카메라(GR III, GR IIIx, GR IV)를 위한 iOS 및 Android용 컴패니언 앱입니다.
+**GR Photo**은 Ricoh GR 카메라(GR III, GR IIIx, GR IV)를 위한 iOS 및 Android용 컴패니언 앱입니다.
 카메라에 있는 사진을 둘러보고 다운로드하고, 라이브 뷰가 있는 리모트 셔터로 쓰고, 화상 컨트롤 룩을
 한곳에 모아 둘 수 있습니다. 빠르고 쓰기 쉽도록, 그리고 카메라의 컬러 프로파일을 제대로 관리할 수
 있도록 만들었습니다. 사진을 촬영할 때 적용된 룩을 저장하고, 미리보기를 보면서 편집하고, 카메라의
 커스텀 슬롯에 등록할 수 있습니다.
 
-GR Lab은 독립 프로젝트이며 Ricoh와 제휴 관계가 없습니다. 카메라와는 Ricoh의 자체 앱과 카메라
+GR Photo는 독립 프로젝트이며 Ricoh와 제휴 관계가 없습니다. 카메라와는 Ricoh의 자체 앱과 카메라
 펌웨어를 리버스 엔지니어링해 알아낸 프로토콜로 통신하며, 그 조사 결과는
 [`research/`](../../research/README.md)에 정리되어 있습니다.
 
@@ -76,17 +76,17 @@ GR Lab은 독립 프로젝트이며 Ricoh와 제휴 관계가 없습니다. 카�
 
 ## 기능
 
-GR Lab은 세 가지를 가장 중요하게 여깁니다. 사진을 빨리 볼 수 있을 것, 사용자를 번거롭게 하지 않을
+GR Photo는 세 가지를 가장 중요하게 여깁니다. 사진을 빨리 볼 수 있을 것, 사용자를 번거롭게 하지 않을
 것, 그리고 화상 컨트롤 룩을 관리할 가치가 있는 것으로 다룰 것입니다.
 
-- **빠릅니다.** 카메라가 근처에 있으면 GR Lab은 앱이 열릴 때 Bluetooth로 카메라에 연결합니다.
+- **빠릅니다.** 카메라가 근처에 있으면 GR Photo는 앱이 열릴 때 Bluetooth로 카메라에 연결합니다.
   라이브러리를 열면 카메라를 깨우고 카메라의 Wi-Fi를 켜서 연결하는 과정이 한 번에 이루어지며, 그
   뒤로는 페이지를 오가는 동안 Wi-Fi가 유지되므로 다시 연결하는 일이 없고 다운로드도 계속
   진행됩니다. 파일 목록, 썸네일, 미리보기는 휴대전화에 캐시되어 라이브러리가 빨리 열립니다.
   GR IV HDF와 Android 휴대전화를 사용했을 때, 전원이 꺼져 있던 카메라에서 라이브러리가 열리기까지
   약 13초가 걸렸습니다.
 - **쓰기 쉽습니다.** 한 화면에 카메라가 모여 있고, 거기서 한 번만 탭하면 라이브러리, 촬영, 룩으로
-  이동합니다. GR Lab이 카메라의 전원을 켜고 Wi-Fi를 켜서 연결까지 해 주므로 페어링한 뒤에는
+  이동합니다. GR Photo가 카메라의 전원을 켜고 Wi-Fi를 켜서 연결까지 해 주므로 페어링한 뒤에는
   카메라에서 설정할 것이 없습니다. 문제가 생기면 원인과 확인할 사항을 알려 주고 ‘다시 시도’를
   표시합니다. 끊어진 연결은 저절로 복구됩니다.
 - **관리할 수 있는 룩.** 라이브러리의 모든 사진에는 촬영할 때 적용된 화상 컨트롤이 표시되며, 한
@@ -102,7 +102,7 @@ GR Lab은 세 가지를 가장 중요하게 여깁니다. 사진을 빨리 볼 �
   읽고 등록하는 작업은 카메라의 Wi-Fi에 연결하지 않고 Bluetooth만으로 이루어집니다.
 - **라이브러리.** 카메라의 사진과 동영상을 날짜별로 둘러보고, JPEG, RAW, 동영상, 다운로드 전으로
   필터링하고, 어떤 컷이든 상세 정보와 함께 전체 화면으로 열 수 있습니다. 한 컷이나 선택한 여러 컷을
-  JPEG, RAW 또는 둘 다로 휴대전화 사진 보관함의 GR Lab 앨범에 다운로드합니다. 다른 앱을 쓰거나
+  JPEG, RAW 또는 둘 다로 휴대전화 사진 보관함의 GR Photo 앨범에 다운로드합니다. 다른 앱을 쓰거나
   휴대전화를 잠가도 다운로드는 계속됩니다. Android는 일시 정지와 모두 취소 버튼이 있는 알림으로, iOS
   26 이상은 잠금 화면과 Dynamic Island에 진행 상황을 보여 줍니다. 동영상은 앱 안에서 재생됩니다.
 - **리모트 셔터.** Bluetooth만으로 작동하는 큼직한 셔터 버튼에 셀프타이머, 드라이브 모드, 모드
@@ -115,7 +115,7 @@ GR Lab은 세 가지를 가장 중요하게 여깁니다. 사진을 빨리 볼 �
   이름을 바꾸거나 지울 수 있습니다.
 - **테마와 언어.** 라이트, 다크, 암실, 인화지, 사이아노타입 테마와 카메라 메뉴가 지원하는 21개
   언어를 제공합니다.
-- **개인정보 보호.** 계정, 분석, 광고, 충돌 보고가 없습니다. GR Lab은 카메라하고만 통신합니다.
+- **개인정보 보호.** 계정, 분석, 광고, 충돌 보고가 없습니다. GR Photo는 카메라하고만 통신합니다.
   [개인정보 처리방침](../../app/assets/privacy.md)을 참고하세요.
 
 ## 요구 사항
@@ -125,7 +125,7 @@ GR Lab은 세 가지를 가장 중요하게 여깁니다. 사진을 빨리 볼 �
   GR IIIx의 펌웨어에는 휴대전화에서 화상 컨트롤 설정을 읽거나 쓸 방법이 없습니다.
 - Android 12 이상 또는 iOS 15 이상.
 
-GR Lab은 아직 초기 단계입니다. 하드웨어 로그에는 펌웨어 1.20의 GR IV HDF로 실행한 기록이 남아
+GR Photo는 아직 초기 단계입니다. 하드웨어 로그에는 펌웨어 1.20의 GR IV HDF로 실행한 기록이 남아
 있습니다. 페어링, 연결, 카메라 깨우기, 둘러보기, 다운로드, 라이브 뷰, 초점 및 노출 변경입니다.
 GR III와 GR IIIx 지원은 프로토콜 조사를 바탕으로 한 것이며 아직 실제 카메라에서 테스트하지
 않았습니다. 지금까지 확인된 내용은
@@ -133,20 +133,20 @@ GR III와 GR IIIx 지원은 프로토콜 조사를 바탕으로 한 것이며 �
 
 ## 설치
 
-Android에서는 휴대전화에서 [최신 릴리스](https://github.com/jeph/gr-lab/releases/latest)의
-`gr-lab-v<version>.apk`를 내려받아 엽니다. Android가 브라우저에서 받은 앱을 설치할 권한을 한 번
+Android에서는 휴대전화에서 [최신 릴리스](https://github.com/jeph/gr-photo/releases/latest)의
+`gr-photo-v<version>.apk`를 내려받아 엽니다. Android가 브라우저에서 받은 앱을 설치할 권한을 한 번
 요청합니다. 모든 릴리스는 같은 키로 서명되므로, 새 릴리스는 이미 설치된 앱 위에 그대로 설치되고
 카메라와 설정도 유지됩니다.
 
 iOS에서는 모든 릴리스가 TestFlight로 올라가지만, 지금은 프로젝트 자체 테스터에게만 제공됩니다. 공개
-TestFlight 링크는 아직 없으므로 iPhone에서는 GR Lab을 소스에서 직접 빌드해 설치합니다.
+TestFlight 링크는 아직 없으므로 iPhone에서는 GR Photo를 소스에서 직접 빌드해 설치합니다.
 
 소스에서 빌드하려면 [Flutter](https://flutter.dev) 3.47 이상과 Android SDK 또는 Xcode가 설정되어
 있어야 합니다.
 
 ```sh
-git clone https://github.com/jeph/gr-lab.git
-cd gr-lab/app
+git clone https://github.com/jeph/gr-photo.git
+cd gr-photo/app
 flutter run --flavor prod --release
 ```
 
@@ -167,8 +167,8 @@ flutter run --dart-define=GR_DEMO=true
 1. **카메라를 페어링합니다.** ‘카메라 추가’를 탭하고 안내를 따르세요. 카메라에서는 MENU → E6 →
    무선 통신 설정에 페어링이 있습니다. 작동 모드를 ‘켜짐’으로 설정하고 ‘페어링’을 열어 ‘페어링
    실행’을 선택한 다음, 휴대전화에서 코드를 확인하고 카메라의 OK 버튼을 누르세요. 그러면
-   카메라가 ‘카메라’ 화면에 나타나며, 카메라가 근처에 있을 때 GR Lab을 열면 자동으로 연결됩니다.
-2. **라이브러리를 엽니다.** GR Lab은 카메라가 꺼져 있으면 전원을 켜고 카메라의 Wi-Fi에
+   카메라가 ‘카메라’ 화면에 나타나며, 카메라가 근처에 있을 때 GR Photo를 열면 자동으로 연결됩니다.
+2. **라이브러리를 엽니다.** GR Photo는 카메라가 꺼져 있으면 전원을 켜고 카메라의 Wi-Fi에
    연결합니다. Android에서는 카메라의 네트워크를 한 번 승인하라는 안내가 표시됩니다. 컷을 탭하면
    볼 수 있고, 길게 누르면 여러 컷을 선택할 수 있습니다. 보관하고 싶은 것을 다운로드하세요.
 3. **촬영합니다.** ‘리모트’는 Bluetooth로 작동하는 셔터입니다. ‘라이브 뷰’는 카메라의 Wi-Fi에
@@ -176,8 +176,8 @@ flutter run --dart-define=GR_DEMO=true
 4. **룩을 저장합니다.** 라이브러리에서 사진을 열고 ‘룩 저장’을 탭하거나, 룩 페이지의 +로 처음부터
    새로 만드세요. 룩을 탭하면 편집할 수 있고, C1, C2 또는 C3로 드래그하면 카메라에 등록됩니다.
 
-설정의 ‘자동 연결 해제’는 GR Lab을 한동안(기본값 5분) 사용하지 않으면 카메라의 Wi-Fi 연결을
-해제합니다. [GR Lab의 동작 방식](../behaviour.md)에 각 화면과 모든 연결 상태가 자세히 설명되어
+설정의 ‘자동 연결 해제’는 GR Photo를 한동안(기본값 5분) 사용하지 않으면 카메라의 Wi-Fi 연결을
+해제합니다. [GR Photo의 동작 방식](../behaviour.md)에 각 화면과 모든 연결 상태가 자세히 설명되어
 있습니다.
 
 ## 개발
@@ -203,8 +203,8 @@ flutter run --flavor prod --release          # 사용자가 받는 빌드
 flutter run --dart-define=GR_DEMO=true       # 시뮬레이션 카메라, Android 에뮬레이터와 iOS 시뮬레이터에서 작동
 ```
 
-빌드는 두 가지입니다. `dev`(`io.jeph.grlab.dev`, 이름은 "GR Lab Dev")는 `prod`(`io.jeph.grlab`,
-"GR Lab")와 나란히 설치됩니다. `--flavor`를 지정하지 않으면 `flutter run`과 `flutter build`는
+빌드는 두 가지입니다. `dev`(`io.jeph.grphoto.dev`, 이름은 "GR Photo Dev")는 `prod`(`io.jeph.grphoto`,
+"GR Photo")와 나란히 설치됩니다. `--flavor`를 지정하지 않으면 `flutter run`과 `flutter build`는
 `dev`를 빌드합니다.
 
 `flutter run`만 실행하면 디버그 빌드가 만들어지는데, 디버그 빌드는 프로파일 빌드나 릴리스 빌드보다
@@ -246,7 +246,7 @@ Android에서 `flutter test`는 기본 flavor도 앱의 ID도 프로젝트에서
 중단합니다.
 
 iOS 시뮬레이터에서는 사진 접근 권한을 부여할 때 앱이 설치되어 있어야 하는데, `flutter test`는
-테스트가 끝나면 앱을 제거하므로 부여한 권한도 함께 삭제됩니다. GR Lab은 자체 앨범을 유지하기 위해
+테스트가 끝나면 앱을 제거하므로 부여한 권한도 함께 삭제됩니다. GR Photo는 자체 앨범을 유지하기 위해
 전체 접근 권한을 요청하며, iOS 26.3 시뮬레이터에서는 `simctl privacy grant photos`만으로는 iOS가
 권한을 묻는 것을 막지 못했습니다. 이 명령이 기록하는 권한은 `auth_version`이 1인데, iOS는 이 값이
 2일 때만 전체 접근으로 인정하기 때문입니다. 실행할 때마다 먼저 권한을 부여하고 이 값을 설정하세요.
@@ -255,15 +255,15 @@ iOS 시뮬레이터에서는 사진 접근 권한을 부여할 때 앱이 설치
 cd app
 flutter build ios --simulator --debug --dart-define=GR_DEMO=true
 xcrun simctl install booted build/ios/iphonesimulator/Runner.app
-xcrun simctl privacy booted grant photos io.jeph.grlab.dev
+xcrun simctl privacy booted grant photos io.jeph.grphoto.dev
 sqlite3 "$(xcrun simctl getenv booted HOME)/Library/TCC/TCC.db" \
-  "UPDATE access SET auth_version = 2 WHERE service = 'kTCCServicePhotos' AND client = 'io.jeph.grlab.dev'"
+  "UPDATE access SET auth_version = 2 WHERE service = 'kTCCServicePhotos' AND client = 'io.jeph.grphoto.dev'"
 flutter test integration_test --dart-define=GR_DEMO=true -d <simulator>
 ```
 
 ### 디버그 로그
 
-GR Lab은 설정 > 디버그 로그 사용이 켜져 있는 동안 디버그 로그를 기록합니다. 카메라와 주고받는
+GR Photo는 설정 > 디버그 로그 사용이 켜져 있는 동안 디버그 로그를 기록합니다. 카메라와 주고받는
 모든 내용(Bluetooth 검색, 읽기, 쓰기, 알림, 모든 HTTP 요청과 응답, WebSocket 메시지, 라이브 뷰
 프레임 크기, Wi-Fi 연결 단계), 앱이 출력하는 모든 줄, 처리되지 않은 오류, 네이티브 Wi-Fi 코드가
 출력하는 줄이 기록됩니다. 이 설정은 `dev`에서는 기본으로 켜져 있고 `prod`에서는 꺼져 있습니다. 꺼져
@@ -277,13 +277,13 @@ GR Lab은 설정 > 디버그 로그 사용이 켜져 있는 동안 디버그 로
 `main`에 푸시할 때마다 릴리스가 만들어지며, 이 작업은
 [`.github/workflows/release.yml`](../../.github/workflows/release.yml)이 맡습니다. 이 워크플로는
 릴리스에 직전보다 하나 큰 0.0.N 번호를 붙이고, `tool/check.sh`를 실행한 뒤, 두 앱의 `prod` flavor를
-릴리스 모드로 빌드합니다. Android APK는 GR Lab의 릴리스 키로 서명되어 SHA-256 체크섬, 빌드 출처
+릴리스 모드로 빌드합니다. Android APK는 GR Photo의 릴리스 키로 서명되어 SHA-256 체크섬, 빌드 출처
 증명(attestation), Kotlin 스택 트레이스를 해독하는 R8 매핑과 함께
-[릴리스 페이지](https://github.com/jeph/gr-lab/releases)에 게시됩니다. iOS 앱은 App Store용으로
+[릴리스 페이지](https://github.com/jeph/gr-photo/releases)에 게시됩니다. iOS 앱은 App Store용으로
 서명되어 TestFlight에 업로드됩니다. 키는 `main`만 사용할 수 있는 GitHub 환경(environment)에
 보관되며, 앱을 빌드하는 작업(job)은 어떤 키도 갖지 않습니다.
 
-`gh attestation verify gr-lab-v<version>.apk --repo jeph/gr-lab`은 APK가 이 저장소에서 해당
+`gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo`은 APK가 이 저장소에서 해당
 워크플로로 빌드되었는지 확인합니다.
 
 ```sh
@@ -295,7 +295,7 @@ tool/testflight.sh       # prod iOS 앱을 빌드해 TestFlight에 업로드
 처리가 끝나면 TestFlight 항목에 나타납니다. 내부 테스터는 케이블 없이 TestFlight 앱에서
 설치합니다. Xcode는 App Store Connect API 키로 빌드에 서명하고 업로드하므로, Mac에서 설정할 것은
 `~/.appstoreconnect/private_keys`에 넣는 키 파일 `AuthKey_<key id>.p8`과
-`~/.appstoreconnect/gr-lab.env`의 `ASC_KEY_ID` 및 `ASC_ISSUER_ID`입니다. 키에는 관리(Admin) 역할이
+`~/.appstoreconnect/gr-photo.env`의 `ASC_KEY_ID` 및 `ASC_ISSUER_ID`입니다. 키에는 관리(Admin) 역할이
 필요합니다. Apple은 앱 관리(App Manager) 키가 팀의 배포 인증서를 사용하도록 허용하지 않기
 때문입니다. 아카이브는 서명 없이 빌드하고 내보낼 때 App Store용으로
 서명합니다(`app/ios/ExportOptions.plist`). 아카이브 자체에 서명하려면 팀에 등록된 테스트 기기가
@@ -304,7 +304,7 @@ tool/testflight.sh       # prod iOS 앱을 빌드해 TestFlight에 업로드
 ## 기여하기
 
 버그 신고와 풀 리퀘스트를 환영합니다. 대부분의 버그는 실제 하드웨어에서만 나타나므로
-[이슈를 등록](https://github.com/jeph/gr-lab/issues)할 때 카메라 모델과 펌웨어 버전, 휴대전화
+[이슈를 등록](https://github.com/jeph/gr-photo/issues)할 때 카메라 모델과 펌웨어 버전, 휴대전화
 모델과 Android 또는 iOS 버전, 그리고 어떤 작업을 했는지 적어 주세요. 내보낸 디버그 로그(설정,
 디버그 로그, 로그 내보내기)를 보면 대개 무슨 일이 있었는지 알 수 있지만, 로그에는 카메라의 일련
 번호와 Wi-Fi 암호가 들어 있으므로 이를 공유해도 괜찮은 경우에만 첨부하세요.
@@ -317,7 +317,7 @@ tool/testflight.sh       # prod iOS 앱을 빌드해 TestFlight에 업로드
 
 ## 감사의 말
 
-GR Lab은 [Flutter](https://flutter.dev)로 만들었으며, Bluetooth에는
+GR Photo는 [Flutter](https://flutter.dev)로 만들었으며, Bluetooth에는
 [universal_ble](https://pub.dev/packages/universal_ble)을 사용하고, 그 밖에
 [image](https://pub.dev/packages/image), [video_player](https://pub.dev/packages/video_player),
 [share_plus](https://pub.dev/packages/share_plus),
@@ -329,7 +329,7 @@ GR Lab은 [Flutter](https://flutter.dev)로 만들었으며, Bluetooth에는
 
 ## 라이선스
 
-GR Lab은 [MIT 라이선스](../../LICENSE)로 배포됩니다. GR Lab에 포함된 서드 파티 패키지와 글꼴에는
+GR Photo는 [MIT 라이선스](../../LICENSE)로 배포됩니다. GR Photo에 포함된 서드 파티 패키지와 글꼴에는
 각각의 라이선스가 그대로 적용됩니다. 앱의 **설정 › 정보 › 라이선스**에서 목록을 볼 수 있으며,
 글꼴의 라이선스 전문은 [`app/assets/fonts/`](../../app/assets/fonts/)에 있습니다.
 

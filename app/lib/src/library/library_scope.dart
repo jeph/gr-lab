@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:gr_camera/gr_camera.dart';
 
-import 'package:grlab/src/connection/idle_disconnect.dart';
-import 'package:grlab/src/data/cameras.dart';
-import 'package:grlab/src/downloads/download_engine.dart';
-import 'package:grlab/src/library/camera_link.dart';
-import 'package:grlab/src/library/library_model.dart';
-import 'package:grlab/src/library/shot.dart';
-import 'package:grlab/src/services.dart';
+import 'package:grphoto/src/connection/idle_disconnect.dart';
+import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/downloads/download_engine.dart';
+import 'package:grphoto/src/library/camera_link.dart';
+import 'package:grphoto/src/library/library_model.dart';
+import 'package:grphoto/src/library/shot.dart';
+import 'package:grphoto/src/services.dart';
 
 /// The library's models for the current camera, created with the app's
 /// models (`AppModels.library`) for the app's lifetime: the Library and

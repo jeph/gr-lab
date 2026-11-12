@@ -12,12 +12,12 @@ import 'package:gr_protocol/gr_protocol.dart'
         BleConnection,
         BleTransport,
         WifiNetworkControl;
-import 'package:grlab/l10n/l10n.dart';
-import 'package:grlab/src/app.dart';
-import 'package:grlab/src/app_scope.dart';
-import 'package:grlab/src/data/cameras.dart';
-import 'package:grlab/src/services.dart';
-import 'package:grlab/src/theme/tokens.dart';
+import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/app.dart';
+import 'package:grphoto/src/app_scope.dart';
+import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/services.dart';
+import 'package:grphoto/src/theme/tokens.dart';
 
 /// The app wired to a [FakeGrCamera], with its data in a temporary
 /// directory.
@@ -59,10 +59,10 @@ final class TestApp {
   bool get bluetoothPermission => _permission.granted;
   set bluetoothPermission(bool granted) => _permission.granted = granted;
 
-  /// Pumps the whole app ([GrLabApp]), as `main` runs it.
+  /// Pumps the whole app ([GrPhotoApp]), as `main` runs it.
   Future<void> pumpApp(WidgetTester tester) async {
     _tester = tester;
-    await tester.pumpWidget(GrLabApp(models: models));
+    await tester.pumpWidget(GrPhotoApp(models: models));
     await tester.pump();
   }
 
@@ -169,7 +169,7 @@ Future<TestApp> createTestApp({
   // flutter_test answers every dart:io HttpClient request with 400; the
   // fake camera serves real HTTP on loopback.
   HttpOverrides.global = null;
-  final root = await Directory.systemTemp.createTemp('grlab_test_');
+  final root = await Directory.systemTemp.createTemp('grphoto_test_');
   final data = await Directory('${root.path}/data').create();
   final cache = await Directory('${root.path}/cache').create();
   final debugLogDir = Directory('${data.path}/debug-log');
@@ -213,7 +213,7 @@ Future<TestApp> createTestApp({
     trace: trace,
     media: saver,
     background: background,
-    clientName: 'GR Lab',
+    clientName: 'GR Photo',
     dataDir: data,
     cacheDir: cache,
     debugLogDir: debugLogDir,

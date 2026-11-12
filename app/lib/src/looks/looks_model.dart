@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
 
-import 'package:grlab/src/connection/connection_controller.dart';
-import 'package:grlab/src/looks/looks_store.dart';
-import 'package:grlab/src/shoot/camera_error_code.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/looks/looks_store.dart';
+import 'package:grphoto/src/shoot/camera_error_code.dart';
 
 /// Where reading the camera's Custom slots stands.
 enum SlotsState {

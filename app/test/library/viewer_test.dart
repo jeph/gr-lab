@@ -4,12 +4,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:grlab/src/library/image_orientation.dart';
-import 'package:grlab/src/library/library_screen.dart';
-import 'package:grlab/src/library/viewer.dart';
-import 'package:grlab/src/looks/looks_store.dart';
-import 'package:grlab/src/services.dart';
-import 'package:grlab/src/widgets/group.dart';
+import 'package:grphoto/src/library/image_orientation.dart';
+import 'package:grphoto/src/library/library_screen.dart';
+import 'package:grphoto/src/library/viewer.dart';
+import 'package:grphoto/src/looks/looks_store.dart';
+import 'package:grphoto/src/services.dart';
+import 'package:grphoto/src/widgets/group.dart';
 import 'package:image/image.dart' as img;
 
 import '../support/test_app.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-/// The licenses of what GR Lab ships besides its Dart and Flutter packages,
+/// The licenses of what GR Photo ships besides its Dart and Flutter packages,
 /// which Flutter lists by itself: the fonts and the sample photos. Each is
 /// the name Settings › About › Licenses shows and the bundled file that
 /// holds the text.

@@ -8,11 +8,11 @@ import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart'
     show GrChangesSocket, GrHttpClient;
-import 'package:grlab/src/data/cameras.dart';
-import 'package:grlab/src/downloads/download_engine.dart';
-import 'package:grlab/src/library/library_model.dart';
-import 'package:grlab/src/library/library_scope.dart';
-import 'package:grlab/src/library/shot.dart';
+import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/downloads/download_engine.dart';
+import 'package:grphoto/src/library/library_model.dart';
+import 'package:grphoto/src/library/library_scope.dart';
+import 'package:grphoto/src/library/shot.dart';
 
 import '../support/test_app.dart' show RecordingMediaSaver;
 
@@ -119,8 +119,8 @@ void main() {
     );
     await camera.startHttp();
     http = camera.httpClient('127.0.0.1', null);
-    cache = await Directory.systemTemp.createTemp('grlab_lib_');
-    data = await Directory.systemTemp.createTemp('grlab_lib_data_');
+    cache = await Directory.systemTemp.createTemp('grphoto_lib_');
+    data = await Directory.systemTemp.createTemp('grphoto_lib_data_');
     link = ValueNotifier(null);
     queue = RequestQueue();
   });
