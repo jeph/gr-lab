@@ -195,15 +195,45 @@ Future<String?> askLookName(
   BuildContext context, {
   required String initial,
 }) async {
-  final l10n = context.l10n;
-  final controller = TextEditingController(text: initial);
   final name = await showDialog<String>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => _LookNameDialog(initial: initial),
+  );
+  final trimmed = name?.trim();
+  return trimmed == null || trimmed.isEmpty ? null : trimmed;
+}
+
+/// The dialog of [askLookName]. It keeps the field's controller for as long
+/// as it is on screen, which is longer than until it answers: it is still
+/// built while it leaves, as when the keyboard closes under it.
+class _LookNameDialog extends StatefulWidget {
+  const new({required this.initial});
+
+  final String initial;
+
+  @override
+  State<_LookNameDialog> createState() => _LookNameDialogState();
+}
+
+class _LookNameDialogState extends State<_LookNameDialog> {
+  late final TextEditingController _name = TextEditingController(
+    text: widget.initial,
+  );
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return AlertDialog(
       title: Text(l10n.looksNameTitle),
       content: TextField(
         key: const Key('looks-name-field'),
-        controller: controller,
+        controller: _name,
         autofocus: true,
         maxLength: lookNameMaxLength,
         inputFormatters: [
@@ -218,15 +248,12 @@ Future<String?> askLookName(
         ),
         TextButton(
           key: const Key('looks-name-ok'),
-          onPressed: () => Navigator.pop(context, controller.text),
+          onPressed: () => Navigator.pop(context, _name.text),
           child: Text(l10n.looksNameSave),
         ),
       ],
-    ),
-  );
-  controller.dispose();
-  final trimmed = name?.trim();
-  return trimmed == null || trimmed.isEmpty ? null : trimmed;
+    );
+  }
 }
 
 /// Says why a look was not saved: the saved look [conflict] names has its
