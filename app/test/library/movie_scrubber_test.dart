@@ -21,6 +21,13 @@ class _Player extends ValueNotifier<VideoPlayerValue>
   /// Every seek asked for, in order, each landing when completed.
   final seeks = <({Duration position, Completer<void> landed})>[];
 
+  /// Lands every seek still under way.
+  void landSeeks() {
+    for (final seek in seeks.where((s) => !s.landed.isCompleted)) {
+      seek.landed.complete();
+    }
+  }
+
   @override
   Future<void> seekTo(Duration position) async {
     final landed = Completer<void>();
@@ -29,8 +36,12 @@ class _Player extends ValueNotifier<VideoPlayerValue>
     value = value.copyWith(position: position);
   }
 
+  /// As the real player does, starts over when it is at the movie's end.
   @override
-  Future<void> play() async => value = value.copyWith(isPlaying: true);
+  Future<void> play() async {
+    if (value.position == value.duration) await seekTo(Duration.zero);
+    value = value.copyWith(isPlaying: true);
+  }
 
   @override
   Future<void> pause() async => value = value.copyWith(isPlaying: false);
@@ -149,20 +160,83 @@ void main() {
     expect(player.value.isPlaying, isFalse);
     await finger.up();
     await tester.pump();
+    expect(
+      player.value.isPlaying,
+      isFalse,
+      reason: 'the seek has not landed yet',
+    );
+    player.landSeeks();
+    await tester.pump();
     expect(player.value.isPlaying, isTrue);
+    expect(player.value.position, const Duration(seconds: 5));
 
     finger = await tester.startGesture(_along(tester, 0.5));
     await finger.moveTo(_along(tester, 1.2));
     await tester.pump();
     expect(player.seeks.last.position, const Duration(seconds: 10));
     await finger.up();
+    player.landSeeks();
     await tester.pump();
     expect(player.value.isPlaying, isFalse);
+    expect(player.value.position, const Duration(seconds: 10));
+  });
 
-    for (final seek in player.seeks) {
-      seek.landed.complete();
-    }
+  testWidgets('a drag to the end and back goes on from where the finger left, '
+      'not from the start', (tester) async {
+    final player = _Player();
+    await player.play();
+    await _pumpScrubber(tester, player);
+
+    final finger = await tester.startGesture(_along(tester, 0.5));
+    await finger.moveTo(_along(tester, 1.2));
     await tester.pump();
+    player.landSeeks();
+    await tester.pump();
+    expect(player.value.position, const Duration(seconds: 10));
+
+    // The player is still at the end when the finger lifts: the seek back
+    // lands later.
+    await finger.moveTo(_along(tester, 0.5));
+    await finger.up();
+    await tester.pump();
+    expect(player.value.isPlaying, isFalse);
+    player.landSeeks();
+    await tester.pump();
+
+    expect(player.value.isPlaying, isTrue);
+    expect(player.value.position, const Duration(seconds: 5));
+    expect(
+      player.seeks.map((s) => s.position),
+      isNot(contains(Duration.zero)),
+      reason: 'playing must not start the movie over',
+    );
+  });
+
+  testWidgets('a second drag begun before the first one lands goes on '
+      'playing when it ends', (tester) async {
+    final player = _Player();
+    await player.play();
+    await _pumpScrubber(tester, player);
+
+    var finger = await tester.startGesture(_along(tester, 0.2));
+    await finger.moveTo(_along(tester, 0.5));
+    await finger.up();
+    finger = await tester.startGesture(_along(tester, 0.5));
+    await finger.moveTo(_along(tester, 0.8));
+    await tester.pump();
+    player.landSeeks();
+    await tester.pump();
+    expect(
+      player.value.isPlaying,
+      isFalse,
+      reason: 'the finger is still on the bar',
+    );
+
+    await finger.up();
+    player.landSeeks();
+    await tester.pump();
+    expect(player.value.isPlaying, isTrue);
+    expect(player.value.position, const Duration(seconds: 8));
   });
 
   testWidgets('a drag leaves a paused movie paused', (tester) async {

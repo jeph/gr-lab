@@ -31,8 +31,12 @@ class _MovieScrubberState extends State<MovieScrubber> {
   double? _sought;
   int _seeks = 0;
 
+  /// Completes when the seek asked for last has landed.
+  Future<void> _landing = Future.value();
+
   /// Whether the movie was playing when the drag began, to go on after it.
   bool _resumeAfterDrag = false;
+  int _drags = 0;
 
   static double _played(VideoPlayerValue value) =>
       value.duration > Duration.zero
@@ -42,13 +46,17 @@ class _MovieScrubberState extends State<MovieScrubber> {
         )
       : 0;
 
-  Future<void> _seek(Offset touch) async {
+  void _seek(Offset touch) {
     final video = widget.video;
     final fraction = (touch.dx / context.size!.width).clamp(0.0, 1.0);
     final seek = ++_seeks;
     setState(() => _sought = fraction);
+    _landing = _land(seek, video.value.duration * fraction);
+  }
+
+  Future<void> _land(int seek, Duration position) async {
     try {
-      await video.seekTo(video.value.duration * fraction);
+      await widget.video.seekTo(position);
     } finally {
       if (mounted && seek == _seeks) setState(() => _sought = null);
     }
@@ -56,17 +64,26 @@ class _MovieScrubberState extends State<MovieScrubber> {
 
   void _startDrag(DragStartDetails details) {
     final video = widget.video;
-    _resumeAfterDrag = video.value.isPlaying;
-    if (_resumeAfterDrag) unawaited(video.pause());
-    unawaited(_seek(details.localPosition));
+    _drags++;
+    // A drag begun while the one before waits to go on playing takes that
+    // over.
+    _resumeAfterDrag = _resumeAfterDrag || video.value.isPlaying;
+    if (video.value.isPlaying) unawaited(video.pause());
+    _seek(details.localPosition);
   }
 
-  void _endDrag() {
+  /// Goes on playing once the drag's last seek has landed. Until then the
+  /// player is where an earlier seek left it, and `play` starts a movie
+  /// over when that is its end.
+  Future<void> _endDrag() async {
     if (!_resumeAfterDrag) return;
+    final drag = _drags;
+    await _landing;
+    if (!mounted || drag != _drags) return;
     _resumeAfterDrag = false;
     final video = widget.video;
     // Left at its end, the movie has nothing more to play.
-    if ((_sought ?? _played(video.value)) < 1) unawaited(video.play());
+    if (_played(video.value) < 1) unawaited(video.play());
   }
 
   @override
@@ -74,12 +91,11 @@ class _MovieScrubberState extends State<MovieScrubber> {
     final c = GrColors.of(context);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTapDown: (details) => unawaited(_seek(details.localPosition)),
+      onTapDown: (details) => _seek(details.localPosition),
       onHorizontalDragStart: _startDrag,
-      onHorizontalDragUpdate: (details) =>
-          unawaited(_seek(details.localPosition)),
-      onHorizontalDragEnd: (_) => _endDrag(),
-      onHorizontalDragCancel: _endDrag,
+      onHorizontalDragUpdate: (details) => _seek(details.localPosition),
+      onHorizontalDragEnd: (_) => unawaited(_endDrag()),
+      onHorizontalDragCancel: () => unawaited(_endDrag()),
       child: SizedBox(
         height: MovieScrubber.touchHeight,
         child: Align(
