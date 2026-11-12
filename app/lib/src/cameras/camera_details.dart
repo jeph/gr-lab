@@ -5,14 +5,17 @@ import 'package:grphoto/src/app_scope.dart';
 import 'package:grphoto/src/cameras/camera_identity.dart';
 import 'package:grphoto/src/cameras/camera_rename.dart';
 import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/geotag/geotag_section.dart';
 import 'package:grphoto/src/library/format.dart';
 import 'package:grphoto/src/pairing/pairing_widgets.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/group.dart';
 
 /// One paired camera, from ⋯ on the Cameras screen (mock
-/// `b-camera-detail`): rename it or forget it. Connecting is on the
-/// Cameras screen: the camera card and its sheet, or the camera's row.
+/// `b-camera-detail`): rename it, its geotagging and clock for a camera
+/// that can be sent a location ([GeotagSection]), or forget it.
+/// Connecting is on the Cameras screen: the camera card and its sheet, or
+/// the camera's row.
 class CameraDetailsScreen extends StatelessWidget {
   const new({required this.serial, super.key});
 
@@ -77,6 +80,7 @@ class CameraDetailsScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+                GeotagSection(camera: camera),
                 const SizedBox(height: 22),
                 GroupBox(children: [_ForgetRow(camera: camera)]),
                 Padding(

@@ -209,11 +209,10 @@ flutter run --dart-define=GR_DEMO=true
    ou créez-en un de toutes pièces avec + sur la page Styles. Touchez un style pour le modifier, et
    faites-le glisser sur C1, C2 ou C3 pour le charger dans l'appareil photo.
 5. **Ajoutez la position.** GR Photo propose la Géolocalisation une fois pour chaque appareil
-   photo ; vous pouvez aussi l'activer plus tard en touchant la pastille sur la carte de l'appareil
-   photo. Votre téléphone demande si GR Photo peut utiliser sa position. Dès lors, la position est
-   envoyée chaque fois que l'appareil photo est allumé et à portée. La Géolocalisation en
-   arrière-plan se trouve dans Réglages, Position, et nécessite que l'accès à la position soit
-   toujours autorisé.
+   photo ; vous pouvez aussi l'activer plus tard avec ⋯ sur la carte de l'appareil photo. Votre
+   téléphone demande si GR Photo peut utiliser sa position. Dès lors, la position est envoyée chaque
+   fois que l'appareil photo est allumé et à portée. La Géolocalisation en arrière-plan se trouve
+   dans Réglages, Position, et nécessite que l'accès à la position soit toujours autorisé.
 
 L'option Déconnexion automatique des Réglages quitte le Wi-Fi de l'appareil photo lorsque GR Photo
 est resté inutilisé un certain temps (5 minutes par défaut). [Le comportement de

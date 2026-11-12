@@ -183,9 +183,9 @@ flutter run --dart-define=GR_DEMO=true
    on the Looks page. Tap a look to edit it, and drag it onto C1, C2 or C3 to load it into the
    camera.
 5. **Add locations.** GR Photo offers Geotagging once for each camera; you can also turn it on
-   later by tapping the chip on the camera's card. Your phone asks whether GR Photo may use its
-   location. From then on the location is sent whenever the camera is on and in reach. Background
-   geotagging is under Settings, Location, and needs location allowed all the time.
+   later with ⋯ on the camera's card. Your phone asks whether GR Photo may use its location. From
+   then on the location is sent whenever the camera is on and in reach. Background geotagging is
+   under Settings, Location, and needs location allowed all the time.
 
 Auto-disconnect in Settings leaves the camera's Wi-Fi after GR Photo has gone unused for a while (5
 minutes by default). [How GR Photo behaves](docs/behaviour.md) describes each screen and every

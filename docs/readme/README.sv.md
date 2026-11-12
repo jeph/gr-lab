@@ -193,9 +193,9 @@ flutter run --dart-define=GR_DEMO=true
    grunden med + på sidan Stilar. Tryck på en stil för att redigera den, och dra den till C1, C2
    eller C3 för att lägga in den i kameran.
 5. **Lägg till plats.** GR Photo erbjuder Geotaggning en gång för varje kamera; du kan också slå på
-   den senare genom att trycka på chippet på kamerans kort. Telefonen frågar om GR Photo får använda
-   dess plats. Därefter skickas platsen så fort kameran är påslagen och inom räckhåll. Geotaggning i
-   bakgrunden finns under Inställningar, Plats, och kräver att plats alltid är tillåten.
+   den senare via ⋯ på kamerans kort. Telefonen frågar om GR Photo får använda dess plats. Därefter
+   skickas platsen så fort kameran är påslagen och inom räckhåll. Geotaggning i bakgrunden finns
+   under Inställningar, Plats, och kräver att plats alltid är tillåten.
 
 Med Koppla från automatiskt i Inställningar lämnar GR Photo kamerans Wi-Fi när appen inte har
 använts på ett tag (5 minuter som standard). [Så beter sig GR Photo](../behaviour.md) beskriver

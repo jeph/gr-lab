@@ -193,10 +193,9 @@ flutter run --dart-define=GR_DEMO=true
    på siden Looks. Tryk på et look for at redigere det, og træk det til C1, C2 eller C3 for at
    indlæse det i kameraet.
 5. **Tilføj lokalitet.** GR Photo tilbyder Geotagging én gang for hvert kamera; du kan også slå det
-   til senere ved at trykke på chippen på kameraets kort. Din telefon spørger, om GR Photo må bruge
-   dens lokalitet. Derefter sendes lokaliteten, hver gang kameraet er tændt og inden for rækkevidde.
-   Geotagging i baggrunden findes under Indstillinger, Lokalitet, og kræver, at lokalitet altid er
-   tilladt.
+   til senere via ⋯ på kameraets kort. Din telefon spørger, om GR Photo må bruge dens lokalitet.
+   Derefter sendes lokaliteten, hver gang kameraet er tændt og inden for rækkevidde. Geotagging i
+   baggrunden findes under Indstillinger, Lokalitet, og kræver, at lokalitet altid er tilladt.
 
 Afbryd automatisk i Indstillinger afbryder kameraets Wi-Fi, når GR Photo ikke har været i brug et
 stykke tid (som standard 5 minutter). [Sådan opfører GR Photo sig](../behaviour.md) beskriver hvert

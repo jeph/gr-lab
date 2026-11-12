@@ -2,8 +2,8 @@ import 'package:gr_camera/gr_camera.dart';
 import 'package:grphoto/l10n/l10n.dart';
 import 'package:grphoto/src/geotag/geotag_need.dart';
 
-/// What live geotagging is doing, in words: the camera sheet's status line
-/// and the text of the phone's notice while it runs.
+/// What live geotagging is doing, in words: the status line in the
+/// camera's details and the text of the phone's notice while it runs.
 String geotagStatusText(AppLocalizations l10n, GeotagStatus status) =>
     switch (status) {
       GeotagStatus.off => l10n.geotagStatusOff,

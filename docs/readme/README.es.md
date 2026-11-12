@@ -197,10 +197,10 @@ flutter run --dart-define=GR_DEMO=true
    cero con + en la página Estilos. Toca un estilo para editarlo y arrástralo a C1, C2 o C3 para
    cargarlo en la cámara.
 5. **Añade la ubicación.** GR Photo ofrece Geoetiquetado una vez para cada cámara; también puedes
-   activarlo más tarde tocando el chip de la tarjeta de la cámara. Tu teléfono pregunta si GR Photo
-   puede usar su ubicación. A partir de entonces, la ubicación se envía siempre que la cámara esté
-   encendida y al alcance. Geoetiquetado en segundo plano está en Ajustes, Ubicación, y necesita que
-   la ubicación esté permitida siempre.
+   activarlo más tarde con ⋯ en la tarjeta de la cámara. Tu teléfono pregunta si GR Photo puede usar
+   su ubicación. A partir de entonces, la ubicación se envía siempre que la cámara esté encendida y
+   al alcance. Geoetiquetado en segundo plano está en Ajustes, Ubicación, y necesita que la
+   ubicación esté permitida siempre.
 
 Desconexión automática, en Ajustes, sale del Wi-Fi de la cámara cuando GR Photo lleva un rato sin
 usarse (5 minutos de forma predeterminada). [Cómo se comporta GR Photo](../behaviour.md) describe en

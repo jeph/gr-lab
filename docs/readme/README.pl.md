@@ -194,8 +194,8 @@ flutter run --dart-define=GR_DEMO=true
    przyciskiem + na stronie Style. Dotknij stylu, aby go edytować, i przeciągnij go na C1, C2 albo
    C3, aby wczytać go do aparatu.
 5. **Dodaj lokalizację.** GR Photo proponuje Geotagowanie raz dla każdego aparatu; możesz je też
-   włączyć później, dotykając etykiety na karcie aparatu. Telefon pyta, czy GR Photo może używać
-   jego lokalizacji. Od tej chwili lokalizacja jest wysyłana zawsze, gdy aparat jest włączony i w
+   włączyć później za pomocą ⋯ na karcie aparatu. Telefon pyta, czy GR Photo może używać jego
+   lokalizacji. Od tej chwili lokalizacja jest wysyłana zawsze, gdy aparat jest włączony i w
    zasięgu. Geotagowanie w tle znajduje się w Ustawieniach, w sekcji Lokalizacja, i wymaga
    zezwolenia na dostęp do lokalizacji zawsze.
 

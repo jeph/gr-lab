@@ -147,14 +147,26 @@ final class GeotagController extends ChangeNotifier {
   /// ([CameraFeature.geotagging]).
   bool get supported => connection.body.supports(CameraFeature.geotagging);
 
-  /// What live geotagging is doing for the current camera: the session's
-  /// own word while there is one, otherwise what the setting and the
-  /// phone's access make of it.
+  /// Whether [camera] can be sent a location at all: for the current
+  /// camera by what its link read too ([supported]), for another by its
+  /// model and firmware as saved.
+  bool supports(SavedCamera camera) =>
+      _isCurrent(camera) ? supported : camera.supportsGeotagging;
+
+  /// What live geotagging is doing for the current camera
+  /// ([GeotagStatus.unsupported] without one).
   GeotagStatus get status {
     final camera = connection.camera;
-    if (camera == null || !supported) return GeotagStatus.unsupported;
+    return camera == null ? GeotagStatus.unsupported : statusOf(camera);
+  }
+
+  /// What live geotagging is doing for [camera]: the session's own word
+  /// for the current camera while there is one, otherwise what the setting
+  /// and the phone's access make of it.
+  GeotagStatus statusOf(SavedCamera camera) {
+    if (!supports(camera)) return GeotagStatus.unsupported;
     if (!camera.liveGeotagging) return GeotagStatus.off;
-    final status = _geotagging?.status;
+    final status = _isCurrent(camera) ? _geotagging?.status : null;
     // No session, or one that has not taken the setting in yet.
     if (status == null || status == GeotagStatus.off) {
       return switch (_liveNeed(_access)) {
@@ -176,6 +188,9 @@ final class GeotagController extends ChangeNotifier {
         ? GeotagStatus.waitingForCamera
         : status;
   }
+
+  bool _isCurrent(SavedCamera camera) =>
+      camera.serial == connection.camera?.serial;
 
   /// What the phone has to allow before [status] can move on; null for a
   /// status that waits for something else.

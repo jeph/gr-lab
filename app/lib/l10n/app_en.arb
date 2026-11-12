@@ -971,7 +971,7 @@
   },
   "geotagAutoStart": "Automatic start",
   "@geotagAutoStart": {
-    "description": "Title of the row on the camera sheet about geotagging starting by itself when the camera is switched on, with GR Photo closed."
+    "description": "Title of the row in the camera's details about geotagging starting by itself when the camera is switched on, with GR Photo closed."
   },
   "geotagAutoStartNeedsAlways": "Starts when GR Photo is open. To start whenever the camera is switched on, allow location all the time.",
   "@geotagAutoStartNeedsAlways": {
@@ -999,7 +999,7 @@
   },
   "geotagNeedCameraLink": "The camera wasn't linked to this phone",
   "@geotagNeedCameraLink": {
-    "description": "On the camera sheet's Automatic start row after the user declined the phone's own prompt that links GR Photo to the camera (Android's companion device prompt). The Set up button stays."
+    "description": "On the Automatic start row in the camera's details after the user declined the phone's own prompt that links GR Photo to the camera (Android's companion device prompt). The Set up button stays."
   },
   "geotagNoticeChannel": "Geotagging",
   "@geotagNoticeChannel": {
@@ -1029,7 +1029,7 @@
   },
   "geotagOfferNotNow": "Not now",
   "@geotagOfferNotNow": {
-    "description": "Button of the geotagging offer that leaves live geotagging off. It can be turned on later on the camera sheet."
+    "description": "Button of the geotagging offer that leaves live geotagging off. It can be turned on later in the camera's details."
   },
   "geotagOfferNotification": "While it runs, Android shows a notification with a Stop button.",
   "@geotagOfferNotification": {
@@ -1049,67 +1049,67 @@
   },
   "geotagOpenSettings": "Open settings",
   "@geotagOpenSettings": {
-    "description": "Button that opens the page of the phone's settings where location can be allowed for GR Photo, or turned on for the phone: on the camera sheet, in Settings, and as the action of a snack bar. Keep it short."
+    "description": "Button that opens the page of the phone's settings where location can be allowed for GR Photo, or turned on for the phone: in the camera's details, in Settings, and as the action of a snack bar. Keep it short."
   },
   "geotagResume": "Resume",
   "@geotagResume": {
-    "description": "Button under the Geotagging row on the camera sheet, shown with geotagStatusStopped: starts geotagging again after the user stopped it from the notification."
+    "description": "Button under the Geotagging row in the camera's details, shown with geotagStatusStopped: starts geotagging again after the user stopped it from the notification."
   },
   "geotagSection": "Location",
   "@geotagSection": {
-    "description": "Heading of the camera sheet's section with the camera's Geotagging, Automatic start and Sync camera clock rows."
+    "description": "Heading of the section in the camera's details with the camera's Geotagging, Automatic start and Sync camera clock rows."
   },
   "geotagStatusLocationOff": "Location is turned off on this phone",
   "@geotagStatusLocationOff": {
-    "description": "Location services are switched off for the whole phone. One of the status lines under the Geotagging switch on the camera sheet. A button to the phone's settings follows. Also shown in Settings and in a snack bar when turning a geotagging mode on was refused for this reason."
+    "description": "Location services are switched off for the whole phone. One of the status lines under the Geotagging switch in the camera's details. A button to the phone's settings follows. Also shown in Settings and in a snack bar when turning a geotagging mode on was refused for this reason."
   },
   "geotagStatusNeedsApp": "The camera was switched on while GR Photo was closed. Geotagging starts when GR Photo is open.",
   "@geotagStatusNeedsApp": {
-    "description": "The camera came on while GR Photo was not on screen, and the phone did not let geotagging start from there. One of the status lines under the Geotagging switch on the camera sheet."
+    "description": "The camera came on while GR Photo was not on screen, and the phone did not let geotagging start from there. One of the status lines under the Geotagging switch in the camera's details."
   },
   "geotagStatusOff": "Off",
   "@geotagStatusOff": {
-    "description": "Geotagging is turned off for this camera. One of the status lines under the Geotagging switch on the camera sheet."
+    "description": "Geotagging is turned off for this camera. One of the status lines under the Geotagging switch in the camera's details."
   },
   "geotagStatusOffOnCamera": "Store Location Info is off on the camera",
   "@geotagStatusOffOnCamera": {
-    "description": "The camera's own menu setting that lets it take a location is off: someone turned it off in the camera's menu. One of the status lines under the Geotagging switch on the camera sheet. A Turn on button follows. Also the text of Android's notification while geotagging runs with GR Photo not on screen. Store Location Info is the camera's menu entry: write it as the camera's menu does in this language."
+    "description": "The camera's own menu setting that lets it take a location is off: someone turned it off in the camera's menu. One of the status lines under the Geotagging switch in the camera's details. A Turn on button follows. Also the text of Android's notification while geotagging runs with GR Photo not on screen. Store Location Info is the camera's menu entry: write it as the camera's menu does in this language."
   },
   "geotagStatusPermissionDenied": "GR Photo isn't allowed to use this phone's location",
   "@geotagStatusPermissionDenied": {
-    "description": "The location permission is denied. One of the status lines under the Geotagging switch on the camera sheet. A button to the phone's settings follows. Also shown in Settings and in a snack bar when turning a geotagging mode on was refused for this reason."
+    "description": "The location permission is denied. One of the status lines under the Geotagging switch in the camera's details. A button to the phone's settings follows. Also shown in Settings and in a snack bar when turning a geotagging mode on was refused for this reason."
   },
   "geotagStatusPreciseNeeded": "Precise location is needed. Approximate location can be kilometres off.",
   "@geotagStatusPreciseNeeded": {
-    "description": "The user allowed GR Photo only the approximate location, which is too coarse to tag photos with. One of the status lines under the Geotagging switch on the camera sheet. A button to the phone's settings follows. Also shown in Settings and in a snack bar when turning a geotagging mode on was refused for this reason. Name precise and approximate location as the phone's own settings do."
+    "description": "The user allowed GR Photo only the approximate location, which is too coarse to tag photos with. One of the status lines under the Geotagging switch in the camera's details. A button to the phone's settings follows. Also shown in Settings and in a snack bar when turning a geotagging mode on was refused for this reason. Name precise and approximate location as the phone's own settings do."
   },
   "geotagStatusSending": "Sending this phone's location to the camera",
   "@geotagStatusSending": {
-    "description": "Geotagging is running: the camera holds a location the phone sent. One of the status lines under the Geotagging switch on the camera sheet. Also the text of Android's notification while geotagging runs with GR Photo not on screen."
+    "description": "Geotagging is running: the camera holds a location the phone sent. One of the status lines under the Geotagging switch in the camera's details. Also the text of Android's notification while geotagging runs with GR Photo not on screen."
   },
   "geotagStatusStopped": "Stopped. It starts again the next time the camera is switched on.",
   "@geotagStatusStopped": {
-    "description": "The user pressed Stop on Android's geotagging notification. One of the status lines under the Geotagging switch on the camera sheet. A Resume button follows."
+    "description": "The user pressed Stop on Android's geotagging notification. One of the status lines under the Geotagging switch in the camera's details. A Resume button follows."
   },
   "geotagStatusUnsupported": "This camera can't be sent a location",
   "@geotagStatusUnsupported": {
-    "description": "The camera's model or firmware has no geotagging over Bluetooth. Status of geotagging for such a camera; the camera sheet hides the section for it."
+    "description": "The camera's model or firmware has no geotagging over Bluetooth. Status of geotagging for such a camera; the camera's details hide the section for it."
   },
   "geotagStatusWaitingForCamera": "Starts when the camera is switched on and in reach",
   "@geotagStatusWaitingForCamera": {
-    "description": "Geotagging is on, and the camera is off or out of Bluetooth reach. One of the status lines under the Geotagging switch on the camera sheet. Also the text of Android's notification while geotagging runs with GR Photo not on screen."
+    "description": "Geotagging is on, and the camera is off or out of Bluetooth reach. One of the status lines under the Geotagging switch in the camera's details. Also the text of Android's notification while geotagging runs with GR Photo not on screen."
   },
   "geotagStatusWaitingForLocation": "Waiting for this phone's location",
   "@geotagStatusWaitingForLocation": {
-    "description": "The camera is on, and the phone has no position good enough to send yet. One of the status lines under the Geotagging switch on the camera sheet. Also the text of Android's notification while geotagging runs with GR Photo not on screen."
+    "description": "The camera is on, and the phone has no position good enough to send yet. One of the status lines under the Geotagging switch in the camera's details. Also the text of Android's notification while geotagging runs with GR Photo not on screen."
   },
   "geotagSwitch": "Geotagging",
   "@geotagSwitch": {
-    "description": "Title of the switch row on the camera sheet that turns live geotagging on or off for this camera: while the camera is on, the phone sends it its location over Bluetooth and the camera saves it in each photo."
+    "description": "Title of the switch row in the camera's details that turns live geotagging on or off for this camera: while the camera is on, the phone sends it its location over Bluetooth and the camera saves it in each photo."
   },
   "geotagSyncClock": "Sync camera clock",
   "@geotagSyncClock": {
-    "description": "Title of the switch row on the camera sheet that keeps the camera's clock on the phone's time."
+    "description": "Title of the switch row in the camera's details that keeps the camera's clock on the phone's time."
   },
   "geotagSyncClockForced": "On while geotagging is on: geotagging keeps the camera's clock on this phone's time",
   "@geotagSyncClockForced": {
@@ -1121,7 +1121,7 @@
   },
   "geotagTurnOnStoreLocationInfo": "Turn on",
   "@geotagTurnOnStoreLocationInfo": {
-    "description": "Button under the Geotagging row on the camera sheet, shown with geotagStatusOffOnCamera: turns the camera's Store Location Info setting back on."
+    "description": "Button under the Geotagging row in the camera's details, shown with geotagStatusOffOnCamera: turns the camera's Store Location Info setting back on."
   },
   "homeBarCameras": "Cameras",
   "@homeBarCameras": {

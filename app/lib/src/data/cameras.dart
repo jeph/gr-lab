@@ -48,7 +48,7 @@ final class SavedCamera {
 
   /// Live geotagging is on for this camera: while it is on and linked, the
   /// phone's location is sent to it. Off until the user accepts the offer
-  /// or flips the camera sheet's switch.
+  /// or flips the switch in the camera's details.
   final bool liveGeotagging;
 
   /// The one-time offer of live geotagging was shown for this camera,

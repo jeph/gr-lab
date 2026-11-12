@@ -197,10 +197,10 @@ flutter run --dart-define=GR_DEMO=true
    con + nella pagina Stili. Tocca uno stile per modificarlo e trascinalo su C1, C2 o C3 per
    caricarlo nella fotocamera.
 5. **Aggiungi la posizione.** GR Photo propone Geotagging una volta per ogni fotocamera; puoi anche
-   attivarlo più tardi toccando il chip sulla scheda della fotocamera. Il telefono chiede se GR
-   Photo può usare la sua posizione. Da quel momento la posizione viene inviata ogni volta che la
-   fotocamera è accesa e a portata. Geotagging in background si trova in Impostazioni, Posizione, e
-   richiede che l'accesso alla posizione sia consentito sempre.
+   attivarlo più tardi con ⋯ sulla scheda della fotocamera. Il telefono chiede se GR Photo può usare
+   la sua posizione. Da quel momento la posizione viene inviata ogni volta che la fotocamera è
+   accesa e a portata. Geotagging in background si trova in Impostazioni, Posizione, e richiede che
+   l'accesso alla posizione sia consentito sempre.
 
 Disconnessione automatica, in Impostazioni, esce dal Wi-Fi della fotocamera dopo che GR Photo è
 rimasta inutilizzata per un po' (5 minuti per impostazione predefinita).

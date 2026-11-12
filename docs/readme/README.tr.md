@@ -198,10 +198,10 @@ flutter run --dart-define=GR_DEMO=true
    sayfasındaki + ile sıfırdan bir stil oluşturun. Düzenlemek için bir stile dokunun; kameraya
    yüklemek için de onu C1, C2 veya C3’e sürükleyin.
 5. **Konum ekleyin.** GR Photo, Konum etiketleme’yi her kamera için bir kez önerir; daha sonra
-   kameranın kartındaki çipe dokunarak da açabilirsiniz. Telefonunuz, GR Photo’nun telefonun
-   konumunu kullanmasına izin verip vermediğinizi sorar. Bundan sonra konum, kamera açık ve kapsama
-   alanında olduğu her an gönderilir. Arka planda konum etiketleme, Ayarlar’da Konum altındadır ve
-   konuma her zaman izin verilmesini gerektirir.
+   kameranın kartındaki ⋯ ile de açabilirsiniz. Telefonunuz, GR Photo’nun telefonun konumunu
+   kullanmasına izin verip vermediğinizi sorar. Bundan sonra konum, kamera açık ve kapsama alanında
+   olduğu her an gönderilir. Arka planda konum etiketleme, Ayarlar’da Konum altındadır ve konuma her
+   zaman izin verilmesini gerektirir.
 
 Ayarlar’daki Otomatik bağlantı kesme, GR Photo bir süre (varsayılan olarak 5 dakika)
 kullanılmadığında kameranın Wi-Fi ağından çıkar. [GR Photo nasıl davranır](../behaviour.md) belgesi,

@@ -196,9 +196,9 @@ flutter run --dart-define=GR_DEMO=true
    com + na página Estilos. Toque num estilo para o editar e arraste-o para C1, C2 ou C3 para o
    carregar na câmara.
 5. **Adicione a localização.** O GR Photo propõe a Georreferenciação uma vez para cada câmara;
-   também pode ativá-la mais tarde tocando no chip do cartão da câmara. O seu telemóvel pergunta se
-   o GR Photo pode utilizar a localização dele. A partir daí, a localização é enviada sempre que a
-   câmara estiver ligada e ao alcance. A Georreferenciação em segundo plano está em Definições,
+   também pode ativá-la mais tarde com ⋯ no cartão da câmara. O seu telemóvel pergunta se o GR Photo
+   pode utilizar a localização dele. A partir daí, a localização é enviada sempre que a câmara
+   estiver ligada e ao alcance. A Georreferenciação em segundo plano está em Definições,
    Localização, e precisa de que a localização esteja sempre permitida.
 
 Desligar automaticamente, nas Definições, sai do Wi-Fi da câmara depois de o GR Photo estar algum

@@ -12,8 +12,8 @@ import 'package:grphoto/src/geotag/geotag_offer.dart';
 import 'package:grphoto/src/geotag/geotag_text.dart';
 import 'package:grphoto/src/widgets/group.dart';
 
-/// The camera sheet's location section, for a camera that can be sent a
-/// location (nothing otherwise):
+/// The location section of a camera's details, for a camera that can be
+/// sent a location (nothing otherwise):
 ///
 /// - Geotagging: the switch of live geotagging for this camera, with what
 ///   it is doing in a line under it and, where the user can help, a
@@ -28,7 +28,7 @@ import 'package:grphoto/src/widgets/group.dart';
 class GeotagSection extends StatefulWidget {
   const new({required this.camera, super.key});
 
-  /// The current camera, as saved.
+  /// The camera the section is about, as saved: the current one or not.
   final SavedCamera camera;
 
   @override
@@ -97,11 +97,11 @@ class _GeotagSectionState extends State<GeotagSection> {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: _geotag,
     builder: (context, _) {
-      if (!_geotag.supported) return const SizedBox.shrink();
+      if (!_geotag.supports(widget.camera)) return const SizedBox.shrink();
       final l10n = context.l10n;
       final live = widget.camera.liveGeotagging;
       return Column(
-        key: const Key('camera-sheet-location'),
+        key: const Key('camera-details-location'),
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -119,7 +119,7 @@ class _GeotagSectionState extends State<GeotagSection> {
   );
 
   Widget _liveRow(AppLocalizations l10n, {required bool live}) {
-    final status = _geotag.status;
+    final status = _geotag.statusOf(widget.camera);
     final refused = live ? null : _standing(_liveRefused);
     final missing = live ? GeotagController.needOf(status) : refused;
     return _ActionRow(
@@ -127,26 +127,26 @@ class _GeotagSectionState extends State<GeotagSection> {
           ? _settingsAction('geotag', l10n, missing)
           : switch (status) {
               GeotagStatus.offOnCamera => _Action(
-                key: const Key('camera-sheet-geotag-store'),
+                key: const Key('camera-details-geotag-store'),
                 label: l10n.geotagTurnOnStoreLocationInfo,
                 onPressed: () => unawaited(_geotag.turnOnStoreLocationInfo()),
               ),
               GeotagStatus.stopped => _Action(
-                key: const Key('camera-sheet-geotag-resume'),
+                key: const Key('camera-details-geotag-resume'),
                 label: l10n.geotagResume,
                 onPressed: _geotag.resume,
               ),
               _ => null,
             },
       child: GroupRow(
-        key: const Key('camera-sheet-geotag'),
+        key: const Key('camera-details-geotag'),
         icon: Icons.location_on_outlined,
         title: l10n.geotagSwitch,
         subtitle: refused != null
             ? geotagNeedText(l10n, refused)
             : geotagStatusText(l10n, status),
         trailing: Switch(
-          key: const Key('camera-sheet-geotag-switch'),
+          key: const Key('camera-details-geotag-switch'),
           value: live,
           onChanged: _asking ? null : (on) => unawaited(_setLive(on: on)),
         ),
@@ -159,7 +159,7 @@ class _GeotagSectionState extends State<GeotagSection> {
     const icon = Icons.power_settings_new_rounded;
     if (_geotag.autoStartReady(widget.camera)) {
       return GroupRow(
-        key: const Key('camera-sheet-autostart'),
+        key: const Key('camera-details-autostart'),
         icon: icon,
         title: l10n.geotagAutoStart,
         subtitle: l10n.geotagAutoStartReady,
@@ -173,12 +173,12 @@ class _GeotagSectionState extends State<GeotagSection> {
       action: refused != null && refused.settingsPage != null
           ? _settingsAction('autostart', l10n, refused)
           : _Action(
-              key: const Key('camera-sheet-autostart-setup'),
+              key: const Key('camera-details-autostart-setup'),
               label: l10n.geotagAutoStartSetUp,
               onPressed: _asking ? null : () => unawaited(_setUpAutoStart()),
             ),
       child: GroupRow(
-        key: const Key('camera-sheet-autostart'),
+        key: const Key('camera-details-autostart'),
         icon: icon,
         title: l10n.geotagAutoStart,
         subtitle: refused != null
@@ -197,7 +197,7 @@ class _GeotagSectionState extends State<GeotagSection> {
     void set({required bool on}) =>
         unawaited(_geotag.setSyncClock(_serial, on: on));
     return GroupRow(
-      key: const Key('camera-sheet-clock'),
+      key: const Key('camera-details-clock'),
       icon: Icons.schedule_rounded,
       title: l10n.geotagSyncClock,
       // Geotagging needs the camera's clock right, so it keeps it there.
@@ -205,7 +205,7 @@ class _GeotagSectionState extends State<GeotagSection> {
           ? l10n.geotagSyncClockForced
           : l10n.geotagSyncClockSubtitle,
       trailing: Switch(
-        key: const Key('camera-sheet-clock-switch'),
+        key: const Key('camera-details-clock-switch'),
         value: on,
         onChanged: live ? null : (on) => set(on: on),
       ),
@@ -217,7 +217,7 @@ class _GeotagSectionState extends State<GeotagSection> {
   /// for the row named [row].
   _Action _settingsAction(String row, AppLocalizations l10n, GeotagNeed need) =>
       _Action(
-        key: Key('camera-sheet-$row-settings'),
+        key: Key('camera-details-$row-settings'),
         label: l10n.geotagOpenSettings,
         onPressed: () => unawaited(_geotag.openSettings(need)),
       );

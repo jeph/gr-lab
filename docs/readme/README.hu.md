@@ -200,10 +200,10 @@ flutter run --dart-define=GR_DEMO=true
    gombra, vagy készítsen egyet a nulláról a Stílusok oldal + gombjával. Koppintson egy stílusra a
    szerkesztéséhez, és húzza a C1, C2 vagy C3 helyre, ha be szeretné tölteni a kamerába.
 5. **Adjon hozzá helyadatokat.** A GR Photo minden kameránál egyszer felajánlja a Geocímkézést;
-   később is bekapcsolhatja, ha a kamera kártyáján lévő címkére koppint. A telefon megkérdezi, hogy
-   a GR Photo használhatja-e a helyzetét. Ettől kezdve a GR Photo mindig elküldi a helyzetet, amikor
-   a kamera be van kapcsolva és a közelben van. A Háttérbeli geocímkézés a Beállítások
-   Helymeghatározás részében található, és ehhez mindig engedélyezni kell a helyhozzáférést.
+   később is bekapcsolhatja a kamera kártyáján lévő ⋯ gombbal. A telefon megkérdezi, hogy a GR Photo
+   használhatja-e a helyzetét. Ettől kezdve a GR Photo mindig elküldi a helyzetet, amikor a kamera
+   be van kapcsolva és a közelben van. A Háttérbeli geocímkézés a Beállítások Helymeghatározás
+   részében található, és ehhez mindig engedélyezni kell a helyhozzáférést.
 
 A Beállítások Automatikus leválasztás funkciója kilép a kamera Wi-Fi-hálózatából, ha a GR Photo egy
 ideje nincs használatban (alapértelmezés szerint 5 perc után). [A GR Photo

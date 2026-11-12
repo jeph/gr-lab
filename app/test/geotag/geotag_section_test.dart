@@ -5,8 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
-import 'package:grphoto/src/connection/camera_pill.dart';
+import 'package:grphoto/src/cameras/camera_details.dart';
 import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/data/cameras.dart';
 
 import '../support/test_app.dart';
 
@@ -32,13 +33,13 @@ const _phoneOff = LocationAccess(
   serviceOn: false,
 );
 
-const _section = Key('camera-sheet-location');
-const _switch = Key('camera-sheet-geotag-switch');
-const _clockSwitch = Key('camera-sheet-clock-switch');
-const _settings = Key('camera-sheet-geotag-settings');
-const _store = Key('camera-sheet-geotag-store');
-const _resume = Key('camera-sheet-geotag-resume');
-const _setUp = Key('camera-sheet-autostart-setup');
+const _section = Key('camera-details-location');
+const _switch = Key('camera-details-geotag-switch');
+const _clockSwitch = Key('camera-details-clock-switch');
+const _settings = Key('camera-details-geotag-settings');
+const _store = Key('camera-details-geotag-store');
+const _resume = Key('camera-details-geotag-resume');
+const _setUp = Key('camera-details-autostart-setup');
 const _offer = Key('geotag-offer');
 
 const _off = 'Off';
@@ -57,8 +58,8 @@ LocationFix _fix() => LocationFix(
   time: clock.now().toUtc(),
 );
 
-/// A phone-sized screen with the camera pill, which opens the camera
-/// sheet; nothing connects by itself.
+/// A phone-sized screen with the details of the saved camera; nothing
+/// connects by itself.
 Future<TestApp> _start(
   WidgetTester tester, {
   FakeCameraConfig config = _bonded,
@@ -83,20 +84,9 @@ Future<TestApp> _start(
       geotagOffered: offered,
     ),
   ))!;
-  await app.pumpWithin(
-    tester,
-    const Scaffold(
-      body: SafeArea(
-        child: Align(alignment: Alignment.topLeft, child: CameraPill()),
-      ),
-    ),
-  );
+  await app.pumpWithin(tester, const CameraDetailsScreen(serial: _serial));
+  await pumpUntilFound(tester, find.byKey(const Key('camera-details')));
   return app;
-}
-
-Future<void> _openSheet(WidgetTester tester) async {
-  await tapWhenReady(tester, find.byKey(const Key('camera-pill')));
-  await pumpUntilFound(tester, find.byKey(const Key('camera-sheet')));
 }
 
 Future<void> _linkBluetooth(WidgetTester tester, TestApp app) async {
@@ -114,7 +104,7 @@ Future<void> _tap(WidgetTester tester, Key key) =>
 /// [text] in the section's row named [row] (`geotag`, `autostart` or
 /// `clock`).
 Finder _inRow(String row, String text) => find.descendant(
-  of: find.byKey(Key('camera-sheet-$row')),
+  of: find.byKey(Key('camera-details-$row')),
   matching: find.textContaining(text),
 );
 
@@ -127,8 +117,7 @@ void main() {
     // Saved without its model, and not linked, so nothing says what it
     // can do.
     final app = await _start(tester, saveModel: false);
-    await _openSheet(tester);
-    expect(find.byKey(const Key('camera-sheet-bluetooth')), findsOneWidget);
+    expect(find.byKey(const Key('camera-details-rename')), findsOneWidget);
     expect(find.byKey(_section), findsNothing);
 
     await app.dispose();
@@ -140,7 +129,6 @@ void main() {
     final location = FakePhoneLocation();
     final app = await _start(tester, location: location);
     final cameras = app.models.cameras;
-    await _openSheet(tester);
 
     expect(find.byKey(_section), findsOneWidget);
     expect(_inRow('geotag', 'Geotagging'), findsOneWidget);
@@ -151,7 +139,7 @@ void main() {
     expect(_switchOf(tester, _clockSwitch).value, isTrue);
     expect(_switchOf(tester, _clockSwitch).onChanged, isNotNull);
     // Nothing to set up while it is off.
-    expect(find.byKey(const Key('camera-sheet-autostart')), findsNothing);
+    expect(find.byKey(const Key('camera-details-autostart')), findsNothing);
 
     await _tap(tester, _switch);
     await pumpUntil(
@@ -219,7 +207,6 @@ void main() {
       live: true,
     );
     await _linkBluetooth(tester, app);
-    await _openSheet(tester);
     await pumpUntilFound(tester, _inRow('geotag', _waitingForLocation));
     expect(find.byKey(_settings), findsNothing);
 
@@ -248,7 +235,6 @@ void main() {
       'says what is needed, until the phone allows it', (tester) async {
     final location = FakePhoneLocation(access: _denied);
     final app = await _start(tester, location: location);
-    await _openSheet(tester);
 
     await _tap(tester, _switch);
     await pumpUntilFound(tester, _inRow('geotag', _notAllowed));
@@ -275,7 +261,6 @@ void main() {
       live: true,
     );
     await _linkBluetooth(tester, app);
-    await _openSheet(tester);
     await pumpUntilFound(tester, _inRow('geotag', _waitingForLocation));
     expect(find.byKey(_store), findsNothing);
 
@@ -311,7 +296,6 @@ void main() {
       live: true,
     );
     await _linkBluetooth(tester, app);
-    await _openSheet(tester);
     await pumpUntil(tester, () => location.runHeld, reason: 'the run');
     expect(find.byKey(_resume), findsNothing);
 
@@ -343,7 +327,6 @@ void main() {
       live: true,
     );
     await _linkBluetooth(tester, app);
-    await _openSheet(tester);
     await pumpUntilFound(
       tester,
       _inRow('geotag', 'Geotagging starts when GR Photo is open'),
@@ -372,7 +355,6 @@ void main() {
       watch: watch,
       live: true,
     );
-    await _openSheet(tester);
 
     expect(_inRow('autostart', 'Automatic start'), findsOneWidget);
     expect(
@@ -412,7 +394,6 @@ void main() {
       watch: watch,
       live: true,
     );
-    await _openSheet(tester);
 
     // The phone leaves location as it is: allowed while in use.
     await _tap(tester, _setUp);
@@ -421,7 +402,7 @@ void main() {
       _inRow('autostart', 'Location has to be allowed all the time'),
     );
     expect(watch.associateRequests, isEmpty);
-    await _tap(tester, const Key('camera-sheet-autostart-settings'));
+    await _tap(tester, const Key('camera-details-autostart-settings'));
     expect(location.settingsOpened, [LocationSettingsPage.app]);
 
     // Allowed there; the link is what is left, and it is refused.
@@ -448,9 +429,8 @@ void main() {
       watch: FakePowerOnWatch(supported: false),
       live: true,
     );
-    await _openSheet(tester);
     expect(_inRow('geotag', _waitingForCamera), findsOneWidget);
-    expect(find.byKey(const Key('camera-sheet-autostart')), findsNothing);
+    expect(find.byKey(const Key('camera-details-autostart')), findsNothing);
 
     await app.dispose();
   });
@@ -461,7 +441,6 @@ void main() {
       ..whileInUseAnswer = FakePhoneLocation.whileInUse;
     final app = await _start(tester, location: location, offered: false);
     final cameras = app.models.cameras;
-    await _openSheet(tester);
 
     await _tap(tester, _switch);
     await pumpUntilFound(tester, find.byKey(_offer));
@@ -496,6 +475,80 @@ void main() {
     expect(find.byKey(_offer), findsNothing);
     expect(location.whileInUseRequests, 1);
     expect(cameras.current!.serial, _serial);
+
+    await app.dispose();
+  });
+
+  testWidgets('the details of a camera that is not the current one show '
+      "its own geotagging, not the current camera's", (tester) async {
+    const otherSerial = '7654321';
+    final location = FakePhoneLocation();
+    final app = await _start(
+      tester,
+      config: _storing,
+      location: location,
+      live: true,
+    );
+    final cameras = app.models.cameras;
+    SavedCamera other() =>
+        cameras.cameras.singleWhere((c) => c.serial == otherSerial);
+    await tester.runAsync(() async {
+      const paired = GrPairedCamera(
+        deviceId: '00:00:5E:00:53:B7',
+        serialNumber: otherSerial,
+        modelName: 'RICOH GR IV',
+        firmwareRevision: '1.20',
+        bluetoothDeviceName: 'GR_H0053B7',
+      );
+      await cameras.add(
+        SavedCamera(
+          paired: paired,
+          name: 'Street',
+          pairedAt: DateTime(2026, 11, 8, 9, 41),
+          geotagOffered: true,
+        ),
+      );
+      await cameras.select(_serial);
+    });
+    await _linkBluetooth(tester, app);
+    await pumpUntil(tester, () {
+      location.emitFix(_fix());
+      return app.models.geotag.status == GeotagStatus.sending;
+    }, reason: 'sending to the current camera');
+
+    await app.pumpWithin(
+      tester,
+      const CameraDetailsScreen(serial: otherSerial),
+    );
+    await pumpUntilFound(tester, _inRow('geotag', _off));
+    expect(_switchOf(tester, _switch).value, isFalse);
+    expect(_switchOf(tester, _clockSwitch).onChanged, isNotNull);
+
+    await _tap(tester, _switch);
+    await pumpUntil(
+      tester,
+      () => other().liveGeotagging,
+      reason: 'live geotagging on for the other camera',
+    );
+    // It is not the camera a location is being sent to.
+    await pumpUntilFound(tester, _inRow('geotag', _waitingForCamera));
+    expect(_inRow('geotag', _sending), findsNothing);
+    expect(app.models.geotag.status, GeotagStatus.sending);
+    expect(cameras.current!.serial, _serial);
+
+    await pumpUntil(
+      tester,
+      () => _switchOf(tester, _switch).onChanged != null,
+      reason: 'the switch enabled again',
+    );
+    await _tap(tester, _switch);
+    await pumpUntil(
+      tester,
+      () => !other().liveGeotagging,
+      reason: 'live geotagging off for the other camera',
+    );
+    expect(cameras.current!.liveGeotagging, isTrue);
+    expect(app.camera.storeLocationInfo, isTrue);
 
     await app.dispose();
   });

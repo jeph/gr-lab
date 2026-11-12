@@ -202,10 +202,10 @@ flutter run --dart-define=GR_DEMO=true
    erstelle mit + auf der Seite „Looks“ einen ganz neuen. Tippe auf einen Look, um ihn zu
    bearbeiten, und ziehe ihn auf C1, C2 oder C3, um ihn in die Kamera zu laden.
 5. **Füge Standorte hinzu.** GR Photo bietet Geotagging für jede Kamera einmal an; du kannst es auch
-   später einschalten, indem du auf den Chip auf der Karte der Kamera tippst. Dein Smartphone fragt,
-   ob GR Photo seinen Standort verwenden darf. Von da an wird der Standort gesendet, wann immer die
-   Kamera eingeschaltet und in Reichweite ist. Hintergrund-Geotagging findest du in den
-   Einstellungen unter „Standort“; dafür muss der Standortzugriff immer erlaubt sein.
+   später über ⋯ auf der Karte der Kamera einschalten. Dein Smartphone fragt, ob GR Photo seinen
+   Standort verwenden darf. Von da an wird der Standort gesendet, wann immer die Kamera
+   eingeschaltet und in Reichweite ist. Hintergrund-Geotagging findest du in den Einstellungen unter
+   „Standort“; dafür muss der Standortzugriff immer erlaubt sein.
 
 „Automatisch trennen“ in den Einstellungen verlässt das WLAN der Kamera, nachdem GR Photo eine Weile
 nicht verwendet wurde (standardmäßig 5 Minuten). [So verhält sich GR Photo](../behaviour.md)

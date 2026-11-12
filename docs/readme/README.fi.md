@@ -194,10 +194,10 @@ flutter run --dart-define=GR_DEMO=true
    Tyylit-sivun painikkeella +. Muokkaa tyyliä napauttamalla sitä ja siirrä se kameraan vetämällä se
    paikan C1, C2 tai C3 päälle.
 5. **Lisää sijainnit.** GR Photo tarjoaa Paikkamerkintää kerran kullekin kameralle; voit ottaa sen
-   käyttöön myös myöhemmin napauttamalla kameran kortissa olevaa merkkiä. Puhelin kysyy, saako GR
-   Photo käyttää sen sijaintia. Siitä lähtien sijainti lähetetään aina, kun kamera on päällä ja
-   lähellä. Taustapaikkamerkintä löytyy kohdasta Asetukset, Sijainti, ja se edellyttää, että
-   sijainnin käyttö on sallittu aina.
+   käyttöön myös myöhemmin kameran kortin ⋯-painikkeella. Puhelin kysyy, saako GR Photo käyttää sen
+   sijaintia. Siitä lähtien sijainti lähetetään aina, kun kamera on päällä ja lähellä.
+   Taustapaikkamerkintä löytyy kohdasta Asetukset, Sijainti, ja se edellyttää, että sijainnin käyttö
+   on sallittu aina.
 
 Asetusten Automaattinen katkaisu poistuu kameran Wi-Fi-verkosta, kun GR Photo on ollut jonkin aikaa
 käyttämättä (oletuksena 5 minuuttia). [Näin GR Photo toimii](../behaviour.md) kuvaa jokaisen näytön

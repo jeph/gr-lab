@@ -192,10 +192,9 @@ flutter run --dart-define=GR_DEMO=true
    úplně nový tlačítkem + na stránce Vzhledy. Klepnutím vzhled upravíte a přetažením na C1, C2 nebo
    C3 ho načtete do fotoaparátu.
 5. **Přidávejte polohu.** GR Photo nabídne Geotagování jednou pro každý fotoaparát; zapnout ho
-   můžete i později klepnutím na štítek na kartě fotoaparátu. Telefon se zeptá, zda GR Photo smí
-   používat jeho polohu. Od té chvíle se poloha posílá vždy, když je fotoaparát zapnutý a poblíž.
-   Geotagování na pozadí najdete v Nastavení v části Poloha a vyžaduje přístup k poloze povolený
-   vždy.
+   můžete i později přes ⋯ na kartě fotoaparátu. Telefon se zeptá, zda GR Photo smí používat jeho
+   polohu. Od té chvíle se poloha posílá vždy, když je fotoaparát zapnutý a poblíž. Geotagování na
+   pozadí najdete v Nastavení v části Poloha a vyžaduje přístup k poloze povolený vždy.
 
 Automatické odpojení v Nastavení ukončí připojení k Wi-Fi fotoaparátu, když se GR Photo nějakou dobu
 nepoužívá (ve výchozím nastavení 5 minut). Dokument [Jak se GR Photo chová](../behaviour.md)
