@@ -1,15 +1,20 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/app_scope.dart';
 import 'package:grphoto/src/connection/camera_pill.dart';
 import 'package:grphoto/src/connection/connect_failure_view.dart';
 import 'package:grphoto/src/connection/connect_steps.dart';
 import 'package:grphoto/src/connection/connection_controller.dart';
 import 'package:grphoto/src/data/settings.dart';
+import 'package:grphoto/src/library/format.dart';
+import 'package:grphoto/src/library/library_scope.dart';
+import 'package:grphoto/src/library/shot.dart';
+import 'package:grphoto/src/library/shot_cell.dart';
+import 'package:grphoto/src/library/viewer.dart';
 import 'package:grphoto/src/shoot/live_view_controller.dart';
 import 'package:grphoto/src/shoot/shoot_format.dart';
 import 'package:grphoto/src/shoot/shoot_model.dart';
@@ -25,7 +30,8 @@ import 'package:grphoto/src/widgets/pressable.dart';
 /// where that room is too little they lie over the picture's edges, on a
 /// shade that keeps them legible, and the picture can be tapped to focus
 /// anywhere between them. The exposure readouts edit on a dial; × goes
-/// back to Remote.
+/// back to Remote. The last shot is the newest picture taken since live
+/// view was opened, and a tap on it opens the viewer on all of them.
 class LiveViewPage extends StatelessWidget {
   const new({required this.model, super.key});
 
@@ -34,17 +40,20 @@ class LiveViewPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final chosen = GrColors.of(context);
-    return Theme(
-      data: grTheme(
-        chosen.brightness == Brightness.dark ? chosen : GrColors.dark,
-      ),
-      child: Builder(
-        builder: (context) => Scaffold(
-          key: const Key('shoot-live'),
-          backgroundColor: Colors.black,
-          body: ListenableBuilder(
-            listenable: model.liveView,
-            builder: (context, _) => _LiveLayout(model: model),
+    return LibraryScope(
+      library: AppScope.of(context).library,
+      child: Theme(
+        data: grTheme(
+          chosen.brightness == Brightness.dark ? chosen : GrColors.dark,
+        ),
+        child: Builder(
+          builder: (context) => Scaffold(
+            key: const Key('shoot-live'),
+            backgroundColor: Colors.black,
+            body: ListenableBuilder(
+              listenable: model.liveView,
+              builder: (context, _) => _LiveLayout(model: model),
+            ),
           ),
         ),
       ),
@@ -65,8 +74,51 @@ class _LiveLayoutState extends State<_LiveLayout> {
   /// The readout whose values the dial shows; null hides the dial.
   String? _dialKey;
 
+  late final LibraryContext _library = LibraryScope.of(context);
+
+  /// [LiveViewController.shots] as last grouped into [_grouped].
+  List<CameraFile>? _groupedFiles;
+  List<Shot> _grouped = const [];
+
   ShootModel get _model => widget.model;
   LiveViewController get _live => _model.liveView;
+
+  /// The pictures taken since live view was opened, newest first, as the
+  /// Library shows them: a RAW+JPEG pair is one.
+  List<Shot> get _taken {
+    final files = _live.shots;
+    if (!identical(files, _groupedFiles)) {
+      _groupedFiles = files;
+      _grouped = groupShots(files);
+    }
+    return _grouped;
+  }
+
+  /// Opens the viewer on [_taken], at the newest. Live view stops under
+  /// it ([LiveViewController.covered]).
+  Future<void> _viewTaken() async {
+    final shots = _taken;
+    if (shots.isEmpty) return;
+    final live = _live..covered = true;
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => LibraryScope(
+            library: _library,
+            child: ShotViewer(shots: shots, initialIndex: 0),
+          ),
+        ),
+      );
+    } finally {
+      live.covered = false;
+    }
+  }
+
+  Widget _lastShot() => _LastShot(
+    serial: _library.model.serial,
+    shots: _taken,
+    onTap: () => unawaited(_viewTaken()),
+  );
 
   /// The `/v1/props` keys of the readouts, left to right.
   static const _readouts = ['av', 'tv', 'sv', 'xv'];
@@ -381,11 +433,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         spacing: 8,
-        children: [
-          _readoutsFor(dialKey, perRow: 2),
-          _shutter(),
-          _LastShot(bytes: _live.lastShot),
-        ],
+        children: [_readoutsFor(dialKey, perRow: 2), _shutter(), _lastShot()],
       ),
     ),
   );
@@ -544,7 +592,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
         padding: const EdgeInsets.symmetric(horizontal: 40),
         child: Row(
           children: [
-            _LastShot(bytes: _live.lastShot),
+            _lastShot(),
             Expanded(child: Center(child: _shutter())),
             const SizedBox(width: _LastShot.size),
           ],
@@ -574,7 +622,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
               width: _shutterSize,
               child: Align(
                 alignment: AlignmentDirectional.centerStart,
-                child: _LastShot(bytes: _live.lastShot),
+                child: _lastShot(),
               ),
             ),
             Expanded(
@@ -1226,31 +1274,67 @@ class _RoundButton extends StatelessWidget {
   }
 }
 
-/// The newest picture taken while live view is on.
+/// The newest picture taken since live view was opened, the picture the
+/// Library's grid shows of it, so it comes in as it stays: upright and
+/// filling the square. A tap opens the pictures taken.
 class _LastShot extends StatelessWidget {
-  const new({required this.bytes});
+  const new({required this.serial, required this.shots, required this.onTap});
 
   static const size = 56.0;
+  static const _radius = BorderRadius.all(Radius.circular(12));
 
-  final Uint8List? bytes;
+  /// The camera of [shots]; null while the library has none.
+  final String? serial;
+
+  /// The pictures taken, newest first.
+  final List<Shot> shots;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    final b = bytes;
-    return Container(
+    final serial = this.serial;
+    final newest = shots.firstOrNull;
+    final shown = serial != null && newest != null;
+    final square = Container(
       key: const Key('live-last-shot'),
       width: size,
       height: size,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: c.s2,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: _radius,
         border: Border.all(color: c.line2),
       ),
-      child: b == null
-          ? null
-          : Image.memory(b, fit: BoxFit.cover, gaplessPlayback: true),
+      child: shown
+          ? Stack(
+              fit: StackFit.expand,
+              children: [
+                // The shot before stays under the newest until that one's
+                // picture is in: the square is not empty in between.
+                for (final shot in shots.take(2).toList().reversed)
+                  CameraImage(
+                    key: ValueKey(shot.primary),
+                    serial: serial,
+                    file: shot.primary,
+                    size: shot.gridSize,
+                  ),
+              ],
+            )
+          : null,
+    );
+    if (!shown) return square;
+    return Semantics(
+      label: context.l10n.libraryShotSemantics(
+        formatLabel(context, newest.format),
+        newest.primary.name,
+      ),
+      button: true,
+      child: Pressable(
+        onTap: onTap,
+        shape: const RoundedRectangleBorder(borderRadius: _radius),
+        child: square,
+      ),
     );
   }
 }

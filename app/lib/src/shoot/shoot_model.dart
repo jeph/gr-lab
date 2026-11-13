@@ -152,6 +152,9 @@ final class ShootModel extends ChangeNotifier {
   set mode(ShootMode value) {
     if (settings.shootMode == value) return;
     settings.shootMode = value;
+    // Live view was left: the pictures taken in it are those of that
+    // visit only.
+    if (value != ShootMode.liveView) liveView.forgetShots();
     _updateLiveView();
     // Back to Remote stops a join still under way (mock `b-shoot`); Wi-Fi
     // that is up stays up for the next page that needs it.

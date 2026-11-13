@@ -73,6 +73,10 @@ GR WORLD requests the info for every listed photo in a background loop (`0xdb633
 ### 2.3 Thumbnails / previews
 UI image widgets load `…/v1/photos/<dir>/<file>?storage=<s>&size=thumb` for grid cells and `size=view` for the large preview (`0x977b64` picks thumb vs view on a widget mode field). With one storage the URL is `…/<file>?size=thumb`.
 
+What a GR IV HDF JPEG holds (observed: one file written by firmware 1.11, read with exiftool on 2026-11-12): an EXIF thumbnail (IFD1) of 160×120 in which the 3:2 picture lies between black bars, 8 rows above and 8 below, and a maker-note preview of 720×480 without bars. **[inferred]** `size=thumb` answers with the first and `size=view` with the second; neither response has been compared with the file (Open questions, item 4). No DNG has been read, so what a DNG's `thumb` and `view` show is **[unknown]**.
+
+GR Photo shows `size=view` in the Library's grid and in live view's last shot: a `thumb` cropped to fill a square would keep its bars at the top and bottom. Reported by the user on 2026-11-12 (body and firmware not recorded), when the last shot still loaded `size=thumb` of every file a `storage` `add` named: a picture came in small and was replaced by a larger one. **[inferred]** The shot was RAW+JPEG, the two were the thumbnails of its two files, and the DNG's has no bars; see [remote shooting §8](remote-shooting.md#8-open-unknowns) for the hardware test.
+
 ### 2.4 Full download (manual import and auto-transfer)
 Size choice:
 - Import size enum `hOb`: `thumb`(0), `view`(1), `full`(2), `xs`(3), `single`(4) (`work/cs/blutter_out/objs.txt`:54002-54031).

@@ -39,9 +39,11 @@ import 'package:video_player/video_player.dart';
 /// The viewer follows the camera's listing: a shot that leaves it (deleted
 /// on the camera, or its card taken out) leaves the swipe list, a pair
 /// that lost one half shows the other, and the viewer closes once no shot
-/// is left. It also closes when the Library switches to another camera:
-/// its shots are not on that camera, and it has no listing of theirs to
-/// follow any more \[design\].
+/// is left. A picture taken a moment ago (the viewer opened from live
+/// view) is in no listing yet: it stays until one has it, and is followed
+/// like the others from then on. The viewer also closes when the Library
+/// switches to another camera: its shots are not on that camera, and it
+/// has no listing of theirs to follow any more \[design\].
 class ShotViewer extends StatefulWidget {
   const new({required this.shots, required this.initialIndex, super.key});
 
@@ -58,9 +60,12 @@ class _ShotViewerState extends State<ShotViewer> with TickerProviderStateMixin {
   /// The camera of [_shots]: the listing's camera when the viewer opened.
   late final String? _serial;
 
-  /// [ShotViewer.shots] still in the listing, in their order, as the
-  /// listing has them now.
+  /// [ShotViewer.shots] not known to have left the listing, in their
+  /// order, as the listing has them now.
   late final List<Shot> _shots = [...widget.shots];
+
+  /// Keys of the [_shots] a listing has had: these leave with the listing.
+  final Set<String> _listed = {};
 
   /// The listing [_shots] were last matched against. The library reports
   /// far more than new listings (each file's info, its refresh starting
@@ -107,6 +112,10 @@ class _ShotViewerState extends State<ShotViewer> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _serial = _library.model.serial;
+    if (_library.model.shots case final listing?) {
+      final keys = {for (final s in listing) s.key};
+      _listed.addAll(widget.shots.map((s) => s.key).where(keys.contains));
+    }
     _library.model.addListener(_followListing);
     _immersion = AnimationController(
       vsync: this,
@@ -228,17 +237,18 @@ class _ShotViewerState extends State<ShotViewer> with TickerProviderStateMixin {
     if (listing == null || identical(listing, _followed)) return;
     _followed = listing;
     final listed = {for (final s in listing) s.key: s};
-    final kept = [for (final s in _shots) ?listed[s.key]];
+    _listed.addAll(_shots.map((s) => s.key).where(listed.containsKey));
+    // As the listing has it, itself while no listing has had it, or null
+    // once it left the listing.
+    Shot? now(Shot s) => listed[s.key] ?? (_listed.contains(s.key) ? null : s);
+    final kept = [for (final s in _shots) ?now(s)];
     if (listEquals(kept, _shots)) return;
     if (kept.isEmpty) {
       _close();
       return;
     }
     final shown = _shots[_index];
-    final keptBefore = _shots
-        .take(_index)
-        .where((s) => listed.containsKey(s.key))
-        .length;
+    final keptBefore = _shots.take(_index).where((s) => now(s) != null).length;
     final index = min(keptBefore, kept.length - 1);
     final dropped = kept.length != _shots.length;
     setState(() {

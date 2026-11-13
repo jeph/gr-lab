@@ -7,7 +7,10 @@ import 'package:gr_fake_camera/gr_fake_camera.dart';
 // Only to check the simulated camera's Operation Mode.
 import 'package:gr_protocol/gr_protocol.dart' show BleOperationMode;
 import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/library/image_orientation.dart';
 import 'package:grphoto/src/library/library_screen.dart';
+import 'package:grphoto/src/library/shot_cell.dart';
+import 'package:grphoto/src/library/viewer.dart';
 import 'package:grphoto/src/shoot/live_view_controller.dart';
 import 'package:grphoto/src/shoot/shoot_screen.dart';
 import 'package:grphoto/src/theme/tokens.dart';
@@ -998,6 +1001,194 @@ void main() {
       await tester.tap(find.byKey(const Key('shoot-mode-liveView')));
       await pumpUntilFound(tester, find.byKey(const Key('live-picture')));
       expect(app.models.connection.status, ConnectionStatus.connected);
+      await app.dispose();
+    });
+
+    final lastShot = find.byKey(const Key('live-last-shot'));
+    Finder inLastShot(Finder finder) =>
+        find.descendant(of: lastShot, matching: finder);
+
+    /// The files whose pictures the last shot holds, bottom to top.
+    List<CameraFile> lastShotFiles(WidgetTester tester) => [
+      for (final image in tester.widgetList<CameraImage>(
+        inLastShot(find.byType(CameraImage)),
+      ))
+        image.file,
+    ];
+
+    CameraFile fileOf(FakePhoto photo) => CameraFile(photo.storage, photo.path);
+
+    /// Presses the shutter and waits for the last shot to show the
+    /// picture taken.
+    Future<FakePhoto> shoot(WidgetTester tester, TestApp app) async {
+      final before = app.camera.photos.length;
+      await _untilReady(tester);
+      await tester.tap(find.byKey(const Key('shoot-shutter')));
+      await pumpUntil(
+        tester,
+        () => app.camera.photos.length == before + 1,
+        reason: 'picture taken',
+      );
+      final photo = app.camera.photos.last;
+      final picture = find.descendant(
+        of: find.byKey(ValueKey(fileOf(photo))),
+        matching: find.byType(Image),
+      );
+      await pumpUntilFound(tester, inLastShot(picture));
+      return photo;
+    }
+
+    testWidgets('the last shot is the newest picture taken, as the Library '
+        'shows it from the start: upright, and one picture for a RAW+JPEG '
+        'pair', (tester) async {
+      final app = await inLiveView(
+        tester,
+        config: FakeCameraConfig(
+          bonded: true,
+          // Held upright; the pictures taken are served as this one.
+          photos: [
+            FakePhoto(
+              '100RICOH',
+              'R0000001.JPG',
+              DateTime(2026, 11, 5, 8),
+              orientation: 6,
+            ),
+          ],
+        ),
+      );
+      expect(inLastShot(find.byType(CameraImage)), findsNothing);
+
+      final first = await shoot(tester, app);
+      final image = tester.widget<CameraImage>(
+        inLastShot(find.byType(CameraImage)),
+      );
+      expect(image.file, fileOf(first));
+      // The grid's picture and no other: none follows it in the square.
+      expect(image.size, GrImageSize.view);
+      expect(image.sharper, isNull);
+      expect(
+        tester
+            .widget<ExifOrientation>(inLastShot(find.byType(ExifOrientation)))
+            .orientation,
+        6,
+      );
+
+      // Its RAW half: still the one picture, which is not loaded again.
+      final shown = tester.state(inLastShot(find.byType(CameraImage)));
+      app.camera.addPhoto(
+        FakePhoto(
+          first.dir,
+          '${first.baseName}.DNG',
+          first.dateTime,
+          orientation: 6,
+        ),
+      );
+      await pumpUntil(
+        tester,
+        () => app.models.connection.cameraSession!.liveView.shots.length == 2,
+        reason: 'the RAW half taken',
+      );
+      await pumpRounds(tester, 5);
+      expect(lastShotFiles(tester), [fileOf(first)]);
+      expect(tester.state(inLastShot(find.byType(CameraImage))), same(shown));
+
+      // The picture before stays under the next one.
+      final second = await shoot(tester, app);
+      expect(lastShotFiles(tester), [fileOf(first), fileOf(second)]);
+      await app.dispose();
+    });
+
+    testWidgets('a tap on the last shot opens the pictures taken since live '
+        'view was opened, the newest first, and live view stops under the '
+        'viewer; × forgets them', (tester) async {
+      final app = await inLiveView(tester);
+      final camera = app.camera;
+      final listing = app.models.library.model;
+      final viewer = find.byType(ShotViewer);
+      Finder showing(FakePhoto photo) => find.descendant(
+        of: viewer,
+        matching: find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text(photo.file),
+        ),
+      );
+      int pages() => tester
+          .widget<PageView>(
+            find.descendant(of: viewer, matching: find.byType(PageView)),
+          )
+          .childrenDelegate
+          .estimatedChildCount!;
+      bool listed(FakePhoto photo) =>
+          listing.shots!.any((s) => s.files.contains(fileOf(photo)));
+      await pumpUntil(
+        tester,
+        () => camera.liveViewStreams == 1,
+        reason: 'streaming',
+      );
+
+      final first = await shoot(tester, app);
+      expect(
+        listed(first),
+        isFalse,
+        reason: 'the picture shows before the listing is read again',
+      );
+      await tester.tap(lastShot);
+      await pumpUntilFound(tester, showing(first));
+      await pumpUntil(
+        tester,
+        () => camera.liveViewStreams == 0,
+        reason: 'stopped under the viewer',
+      );
+      expect(app.models.connection.status, ConnectionStatus.connected);
+
+      // It stays while no listing has it, and once one does.
+      await pumpUntil(tester, () => listed(first), reason: 'listed');
+      await pumpRounds(tester, 5);
+      expect(showing(first), findsOneWidget);
+      expect(camera.liveViewStreams, 0, reason: 'still stopped');
+      expect(pages(), 1, reason: 'not the pictures taken before live view');
+
+      // The volume buttons are the viewer's there, not the shutter's.
+      final taken = camera.photos.length;
+      await tester.sendKeyEvent(LogicalKeyboardKey.audioVolumeDown);
+      await pumpRounds(tester, 30);
+      expect(camera.photos, hasLength(taken));
+
+      await tapWhenReady(
+        tester,
+        find.descendant(of: viewer, matching: find.byType(BackButton)),
+      );
+      await pumpUntil(
+        tester,
+        () => viewer.evaluate().isEmpty,
+        reason: 'viewer closed',
+      );
+      await pumpUntil(
+        tester,
+        () => camera.liveViewStreams == 1,
+        reason: 'streaming again',
+      );
+
+      final second = await shoot(tester, app);
+      await tester.tap(lastShot);
+      await pumpUntilFound(tester, showing(second));
+      expect(pages(), 2);
+      await tapWhenReady(
+        tester,
+        find.descendant(of: viewer, matching: find.byType(BackButton)),
+      );
+      await pumpUntil(
+        tester,
+        () => viewer.evaluate().isEmpty,
+        reason: 'viewer closed',
+      );
+
+      await tester.tap(find.byKey(const Key('live-close')));
+      await pumpUntilFound(tester, find.byKey(const Key('shoot-remote')));
+      await tester.tap(find.byKey(const Key('shoot-mode-liveView')));
+      await pumpUntilFound(tester, find.byKey(const Key('live-picture')));
+      await pumpRounds(tester, 5);
+      expect(inLastShot(find.byType(CameraImage)), findsNothing);
       await app.dispose();
     });
 

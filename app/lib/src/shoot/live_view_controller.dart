@@ -48,6 +48,10 @@ final class SettingRefusalByCamera extends SettingRefusal {
 /// Not wanting it (another tab or mode, or the app no longer in front)
 /// stops live view and leaves the Wi-Fi up for the next page that needs it
 /// ([ConnectionController.leaveUnusedWifi] leaves it). \[design\]
+///
+/// The pictures taken ([shots]) are kept until live view is left
+/// ([forgetShots], and when the camera's pages close): through the app
+/// leaving the front and the Wi-Fi going and coming back. \[design\]
 final class LiveViewController extends ChangeNotifier {
   new({required this.connection}) {
     connection.addListener(_sync);
@@ -63,6 +67,7 @@ final class LiveViewController extends ChangeNotifier {
   late final StreamSubscription<void> _wifiUp;
   CameraLiveView? _live;
   bool _wanted = false;
+  bool _covered = false;
   bool _askedToJoin = false;
   bool _disposed = false;
 
@@ -94,8 +99,12 @@ final class LiveViewController extends ChangeNotifier {
     return identical(f, _hiddenFocus) ? null : f;
   }
 
-  /// Thumbnail of the newest picture taken while live view is on.
-  Uint8List? get lastShot => _live?.lastShot;
+  /// The files of the pictures taken since live view was opened, oldest
+  /// first; see [CameraLiveView.shots].
+  List<CameraFile> get shots => _live?.shots ?? const [];
+
+  /// Forgets [shots]: live view was left.
+  void forgetShots() => _live?.forgetShots();
 
   /// How the camera is held; see [CameraLiveView.orientation].
   GrCameraOrientation? get orientation => _live?.orientation;
@@ -113,6 +122,18 @@ final class LiveViewController extends ChangeNotifier {
     connection.liveViewWanted = value;
     _askedToJoin = false;
     if (!value) _live?.stop();
+    _sync();
+  }
+
+  /// Whether a page lies over live view (the viewer of [shots]). Live
+  /// view stops under it and starts again when it goes \[design\]: nobody
+  /// sees the picture then, and the camera's Wi-Fi is left to the page's
+  /// own requests. It is still [wanted], which keeps the Wi-Fi.
+  bool get covered => _covered;
+
+  set covered(bool value) {
+    if (_disposed || _covered == value) return;
+    _covered = value;
     _sync();
   }
 
@@ -158,11 +179,12 @@ final class LiveViewController extends ChangeNotifier {
         // A failed join is not repeated by itself; [retryJoin] does.
         _askedToJoin = true;
         if (connection.failure == null) unawaited(connection.joinWifi());
-      case ConnectionStatus.connected:
+      case ConnectionStatus.connected when !_covered:
         live?.start();
       case ConnectionStatus.offline ||
           ConnectionStatus.connecting ||
           ConnectionStatus.bluetooth ||
+          ConnectionStatus.connected ||
           ConnectionStatus.failed:
         live?.stop();
     }
@@ -215,7 +237,8 @@ final class LiveViewController extends ChangeNotifier {
     if (live != null) {
       live
         ..removeListener(_onLive)
-        ..stop();
+        ..stop()
+        ..forgetShots();
       live.frame.removeListener(_onFrame);
     }
     unawaited(_wifiUp.cancel());

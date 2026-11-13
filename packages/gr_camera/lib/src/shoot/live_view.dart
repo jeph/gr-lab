@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/src/environment.dart';
+import 'package:gr_camera/src/library/camera_file.dart';
+import 'package:gr_camera/src/library/camera_library.dart';
 import 'package:gr_camera/src/shoot/setting_writes.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 
@@ -38,7 +39,7 @@ final class FocusMark {
 /// remote-shooting.md): the MJPEG picture from `GET /v1/liveview`, tap to
 /// focus (`POST /v1/lens/focus pos=X,Y`), the exposure settings from
 /// `/v1/props` and their lists, changed with `PUT /v1/params/camera`, and
-/// the newest picture from the change WebSocket.
+/// the pictures taken meanwhile, from the change WebSocket.
 ///
 /// It runs between [start] and [stop]: the app starts it while live view
 /// is wanted and the camera's Wi-Fi is up, and stops it otherwise.
@@ -82,15 +83,9 @@ final class CameraLiveView extends ChangeNotifier {
 
   final _settings = SettingWrites();
   FocusMark? _focus;
-  Uint8List? _lastShot;
 
-  /// Path and storage, as the camera named them, [_lastShot] is of.
-  (GrPhotoPath, String?)? _lastShotOf;
-
-  /// Thumbnail loads running, with the file each is for. A `delete` of
-  /// that file removes its load, so a thumbnail that comes in after the
-  /// file left the camera is not shown.
-  final _shotLoads = <Object, (GrPhotoPath, String?)>{};
+  /// See [shots]; replaced when it changes, never changed in place.
+  List<CameraFile> _shots = const [];
   String? _streamError;
 
   /// Whether [start] was called and [stop] not since.
@@ -111,9 +106,21 @@ final class CameraLiveView extends ChangeNotifier {
   /// without a result, and after [stop].
   FocusMark? get focus => _focus;
 
-  /// Thumbnail of the newest picture taken while live view runs; null
-  /// again once the camera reports that file deleted.
-  Uint8List? get lastShot => _lastShot;
+  /// The files the camera reported as added while live view ran (pictures
+  /// taken from the app or on the camera), oldest first, without those it
+  /// reported deleted since. A RAW+JPEG picture is two of them. Each is
+  /// named as the library lists it, so its image and info come from there.
+  /// They stay through [stop] and the next [start]; [forgetShots] empties
+  /// them. Another list each time it changes.
+  List<CameraFile> get shots => _shots;
+
+  /// Empties [shots].
+  void forgetShots() {
+    if (_shots.isEmpty) return;
+    _log('shots.forgotten', {'files': _shots.length});
+    _shots = const [];
+    if (!_closed) notifyListeners();
+  }
 
   /// How the camera is held, from `/v1/props` and the `cameraDirect`
   /// change (remote-shooting.md §1.5); null until the settings are read,
@@ -451,9 +458,9 @@ final class CameraLiveView extends ChangeNotifier {
         if (!_sameFocus(running.$2, captureId)) return;
         _focusEnded(focused ? FocusState.focused : FocusState.missed);
       case GrStorageChange(:final path?, action: 'delete'):
-        _shotDeleted(path, e.storage);
+        _shotDeleted(_listed(path, e.storage));
       case GrStorageChange(:final path?):
-        unawaited(_loadThumb(http, path, e.storage));
+        _shotAdded(_listed(path, e.storage));
       default:
     }
   }
@@ -548,64 +555,29 @@ final class CameraLiveView extends ChangeNotifier {
     return true;
   }
 
-  Future<void> _loadThumb(
-    GrHttpClient http,
-    GrPhotoPath path,
-    String? storage,
-  ) async {
-    final load = Object();
-    _shotLoads[load] = (path, storage);
-    final sink = StreamController<List<int>>();
-    final bytes = sink.stream.fold(BytesBuilder(copy: false), (b, chunk) {
-      b.add(chunk);
-      return b;
-    });
-    try {
-      await http.download(
-        path,
-        sink.sink,
-        size: GrImageSize.thumb,
-        storage: storage,
-      );
-      await sink.close();
-      final data = (await bytes).takeBytes();
-      // Gone when the file was deleted meanwhile ([_shotDeleted]).
-      final shot = _shotLoads.remove(load);
-      if (_closed || data.isEmpty) return;
-      if (shot == null) {
-        _log('thumb.dropped', {'path': '$path', 'storage': storage});
-        return;
-      }
-      _lastShot = data;
-      _lastShotOf = shot;
-      notifyListeners();
-    } on Object catch (e) {
-      _shotLoads.remove(load);
-      await sink.close();
-      _log('thumb.failed', {'path': '$path', 'error': '$e'});
-      // Only the thumbnail is missing; the picture is on the camera.
-    }
+  /// [path] on [storage], as a `storage` change names them, as the library
+  /// lists it: a camera listed without `storage=` ([listedStorages]) has
+  /// its files without one.
+  CameraFile _listed(GrPhotoPath path, String? storage) => CameraFile(
+    listedStorages(_session.props).contains(null) ? null : storage,
+    path,
+  );
+
+  void _shotAdded(CameraFile file) {
+    if (_shots.contains(file)) return;
+    _shots = List.unmodifiable([..._shots, file]);
+    _log('shot.added', {'file': '$file', 'shots': _shots.length});
+    notifyListeners();
   }
 
-  /// The camera deleted [path] on [storage] (on the body, or by another
-  /// app): its thumbnail is no longer the last shot, and one still loading
-  /// is not shown. The camera may still send it, finishing a request it
-  /// accepted before the delete (\[inferred\] from the GR IV firmware).
-  void _shotDeleted(GrPhotoPath path, String? storage) {
-    final deleted = (path, storage);
-    final loads = _shotLoads.length;
-    _shotLoads.removeWhere((_, shot) => shot == deleted);
-    final wasShown = _lastShotOf == deleted;
-    if (!wasShown && loads == _shotLoads.length) return;
-    _log('thumb.deleted', {
-      'path': '$path',
-      'storage': storage,
-      'shown': wasShown,
-      'loadsDropped': loads - _shotLoads.length,
-    });
-    if (!wasShown) return;
-    _lastShot = null;
-    _lastShotOf = null;
+  /// The camera deleted [file] (on the body, or by another app).
+  void _shotDeleted(CameraFile file) {
+    if (!_shots.contains(file)) return;
+    _shots = List.unmodifiable([
+      for (final shot in _shots)
+        if (shot != file) shot,
+    ]);
+    _log('shot.deleted', {'file': '$file', 'shots': _shots.length});
     notifyListeners();
   }
 

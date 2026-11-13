@@ -91,9 +91,12 @@ class _ShootScreenState extends State<ShootScreen> {
     }
   }
 
-  /// Volume up or down fires the shutter while Shoot is showing.
+  /// Volume up or down fires the shutter while Shoot is showing, and not
+  /// under the viewer of live view's pictures, where a movie plays.
   bool _onKey(KeyEvent event) {
-    if (!_model.visible || event is! KeyDownEvent) return false;
+    if (!_model.visible || _model.liveView.covered || event is! KeyDownEvent) {
+      return false;
+    }
     final key = event.logicalKey;
     if (key != LogicalKeyboardKey.audioVolumeUp &&
         key != LogicalKeyboardKey.audioVolumeDown) {

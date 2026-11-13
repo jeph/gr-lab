@@ -199,78 +199,85 @@ void main() {
     expect(live.orientation, isNull, reason: 'read again on the next start');
   });
 
-  test('a picture taken while live view runs becomes the last shot', () async {
+  test('pictures taken while live view runs are its shots, oldest first, '
+      'through a stop, until forgotten', () async {
     rig = await ShootRig.start(wifi: true);
     final live = rig.liveView;
     await rig.remote.wake();
     await rig.startLiveView();
-    expect(live.lastShot, isNull);
-    await rig.remote.shutter();
-    await until(() => live.lastShot != null, reason: 'thumbnail');
-  });
+    expect(live.shots, isEmpty);
 
-  test('the last shot goes once the camera deletes its file', () async {
-    rig = await ShootRig.start(wifi: true);
-    final live = rig.liveView;
-    await rig.remote.wake();
-    await rig.startLiveView();
     await rig.remote.shutter();
-    await until(() => live.lastShot != null, reason: 'thumbnail');
-    final shot = rig.camera.photos.last;
+    await until(() => live.shots.length == 1, reason: 'first shot');
+    final first = live.shots;
+    await rig.remote.shutter();
+    await until(() => live.shots.length == 2, reason: 'second shot');
+    expect(first, hasLength(1), reason: 'a list handed out is not changed');
+    expect(live.shots, [
+      for (final photo in rig.camera.photos.sublist(
+        rig.camera.photos.length - 2,
+      ))
+        CameraFile(photo.storage, photo.path),
+    ]);
+    expect(rig.events('shoot.shot.added').map((e) => e['shots']), [1, 2]);
+
+    // The Wi-Fi going, or the app leaving the front, is not the end of
+    // the pictures taken.
+    live.stop();
+    await rig.startLiveView();
+    expect(live.shots, hasLength(2));
 
     var notified = 0;
-    live.addListener(() => notified++);
-    expect(rig.camera.removePhoto(shot.path, storage: shot.storage), isTrue);
-    await until(() => live.lastShot == null, reason: 'last shot cleared');
-    expect(notified, greaterThan(0));
-    expect(rig.events('shoot.thumb.deleted'), [
-      {
-        'path': '${shot.path}',
-        'storage': shot.storage,
-        'shown': true,
-        'loadsDropped': 0,
-      },
+    live
+      ..addListener(() => notified++)
+      ..forgetShots();
+    expect(live.shots, isEmpty);
+    expect(notified, 1);
+    expect(rig.events('shoot.shots.forgotten'), [
+      {'files': 2},
     ]);
   });
 
-  test('a thumbnail still loading when the camera deletes its file is not '
-      'shown', () async {
-    final asked = Completer<void>();
-    final release = Completer<void>();
-    final media = syntheticMedia();
-    rig = await ShootRig.start(
-      wifi: true,
-      media: (photo, size) async {
-        if (size == GrImageSize.thumb && !asked.isCompleted) {
-          asked.complete();
-          await release.future;
-        }
-        return await media(photo, size);
-      },
-    );
-    addTearDown(() {
-      if (!release.isCompleted) release.complete();
-    });
+  test('a shot goes once the camera deletes its file', () async {
+    rig = await ShootRig.start(wifi: true);
     final live = rig.liveView;
     await rig.remote.wake();
     await rig.startLiveView();
     await rig.remote.shutter();
-    await asked.future;
-    final shot = rig.camera.photos.last;
+    await until(() => live.shots.length == 1, reason: 'first shot');
+    await rig.remote.shutter();
+    await until(() => live.shots.length == 2, reason: 'second shot');
+    final [kept, deleted] = live.shots;
 
-    rig.camera.removePhoto(shot.path, storage: shot.storage);
-    await until(
-      () => rig.events('shoot.thumb.deleted').isNotEmpty,
-      reason: 'delete seen',
+    var notified = 0;
+    live.addListener(() => notified++);
+    expect(
+      rig.camera.removePhoto(deleted.path, storage: deleted.storage!),
+      isTrue,
     );
-    // The camera finishes the request it accepted before the delete.
-    release.complete();
-    await until(
-      () => rig.events('shoot.thumb.dropped').isNotEmpty,
-      reason: 'load ended',
+    await until(() => live.shots.length == 1, reason: 'shot dropped');
+    expect(live.shots, [kept]);
+    expect(notified, greaterThan(0));
+    expect(rig.events('shoot.shot.deleted'), [
+      {'file': '$deleted', 'shots': 1},
+    ]);
+  });
+
+  test('a shot of a camera listed without a storage has none, as the '
+      'library lists it', () async {
+    rig = await ShootRig.start(
+      config: const FakeCameraConfig(bonded: true, sdCard: false),
+      wifi: true,
     );
-    expect(live.lastShot, isNull);
-    expect(rig.events('shoot.thumb.deleted').single['loadsDropped'], 1);
+    final live = rig.liveView;
+    await rig.remote.wake();
+    await rig.startLiveView();
+    await rig.remote.shutter();
+    await until(() => live.shots.isNotEmpty, reason: 'shot');
+
+    final listing = await rig.session.library!.listFiles();
+    expect(live.shots.single.storage, isNull);
+    expect(listing.files, contains(live.shots.single));
   });
 
   test('closing the session stops live view', () async {
