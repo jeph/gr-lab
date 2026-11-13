@@ -5,9 +5,8 @@ product page and for search results, from the raw screens run.sh took.
     tool/store_screenshots/compose.py [locale ...]
 
 Reads build/store-screenshots/raw/<device>/<locale>/*.png and
-captions/<locale>.json, lays each screenshot out as a web page (a numbered
-label and a caption, set left, above the screen in a drawn device that runs
-off the bottom edge) and has headless Google Chrome render it at the size the
+captions/<locale>.json, lays each screenshot out as a web page (a caption,
+set left, above the screen in a drawn device that runs off the bottom edge) and has headless Google Chrome render it at the size the
 App Store takes. The results are
 build/store-screenshots/out/<device>/<locale>/NN-<shot>.jpg, and
 out/creative/<locale>/header.png and search.jpg, which show three phones on
@@ -20,9 +19,8 @@ The photos on the simulated card are vivid ones, and a screen full of them
 outshines its caption, so each screen is shown a little calmer than the
 simulator took it (TONE).
 
-A locale is one of the app's (app/l10n.yaml). The label of each shot and the
-chips of the first one name the app's features as its messages for that
-locale do.
+A locale is one of the app's (app/l10n.yaml). The chips of the first shot
+name the app's features as its messages for that locale do.
 """
 
 import html
@@ -47,27 +45,24 @@ DEVICES = {
 }
 
 # Each shot in the order of the listing: its caption key, its layout, the raw
-# screens it shows, the colour of its label and glow, and the app's message
-# its label reads (none: the app's name).
+# screens it shows and the colour of its glow.
 SHOTS = [
     (
         "overview",
         "trio",
         ["look-editor-colour", "live-view", "library"],
         "#6EA8FF",
-        None,
     ),
-    ("library", "single", ["library"], "#FFB454", "libraryTitle"),
-    ("viewer", "single", ["viewer"], "#FF7A59", "looksPreviewFullScreen"),
-    ("live-view", "single", ["live-view"], "#5BD08B", "shootModeLiveView"),
-    ("looks", "single", ["looks-loaded"], "#B48CFF", "looksTitle"),
-    ("look-editor", "single", ["look-editor-colour"], "#FFD166", "looksBaseImage"),
+    ("library", "single", ["library"], "#FFB454"),
+    ("viewer", "single", ["viewer"], "#FF7A59"),
+    ("live-view", "single", ["live-view"], "#5BD08B"),
+    ("looks", "single", ["looks-loaded"], "#B48CFF"),
+    ("look-editor", "single", ["look-editor-colour"], "#FFD166"),
     (
         "geotagging",
         "pair",
         ["viewer-map", "lock-screen"],
         "#4FD1C5",
-        "geotagNoticeChannel",
     ),
 ]
 
@@ -274,8 +269,6 @@ def captions(locale, device):
         on_ipad = caption.pop("ipad", {})
         if device == "ipad":
             caption.update(on_ipad)
-    for shot, _, _, _, message in SHOTS:
-        shots[shot]["label"] = messages[message] if message else "GR Photo"
     shots["overview"]["chips"] = [messages[key] for key in CHIPS]
     return shots
 
@@ -358,7 +351,7 @@ def snap(markup, width, height, target, folder):
     source.unlink()
 
 
-def page(device, locale, number, caption, layout, screens, glow, sources):
+def page(device, locale, caption, layout, screens, glow, sources):
     size = DEVICES[device]
     width, height = size["width"], size["height"]
     css = style(locale, width, height, glow)
@@ -379,7 +372,6 @@ def page(device, locale, number, caption, layout, screens, glow, sources):
         f'<body style="--u:{unit:.2f}px;--aspect:{width / height:.4f}">'
         f'<div class="glow"></div>'
         f'<div class="caption">'
-        f'<div class="label">{number:02d} — {html.escape(caption["label"])}</div>'
         f"<h1>{heading(locale, caption['title'])}</h1>"
         f"<p>{html.escape(caption['subtitle'])}</p>{chips}</div>"
         f'<div class="stage">{"".join(devices)}</div></body>'
@@ -411,7 +403,7 @@ def creative(locale, table, folder):
             words = (
                 f'<div class="words" style="left:{left}px;top:{top}px;'
                 f'width:{across}px;height:{down}px">'
-                f'<div class="label">{html.escape(caption["label"])}</div>'
+                '<div class="label">GR Photo</div>'
                 f"<h1>{heading(locale, caption['title'])}</h1>"
                 f"<p>{html.escape(caption['subtitle'])}</p></div>"
             )
@@ -446,16 +438,16 @@ def render(device, locale, table, folder):
     (folder / device / locale).mkdir(parents=True)
     sources = {
         screen: toned(raw / f"{screen}.png", table, folder / device / locale)
-        for _, _, screens, _, _ in SHOTS
+        for _, _, screens, _ in SHOTS
         for screen in screens
     }
     shots = captions(locale, device)
     out = WORK / "out" / device / locale
     out.mkdir(parents=True, exist_ok=True)
-    for number, (shot, layout, screens, glow, _) in enumerate(SHOTS, start=1):
+    for number, (shot, layout, screens, glow) in enumerate(SHOTS, start=1):
         target = out / f"{number:02d}-{shot}.png"
         snap(
-            page(device, locale, number, shots[shot], layout, screens, glow, sources),
+            page(device, locale, shots[shot], layout, screens, glow, sources),
             size["width"],
             size["height"],
             target,
