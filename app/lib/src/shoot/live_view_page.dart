@@ -398,7 +398,10 @@ class _LiveLayoutState extends State<_LiveLayout> {
             bottom: 0,
             width: dialWidth,
             height: _dialRoom,
-            child: Align(alignment: Alignment.topCenter, child: _dial(dialKey)),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ToastFloor(child: _dial(dialKey)),
+            ),
           ),
       ],
     );

@@ -772,6 +772,35 @@ void main() {
       await app.dispose();
     });
 
+    testWidgets('on its side, what the camera refuses is said above the '
+        'open dial', (tester) async {
+      final app = await inLiveView(
+        tester,
+        config: const FakeCameraConfig(bonded: true, remainingPictures: 0),
+      );
+      tester.view
+        ..physicalSize = const Size(998, 448)
+        ..devicePixelRatio = 1;
+      await pumpRounds(tester, 3);
+      await pumpUntil(
+        tester,
+        () => find.text('f/2.8').evaluate().isNotEmpty,
+        reason: 'aperture readout',
+      );
+      await tester.tap(find.byKey(const Key('live-readout-av')));
+      await pumpUntilFound(tester, find.byKey(const Key('live-dial-av')));
+      await tester.tap(find.byKey(const Key('shoot-shutter')));
+      await pumpUntilFound(tester, find.byKey(const Key('toast-failed')));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(
+        tester.getRect(find.byKey(const Key('toast'))).bottom,
+        lessThanOrEqualTo(
+          tester.getRect(find.byKey(const Key('live-dial-av'))).top - 8,
+        ),
+      );
+      await app.dispose();
+    });
+
     testWidgets('quick taps run one focus at a time: the first, then the '
         'newest tap once it ends', (tester) async {
       final app = await inLiveView(tester);
