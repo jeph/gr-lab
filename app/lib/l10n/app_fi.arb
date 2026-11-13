@@ -500,7 +500,7 @@
   "settingsAutoDisconnectNever": "Ei koskaan",
   "settingsAutoDisconnectSheetTitle": "Wi-Fi-yhteyden katkaisu",
   "settingsAutoDisconnectSubtitle": "Poistuu kameran Wi-Fi-verkosta, kun GR Photo ei ole käytössä",
-  "settingsBackgroundExplainHistory": "Kun otat taustapaikkamerkinnän käyttöön, puhelin pyytää sallimaan sijainnin käytön aina. Sijaintihistoria tallennetaan vain paikallisesti tähän puhelimeen, ja voit poistaa sen Asetuksissa milloin tahansa. Puhelimeen tallennetaan viimeisten {days} päivän sijaintitiedot. Kuvat, jotka ladataan yli {days} päivää ottamisen jälkeen, eivät saa sijaintia taustapaikkamerkinnästä.",
+  "settingsBackgroundExplainHistory": "Kun otat taustapaikkamerkinnän käyttöön, puhelin pyytää sallimaan sijainnin käytön aina. Sijaintihistoria tallennetaan vain paikallisesti tähän puhelimeen, ja voit poistaa sen Asetuksissa milloin tahansa. Yli {days} päivää vanha sijaintihistoria poistetaan, joten kuvat, jotka ladataan yli {days} päivää ottamisen jälkeen, eivät saa sijaintia taustapaikkamerkinnästä.",
   "settingsBackgroundExplainHow": "Taustapaikkamerkintä säilyttää tämän puhelimen sijaintihistoriaa {days} päivän ajan, myös silloin, kun GR Photo on suljettu eikä ole käytössä. Kun lataat kuvan, GR Photo lisää siihen puhelimen sijainnin kuvan ottamishetkeltä. Toisin kuin reaaliaikaisessa paikkamerkinnässä, GR Photon ei tarvitse olla käynnissä, jotta taustapaikkamerkintä toimii. Taustapaikkamerkinnän sijaintitiedot ovat kuitenkin hieman epätarkempia kuin reaaliaikaisen paikkamerkinnän.",
   "settingsBackgroundGeotagging": "Taustapaikkamerkintä",
   "settingsBackgroundGeotaggingPaused": "Keskeytetty",

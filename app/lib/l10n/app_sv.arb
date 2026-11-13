@@ -500,7 +500,7 @@
   "settingsAutoDisconnectNever": "Aldrig",
   "settingsAutoDisconnectSheetTitle": "Koppla från Wi-Fi efter",
   "settingsAutoDisconnectSubtitle": "Lämnar kamerans Wi-Fi när GR Photo inte används",
-  "settingsBackgroundExplainHistory": "När du slår på geotaggning i bakgrunden ber telefonen dig att tillåta åtkomst till din plats alltid. Platshistoriken sparas bara lokalt på den här telefonen, och du kan radera den i Inställningar när som helst. De senaste {days} dagarnas platsdata sparas på din telefon. Bilder som hämtas mer än {days} dagar efter att de togs får ingen plats från geotaggning i bakgrunden.",
+  "settingsBackgroundExplainHistory": "När du slår på geotaggning i bakgrunden ber telefonen dig att tillåta åtkomst till din plats alltid. Platshistoriken sparas bara lokalt på den här telefonen, och du kan radera den i Inställningar när som helst. Platshistorik som är äldre än {days} dagar raderas, så bilder som hämtas mer än {days} dagar efter att de togs får ingen plats från geotaggning i bakgrunden.",
   "settingsBackgroundExplainHow": "Geotaggning i bakgrunden sparar en historik över den här telefonens plats i {days} dagar, även när GR Photo är stängt och inaktivt. När du hämtar en bild lägger GR Photo till telefonens plats från tidpunkten då bilden togs. Till skillnad från live-geotaggning behöver du inte hålla GR Photo aktivt för att geotaggning i bakgrunden ska fungera. Platsdata från geotaggning i bakgrunden är dock något mindre exakta än från live-geotaggning.",
   "settingsBackgroundGeotagging": "Geotaggning i bakgrunden",
   "settingsBackgroundGeotaggingPaused": "Pausad",

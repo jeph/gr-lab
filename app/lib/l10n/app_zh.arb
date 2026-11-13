@@ -500,7 +500,7 @@
   "settingsAutoDisconnectNever": "永不",
   "settingsAutoDisconnectSheetTitle": "多久后断开 Wi-Fi",
   "settingsAutoDisconnectSubtitle": "不使用 GR Photo 时断开相机的 Wi-Fi",
-  "settingsBackgroundExplainHistory": "开启后台地理标记时，手机会请你将位置信息权限设为“始终允许”。位置记录只保存在这部手机本地，你可以随时在“设置”中删除。手机上保存着过去 {days} 天的位置数据。拍摄后超过 {days} 天才下载的照片，无法通过后台地理标记获得位置。",
+  "settingsBackgroundExplainHistory": "开启后台地理标记时，手机会请你将位置信息权限设为“始终允许”。位置记录只保存在这部手机本地，你可以随时在“设置”中删除。超过 {days} 天的位置记录会被删除，因此拍摄后超过 {days} 天才下载的照片，无法通过后台地理标记获得位置。",
   "settingsBackgroundExplainHow": "后台地理标记会保存这部手机 {days} 天内的位置记录，即使 GR Photo 已关闭且未在使用也一样。下载照片时，GR Photo 会把拍摄时手机的位置数据添加到照片中。与实时地理标记不同，后台地理标记无需让 GR Photo 保持运行即可工作。不过，后台地理标记提供的位置数据比实时地理标记略欠精确。",
   "settingsBackgroundGeotagging": "后台地理标记",
   "settingsBackgroundGeotaggingPaused": "已暂停",

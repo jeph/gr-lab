@@ -2671,7 +2671,7 @@
   "@settingsAutoDisconnectSubtitle": {
     "description": "Settings: explanation under Auto-disconnect."
   },
-  "settingsBackgroundExplainHistory": "When you turn background geotagging on, your phone asks you to allow access to your location all the time. Location history is only ever stored locally on this phone and you can delete it in Settings at any time. The past {days} days of location data are stored on your phone. Photos downloaded more than {days} days after they were taken get no location from background geotagging.",
+  "settingsBackgroundExplainHistory": "When you turn background geotagging on, your phone asks you to allow access to your location all the time. Location history is only ever stored locally on this phone and you can delete it in Settings at any time. Location history older than {days} days is deleted, so photos downloaded more than {days} days after they were taken get no location from background geotagging.",
   "@settingsBackgroundExplainHistory": {
     "description": "Second and last paragraph of the screen that explains background geotagging: turning the Background geotagging switch on brings up the phone's permission prompt or settings page, the location history stays on the phone and can be deleted, and how far back it goes. Name the permission choice as the phone's settings do (Android: Allow all the time; iOS: Always).",
     "placeholders": {
@@ -2682,7 +2682,7 @@
       }
     }
   },
-  "settingsBackgroundExplainHow": "Background geotagging keeps a history of this phone's location for {days} days, even when GR Photo is closed and inactive. When you download a photo, GR Photo adds the phone's location data to the photo when the photo was taken. Unlike live geotagging, you don't have to keep GR Photo active for background geotagging to work. However, location data provided by background geotagging is slightly less accurate than live geotagging.",
+  "settingsBackgroundExplainHow": "Background geotagging keeps a history of this phone's location for {days} days, even when GR Photo is closed and inactive. When you download a photo, GR Photo tags it with where your phone was when the photo was taken. Unlike live geotagging, you don't have to keep GR Photo active for background geotagging to work. However, location data provided by background geotagging is slightly less accurate than live geotagging.",
   "@settingsBackgroundExplainHow": {
     "description": "First paragraph of the screen that explains background geotagging: what it does (a downloaded photo gets the place the phone was at when the photo was taken) and how it compares with live geotagging.",
     "placeholders": {

@@ -500,7 +500,7 @@
   "settingsAutoDisconnectNever": "안 함",
   "settingsAutoDisconnectSheetTitle": "미사용 시 Wi-Fi 연결 해제",
   "settingsAutoDisconnectSubtitle": "GR Photo를 사용하지 않으면 카메라의 Wi-Fi 연결을 해제합니다",
-  "settingsBackgroundExplainHistory": "백그라운드 위치 태그를 켜면 휴대전화가 위치 액세스를 ‘항상 허용’으로 설정하도록 요청합니다. 위치 기록은 이 휴대전화에만 로컬로 저장되며, 언제든지 설정에서 삭제할 수 있습니다. 휴대전화에는 최근 {days}일간의 위치 데이터가 저장됩니다. 촬영한 지 {days}일이 지난 뒤에 다운로드한 사진에는 백그라운드 위치 태그로 위치가 추가되지 않습니다.",
+  "settingsBackgroundExplainHistory": "백그라운드 위치 태그를 켜면 휴대전화가 위치 액세스를 ‘항상 허용’으로 설정하도록 요청합니다. 위치 기록은 이 휴대전화에만 로컬로 저장되며, 언제든지 설정에서 삭제할 수 있습니다. {days}일이 지난 위치 기록은 삭제되므로, 촬영한 지 {days}일이 지난 뒤에 다운로드한 사진에는 백그라운드 위치 태그로 위치가 추가되지 않습니다.",
   "settingsBackgroundExplainHow": "백그라운드 위치 태그는 GR Photo가 닫혀 있고 사용 중이 아닐 때에도 이 휴대전화의 위치 기록을 {days}일 동안 보관합니다. 사진을 다운로드하면 GR Photo가 촬영 당시 휴대전화의 위치 데이터를 사진에 추가합니다. 실시간 위치 태그와 달리 백그라운드 위치 태그는 GR Photo를 계속 실행해 두지 않아도 작동합니다. 다만 백그라운드 위치 태그가 제공하는 위치 데이터는 실시간 위치 태그보다 정확도가 조금 낮습니다.",
   "settingsBackgroundGeotagging": "백그라운드 위치 태그",
   "settingsBackgroundGeotaggingPaused": "일시 정지됨",

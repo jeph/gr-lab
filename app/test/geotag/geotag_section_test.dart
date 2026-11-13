@@ -124,11 +124,18 @@ void main() {
       said("keeps a history of this phone's location for 90 days"),
       findsOneWidget,
     );
+    expect(
+      said('tags it with where your phone was when the photo was taken'),
+      findsOneWidget,
+    );
     expect(said('Unlike live geotagging'), findsOneWidget);
     expect(said('slightly less accurate'), findsOneWidget);
     expect(said('allow access to your location all the time'), findsOneWidget);
     expect(said('only ever stored locally on this phone'), findsOneWidget);
-    expect(said('past 90 days of location data'), findsOneWidget);
+    expect(
+      said('Location history older than 90 days is deleted'),
+      findsOneWidget,
+    );
     expect(said('more than 90 days after they were taken'), findsOneWidget);
 
     // Once the screen has slid in.

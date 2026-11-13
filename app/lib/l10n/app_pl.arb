@@ -500,7 +500,7 @@
   "settingsAutoDisconnectNever": "Nigdy",
   "settingsAutoDisconnectSheetTitle": "Rozłącz Wi-Fi po",
   "settingsAutoDisconnectSubtitle": "Rozłącza Wi-Fi aparatu, gdy GR Photo nie jest używane",
-  "settingsBackgroundExplainHistory": "Gdy włączysz geotagowanie w tle, telefon poprosi o zezwolenie na dostęp do lokalizacji zawsze. Historia lokalizacji jest przechowywana wyłącznie lokalnie w tym telefonie i w każdej chwili możesz ją usunąć w Ustawieniach. W telefonie przechowywane są dane o lokalizacji z ostatnich {days} dni. Zdjęcia pobrane później niż {days} dni po zrobieniu nie otrzymują lokalizacji z geotagowania w tle.",
+  "settingsBackgroundExplainHistory": "Gdy włączysz geotagowanie w tle, telefon poprosi o zezwolenie na dostęp do lokalizacji zawsze. Historia lokalizacji jest przechowywana wyłącznie lokalnie w tym telefonie i w każdej chwili możesz ją usunąć w Ustawieniach. Historia lokalizacji starsza niż {days} dni jest usuwana, więc zdjęcia pobrane później niż {days} dni po zrobieniu nie otrzymują lokalizacji z geotagowania w tle.",
   "settingsBackgroundExplainHow": "Geotagowanie w tle przechowuje historię lokalizacji tego telefonu przez {days} dni, także gdy GR Photo jest zamknięte i nieaktywne. Gdy pobierasz zdjęcie, GR Photo dodaje do niego lokalizację telefonu z chwili, w której zostało zrobione. Inaczej niż przy geotagowaniu na żywo GR Photo nie musi pozostawać aktywne, aby geotagowanie w tle działało. Dane o lokalizacji z geotagowania w tle są jednak nieco mniej dokładne niż przy geotagowaniu na żywo.",
   "settingsBackgroundGeotagging": "Geotagowanie w tle",
   "settingsBackgroundGeotaggingPaused": "Wstrzymane",

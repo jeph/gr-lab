@@ -500,7 +500,7 @@
   "settingsAutoDisconnectNever": "しない",
   "settingsAutoDisconnectSheetTitle": "Wi-Fiを切断するまでの時間",
   "settingsAutoDisconnectSubtitle": "GR Photoを使っていないときにカメラのWi-Fiから切断します",
-  "settingsBackgroundExplainHistory": "バックグラウンドジオタグをオンにすると、位置情報へのアクセスを「常に許可」にするようスマートフォンから求められます。位置情報の履歴はこのスマートフォン内にのみ保存され、「設定」でいつでも削除できます。スマートフォンには過去{days}日分の位置情報が保存されます。撮影から{days}日を過ぎてダウンロードした写真には、バックグラウンドジオタグで位置情報は追加されません。",
+  "settingsBackgroundExplainHistory": "バックグラウンドジオタグをオンにすると、位置情報へのアクセスを「常に許可」にするようスマートフォンから求められます。位置情報の履歴はこのスマートフォン内にのみ保存され、「設定」でいつでも削除できます。{days}日より古い位置情報の履歴は削除されるため、撮影から{days}日を過ぎてダウンロードした写真には、バックグラウンドジオタグで位置情報は追加されません。",
   "settingsBackgroundExplainHow": "バックグラウンドジオタグは、GR Photoを閉じていて使用していない間も、このスマートフォンの位置情報の履歴を{days}日間保存します。写真をダウンロードすると、撮影した時点のスマートフォンの位置情報をGR Photoが写真に追加します。リアルタイムジオタグと違い、バックグラウンドジオタグではGR Photoを起動したままにしておく必要はありません。ただし、バックグラウンドジオタグの位置情報は、リアルタイムジオタグより精度が少し下がります。",
   "settingsBackgroundGeotagging": "バックグラウンドジオタグ",
   "settingsBackgroundGeotaggingPaused": "一時停止中",
