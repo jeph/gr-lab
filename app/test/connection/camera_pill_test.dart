@@ -113,6 +113,16 @@ void main() {
     expect(sd, findsOneWidget);
     expect(internal, findsOneWidget);
     expect(tester.getTopLeft(sd).dy, lessThan(tester.getTopLeft(internal).dy));
+    // Two storages and the caption make the storage tile's content taller
+    // than the battery's; the tiles are one height all the same.
+    final batteryTile = tester.getRect(
+      find.byKey(const Key('camera-sheet-battery-tile')),
+    );
+    final storageTile = tester.getRect(
+      find.byKey(const Key('camera-sheet-storage-tile')),
+    );
+    expect(batteryTile.top, storageTile.top);
+    expect(batteryTile.height, storageTile.height);
     expect(find.text('No. 1234567 · fw 1.20'), findsOneWidget);
     expect(
       tester

@@ -297,37 +297,43 @@ class _StatusTiles extends StatelessWidget {
     return Padding(
       key: const Key('camera-sheet-connected'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: _Tile(
-              label: l10n.connectionSheetBattery,
-              value: _Fit(
-                child: Text(
-                  battery == null ? '—' : formatBattery(context, battery),
-                  key: const Key('camera-sheet-battery'),
-                  style: GrFonts.monoStyle(context, size: 20, color: c.t1),
+      // The storage tile grows with a second storage and its caption; the
+      // battery tile is as tall as it is.
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: _Tile(
+                key: const Key('camera-sheet-battery-tile'),
+                label: l10n.connectionSheetBattery,
+                value: _Fit(
+                  child: Text(
+                    battery == null ? '—' : formatBattery(context, battery),
+                    key: const Key('camera-sheet-battery'),
+                    style: GrFonts.monoStyle(context, size: 20, color: c.t1),
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _Tile(
-              label: l10n.connectionSheetStorage,
-              value: StorageCounts(
-                key: const Key('camera-sheet-storage'),
-                storages: storages,
-                lineKeyPrefix: 'camera-sheet-storage',
-                soloSize: 20,
+            const SizedBox(width: 8),
+            Expanded(
+              child: _Tile(
+                key: const Key('camera-sheet-storage-tile'),
+                label: l10n.connectionSheetStorage,
+                value: StorageCounts(
+                  key: const Key('camera-sheet-storage'),
+                  storages: storages,
+                  lineKeyPrefix: 'camera-sheet-storage',
+                  soloSize: 20,
+                ),
+                caption: storages.any((s) => s.present)
+                    ? l10n.connectionSheetShotsLeft
+                    : null,
               ),
-              caption: storages.any((s) => s.present)
-                  ? l10n.connectionSheetShotsLeft
-                  : null,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -387,7 +393,12 @@ class _Header extends StatelessWidget {
 
 /// One of the status tiles (battery, storage).
 class _Tile extends StatelessWidget {
-  const new({required this.label, required this.value, this.caption});
+  const new({
+    required this.label,
+    required this.value,
+    this.caption,
+    super.key,
+  });
 
   final String label;
   final Widget value;
