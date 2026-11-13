@@ -117,6 +117,7 @@
   "connectionSheetStorageInternal": "Внутр. память",
   "connectionSheetStorageSd": "SD",
   "connectionSheetStorageUnnamed": "Память",
+  "connectionSheetTurnOn": "Включить",
   "connectionStepBluetoothConnected": "Подключено по Bluetooth",
   "connectionStepBluetoothConnecting": "Подключение по Bluetooth",
   "connectionStepWifi": "Подключение к Wi-Fi",

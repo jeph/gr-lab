@@ -865,6 +865,92 @@ void main() {
     await app.dispose();
   });
 
+  testWidgets("the camera sheet's Bluetooth row says a camera the session "
+      'let go of is off, and turns it on instead of disconnecting it', (
+    tester,
+  ) async {
+    final app = await _start(
+      tester,
+      config: const FakeCameraConfig(bonded: true, poweredOn: false),
+    );
+    final connection = app.models.connection;
+    await pumpUntil(tester, () => connection.bleLinked, reason: 'linked');
+    await _openSheet(tester, 'bluetooth');
+    final disconnect = find.byKey(
+      const Key('camera-sheet-bluetooth-disconnect'),
+    );
+    expect(disconnect, findsOneWidget);
+
+    app.camera.dropBluetooth();
+    await pumpUntil(tester, () => connection.parked, reason: 'let go of');
+    await pumpUntilFound(tester, _sheetState('bluetooth', 'Camera off'));
+    expect(disconnect, findsNothing);
+    expect(_sheetState('bluetooth', 'Turn on'), findsOneWidget);
+
+    await _tap(tester, const Key('camera-sheet-bluetooth-turnOn'));
+    await pumpUntilFound(tester, _sheetState('bluetooth', 'Turning on…'));
+    // The wake links the camera, which drops that link as it turns on.
+    await pumpUntil(
+      tester,
+      () => connection.powerChange == null,
+      reason: 'power on done',
+    );
+    await pumpUntilFound(tester, _sheetState('bluetooth', 'Connected'));
+    expect(app.camera.poweredOn, isTrue);
+    expect(connection.parked, isFalse);
+    expect(disconnect, findsOneWidget);
+
+    await app.dispose();
+  });
+
+  testWidgets("the camera sheet's Bluetooth row has no button once the link "
+      "is lost for good under the camera's Wi-Fi, which its own row leaves", (
+    tester,
+  ) async {
+    final app = await _start(
+      tester,
+      // Liveness takes longer than the test, so the Wi-Fi stays up, and
+      // the reconnect ends with its attempts.
+      sessionOptions: const GrSessionOptions(
+        livenessInterval: Duration(seconds: 30),
+        livenessLossAfter: Duration(seconds: 30),
+        bleReconnectDelays: [Duration(milliseconds: 50)],
+        maxBleReconnectAttempts: 2,
+        bleConnectTimeout: Duration(seconds: 1),
+      ),
+    );
+    final connection = app.models.connection;
+    await _tap(tester, const Key('camera-card-library'));
+    await _untilStatus(tester, app, ConnectionStatus.connected);
+
+    app.camera
+      ..adapterState = BleAdapterState.poweredOff
+      ..dropBluetooth();
+    await pumpUntil(
+      tester,
+      () => !connection.bleLinked && !connection.bleLinking,
+      reason: 'the reconnect gave up',
+    );
+    expect(connection.status, ConnectionStatus.connected);
+
+    await _tap(tester, const Key('camera-pill'));
+    await pumpUntilFound(tester, _sheetState('bluetooth', 'Not connected'));
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('camera-sheet-bluetooth')),
+        matching: find.byType(OutlinedButton),
+      ),
+      findsNothing,
+    );
+    expect(_sheetState('wifi', 'Connected'), findsOneWidget);
+    expect(
+      find.byKey(const Key('camera-sheet-wifi-disconnect')),
+      findsOneWidget,
+    );
+
+    await app.dispose();
+  });
+
   testWidgets('a screen reader can press the power button, which is disabled '
       'while it works', (tester) async {
     final semantics = tester.ensureSemantics();

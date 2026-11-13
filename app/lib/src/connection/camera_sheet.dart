@@ -29,9 +29,11 @@ Future<void> showCameraSheet(BuildContext context) =>
 /// camera pill (mock `connection-controls.html`, direction A): why the
 /// last attempt failed, battery and storage while on the camera's Wi-Fi,
 /// and a row each for Bluetooth and Wi-Fi that says what the link is doing
-/// and connects or disconnects it. Disconnecting Bluetooth ends the
-/// session, Wi-Fi included; disconnecting Wi-Fi keeps Bluetooth. Either
-/// one returns to the Cameras screen from the camera's pages.
+/// and has the button for what can be done about it: connect it, stop
+/// connecting, disconnect it, or turn on a camera that is off.
+/// Disconnecting Bluetooth ends the session, Wi-Fi included; disconnecting
+/// Wi-Fi keeps Bluetooth. Either one returns to the Cameras screen from
+/// the camera's pages.
 class CameraSheet extends StatelessWidget {
   const new({super.key});
 
@@ -120,25 +122,47 @@ class CameraSheet extends StatelessWidget {
       case ConnectionStatus.connecting ||
           ConnectionStatus.bluetooth ||
           ConnectionStatus.connected:
+        // The session outlives its link: the camera drops it when it is
+        // woken or turned off, and the session links it again.
+        final linked = connection.cameraSession?.bleLinked ?? false;
+        final powerChange = connection.powerChange;
+        final linking = connection.bleLinking || powerChange != null;
+        if (linked || linking) {
+          return _LinkRow(
+            name: name,
+            icon: icon,
+            title: title,
+            state: linked
+                ? l10n.connectionSheetConnected
+                : switch (powerChange) {
+                    CameraPowerChange.on => l10n.connectionPillTurningOn,
+                    CameraPowerChange.off => l10n.connectionPillTurningOff,
+                    null => l10n.connectionPillReconnecting,
+                  },
+            action: _LinkAction.disconnect,
+            onPressed: disconnect,
+          );
+        }
+        // Off, and let go of until it says it is on: there is no link to
+        // disconnect, and turning the camera on is what links it again.
+        if (connection.parked) {
+          return _LinkRow(
+            name: name,
+            icon: icon,
+            title: title,
+            state: l10n.connectionPillCameraOff,
+            action: _LinkAction.turnOn,
+            onPressed: () => unawaited(connection.powerOn()),
+          );
+        }
+        // The reconnect gave up while the camera's Wi-Fi is in use, which
+        // carries on without the link: it is linked again only once the
+        // Wi-Fi is left, which the Wi-Fi row does.
         return _LinkRow(
           name: name,
           icon: icon,
           title: title,
-          // The camera drops the link when it is woken or turned off; the
-          // session links it again, except that it lets go of a camera
-          // that is off until the camera says it is on: not connected
-          // meanwhile.
-          state: connection.cameraSession?.bleLinked ?? false
-              ? l10n.connectionSheetConnected
-              : !connection.bleLinking
-              ? l10n.connectionPillNotConnected
-              : switch (connection.powerChange) {
-                  CameraPowerChange.on => l10n.connectionPillTurningOn,
-                  CameraPowerChange.off => l10n.connectionPillTurningOff,
-                  null => l10n.connectionPillReconnecting,
-                },
-          action: _LinkAction.disconnect,
-          onPressed: disconnect,
+          state: l10n.connectionPillNotConnected,
         );
     }
   }
@@ -201,18 +225,22 @@ enum _LinkAction {
   /// Stops connecting.
   cancel,
   disconnect,
+
+  /// Turns on a camera that is off, which links it again.
+  turnOn,
 }
 
 /// One link of the connection, Bluetooth or Wi-Fi: what it is doing and a
-/// button to connect it, stop connecting or disconnect it.
+/// button to connect it, stop connecting, disconnect it or turn the camera
+/// on. No button while nothing can be done about the link from its row.
 class _LinkRow extends StatelessWidget {
   const new({
     required this.name,
     required this.icon,
     required this.title,
     required this.state,
-    required this.action,
-    required this.onPressed,
+    this.action,
+    this.onPressed,
   });
 
   /// `bluetooth` or `wifi`, for the row's keys.
@@ -220,29 +248,35 @@ class _LinkRow extends StatelessWidget {
   final IconData icon;
   final String title;
   final String state;
-  final _LinkAction action;
-  final VoidCallback onPressed;
+
+  /// What the button does; null for a row without one.
+  final _LinkAction? action;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final action = this.action;
     return GroupRow(
       key: Key('camera-sheet-$name'),
       icon: icon,
       title: title,
       subtitle: state,
-      trailing: TrailingFit(
-        child: OutlinedButton(
-          key: Key('camera-sheet-$name-${action.name}'),
-          style: smallOutlinedStyle,
-          onPressed: onPressed,
-          child: Text(switch (action) {
-            _LinkAction.connect => l10n.camerasConnect,
-            _LinkAction.cancel => l10n.camerasCancel,
-            _LinkAction.disconnect => l10n.connectionSheetDisconnect,
-          }),
-        ),
-      ),
+      trailing: action == null
+          ? null
+          : TrailingFit(
+              child: OutlinedButton(
+                key: Key('camera-sheet-$name-${action.name}'),
+                style: smallOutlinedStyle,
+                onPressed: onPressed,
+                child: Text(switch (action) {
+                  _LinkAction.connect => l10n.camerasConnect,
+                  _LinkAction.cancel => l10n.camerasCancel,
+                  _LinkAction.disconnect => l10n.connectionSheetDisconnect,
+                  _LinkAction.turnOn => l10n.connectionSheetTurnOn,
+                }),
+              ),
+            ),
     );
   }
 }

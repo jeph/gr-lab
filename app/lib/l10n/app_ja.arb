@@ -117,6 +117,7 @@
   "connectionSheetStorageInternal": "内蔵",
   "connectionSheetStorageSd": "SD",
   "connectionSheetStorageUnnamed": "ストレージ",
+  "connectionSheetTurnOn": "電源を入れる",
   "connectionStepBluetoothConnected": "Bluetoothで接続済み",
   "connectionStepBluetoothConnecting": "Bluetoothで接続中",
   "connectionStepWifi": "Wi-Fiに接続中",

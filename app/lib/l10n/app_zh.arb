@@ -117,6 +117,7 @@
   "connectionSheetStorageInternal": "内部存储器",
   "connectionSheetStorageSd": "存储卡",
   "connectionSheetStorageUnnamed": "存储",
+  "connectionSheetTurnOn": "开机",
   "connectionStepBluetoothConnected": "已通过蓝牙连接",
   "connectionStepBluetoothConnecting": "正在通过蓝牙连接",
   "connectionStepWifi": "正在连接 Wi-Fi",

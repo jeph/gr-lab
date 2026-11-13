@@ -117,6 +117,7 @@
   "connectionSheetStorageInternal": "Sisäinen",
   "connectionSheetStorageSd": "SD",
   "connectionSheetStorageUnnamed": "Tallennustila",
+  "connectionSheetTurnOn": "Käynnistä",
   "connectionStepBluetoothConnected": "Yhdistetty Bluetoothilla",
   "connectionStepBluetoothConnecting": "Yhdistetään Bluetoothilla",
   "connectionStepWifi": "Yhdistetään Wi-Fiin",

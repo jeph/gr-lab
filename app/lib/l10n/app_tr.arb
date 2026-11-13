@@ -117,6 +117,7 @@
   "connectionSheetStorageInternal": "Dahili",
   "connectionSheetStorageSd": "SD",
   "connectionSheetStorageUnnamed": "Depolama",
+  "connectionSheetTurnOn": "Aç",
   "connectionStepBluetoothConnected": "Bluetooth ile bağlandı",
   "connectionStepBluetoothConnecting": "Bluetooth ile bağlanıyor",
   "connectionStepWifi": "Wi-Fi’ye bağlanıyor",

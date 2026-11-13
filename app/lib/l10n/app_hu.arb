@@ -117,6 +117,7 @@
   "connectionSheetStorageInternal": "Belső",
   "connectionSheetStorageSd": "SD",
   "connectionSheetStorageUnnamed": "Tárhely",
+  "connectionSheetTurnOn": "Bekapcsolás",
   "connectionStepBluetoothConnected": "Bluetooth-kapcsolat létrejött",
   "connectionStepBluetoothConnecting": "Bluetooth-kapcsolat létrehozása",
   "connectionStepWifi": "Csatlakozás a Wi-Fi-hálózathoz",

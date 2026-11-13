@@ -627,6 +627,10 @@
   "@connectionSheetStorageUnnamed": {
     "description": "Label of a storage the camera did not name, before the number of photos that still fit on it: on the camera sheet's storage tile and on the Shoot remote's shots-left readout."
   },
+  "connectionSheetTurnOn": "Turn on",
+  "@connectionSheetTurnOn": {
+    "description": "Button of the Bluetooth row on the camera sheet while the camera is off and GR Photo waits for it to be switched on: turns the camera on, which connects Bluetooth again."
+  },
   "connectionStepBluetoothConnected": "Connected via Bluetooth",
   "@connectionStepBluetoothConnected": {
     "description": "Step of the connection progress shown in the Library and live view: the Bluetooth link is up."

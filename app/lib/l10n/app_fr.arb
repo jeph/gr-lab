@@ -117,6 +117,7 @@
   "connectionSheetStorageInternal": "Interne",
   "connectionSheetStorageSd": "SD",
   "connectionSheetStorageUnnamed": "Stockage",
+  "connectionSheetTurnOn": "Allumer",
   "connectionStepBluetoothConnected": "Connecté en Bluetooth",
   "connectionStepBluetoothConnecting": "Connexion en Bluetooth",
   "connectionStepWifi": "Connexion au Wi-Fi",

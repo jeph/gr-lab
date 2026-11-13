@@ -117,6 +117,7 @@
   "connectionSheetStorageInternal": "ภายใน",
   "connectionSheetStorageSd": "SD",
   "connectionSheetStorageUnnamed": "หน่วยความจำ",
+  "connectionSheetTurnOn": "เปิดกล้อง",
   "connectionStepBluetoothConnected": "เชื่อมต่อผ่านบลูทูธแล้ว",
   "connectionStepBluetoothConnecting": "กำลังเชื่อมต่อผ่านบลูทูธ",
   "connectionStepWifi": "กำลังเชื่อมต่อ Wi-Fi",

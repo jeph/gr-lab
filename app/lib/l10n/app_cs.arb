@@ -117,6 +117,7 @@
   "connectionSheetStorageInternal": "Vnitřní",
   "connectionSheetStorageSd": "SD",
   "connectionSheetStorageUnnamed": "Úložiště",
+  "connectionSheetTurnOn": "Zapnout",
   "connectionStepBluetoothConnected": "Připojeno přes Bluetooth",
   "connectionStepBluetoothConnecting": "Připojování přes Bluetooth",
   "connectionStepWifi": "Připojování k Wi-Fi",

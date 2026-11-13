@@ -117,6 +117,7 @@
   "connectionSheetStorageInternal": "內部記憶體",
   "connectionSheetStorageSd": "SD 卡",
   "connectionSheetStorageUnnamed": "儲存空間",
+  "connectionSheetTurnOn": "開機",
   "connectionStepBluetoothConnected": "已透過 Bluetooth 連線",
   "connectionStepBluetoothConnecting": "正在透過 Bluetooth 連線",
   "connectionStepWifi": "正在連接 Wi-Fi",

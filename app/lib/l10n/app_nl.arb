@@ -117,6 +117,7 @@
   "connectionSheetStorageInternal": "Intern",
   "connectionSheetStorageSd": "SD",
   "connectionSheetStorageUnnamed": "Opslag",
+  "connectionSheetTurnOn": "Inschakelen",
   "connectionStepBluetoothConnected": "Verbonden via Bluetooth",
   "connectionStepBluetoothConnecting": "Verbinden via Bluetooth",
   "connectionStepWifi": "Verbinden met Wi-Fi",

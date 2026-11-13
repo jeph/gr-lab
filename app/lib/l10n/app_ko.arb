@@ -117,6 +117,7 @@
   "connectionSheetStorageInternal": "내장",
   "connectionSheetStorageSd": "SD",
   "connectionSheetStorageUnnamed": "저장 공간",
+  "connectionSheetTurnOn": "전원 켜기",
   "connectionStepBluetoothConnected": "Bluetooth로 연결됨",
   "connectionStepBluetoothConnecting": "Bluetooth로 연결 중",
   "connectionStepWifi": "Wi-Fi에 연결 중",

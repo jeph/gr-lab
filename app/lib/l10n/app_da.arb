@@ -117,6 +117,7 @@
   "connectionSheetStorageInternal": "Indbygget",
   "connectionSheetStorageSd": "SD",
   "connectionSheetStorageUnnamed": "Lager",
+  "connectionSheetTurnOn": "Tænd",
   "connectionStepBluetoothConnected": "Forbundet via Bluetooth",
   "connectionStepBluetoothConnecting": "Forbinder via Bluetooth",
   "connectionStepWifi": "Forbinder til Wi-Fi",

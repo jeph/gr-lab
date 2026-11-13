@@ -117,6 +117,7 @@
   "connectionSheetStorageInternal": "Internt",
   "connectionSheetStorageSd": "SD",
   "connectionSheetStorageUnnamed": "Minne",
+  "connectionSheetTurnOn": "Slå på",
   "connectionStepBluetoothConnected": "Ansluten via Bluetooth",
   "connectionStepBluetoothConnecting": "Ansluter via Bluetooth",
   "connectionStepWifi": "Ansluter till Wi-Fi",
