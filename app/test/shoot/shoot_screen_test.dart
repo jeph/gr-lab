@@ -1192,6 +1192,63 @@ void main() {
       await app.dispose();
     });
 
+    testWidgets('a picture deleted on the camera while the viewer is over '
+        'live view is not the last shot afterwards, nor in the viewer when '
+        'it opens again', (tester) async {
+      final app = await inLiveView(tester);
+      final camera = app.camera;
+      final listing = app.models.library.model;
+      final viewer = find.byType(ShotViewer);
+      Finder showing(FakePhoto photo) => find.descendant(
+        of: viewer,
+        matching: find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text(photo.file),
+        ),
+      );
+      int pages() => tester
+          .widget<PageView>(
+            find.descendant(of: viewer, matching: find.byType(PageView)),
+          )
+          .childrenDelegate
+          .estimatedChildCount!;
+
+      final first = await shoot(tester, app);
+      final second = await shoot(tester, app);
+      await tester.tap(lastShot);
+      await pumpUntilFound(tester, showing(second));
+      await pumpUntil(
+        tester,
+        () => camera.liveViewStreams == 0,
+        reason: 'stopped under the viewer',
+      );
+      await pumpUntil(
+        tester,
+        () => listing.shots!.any((s) => s.files.contains(fileOf(second))),
+        reason: 'listed',
+      );
+
+      expect(camera.removePhoto(second.path, storage: second.storage), isTrue);
+      await pumpUntilFound(tester, showing(first));
+      expect(pages(), 1);
+      await tapWhenReady(
+        tester,
+        find.descendant(of: viewer, matching: find.byType(BackButton)),
+      );
+      await pumpUntil(
+        tester,
+        () => viewer.evaluate().isEmpty,
+        reason: 'viewer closed',
+      );
+      expect(lastShotFiles(tester), [fileOf(first)]);
+
+      await tester.tap(lastShot);
+      await pumpUntilFound(tester, showing(first));
+      await pumpRounds(tester, 5);
+      expect(pages(), 1);
+      await app.dispose();
+    });
+
     testWidgets('a camera switched off during live view is left off and '
         'offers to turn it on; turned on, the picture comes back', (
       tester,

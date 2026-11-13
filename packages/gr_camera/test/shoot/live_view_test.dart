@@ -263,6 +263,53 @@ void main() {
     ]);
   });
 
+  test('a stopped live view still loses the shots the camera deletes, on '
+      'the socket of a later Wi-Fi join too, and takes no picture as a '
+      'shot', () async {
+    rig = await ShootRig.start(wifi: true);
+    final live = rig.liveView;
+    await rig.remote.wake();
+    await rig.startLiveView();
+    for (var taken = 1; taken <= 3; taken++) {
+      await rig.remote.shutter();
+      await until(() => live.shots.length == taken, reason: 'shot $taken');
+    }
+    final [first, second, third] = live.shots;
+    live.stop();
+
+    // The camera reports the picture before the delete, on one socket.
+    final photos = rig.camera.photos.length;
+    await rig.remote.shutter();
+    await until(
+      () => rig.camera.photos.length == photos + 1,
+      reason: 'picture taken while stopped',
+    );
+    expect(
+      rig.camera.removePhoto(second.path, storage: second.storage!),
+      isTrue,
+    );
+    await until(() => live.shots.length == 2, reason: 'shot dropped');
+    expect(live.shots, [first, third]);
+
+    rig.camera.dropWifi();
+    await until(
+      () => rig.session.phase != GrSessionPhase.connected,
+      reason: 'loss',
+    );
+    await until(
+      () => rig.session.phase == GrSessionPhase.connected,
+      reason: 'recovery',
+    );
+    await until(
+      () => rig.events('session.changes.open').length == 2,
+      reason: 'new socket',
+    );
+    expect(live.started, isFalse);
+    expect(rig.camera.removePhoto(third.path, storage: third.storage!), isTrue);
+    await until(() => live.shots.length == 1, reason: 'shot dropped again');
+    expect(live.shots, [first]);
+  });
+
   test('a shot of a camera listed without a storage has none, as the '
       'library lists it', () async {
     rig = await ShootRig.start(

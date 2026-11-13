@@ -42,12 +42,20 @@ final class FocusMark {
 /// the pictures taken meanwhile, from the change WebSocket.
 ///
 /// It runs between [start] and [stop]: the app starts it while live view
-/// is wanted and the camera's Wi-Fi is up, and stops it otherwise.
+/// is wanted and the camera's Wi-Fi is up, and stops it otherwise. The
+/// pictures it has ([shots]) are followed while stopped too.
 final class CameraLiveView extends ChangeNotifier {
-  new _(this._session, this._camera, this.settingsPoll);
+  new _(this._session, this._camera, this.settingsPoll) {
+    _sessionEvents = _session.events.listen((e) {
+      // Each Wi-Fi join opens a new socket; [start] takes it while live
+      // view runs, and the [shots] of a stopped one need it here.
+      if (e.kind == 'changes.open' && _shots.isNotEmpty) _watchChanges();
+    });
+  }
 
   final GrSession _session;
   final GrCameraEnvironment _camera;
+  late final StreamSubscription<GrSessionEvent> _sessionEvents;
 
   /// The newest frame; changes many times a second, so it is separate from
   /// this notifier.
@@ -108,10 +116,14 @@ final class CameraLiveView extends ChangeNotifier {
 
   /// The files the camera reported as added while live view ran (pictures
   /// taken from the app or on the camera), oldest first, without those it
-  /// reported deleted since. A RAW+JPEG picture is two of them. Each is
-  /// named as the library lists it, so its image and info come from there.
-  /// They stay through [stop] and the next [start]; [forgetShots] empties
-  /// them. Another list each time it changes.
+  /// reported deleted since, also after [stop]: a deleted file is not a
+  /// picture to show on the next [start]. A RAW+JPEG picture is two of
+  /// them. Each is named as the library lists it, so its image and info
+  /// come from there. They stay through [stop] and the next [start];
+  /// [forgetShots] empties them. Another list each time it changes.
+  ///
+  /// Deletes are known from the change WebSocket only, so a file deleted
+  /// while the Wi-Fi was down stays.
   List<CameraFile> get shots => _shots;
 
   /// Empties [shots].
@@ -157,7 +169,8 @@ final class CameraLiveView extends ChangeNotifier {
 
   /// Stops the stream, the polls and every focus, and forgets the
   /// settings: they are read again on the next [start] (the mode dial or
-  /// another session may change them meanwhile).
+  /// another session may change them meanwhile). The change WebSocket is
+  /// still followed for deletes of [shots].
   void stop() {
     if (!_started) return;
     _camera.event('shoot.liveview.stop');
@@ -419,9 +432,6 @@ final class CameraLiveView extends ChangeNotifier {
     _focusing = null;
     _earlyLens.clear();
     _nextFocus = null;
-    unawaited(_changes?.cancel());
-    _changes = null;
-    _socket = null;
   }
 
   void _watchChanges() {
@@ -429,11 +439,16 @@ final class CameraLiveView extends ChangeNotifier {
     _changes = null;
     final socket = _session.changes;
     _socket = socket;
-    if (socket == null || !_started) return;
+    if (socket == null || _closed) return;
     _changes = socket.events.listen(_onChange);
   }
 
   void _onChange(GrChangeEvent e) {
+    // The one change a stopped live view follows: [shots] outlive a stop.
+    if (e case GrStorageChange(:final path?, action: 'delete')) {
+      _shotDeleted(_listed(path, e.storage));
+      return;
+    }
     final http = _http;
     if (http == null) return;
     switch (e) {
@@ -457,8 +472,6 @@ final class CameraLiveView extends ChangeNotifier {
         }
         if (!_sameFocus(running.$2, captureId)) return;
         _focusEnded(focused ? FocusState.focused : FocusState.missed);
-      case GrStorageChange(:final path?, action: 'delete'):
-        _shotDeleted(_listed(path, e.storage));
       case GrStorageChange(:final path?):
         _shotAdded(_listed(path, e.storage));
       default:
@@ -584,6 +597,10 @@ final class CameraLiveView extends ChangeNotifier {
   void _close() {
     _started = false;
     _stop();
+    unawaited(_sessionEvents.cancel());
+    unawaited(_changes?.cancel());
+    _changes = null;
+    _socket = null;
     _closed = true;
   }
 }
