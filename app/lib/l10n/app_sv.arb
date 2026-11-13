@@ -405,6 +405,7 @@
   "looksValueRed": "Röd",
   "looksValueSepia": "Sepia",
   "looksValueSmall": "Liten",
+  "looksValueType": "Typ {number}",
   "looksValueWarm": "Varm",
   "looksValueYellow": "Gul",
   "pairingAdd": "Lägg till",

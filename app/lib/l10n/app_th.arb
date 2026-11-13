@@ -405,6 +405,7 @@
   "looksValueRed": "แดง",
   "looksValueSepia": "ซีเปีย",
   "looksValueSmall": "เล็ก",
+  "looksValueType": "แบบ {number}",
   "looksValueWarm": "อุ่น",
   "looksValueYellow": "เหลือง",
   "pairingAdd": "เพิ่ม",

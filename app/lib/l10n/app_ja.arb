@@ -405,6 +405,7 @@
   "looksValueRed": "レッド",
   "looksValueSepia": "セピア",
   "looksValueSmall": "小",
+  "looksValueType": "Type{number}",
   "looksValueWarm": "ウォーム",
   "looksValueYellow": "イエロー",
   "pairingAdd": "追加",

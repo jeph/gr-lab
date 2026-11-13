@@ -325,6 +325,70 @@ void main() {
     await app.dispose();
   });
 
+  group('on a GR IV Monochrome', () {
+    Finder inGroups(String name) => find.descendant(
+      of: find.byKey(const Key('look-groups')),
+      matching: find.text(name),
+    );
+    Finder inRow(LookParameter parameter, String text) => find.descendant(
+      of: find.byKey(ValueKey('look-param:${parameter.name}')),
+      matching: find.text(text),
+    );
+
+    /// The editor on the look in C1, moved to [base].
+    Future<TestApp> editingOn(WidgetTester tester, LookBase base) async {
+      final app = await _inLooks(tester, model: 'RICOH GR IV Monochrome');
+      await tapWhenReady(tester, _inSlot(1, 'Tokyo Night'));
+      await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
+      await _pickBase(tester, base);
+      return app;
+    }
+
+    Future<void> load(WidgetTester tester) async {
+      await tapWhenReady(tester, find.byKey(const Key('look-load')));
+      await tapWhenReady(tester, find.byKey(const Key('looks-load-confirm')));
+      await pumpUntilFound(tester, find.text('Loaded Tokyo Night into C1'));
+    }
+
+    testWidgets('a look moved to Solarized Effect offers the three '
+        'Solarization Types and loads with the one picked', (tester) async {
+      final app = await editingOn(tester, LookBase.solarization);
+      const type = LookParameter.solarizationType;
+      await tapWhenReady(tester, inGroups('Effects'));
+      // The look's grain comes first, and the type a scroll below it.
+      final grain = find.byKey(const ValueKey('look-param:grain'));
+      await pumpUntilFound(tester, grain);
+      await tester.dragUntilVisible(
+        inRow(type, 'Type3'),
+        grain,
+        const Offset(0, -80),
+      );
+      await tester.pump();
+      expect(inRow(type, 'Type1'), findsNWidgets(2), reason: 'the value too');
+
+      await tapWhenReady(tester, inRow(type, 'Type2'));
+      await load(tester);
+      expect(_slotLook(app, 1).base, LookBase.solarization);
+      expect(_slotLook(app, 1).valueOf(type), 2);
+      await app.dispose();
+    });
+
+    testWidgets("HDR Tone's toning offers Off and Sepia, without the Black "
+        '& White the camera refuses on it', (tester) async {
+      final app = await editingOn(tester, LookBase.hdrMono);
+      const toning = LookParameter.toningHdr;
+      await tapWhenReady(tester, inGroups('Colour'));
+      await pumpUntilFound(tester, inRow(toning, 'Sepia'));
+      expect(inRow(toning, 'B&W'), findsNothing);
+
+      await tapWhenReady(tester, inRow(toning, 'Sepia'));
+      await load(tester);
+      expect(_slotLook(app, 1).base, LookBase.hdrMono);
+      expect(_slotLook(app, 1).valueOf(toning), 2);
+      await app.dispose();
+    });
+  });
+
   testWidgets('a GR IV on firmware older than 1.04 asks for an update and '
       'is not turned on for its slots', (tester) async {
     final app = await _inLooks(tester, firmware: '1.03');

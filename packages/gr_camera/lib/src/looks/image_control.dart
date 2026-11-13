@@ -11,11 +11,12 @@ enum LookValueKind {
   choice,
 }
 
-/// The values a parameter takes on the wire, [min] to [max] in steps of 1.
+/// The values a parameter takes on the wire: [min] to [max] in steps of 1,
+/// without those in [refused].
 @immutable
 final class LookRange {
-  /// A range of [kind] from [min] to [max].
-  const new(this.kind, this.min, this.max);
+  /// A range of [kind] from [min] to [max] without [refused].
+  const new(this.kind, this.min, this.max, {this.refused = const {}});
 
   /// How the values read.
   final LookValueKind kind;
@@ -25,6 +26,19 @@ final class LookRange {
 
   /// The highest value.
   final int max;
+
+  /// Values between [min] and [max] the camera does not take.
+  final Set<int> refused;
+
+  /// Every value of the range, lowest first.
+  List<int> get values => [
+    for (var v = min; v <= max; v++)
+      if (!refused.contains(v)) v,
+  ];
+
+  /// Whether [value] is one of [values].
+  bool takes(int value) =>
+      value >= min && value <= max && !refused.contains(value);
 
   /// The value a parameter gets when a look gains it: 0, as in GR WORLD's
   /// fallback look, which holds 0 for every parameter (code 0x82cd88), or
@@ -106,13 +120,24 @@ enum LookChoice {
 
   /// Yellow.
   yellow,
+
+  /// Type 1.
+  type1,
+
+  /// Type 2.
+  type2,
+
+  /// Type 3.
+  type3,
 }
 
 /// The named values of [parameter], indexed by wire value, or null when
-/// the camera shows its value as a number. These are the cases of GR
-/// WORLD's value formatter (code 0x95abc8–0x95b7f8,
-/// research/protocol/image-control.md §4).
-List<LookChoice>? lookChoices(LookParameter parameter) => switch (parameter) {
+/// the camera shows its value as a number; a wire value that is none of
+/// the parameter's has no name. These are the cases of GR WORLD's value
+/// formatter (code 0x95abc8–0x95b7f8, research/protocol/image-control.md
+/// §4), and for the Solarization Type, which GR WORLD does not name, the
+/// camera's own names.
+List<LookChoice?>? lookChoices(LookParameter parameter) => switch (parameter) {
   LookParameter.toningMonotone => const [
     LookChoice.off,
     LookChoice.sepia,
@@ -164,19 +189,39 @@ List<LookChoice>? lookChoices(LookParameter parameter) => switch (parameter) {
     LookChoice.magenta,
     LookChoice.yellow,
   ],
+  // The camera's menu names them Type 1 to Type 3 (Ricoh's notes on GR IV
+  // Monochrome firmware 1.10) and a blob holds 1..3 (found in the GR IV
+  // 1.20 firmware's parser; image-control.md §4).
+  LookParameter.solarizationType => const [
+    null,
+    LookChoice.type1,
+    LookChoice.type2,
+    LookChoice.type3,
+  ],
   _ => null,
 };
 
-/// [parameter]'s [lookChoices] from [min] to the last one, or null
-/// when it has none.
-LookRange? _choices(LookParameter parameter, {int min = 0}) {
+/// [parameter]'s [lookChoices] from [min] to the last one without
+/// [refused], or null when it has none.
+LookRange? _choices(
+  LookParameter parameter, {
+  int min = 0,
+  Set<int> refused = const {},
+}) {
   final choices = lookChoices(parameter);
   if (choices == null) return null;
-  return LookRange(LookValueKind.choice, min, choices.length - 1);
+  return LookRange(
+    LookValueKind.choice,
+    min,
+    choices.length - 1,
+    refused: refused,
+  );
 }
 
-/// The values [parameter] takes, or null when they are not known well
-/// enough to edit; such parameters keep the value the camera gave them.
+/// The values [parameter] takes on [base], or null when they are not
+/// known well enough to edit; such parameters keep the value the camera
+/// gave them. A [base] GR Photo does not know (null) gets the values the
+/// parameter has on most bases.
 ///
 /// Choices run over [lookChoices]; where the GR IIIx firmware's
 /// settings start a choice at 1, so does the range
@@ -184,29 +229,40 @@ LookRange? _choices(LookParameter parameter, {int min = 0}) {
 /// Steps are −4..+4 \[inferred\]: GR WORLD shows the wire value itself and
 /// has no range table; −4..+4 is the GR IIIx firmware's vocabulary (`M4`
 /// to `P4`) as a third-party settings dump reads it.
-LookRange? lookRange(LookParameter parameter) => switch (parameter) {
-  LookParameter.saturation ||
-  LookParameter.hue ||
-  LookParameter.key ||
-  LookParameter.contrast ||
-  LookParameter.contrastHigh ||
-  LookParameter.contrastLow ||
-  LookParameter.sharpness ||
-  LookParameter.toningRetro ||
-  LookParameter.shading ||
-  LookParameter.clarity => _steps,
-  // GR WORLD names 0 Off; that the camera takes only 1..3, as the GR
-  // IIIx firmware's settings do, is \[inferred\].
-  LookParameter.toningBleachBypass ||
-  LookParameter.hdrStrength => _choices(parameter, min: 1),
-  // The filter effect picks one of four custom filters whose R, G and
-  // B values have an unknown range.
-  LookParameter.filterEffect => null,
-  // The rest are choices where GR WORLD names the values. The custom
-  // filter values, the solarization type and the GR IVx's Palette
-  // parameters have no names and unknown ranges.
-  _ => _choices(parameter),
-};
+LookRange? lookRange(LookParameter parameter, LookBase? base) =>
+    switch (parameter) {
+      LookParameter.saturation ||
+      LookParameter.hue ||
+      LookParameter.key ||
+      LookParameter.contrast ||
+      LookParameter.contrastHigh ||
+      LookParameter.contrastLow ||
+      LookParameter.sharpness ||
+      LookParameter.toningRetro ||
+      LookParameter.shading ||
+      LookParameter.clarity => _steps,
+      // GR WORLD names 0 Off; that the camera takes only 1..3, as the GR
+      // IIIx firmware's settings do, is \[inferred\].
+      LookParameter.toningBleachBypass ||
+      LookParameter.hdrStrength => _choices(parameter, min: 1),
+      // The Monochrome's HDR Tone has no Black & White toning: the camera
+      // refuses 1 in a blob on that base (found in the GR IV 1.20 firmware's
+      // parser; image-control.md §4).
+      LookParameter.toningHdr when base == LookBase.hdrMono => _choices(
+        parameter,
+        refused: const {1},
+      ),
+      // The camera refuses 0 (as above), and Type 1 is its default (Ricoh's
+      // notes on GR IV Monochrome firmware 1.10).
+      LookParameter.solarizationType => _choices(parameter, min: 1),
+      // The filter effect picks one of four custom filters whose R, G and
+      // B values have an unknown range.
+      LookParameter.filterEffect => null,
+      // The rest are choices where GR WORLD names the values. The custom
+      // filter values and the GR IVx's Palette parameters have no names and
+      // unknown ranges.
+      _ => _choices(parameter),
+    };
 
 const List<LookParameter> _filter = [
   LookParameter.filterEffect,

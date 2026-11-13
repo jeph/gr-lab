@@ -254,9 +254,10 @@ void main() {
     expect(unknown.offeredBy(_body(GrModel.gr4)), isFalse);
   });
 
-  test('a choice range covers its named values up to the last one', () {
+  test('a choice range covers its named values up to the last one, and '
+      'every value it holds has a name', () {
     for (final p in LookParameter.values) {
-      final range = lookRange(p);
+      final range = lookRange(p, null);
       final choices = lookChoices(p);
       if (range?.kind != LookValueKind.choice) {
         expect(
@@ -269,6 +270,9 @@ void main() {
       expect(choices, isNotNull, reason: '$p');
       expect(range!.min, greaterThanOrEqualTo(0), reason: '$p');
       expect(range.max, choices!.length - 1, reason: '$p');
+      for (final v in range.values) {
+        expect(choices[v], isNotNull, reason: '$p $v');
+      }
     }
     // Named, but its custom filters' values are unknown, so not editable.
     expect(lookChoices(LookParameter.filterEffect), [
@@ -278,14 +282,45 @@ void main() {
       LookChoice.customFilter3,
       LookChoice.customFilter4,
     ]);
-    expect(lookRange(LookParameter.filterEffect), isNull);
+    expect(lookRange(LookParameter.filterEffect, null), isNull);
     // GR WORLD names Off, but the camera starts these at 1.
     for (final p in [
       LookParameter.toningBleachBypass,
       LookParameter.hdrStrength,
     ]) {
       expect(lookChoices(p)?.first, LookChoice.off);
-      expect((lookRange(p)!.min, lookRange(p)!.max), (1, 3));
+      expect(lookRange(p, null)!.values, [1, 2, 3]);
     }
+  });
+
+  test("the Monochrome's HDR Tone has no Black & White toning, which the "
+      'camera refuses on it, so a look moved there does not keep it', () {
+    const toning = LookParameter.toningHdr;
+    expect(lookRange(toning, LookBase.hdrTone)!.values, [0, 1, 2]);
+    expect(lookRange(toning, LookBase.hdrMono)!.values, [0, 2]);
+
+    final blackAndWhite = Look.onBase(LookBase.hdrTone).withValue(toning, 1);
+    expect(blackAndWhite.withBase(LookBase.hdrMono).valueOf(toning), 0);
+    final sepia = blackAndWhite.withValue(toning, 2);
+    expect(sepia.withBase(LookBase.hdrMono).valueOf(toning), 2);
+  });
+
+  test('the Solarization Type runs from Type 1 to Type 3, and a look that '
+      'gains it starts on Type 1', () {
+    const type = LookParameter.solarizationType;
+    expect(lookRange(type, LookBase.solarization)!.values, [1, 2, 3]);
+    expect(lookChoices(type), [
+      null,
+      LookChoice.type1,
+      LookChoice.type2,
+      LookChoice.type3,
+    ]);
+
+    expect(Look.onBase(LookBase.solarization).valueOf(type), 1);
+    final moved = Look.onBase(LookBase.standardMono)
+        .withBase(LookBase.solarization);
+    expect(moved.valueOf(type), 1);
+    final third = moved.withValue(type, 3);
+    expect(third.withBase(LookBase.solarization).valueOf(type), 3);
   });
 }

@@ -28,4 +28,20 @@ void main() {
     expect(ShootTimer.off.label(en), 'Off');
     expect(ShootTimer.tenSeconds.label(en), '10 s');
   });
+
+  test("the GR IV Monochrome's Image Controls read as its menu names "
+      'them', () {
+    expect(settingLabel(en, 'effect', 'efc_monoStandard'), 'Standard');
+    expect(settingLabel(en, 'effect', 'efc_monoSoft'), 'Soft');
+    expect(settingLabel(en, 'effect', 'efc_monoHighContrast'), 'High Contrast');
+    expect(settingLabel(en, 'effect', 'efc_monoGrainy'), 'Grainy');
+    expect(settingLabel(en, 'effect', 'efc_monoSolid'), 'Solid');
+    expect(settingLabel(en, 'effect', 'efc_monoHDRTone'), 'HDR Tone');
+    expect(settingLabel(en, 'effect', 'efc_solarization'), 'Solarized Effect');
+    expect(
+      settingLabel(en, 'effect', 'efc_pictorialism'),
+      'Pictorialist Effect',
+    );
+    expect(settingLabel(en, 'effect', 'efc_pallete'), 'Palette');
+  });
 }

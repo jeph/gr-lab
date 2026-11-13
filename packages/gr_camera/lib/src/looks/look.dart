@@ -16,12 +16,12 @@ final class Look {
   new _(this._blob);
 
   /// A new look on [base] with every parameter the base has
-  /// ([lookParameters]) at its [LookRange.initial] value (0 where the range
-  /// is unknown). The header is copied from [template], a look a camera
-  /// produced, when there is one: which header a camera expects of a blob
-  /// it did not produce is \[unknown\]. Without one it is format version 1
-  /// and byte 1 zero, the header of GR WORLD's own fallback look and the
-  /// version a GR IV HDF on firmware 1.20 stores
+  /// ([lookParameters]) at its [LookRange.initial] value on that base (0
+  /// where the range is unknown). The header is copied from [template], a
+  /// look a camera produced, when there is one: which header a camera
+  /// expects of a blob it did not produce is \[unknown\]. Without one it
+  /// is format version 1 and byte 1 zero, the header of GR WORLD's own
+  /// fallback look and the version a GR IV HDF on firmware 1.20 stores
   /// (research/protocol/image-control.md §1).
   factory onBase(LookBase base, {Look? template}) => Look._(
     BleImageControlBlob(
@@ -29,7 +29,7 @@ final class Look {
       reserved: template?._blob.reserved ?? 0,
       base: BleEnumValue.of(base._wire),
       parameters: [
-        for (final p in lookParameters(base)) _entry(p, _initial(p)),
+        for (final p in lookParameters(base)) _entry(p, _initial(p, base)),
       ],
     ),
   );
@@ -73,18 +73,19 @@ final class Look {
   }
 
   /// This look on [base] instead: the parameters [base] has, in wire-id
-  /// order, each keeping its value when this look has it and starting at
-  /// its initial value when not. The header stays. That the camera wants
-  /// exactly its base's parameters is \[inferred\] from the firmware's
-  /// per-base settings.
+  /// order, each keeping its value when this look has one that [base]
+  /// takes ([lookRange]) and starting at its initial value when not: HDR
+  /// Tone's Black & White toning is not carried to the Monochrome's HDR
+  /// Tone, which the camera refuses it on. The header stays. That the
+  /// camera wants exactly its base's parameters is \[inferred\] from the
+  /// firmware's per-base settings.
   Look withBase(LookBase base) => Look._(
     BleImageControlBlob(
       version: _blob.version,
       reserved: _blob.reserved,
       base: BleEnumValue.of(base._wire),
       parameters: [
-        for (final p in lookParameters(base))
-          _entry(p, valueOf(p) ?? _initial(p)),
+        for (final p in lookParameters(base)) _entry(p, _carried(p, base)),
       ],
     ),
   );
@@ -134,8 +135,17 @@ final class Look {
   static BleImageControlEntry _entry(LookParameter parameter, int value) =>
       BleImageControlEntry(BleEnumValue.of(parameter._wire), value);
 
-  static int _initial(LookParameter parameter) =>
-      lookRange(parameter)?.initial ?? 0;
+  /// This look's value of [parameter] when [base] takes it, else the
+  /// initial one on [base]. A value whose range is not known is kept.
+  int _carried(LookParameter parameter, LookBase base) {
+    final value = valueOf(parameter);
+    if (value == null) return _initial(parameter, base);
+    final range = lookRange(parameter, base);
+    return range == null || range.takes(value) ? value : range.initial;
+  }
+
+  static int _initial(LookParameter parameter, LookBase base) =>
+      lookRange(parameter, base)?.initial ?? 0;
 }
 
 /// A look's base image and the value of each of its parameters, compared

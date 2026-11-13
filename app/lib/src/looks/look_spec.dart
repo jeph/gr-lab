@@ -160,9 +160,10 @@ String parameterLabel(AppLocalizations l10n, LookParameter parameter) =>
 /// as the number.
 String valueLabel(AppLocalizations l10n, LookParameter parameter, int value) {
   final choices = lookChoices(parameter);
-  if (choices != null && value >= 0 && value < choices.length) {
-    return _choiceLabel(l10n, choices[value]);
-  }
+  final choice = choices != null && value >= 0 && value < choices.length
+      ? choices[value]
+      : null;
+  if (choice != null) return _choiceLabel(l10n, choice);
   final number = NumberFormat.decimalPattern(l10n.localeName).format(value);
   return value > 0 ? '+$number' : number;
 }
@@ -192,6 +193,9 @@ String _choiceLabel(AppLocalizations l10n, LookChoice choice) =>
       LookChoice.basic => l10n.looksValueBasic,
       LookChoice.magenta => l10n.looksValueMagenta,
       LookChoice.yellow => l10n.looksValueYellow,
+      LookChoice.type1 => l10n.looksValueType(1),
+      LookChoice.type2 => l10n.looksValueType(2),
+      LookChoice.type3 => l10n.looksValueType(3),
     };
 
 /// One line about [look] (mock `.lookcard .d`): the base image, then each
@@ -203,7 +207,7 @@ String lookSummary(AppLocalizations l10n, Look look, {bool withBase = true}) {
     for (final MapEntry(key: p, :value) in look.values.entries)
       if (groupOf(p) != null &&
           shownIn(look, p) &&
-          value != (lookRange(p)?.initial ?? 0))
+          value != (lookRange(p, look.base)?.initial ?? 0))
         l10n.looksSummaryValue(
           parameterLabel(l10n, p),
           valueLabel(l10n, p, value),

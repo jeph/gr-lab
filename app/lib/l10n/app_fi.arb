@@ -405,6 +405,7 @@
   "looksValueRed": "Punainen",
   "looksValueSepia": "Seepia",
   "looksValueSmall": "Pieni",
+  "looksValueType": "Tyyppi{number}",
   "looksValueWarm": "Lämmin",
   "looksValueYellow": "Keltainen",
   "pairingAdd": "Lisää",

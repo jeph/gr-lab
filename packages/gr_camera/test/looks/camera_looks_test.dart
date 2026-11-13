@@ -176,6 +176,41 @@ void main() {
     expect(mono.look!.base, LookBase.standardMono);
   });
 
+  test('a GR IV Monochrome takes a look moved to Solarized Effect or to its '
+      'HDR Tone, and refuses the values its firmware refuses', () async {
+    rig = await ShootRig.start(
+      config: const FakeCameraConfig(
+        bonded: true,
+        model: 'RICOH GR IV Monochrome',
+      ),
+    );
+    final looks = rig.session.looks;
+    await looks.wake();
+    const type = LookParameter.solarizationType;
+    const toning = LookParameter.toningHdr;
+
+    final solarized = Look.onBase(LookBase.standardMono)
+        .withBase(LookBase.solarization);
+    final c1 = await looks.load(1, name: 'Solarized', look: solarized);
+    expect(c1.look!.valueOf(type), 1);
+    await expectLater(
+      looks.load(1, name: 'No type', look: solarized.withValue(type, 0)),
+      throwsA(isA<BleException>()),
+    );
+    expect(rig.camera.lookSlot(1).name, 'Solarized');
+
+    final hdr = Look.onBase(LookBase.hdrTone)
+        .withValue(toning, 1)
+        .withBase(LookBase.hdrMono);
+    final c2 = await looks.load(2, name: 'HDR', look: hdr);
+    expect(c2.look!.valueOf(toning), 0);
+    await expectLater(
+      looks.load(2, name: 'B&W', look: hdr.withValue(toning, 1)),
+      throwsA(isA<BleException>()),
+    );
+    expect(rig.camera.lookSlot(2).name, 'HDR');
+  });
+
   test("the library reads a photo's Image Control over Wi-Fi", () async {
     rig = await ShootRig.start(wifi: true);
     final library = rig.session.library!;

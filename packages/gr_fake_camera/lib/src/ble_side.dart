@@ -340,6 +340,48 @@ extension on FakeGrCamera {
   static bool _isLookSlot(GrBleCharacteristic<Object> c) =>
       GrBleCatalog.imageControlSlots.any((s) => s.name == c || s.data == c);
 
+  /// Whether the camera's parser refuses [blob] for a value: it rejects
+  /// the whole write when a value is outside its parameter's set, which
+  /// for the Monochrome's HDR Tone has no Black & White toning (found by
+  /// running the GR IV 1.20 firmware's parser in an emulator, not seen on
+  /// a camera; research/protocol/image-control.md §1, §4). The parser's
+  /// other checks (the format version, the body's bases, each base's
+  /// exact parameters in order and the custom filter's values) are not
+  /// simulated \[design\].
+  static bool _refusesLookValue(BleImageControlBlob blob) =>
+      blob.parameters.any((entry) {
+        final value = entry.value;
+        final (min, max) = switch (entry.parameter.known) {
+          BleImageControlParameter.saturation ||
+          BleImageControlParameter.hue ||
+          BleImageControlParameter.key ||
+          BleImageControlParameter.contrast ||
+          BleImageControlParameter.contrastHigh ||
+          BleImageControlParameter.contrastLow ||
+          BleImageControlParameter.sharpness ||
+          BleImageControlParameter.toningRetro ||
+          BleImageControlParameter.shading ||
+          BleImageControlParameter.clarity => (-4, 4),
+          BleImageControlParameter.toningMonotone => (0, 5),
+          BleImageControlParameter.toningCinema ||
+          BleImageControlParameter.toningHdr ||
+          BleImageControlParameter.grainSize ||
+          BleImageControlParameter.grainStrength ||
+          BleImageControlParameter.crossProcess => (0, 2),
+          BleImageControlParameter.toningBleachBypass ||
+          BleImageControlParameter.hdrStrength => (0, 3),
+          BleImageControlParameter.filterEffect ||
+          BleImageControlParameter.grain => (0, 1),
+          BleImageControlParameter.solarizationType => (1, 3),
+          _ => (value, value),
+        };
+        final monoHdrBlackAndWhite =
+            blob.base.known == BleImageControlBase.hdrMono &&
+            entry.parameter.known == BleImageControlParameter.toningHdr &&
+            value == 1;
+        return value < min || value > max || monoHdrBlackAndWhite;
+      });
+
   Uint8List _read(GrBleCharacteristic<Object> c) {
     final live = switch (c) {
       GrBleCatalog.cameraPower =>
@@ -440,9 +482,11 @@ extension on FakeGrCamera {
         // WORLD would ignore are refused too \[design\]: what the camera
         // does with one is \[unknown\].
         final decoded = GrBleCatalog.imageControl1Data.codec.decode(v);
+        final blob = decoded.value;
         if (v.length != BleImageControlBlob.length ||
-            decoded.value == null ||
-            decoded.issues.isNotEmpty) {
+            blob == null ||
+            decoded.issues.isNotEmpty ||
+            _refusesLookValue(blob)) {
           throw BleException(BleErrorCode.gatt, '${c.key}: invalid value');
         }
         _values[c.uuid] = v;

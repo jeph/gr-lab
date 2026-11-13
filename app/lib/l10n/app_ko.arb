@@ -405,6 +405,7 @@
   "looksValueRed": "레드",
   "looksValueSepia": "세피아",
   "looksValueSmall": "소",
+  "looksValueType": "Type{number}",
   "looksValueWarm": "웜",
   "looksValueYellow": "옐로",
   "pairingAdd": "추가",

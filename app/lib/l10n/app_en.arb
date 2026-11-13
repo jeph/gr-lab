@@ -2179,6 +2179,16 @@
   "@looksValueSmall": {
     "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."
   },
+  "looksValueType": "Type{number}",
+  "@looksValueType": {
+    "description": "Solarization Type value, as the camera's menu names it: Type1, Type2 or Type3. Keep it short: it is a segment of a control.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "description": "The type's number, 1 to 3."
+      }
+    }
+  },
   "looksValueWarm": "Warm",
   "@looksValueWarm": {
     "description": "A value of an Image Control adjustment (toning, grain, HDR or colour tone), as Ricoh names it. Keep it short: it is a segment of a control."

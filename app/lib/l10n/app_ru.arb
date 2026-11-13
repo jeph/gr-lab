@@ -405,6 +405,7 @@
   "looksValueRed": "Красный",
   "looksValueSepia": "Сепия",
   "looksValueSmall": "Мелкий",
+  "looksValueType": "Тип {number}",
   "looksValueWarm": "Теплый",
   "looksValueYellow": "Желтый",
   "pairingAdd": "Добавить",

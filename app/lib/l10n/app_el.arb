@@ -405,6 +405,7 @@
   "looksValueRed": "Κόκκινο",
   "looksValueSepia": "Σέπια",
   "looksValueSmall": "Μικρό",
+  "looksValueType": "Τύπος {number}",
   "looksValueWarm": "Θερμό",
   "looksValueYellow": "Κίτρινο",
   "pairingAdd": "Προσθήκη",

@@ -405,6 +405,7 @@
   "looksValueRed": "Červená",
   "looksValueSepia": "Sépie",
   "looksValueSmall": "Malý",
+  "looksValueType": "Typ{number}",
   "looksValueWarm": "Teplý",
   "looksValueYellow": "Žlutá",
   "pairingAdd": "Přidat",

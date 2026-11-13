@@ -405,6 +405,7 @@
   "looksValueRed": "Piros",
   "looksValueSepia": "Szépia",
   "looksValueSmall": "Kicsi",
+  "looksValueType": "{number}. típus",
   "looksValueWarm": "Meleg",
   "looksValueYellow": "Sárga",
   "pairingAdd": "Hozzáadás",

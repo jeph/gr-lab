@@ -405,6 +405,7 @@
   "looksValueRed": "Rojo",
   "looksValueSepia": "Sepia",
   "looksValueSmall": "Pequeño",
+  "looksValueType": "Tipo{number}",
   "looksValueWarm": "Cálido",
   "looksValueYellow": "Amarillo",
   "pairingAdd": "Añadir",

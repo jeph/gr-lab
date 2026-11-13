@@ -25,6 +25,8 @@ All six packages were downloaded again from Ricoh's official pages on 2026-11-07
 
 The HDF variants have no separate download: Ricoh's pages name "GR III / GR III HDF", "GR IIIx / GR IIIx HDF" and "GR IV / GR IV HDF" on one package each.
 
+Ricoh's GR IV Monochrome page listed version 1.11 on 2026-11-13 (`gr4_mono_v111.zip`, released 2026-11-10, "improved stability for general performance"). It has not been downloaded or analyzed: the table above and everything cited as the GR IV Monochrome's firmware is the 1.10 package.
+
 Byte-identical groups:
 
 | Group | What is identical | Consequence |

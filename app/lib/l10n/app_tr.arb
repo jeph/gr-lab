@@ -405,6 +405,7 @@
   "looksValueRed": "Kırmızı",
   "looksValueSepia": "Sepya",
   "looksValueSmall": "Küçük",
+  "looksValueType": "Tip{number}",
   "looksValueWarm": "Sıcak",
   "looksValueYellow": "Sarı",
   "pairingAdd": "Ekle",

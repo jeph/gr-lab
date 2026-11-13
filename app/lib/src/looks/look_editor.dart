@@ -967,6 +967,7 @@ class _LookEditorState extends State<LookEditor>
             _ParameterRow(
               key: ValueKey('look-param:${p.name}'),
               parameter: p,
+              base: _look.base,
               value: _look.valueOf(p)!,
               onChanged: (v) => setState(() => _look = _look.withValue(p, v)),
             ),
@@ -1079,12 +1080,16 @@ class _LookEditorState extends State<LookEditor>
 class _ParameterRow extends StatelessWidget {
   const new({
     required this.parameter,
+    required this.base,
     required this.value,
     required this.onChanged,
     super.key,
   });
 
   final LookParameter parameter;
+
+  /// The look's base image, which decides the values on offer.
+  final LookBase? base;
   final int value;
   final ValueChanged<int> onChanged;
 
@@ -1092,7 +1097,7 @@ class _ParameterRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
-    final range = lookRange(parameter);
+    final range = lookRange(parameter, base);
     final header = Row(
       children: [
         Expanded(
@@ -1130,7 +1135,7 @@ class _ParameterRow extends StatelessWidget {
             LookValueKind.choice => Padding(
               padding: const EdgeInsets.only(top: 10),
               child: ShootSegmented<int>(
-                values: [for (var v = range!.min; v <= range.max; v++) v],
+                values: range!.values,
                 selected: value,
                 label: (v) => valueLabel(l10n, parameter, v),
                 onSelect: onChanged,

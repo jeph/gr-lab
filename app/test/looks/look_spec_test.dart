@@ -8,14 +8,13 @@ void main() {
   final en = lookupAppLocalizations(const Locale('en'));
   final number = RegExp(r'^[+-]?\d+$');
 
-  List<String> offered(LookParameter p) {
-    final range = lookRange(p)!;
-    return [for (var v = range.min; v <= range.max; v++) valueLabel(en, p, v)];
-  }
+  List<String> offered(LookParameter p, [LookBase? base]) => [
+    for (final v in lookRange(p, base)!.values) valueLabel(en, p, v),
+  ];
 
   test('every value the editor offers for a choice has a name', () {
     for (final p in LookParameter.values) {
-      if (lookRange(p)?.kind != LookValueKind.choice) continue;
+      if (lookRange(p, null)?.kind != LookValueKind.choice) continue;
       for (final label in offered(p)) {
         expect(label, isNot(matches(number)), reason: '$p');
       }
@@ -32,6 +31,16 @@ void main() {
     expect(offered(bleach), ['Normal', 'Cool', 'Warm']);
     expect(offered(LookParameter.hdrStrength), ['Low', 'Medium', 'High']);
     expect(valueLabel(en, LookParameter.filterEffect, 0), 'Off');
+  });
+
+  test("the Solarization Type and the toning of the Monochrome's HDR Tone "
+      'offer what the camera takes', () {
+    const type = LookParameter.solarizationType;
+    expect(offered(type, LookBase.solarization), ['Type1', 'Type2', 'Type3']);
+    expect(valueLabel(en, type, 0), '0', reason: 'not one of its values');
+    const toning = LookParameter.toningHdr;
+    expect(offered(toning, LookBase.hdrTone), ['Off', 'B&W', 'Sepia']);
+    expect(offered(toning, LookBase.hdrMono), ['Off', 'Sepia']);
   });
 
   test('a value past the last name, or of a number, reads as the number', () {

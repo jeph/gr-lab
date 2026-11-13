@@ -405,6 +405,7 @@
   "looksValueRed": "红色",
   "looksValueSepia": "棕褐色",
   "looksValueSmall": "小",
+  "looksValueType": "类型{number}",
   "looksValueWarm": "暖色",
   "looksValueYellow": "黄色",
   "pairingAdd": "添加",
