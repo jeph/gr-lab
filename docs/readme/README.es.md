@@ -185,9 +185,11 @@ flutter run --dart-define=GR_DEMO=true
 
 1. **Empareja tu cámara.** Toca Añadir una cámara y sigue la guía. En la cámara, el emparejamiento
    está en MENU → E6 → Comunicación inalámbrica: pon Modo de acción en On, abre Emparejamiento y
-   elige Ejecutar emparejamiento; después confirma el código en el teléfono y pulsa OK en la
-   cámara. La cámara aparece entonces en la pantalla Cámaras, y GR Photo se enlaza con ella por sí
-   solo cuando se abre con la cámara cerca.
+   elige Ejecutar emparejamiento; después confirma el código en el teléfono y pulsa OK en la cámara.
+   En una GR III o GR IIIx, el emparejamiento está en MENU → E6 → Ajuste de Bluetooth: pon Modo de
+   acción en Encendido si cámara enc. o Encendido siempre y, en lugar de confirmar el código,
+   introduce en el teléfono el que muestra la cámara. La cámara aparece entonces en la pantalla
+   Cámaras, y GR Photo se enlaza con ella por sí solo cuando se abre con la cámara cerca.
 2. **Abre la Biblioteca.** GR Photo enciende la cámara si está apagada y se conecta a su Wi-Fi.
    Android te pide aprobar la red de la cámara una vez. Toca una toma para verla, mantén pulsado
    para seleccionar varias y descarga lo que quieras conservar.

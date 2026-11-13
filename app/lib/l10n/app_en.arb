@@ -357,9 +357,17 @@
   "@connectionFailureCheckActionMode": {
     "description": "Check in the list under a camera that could not be reached: the camera's Action Mode setting is On."
   },
+  "connectionFailureCheckActionModeBluetoothSetting": "Action Mode isn't Disable",
+  "@connectionFailureCheckActionModeBluetoothSetting": {
+    "description": "Check in the list under a GR III or GR IIIx that could not be reached: the camera's Action Mode setting is not Disable, which turns its Bluetooth off. Use the texts the GR III shows in this language."
+  },
   "connectionFailureCheckActionModePath": "MENU → E6 → Wireless Communication",
   "@connectionFailureCheckActionModePath": {
     "description": "Where the camera's Action Mode setting is, as named in the camera's menus."
+  },
+  "connectionFailureCheckActionModePathBluetoothSetting": "MENU → E6 → Bluetooth Setting",
+  "@connectionFailureCheckActionModePathBluetoothSetting": {
+    "description": "Where the Action Mode setting of a GR III or GR IIIx is, as named in the camera's menus."
   },
   "connectionFailureCheckAllowJoin": "If the phone asks to join the camera's network, allow it",
   "@connectionFailureCheckAllowJoin": {
@@ -2395,6 +2403,22 @@
   "@pairingDoneUnsavedName": {
     "description": "Shown as the camera's name in the moment before it is saved."
   },
+  "pairingEnterCodeBody": "When your phone asks for a code, enter the one shown on the camera.",
+  "@pairingEnterCodeBody": {
+    "description": "Shown while the camera shows a pairing code and the phone's own pairing prompt asks for it (GR III, GR IIIx)."
+  },
+  "pairingEnterCodeNextBody": "Your phone will ask for the code the camera shows",
+  "@pairingEnterCodeNextBody": {
+    "description": "Explains the code entry that comes next, for a camera whose code is typed on the phone: the phone's own pairing prompt asks for the code on the camera's screen."
+  },
+  "pairingEnterCodeNextTitle": "Then enter a code",
+  "@pairingEnterCodeNextTitle": {
+    "description": "Row title: what happens after tapping Pair, for a camera whose code is typed on the phone (GR III, GR IIIx)."
+  },
+  "pairingEnterCodeTitle": "Enter the code",
+  "@pairingEnterCodeTitle": {
+    "description": "Title while the camera shows a pairing code that has to be typed on the phone (GR III, GR IIIx); also the progress step for it."
+  },
   "pairingErrorCode": "Error code: {code}",
   "@pairingErrorCode": {
     "description": "Small technical detail under a pairing or Bluetooth error, for support.",
@@ -2421,6 +2445,10 @@
   "@pairingFindNotListed": {
     "description": "Hint under the list of nearby cameras. Camera menu path; use the menu names the GR shows in this language."
   },
+  "pairingFindNotListedBluetoothSetting": "On a GR III or GR IIIx, open MENU → E6 Wireless Connection → Bluetooth Setting and set Action Mode to On when power is on or On anytime.",
+  "@pairingFindNotListedBluetoothSetting": {
+    "description": "Second hint under the list of nearby cameras, for the GR III and GR IIIx, whose menu differs from the GR IV's. Camera menu path; use the menu names the GR III shows in this language. 'On when power is on' and 'On anytime' are values of the camera's Action Mode."
+  },
   "pairingFindTitle": "Add a camera",
   "@pairingFindTitle": {
     "description": "Title of the first pairing page."
@@ -2438,6 +2466,10 @@
   "pairingInstructionsBody": "MENU → E6 Wireless Connection → Wireless Communication. Set Action Mode to On, then Pairing → <b>Execute Pairing</b>. Leave that screen open and tap <b>Pair</b> below.",
   "@pairingInstructionsBody": {
     "description": "How to open the camera's pairing screen. Camera menu path; use the menu names the GR shows in this language. Text between <b> and </b> is shown bold; keep the tags. 'Execute Pairing' is the camera's menu item, 'Pair' the button below."
+  },
+  "pairingInstructionsBodyBluetoothSetting": "MENU → E6 Wireless Connection → Bluetooth Setting. Set Action Mode to On when power is on or On anytime, then Pairing → <b>Execute Pairing</b>. Leave that screen open and tap <b>Pair</b> below.",
+  "@pairingInstructionsBodyBluetoothSetting": {
+    "description": "How to open the pairing screen of a GR III or GR IIIx. Camera menu path; use the menu names the GR III shows in this language. Text between <b> and </b> is shown bold; keep the tags. 'On when power is on' and 'On anytime' are values of the camera's Action Mode, 'Execute Pairing' is the camera's menu item, 'Pair' the button below."
   },
   "pairingInstructionsPairingAgain": "Pairing again? Delete this phone from the camera's Paired Devices first.",
   "@pairingInstructionsPairingAgain": {
@@ -2529,6 +2561,10 @@
   "@pairingRegistrationFailedBody": {
     "description": "Pairing failure: the camera did not record the pairing. 'OK' is the camera's button. Followed by numbered steps."
   },
+  "pairingRegistrationFailedBodyPasskey": "The camera keeps a pairing only after its code is entered on the phone. To try again:",
+  "@pairingRegistrationFailedBodyPasskey": {
+    "description": "Pairing failure: the camera did not record the pairing, for a camera whose code is typed on the phone (GR III, GR IIIx). Followed by numbered steps."
+  },
   "pairingRegistrationFailedTitle": "{camera} didn't keep the pairing",
   "@pairingRegistrationFailedTitle": {
     "description": "Pairing failure title: the camera did not record the pairing.",
@@ -2584,6 +2620,10 @@
   "@pairingStepCheckActionMode": {
     "description": "Numbered step after a failed pairing. Camera menu path; use the menu names the GR shows in this language."
   },
+  "pairingStepCheckActionModeBluetoothSetting": "Check Action Mode isn't Disable (MENU → E6 Wireless Connection → Bluetooth Setting)",
+  "@pairingStepCheckActionModeBluetoothSetting": {
+    "description": "Numbered step after a failed pairing of a GR III or GR IIIx. 'Disable' is a value of the camera's Action Mode. Camera menu path; use the menu names the GR III shows in this language."
+  },
   "pairingStepCounter": "{step} of {total}",
   "@pairingStepCounter": {
     "description": "Progress through the pairing pages, e.g. 2 of 4.",
@@ -2607,6 +2647,10 @@
   "pairingStepDeletePhoneFromCamera": "Delete this phone from the camera's Paired Devices",
   "@pairingStepDeletePhoneFromCamera": {
     "description": "Numbered step after a failed pairing. 'Paired Devices' is the camera's menu item; use the text the GR shows in this language."
+  },
+  "pairingStepEnterCode": "Enter the camera's code on the phone",
+  "@pairingStepEnterCode": {
+    "description": "Numbered step after a failed pairing, and the detail of the code entry progress step, for a camera whose code is typed on the phone (GR III, GR IIIx)."
   },
   "pairingStepKeepClose": "Keep the camera close to the phone",
   "@pairingStepKeepClose": {

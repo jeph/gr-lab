@@ -181,9 +181,11 @@ flutter run --dart-define=GR_DEMO=true
 
 1. **Parkoppla kameran.** Tryck på Lägg till en kamera och följ guiden. På kameran finns
    parkopplingen under MENU → E6 → Trådlös komm.: välj På under Funktionsläge, öppna Länkning och
-   välj Utför länkning, bekräfta sedan koden på telefonen och tryck på OK på kameran. Därefter finns
-   kameran på skärmen Kameror, och GR Photo ansluter till den av sig självt när appen öppnas med
-   kameran i närheten.
+   välj Utför länkning, bekräfta sedan koden på telefonen och tryck på OK på kameran. På en GR III
+   eller GR IIIx finns parkopplingen under MENU → E6 → Bluetooth-inställning: välj På när kameran är
+   på eller Alltid på under Funktionsläge, och ange på telefonen den kod som kameran visar i stället
+   för att bekräfta den. Därefter finns kameran på skärmen Kameror, och GR Photo ansluter till den
+   av sig självt när appen öppnas med kameran i närheten.
 2. **Öppna Bibliotek.** GR Photo slår på kameran om den är av och ansluter till dess Wi-Fi. Android
    ber dig godkänna kamerans nätverk en gång. Tryck på en bild för att visa den, håll intryckt för
    att markera flera och hämta det du vill behålla.

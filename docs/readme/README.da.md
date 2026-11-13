@@ -180,9 +180,11 @@ flutter run --dart-define=GR_DEMO=true
 
 1. **Par dit kamera.** Tryk på Tilføj et kamera, og følg vejledningen. På kameraet ligger parringen
    under MENU, E6, Trådløs kommunikation: Indstil Funktionstilstand til Tændt, åbn Parring, og vælg
-   Udfør parring. Bekræft derefter koden på telefonen, og tryk på OK på kameraet. Kameraet står
-   herefter på skærmen Kameraer, og GR Photo opretter selv forbindelse til det, når appen åbnes med
-   kameraet i nærheden.
+   Udfør parring. Bekræft derefter koden på telefonen, og tryk på OK på kameraet. På et GR III eller
+   GR IIIx ligger parringen under MENU, E6, Bluetooth-indstilling: Indstil Funktionstilstand til
+   Tændt, når strøm er til eller Tændt når som helst, og indtast den kode, kameraet viser, på
+   telefonen i stedet for at bekræfte den. Kameraet står herefter på skærmen Kameraer, og GR Photo
+   opretter selv forbindelse til det, når appen åbnes med kameraet i nærheden.
 2. **Åbn Bibliotek.** GR Photo tænder kameraet, hvis det er slukket, og kobler sig på dets Wi-Fi.
    Android beder dig godkende kameraets netværk én gang. Tryk på en optagelse for at se den, hold
    fingeren på en for at vælge flere, og download dem, du vil beholde.

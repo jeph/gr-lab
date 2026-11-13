@@ -244,9 +244,14 @@ final class FakeGrCamera {
   /// The camera holds this phone's bond.
   bool get bonded => _bonded;
 
-  /// The camera shows the code and waits for OK: [confirmPairing] and
-  /// [rejectPairing] only act while this is true.
+  /// The camera shows the code and waits for the user: [confirmPairing],
+  /// [enterPairingCode] and [rejectPairing] only act while this is true.
   bool get pairingPending => _pairing?.isCompleted == false;
+
+  /// The camera's code is typed on the phone (the GR III family) rather
+  /// than compared on both and confirmed with OK on the camera (the GR IV
+  /// family); research/protocol/firmware-bonding-gr3.md §1.
+  bool get pairsByPasskey => model.family == GrModelFamily.gr3;
 
   /// WLAN has been turned on over BLE (the AP may still be starting).
   bool get wlanOn => _wlanEnabled;
@@ -373,8 +378,22 @@ final class FakeGrCamera {
     executePairingOpen = true;
   }
 
-  /// The user presses OK on the camera for the pending pairing.
+  /// The user presses OK on the camera for the pending pairing. A camera
+  /// whose code is typed on the phone ([pairsByPasskey]) has no pairing
+  /// for OK to confirm, so there it does nothing.
   void confirmPairing() {
+    if (!pairsByPasskey) _completePairing();
+  }
+
+  /// The user types the code the camera shows into the phone's pairing
+  /// prompt. Only a camera that [pairsByPasskey] asks for it; on one that
+  /// waits for OK the phone has nowhere to type it, so there it does
+  /// nothing.
+  void enterPairingCode() {
+    if (pairsByPasskey) _completePairing();
+  }
+
+  void _completePairing() {
     final p = _pairing;
     if (p != null && !p.isCompleted) p.complete(true);
   }

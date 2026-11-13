@@ -183,8 +183,11 @@ flutter run --dart-define=GR_DEMO=true
 1. **Muodosta pari kamerasi kanssa.** Napauta Lisää kamera ja seuraa ohjeita. Kamerassa
    parinmuodostus löytyy kohdasta MENU → E6 → Langaton viestintä: valitse Toimintatila-asetukseksi
    Päällä, avaa Muodostetaan laitepari ja valitse Muodosta laitepari, vahvista sitten koodi
-   puhelimessa ja paina kamerassa OK. Kamera näkyy sen jälkeen Kamerat-näytöllä, ja GR Photo
-   yhdistää siihen itsestään, kun sovellus avataan kameran ollessa lähellä.
+   puhelimessa ja paina kamerassa OK. GR III- ja GR IIIx -kameroissa parinmuodostus löytyy kohdasta
+   MENU → E6 → Bluetooth-asetus: valitse Toimintatila-asetukseksi Päällä, virta päällä tai Päällä
+   milloin vain ja anna kameran näyttämä koodi puhelimessa sen vahvistamisen sijaan. Kamera näkyy
+   sen jälkeen Kamerat-näytöllä, ja GR Photo yhdistää siihen itsestään, kun sovellus avataan kameran
+   ollessa lähellä.
 2. **Avaa Kirjasto.** GR Photo käynnistää kameran, jos se on sammutettu, ja liittyy sen
    Wi-Fi-verkkoon. Android pyytää hyväksymään kameran verkon kerran. Katso otosta napauttamalla
    sitä, valitse useita painamalla pitkään ja lataa ne, jotka haluat säilyttää.

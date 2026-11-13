@@ -34,6 +34,16 @@ enum CameraFeature {
   /// pictures it takes: the GPS Information and GEO Tag (Store Location
   /// Info) characteristics (`CameraGeotagging`).
   geotagging,
+
+  /// Pairing by typing the code the camera shows into the phone's pairing
+  /// prompt (Passkey Entry, the camera displaying), in place of comparing
+  /// a code on both and pressing OK on the camera (Numeric Comparison).
+  passkeyPairing,
+
+  /// Bluetooth is set under Bluetooth Setting in the camera's menu, whose
+  /// Action Mode offers On anytime, On when power is on and Disable, in
+  /// place of Wireless Communication with an Action Mode of On or Off.
+  bluetoothSettingMenu,
 }
 
 /// For each feature, the oldest firmware version of each model that has
@@ -87,6 +97,30 @@ const _minimumFirmware = <CameraFeature, Map<GrModel, String>>{
     GrModel.gr4Hdf: '0.00',
     GrModel.gr4Monochrome: '0.00',
     GrModel.gr4x: '0.00',
+  },
+  // The GR III family's `bled` sets the display-only IO capability and
+  // hands the passkey to the camera's screen (`SetDisplayPairingMode`,
+  // `OnPasskeyNotify`), and has no handler for a numeric comparison; the
+  // GR IV's sets display-yes-no and waits for OK (found in GR III firmware
+  // 2.20 and GR IV 1.20; research/protocol/firmware-bonding-gr3.md §1,
+  // §2). The family shares one `bled` (research/camera-models.md §5). Any
+  // version is [inferred]: older firmware was not read. Not run on a GR
+  // III yet.
+  CameraFeature.passkeyPairing: {
+    GrModel.gr3: '0.00',
+    GrModel.gr3x: '0.00',
+    GrModel.gr3Hdf: '0.00',
+    GrModel.gr3xHdf: '0.00',
+  },
+  // The GR III manual and the menu text of GR III firmware 2.20 and GR
+  // IIIx 1.70 (research/protocol/firmware-bonding-gr3.md §4); the GR IV's
+  // menu has Wireless Communication instead (GR IV firmware 1.20). The
+  // HDF bodies are [inferred] from sharing the family's firmware.
+  CameraFeature.bluetoothSettingMenu: {
+    GrModel.gr3: '0.00',
+    GrModel.gr3x: '0.00',
+    GrModel.gr3Hdf: '0.00',
+    GrModel.gr3xHdf: '0.00',
   },
 };
 

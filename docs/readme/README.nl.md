@@ -187,9 +187,11 @@ flutter run --dart-define=GR_DEMO=true
 
 1. **Koppel je camera.** Tik op Camera toevoegen en volg de aanwijzingen. Op de camera vind je het
    koppelen onder MENU, E6, Draadloze comm.: zet Actiemodus op Aan, open Bezig met koppelen en kies
-   Koppelen uitvoeren. Bevestig daarna de code op de telefoon en druk op OK op de camera. De camera
-   staat dan op het scherm Camera's, en GR Photo maakt er vanzelf verbinding mee wanneer de app
-   wordt geopend en de camera in de buurt is.
+   Koppelen uitvoeren. Bevestig daarna de code op de telefoon en druk op OK op de camera. Bij een GR
+   III of GR IIIx vind je het koppelen onder MENU, E6, Bluetooth-instelling: zet Actiemodus op Aan
+   als ingeschakeld of Altijd aan, en voer de code die de camera toont in op de telefoon in plaats
+   van die te bevestigen. De camera staat dan op het scherm Camera's, en GR Photo maakt er vanzelf
+   verbinding mee wanneer de app wordt geopend en de camera in de buurt is.
 2. **Open de Bibliotheek.** GR Photo zet de camera aan als die uit staat en maakt verbinding met
    zijn Wi-Fi. Android vraagt je één keer om het netwerk van de camera goed te keuren. Tik op een
    opname om hem te bekijken, houd ingedrukt om er meerdere te selecteren en download wat je wilt

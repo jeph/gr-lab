@@ -23,6 +23,7 @@ Paths such as `apk/…`, `work/…`, `firmware/…`, `captures/…` and `tools/b
 | [protocol/grworld-connect-flow.md](protocol/grworld-connect-flow.md) | GR WORLD's connect sequence step by step, from the decompiled app |
 | [protocol/power-on-grworld.md](protocol/power-on-grworld.md) | How GR WORLD powers an off camera on over BLE |
 | [protocol/firmware-bonding.md](protocol/firmware-bonding.md) | The camera firmware's Bluetooth pairing and bonding rules, and why a Mac cannot reconnect |
+| [protocol/firmware-bonding-gr3.md](protocol/firmware-bonding-gr3.md) | How a GR III pairs: its code is typed on the phone instead of confirmed with OK on the camera, the same Execute Pairing gate, and its Bluetooth Setting menu |
 | [framework.md](framework.md) | Framework recommendation for Windows/macOS/iOS/Android |
 | [firmware-protocol-inventory.md](firmware-protocol-inventory.md) | Firmware hashes/extraction coverage, HTTP routes beyond the app, GATT UUID comparison, REA native findings and camera-side shutdown limits |
 | [firmware-network-config.md](firmware-network-config.md) | Camera boot/AP startup, hostapd generation, DHCP, radio power settings and timeout distinctions |

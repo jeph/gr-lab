@@ -181,8 +181,10 @@ flutter run --dart-define=GR_DEMO=true
 1. **Spárujte fotoaparát.** Klepněte na Přidat fotoaparát a postupujte podle průvodce. Ve
    fotoaparátu najdete párování v MENU, E6, Bezdrátová komunikace: nastavte Režim akce na Zapnuto,
    otevřete Párování a zvolte Provést párování, potom potvrďte kód v telefonu a stiskněte na
-   fotoaparátu OK. Fotoaparát se pak objeví na obrazovce Fotoaparáty a GR Photo se s ním spojí samo,
-   kdykoli se otevře a fotoaparát je poblíž.
+   fotoaparátu OK. U fotoaparátu GR III nebo GR IIIx je párování v MENU, E6, Nastavení bluetooth:
+   nastavte Režim akce na Zapnuto při zap. fotoap. nebo Zapnuto vždy a kód místo potvrzení zadejte v
+   telefonu tak, jak ho ukazuje fotoaparát. Fotoaparát se pak objeví na obrazovce Fotoaparáty a GR
+   Photo se s ním spojí samo, kdykoli se otevře a fotoaparát je poblíž.
 2. **Otevřete Knihovnu.** GR Photo fotoaparát zapne, pokud je vypnutý, a připojí se k jeho Wi-Fi.
    Android vás jednou požádá o schválení sítě fotoaparátu. Klepnutím snímek zobrazíte, podržením
    jich vyberete víc a stáhnete si, co si chcete ponechat.

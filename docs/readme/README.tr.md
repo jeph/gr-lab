@@ -184,9 +184,11 @@ flutter run --dart-define=GR_DEMO=true
 
 1. **Kameranızı eşleştirin.** Kamera ekle’ye dokunun ve yönergeleri izleyin. Kamerada eşleştirme,
    MENU → E6 → Kablosuz İletişim Ayarı altında yer alır: İşlem Modu ayarını Açık yapın,
-   Eşleştirme’yi açıp Eşleştirme Yap öğesini seçin, ardından kodu telefonda onaylayın ve kamerada
-   OK düğmesine basın. Kamera artık Kameralar ekranındadır ve GR Photo, kamera yakındayken
-   açıldığında ona kendiliğinden bağlanır.
+   Eşleştirme’yi açıp Eşleştirme Yap öğesini seçin, ardından kodu telefonda onaylayın ve kamerada OK
+   düğmesine basın. GR III veya GR IIIx kamerada eşleştirme MENU → E6 → Bluetooth Ayarı altında yer
+   alır: İşlem Modu ayarını Güç açıldığında açık veya Herzaman açık yapın ve kodu onaylamak yerine
+   kameranın gösterdiği kodu telefona girin. Kamera artık Kameralar ekranındadır ve GR Photo, kamera
+   yakındayken açıldığında ona kendiliğinden bağlanır.
 2. **Arşiv’i açın.** GR Photo, kamera kapalıysa onu açar ve Wi-Fi ağına bağlanır. Android, kameranın
    ağını bir kez onaylamanızı ister. Bir çekimi görüntülemek için ona dokunun, birden çok çekim
    seçmek için basılı tutun ve saklamak istediklerinizi indirin.

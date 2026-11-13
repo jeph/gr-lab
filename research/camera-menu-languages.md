@@ -60,7 +60,7 @@ The tables are Ricoh's text. GR Photo's translations use individual terms from t
 - A message whose description in `app/lib/l10n/app_en.arb` says it is the camera's wording ("as Ricoh names it", "Use the text the GR shows in this language") carries the camera's text for that entry in each translation, abbreviations included, because that is what the user sees on the camera.
 - Sentences that name a camera menu entry use the written-out title.
 - Texts the tables do not hold are GR Photo's own wording in every language **[design]**: the values of Toning, Color Tone, Grain Effect size and Filter Effect (Sepia, Cool, Warm, Basic, the colours, Large, Small), Astro, and everything about GR Photo itself.
-- The translations were made from the GR IV 1.20 tables. Where a GR III words an entry differently, GR Photo follows the GR IV **[design]**; the differences were not compared.
+- The translations were made from the GR IV 1.20 tables. Where a GR III words an entry differently, GR Photo follows the GR IV **[design]**; the differences were not compared, except for pairing. The messages shown only for a GR III or GR IIIx (their descriptions in `app_en.arb` say so) name its Bluetooth Setting menu and Action Mode values from the GR III 2.20 tables (entries 608 and 614 to 616), and the pairing entries both families have (Action Mode, Pairing, Execute Pairing, Paired Devices, Authentication Code) read the same in the GR III 2.20 and GR IV 1.20 tables in all 21 languages ([GR III firmware bonding §4](protocol/firmware-bonding-gr3.md#4-menu-and-on-camera-text), compared 2026-11-13).
 
 ## Unknown, for a hardware check
 

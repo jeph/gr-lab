@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:gr_camera/gr_camera.dart';
 import 'package:grphoto/l10n/l10n.dart';
 import 'package:grphoto/src/connection/connection_controller.dart';
 import 'package:grphoto/src/data/cameras.dart';
@@ -97,6 +98,9 @@ class ConnectFailureView extends StatelessWidget {
       ConnectFailureKind.cameraOff => l10n.connectionFailureCameraOffBody,
     };
     final pairAgain = onPairAgain ?? () => unawaited(PairingFlow.push(context));
+    final bluetoothSettingMenu = camera.body.supports(
+      CameraFeature.bluetoothSettingMenu,
+    );
     final checks = switch (kind) {
       ConnectFailureKind.unreachable => [
         GroupRow(
@@ -105,8 +109,12 @@ class ConnectFailureView extends StatelessWidget {
         ),
         GroupRow(
           icon: Icons.bluetooth_rounded,
-          title: l10n.connectionFailureCheckActionMode,
-          subtitle: l10n.connectionFailureCheckActionModePath,
+          title: bluetoothSettingMenu
+              ? l10n.connectionFailureCheckActionModeBluetoothSetting
+              : l10n.connectionFailureCheckActionMode,
+          subtitle: bluetoothSettingMenu
+              ? l10n.connectionFailureCheckActionModePathBluetoothSetting
+              : l10n.connectionFailureCheckActionModePath,
         ),
         GroupRow(
           icon: Icons.info_outline_rounded,

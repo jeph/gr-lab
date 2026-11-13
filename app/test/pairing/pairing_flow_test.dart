@@ -142,23 +142,32 @@ Future<void> _open(WidgetTester tester, TestApp app) async {
   await pumpUntilFound(tester, find.byKey(_find));
 }
 
-/// From the find page to the running pairing attempt.
-Future<void> _selectAndPair(WidgetTester tester, {Key add = _add}) async {
+/// From the find page to the instructions for the camera picked.
+Future<void> _select(WidgetTester tester, {Key add = _add}) async {
   await pumpUntilFound(tester, find.byKey(_find).hitTestable());
   // At large text the nearby list starts below the fold.
   await tester.drag(_flowScrollable, const Offset(0, -2000));
   await tester.pump();
   await tapWhenReady(tester, find.byKey(add));
   expect(find.byKey(_instructions), findsOneWidget);
+}
+
+/// From the find page to the running pairing attempt.
+Future<void> _selectAndPair(WidgetTester tester, {Key add = _add}) async {
+  await _select(tester, add: add);
   await tapWhenReady(tester, find.byKey(const Key('pair-start')));
 }
 
-/// Waits until the phone asks to check the code and the bond request has
-/// reached [camera], so an OK pressed on it now is not lost: the screen
-/// switches before the request arrives, and how long that takes depends on
-/// the machine's load.
-Future<void> _awaitCode(WidgetTester tester, FakeGrCamera camera) async {
-  await pumpUntilFound(tester, find.text('Check the code'));
+/// Waits until the code page shows (titled [title]) and the bond request
+/// has reached [camera], so an OK pressed on it now, or its code typed on
+/// the phone, is not lost: the screen switches before the request arrives,
+/// and how long that takes depends on the machine's load.
+Future<void> _awaitCode(
+  WidgetTester tester,
+  FakeGrCamera camera, {
+  String title = 'Check the code',
+}) async {
+  await pumpUntilFound(tester, find.text(title));
   await pumpUntil(
     tester,
     () => camera.pairingPending,
@@ -244,6 +253,68 @@ void main() {
 
     await app.dispose();
   });
+
+  for (final scale in [1.0, 2.0]) {
+    testWidgets('a GR III is paired by typing its code on the phone, and the '
+        'pages say so (text ×$scale)', (tester) async {
+      // Layout overflows at large text fail the test.
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final app = await _start(
+        tester,
+        const FakeCameraConfig(model: 'RICOH GR III', firmware: '2.20'),
+      );
+
+      app.camera.openExecutePairing();
+      await _select(tester);
+
+      // Its Bluetooth is under Bluetooth Setting, and nothing is confirmed
+      // on the camera.
+      expect(
+        find.textContaining('Bluetooth Setting', findRichText: true),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Wireless Communication', findRichText: true),
+        findsNothing,
+      );
+      await tester.scrollUntilVisible(
+        find.text('Then enter a code'),
+        200,
+        scrollable: _flowScrollable,
+      );
+      expect(find.text('Then confirm a code'), findsNothing);
+
+      await tapWhenReady(tester, find.byKey(const Key('pair-start')));
+      await _awaitCode(tester, app.camera, title: 'Enter the code');
+      expect(find.text('Check the code'), findsNothing);
+      expect(
+        _inFlow(find.textContaining('OK', findRichText: true)),
+        findsNothing,
+      );
+      expect(
+        find.text(
+          'When your phone asks for a code, enter the one shown on the '
+          'camera.',
+          findRichText: true,
+        ),
+        findsOneWidget,
+      );
+
+      // OK on the camera is not what a GR III waits for.
+      app.camera.confirmPairing();
+      await pumpRounds(tester, 20);
+      expect(find.byKey(_progress), findsOneWidget);
+      expect(app.models.cameras.current, isNull);
+
+      app.camera.enterPairingCode();
+      await pumpUntilFound(tester, find.byKey(_done));
+      expect(app.models.cameras.current!.name, 'GR III');
+      expect(find.text('GR III is paired'), findsOneWidget);
+
+      await app.dispose();
+    });
+  }
 
   for (final scale in [1.0, 2.0]) {
     testWidgets('a refused pairing shows the checklist and never retries '

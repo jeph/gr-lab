@@ -17,19 +17,22 @@ final class PairingFailureInfo {
   });
 
   /// Maps a `pairCamera` error to messages in [l10n], naming the [camera]
-  /// being paired. Anything that is not a [GrPairingException] (a scan
-  /// error, Bluetooth turning off) gets the generic page. [detail] always
-  /// carries the error's [errorCode].
+  /// being paired. The steps follow how its [body] pairs and where its
+  /// menu keeps Bluetooth. Anything that is not a [GrPairingException] (a
+  /// scan error, Bluetooth turning off) gets the generic page. [detail]
+  /// always carries the error's [errorCode].
   factory from(
     Object error, {
     required String camera,
+    required CameraBody body,
     required AppLocalizations l10n,
   }) {
     final detail = l10n.pairingErrorCode(errorCode(error));
+    final passkey = body.supports(CameraFeature.passkeyPairing);
     final retrySteps = [
       l10n.pairingStepReopenExecutePairing,
       l10n.pairingStepTapPair,
-      l10n.pairingStepPressOk,
+      if (passkey) l10n.pairingStepEnterCode else l10n.pairingStepPressOk,
     ];
     final removeBondSteps = [
       l10n.pairingStepDeletePhoneFromCamera,
@@ -53,7 +56,10 @@ final class PairingFailureInfo {
           body: l10n.pairingNotFoundBody,
           steps: [
             l10n.pairingStepTurnOnAndKeepClose,
-            l10n.pairingStepCheckActionMode,
+            if (body.supports(CameraFeature.bluetoothSettingMenu))
+              l10n.pairingStepCheckActionModeBluetoothSetting
+            else
+              l10n.pairingStepCheckActionMode,
             l10n.pairingStepReopenExecutePairing,
           ],
           detail: detail,
@@ -72,7 +78,11 @@ final class PairingFailureInfo {
           steps: [
             l10n.pairingStepKeepClose,
             l10n.pairingStepReopenExecutePairing,
-            l10n.pairingStepTapPairThenOk,
+            if (passkey) ...[
+              l10n.pairingStepTapPair,
+              l10n.pairingStepEnterCode,
+            ] else
+              l10n.pairingStepTapPairThenOk,
           ],
           detail: detail,
         );
@@ -104,7 +114,9 @@ final class PairingFailureInfo {
       case GrPairingFailure.registrationFailed:
         return PairingFailureInfo(
           title: l10n.pairingRegistrationFailedTitle(camera),
-          body: l10n.pairingRegistrationFailedBody,
+          body: passkey
+              ? l10n.pairingRegistrationFailedBodyPasskey
+              : l10n.pairingRegistrationFailedBody,
           steps: retrySteps,
           hintTitle: l10n.pairingPairedBeforeTitle,
           hintBody: l10n.pairingPairedBeforeBody,

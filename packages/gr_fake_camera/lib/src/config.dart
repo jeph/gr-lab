@@ -452,9 +452,11 @@ final class FakeCameraConfig {
   /// Pairing as soon as the app starts scanning, as the pairing screen asks.
   final bool openExecutePairingOnScan;
 
-  /// When set, the simulated user presses OK on the camera this long after
-  /// the phone starts bonding. Null leaves it to [FakeGrCamera.confirmPairing]
-  /// and [FakeGrCamera.rejectPairing].
+  /// When set, the simulated user completes the pairing this long after
+  /// the phone starts bonding: OK on the camera, or its code typed on the
+  /// phone when the camera pairs that way. Null leaves it to
+  /// [FakeGrCamera.confirmPairing], [FakeGrCamera.enterPairingCode] and
+  /// [FakeGrCamera.rejectPairing].
   final Duration? autoConfirmPairing;
 
   /// Battery percentage (`/v1/props` `battery`, BLE Battery Level).

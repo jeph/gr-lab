@@ -171,9 +171,11 @@ flutter run --dart-define=GR_DEMO=true
 
 1. **Pair your camera.** Tap Add a camera and follow the guide. On the camera, pairing is under
    MENU, Wireless Connection, Wireless Communication: set Action Mode to On, open Pairing and choose
-   Execute Pairing, then confirm the code on the phone and press OK on the camera. The camera is
-   then on the Cameras screen, and GR Photo links to it by itself when it opens with the camera
-   nearby.
+   Execute Pairing, then confirm the code on the phone and press OK on the camera. On a GR III or GR
+   IIIx, pairing is under MENU, Wireless Connection, Bluetooth Setting: set Action Mode to On when
+   power is on or On anytime, and instead of confirming the code, enter the one the camera shows on
+   the phone. The camera is then on the Cameras screen, and GR Photo links to it by itself when it
+   opens with the camera nearby.
 2. **Open the Library.** GR Photo turns the camera on if it is off and joins its Wi-Fi. Android asks
    you to approve the camera's network once. Tap a shot to view it, press and hold to select
    several, and download what you want to keep.

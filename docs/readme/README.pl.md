@@ -180,10 +180,12 @@ flutter run --dart-define=GR_DEMO=true
 ## Korzystanie z aplikacji
 
 1. **Sparuj aparat.** Dotknij Dodaj aparat i postępuj zgodnie ze wskazówkami. W aparacie parowanie
-   znajduje się w MENU → E6 → Komunikacja bezprz.: ustaw Tryb działania na Wł., otwórz Parowanie
-   i wybierz Wykonaj parowanie, a następnie potwierdź kod w telefonie i naciśnij OK w aparacie.
-   Aparat pojawi się wtedy na ekranie Aparaty, a GR Photo będzie się z nim łączyć samodzielnie, gdy
-   zostanie otwarte w pobliżu aparatu.
+   znajduje się w MENU → E6 → Komunikacja bezprz.: ustaw Tryb działania na Wł., otwórz Parowanie i
+   wybierz Wykonaj parowanie, a następnie potwierdź kod w telefonie i naciśnij OK w aparacie. W
+   aparacie GR III lub GR IIIx parowanie znajduje się w MENU → E6 → Ustawienia Bluetooth: ustaw Tryb
+   działania na Wł. przy wł. zasil. lub Wł. zawsze, a zamiast potwierdzać kod, wpisz w telefonie
+   ten, który wyświetla aparat. Aparat pojawi się wtedy na ekranie Aparaty, a GR Photo będzie się z
+   nim łączyć samodzielnie, gdy zostanie otwarte w pobliżu aparatu.
 2. **Otwórz Bibliotekę.** GR Photo włącza aparat, jeśli jest wyłączony, i łączy się z jego Wi-Fi.
    Android jednorazowo prosi o zatwierdzenie sieci aparatu. Dotknij ujęcia, aby je wyświetlić,
    naciśnij i przytrzymaj, aby zaznaczyć kilka, i pobierz to, co chcesz zachować.

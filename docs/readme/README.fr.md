@@ -194,9 +194,11 @@ flutter run --dart-define=GR_DEMO=true
 1. **Jumelez votre appareil photo.** Touchez Ajouter un appareil photo et suivez le guide. Sur
    l'appareil photo, le jumelage se trouve sous MENU, E6, Communication sans fil : réglez Mode de
    fonctionnement sur Marche, ouvrez Jumelage et choisissez Exécuter le jumelage, puis confirmez le
-   code sur le téléphone et appuyez sur OK sur l'appareil photo. L'appareil photo figure alors sur
-   l'écran Appareils photo, et GR Photo s'y connecte tout seul lorsqu'il s'ouvre avec l'appareil
-   photo à proximité.
+   code sur le téléphone et appuyez sur OK sur l'appareil photo. Sur un GR III ou un GR IIIx, le
+   jumelage se trouve sous MENU, E6, Réglage Bluetooth : réglez Mode de fonctionnement sur Activer
+   sous tension ou Toujours activer et, au lieu de confirmer le code, saisissez sur le téléphone
+   celui qu'affiche l'appareil photo. L'appareil photo figure alors sur l'écran Appareils photo, et
+   GR Photo s'y connecte tout seul lorsqu'il s'ouvre avec l'appareil photo à proximité.
 2. **Ouvrez la Bibliothèque.** GR Photo allume l'appareil photo s'il est éteint et rejoint son
    Wi-Fi. Android vous demande une fois d'approuver le réseau de l'appareil photo. Touchez une vue
    pour l'afficher, maintenez l'appui pour en sélectionner plusieurs, et téléchargez ce que vous

@@ -187,9 +187,11 @@ flutter run --dart-define=GR_DEMO=true
 1. **Párosítsa a kameráját.** Koppintson a Kamera hozzáadása gombra, és kövesse az útmutatót. A
    kamerán a párosítás itt található: MENU → E6 → Vez. nélk. kom. Állítsa a Működési mód beállítást
    Be értékre, nyissa meg a Párosítás menüpontot, és válassza a Párosítás végrehajtása lehetőséget,
-   majd erősítse meg a kódot a telefonon, és nyomja meg a kamerán az OK gombot. A kamera ezután
-   megjelenik a Kamerák képernyőn, és a GR Photo magától csatlakozik hozzá, ha megnyitáskor a kamera
-   a közelben van.
+   majd erősítse meg a kódot a telefonon, és nyomja meg a kamerán az OK gombot. GR III vagy GR IIIx
+   esetén a párosítás itt található: MENU → E6 → Bluetooth-beállítás. Állítsa a Működési mód
+   beállítást Be, ha áram alatt vagy Bármikor be értékre, és a kód megerősítése helyett írja be a
+   telefonon a kamerán látható kódot. A kamera ezután megjelenik a Kamerák képernyőn, és a GR Photo
+   magától csatlakozik hozzá, ha megnyitáskor a kamera a közelben van.
 2. **Nyissa meg a Könyvtárat.** A GR Photo bekapcsolja a kamerát, ha ki van kapcsolva, és
    csatlakozik a Wi-Fi-hálózatához. Az Android egyszer a jóváhagyását kéri a kamera hálózatához.
    Koppintson egy felvételre a megtekintéséhez, tartsa nyomva több felvétel kijelöléséhez, és töltse

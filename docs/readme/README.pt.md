@@ -182,11 +182,13 @@ flutter run --dart-define=GR_DEMO=true
 
 ## Utilização
 
-1. **Emparelhe a câmara.** Toque em Adicionar câmara e siga o guia. Na câmara, o emparelhamento
-   está em MENU, E6, Comunicação sem fios: defina Modo de Ação para Ligar, abra Emparelhamento e
-   escolha Executar Emparelhamento; depois confirme o código no telemóvel e prima OK na câmara. A
-   câmara passa então a constar do ecrã Câmaras, e o GR Photo liga-se a ela sozinho quando é aberto
-   com a câmara por perto.
+1. **Emparelhe a câmara.** Toque em Adicionar câmara e siga o guia. Na câmara, o emparelhamento está
+   em MENU, E6, Comunicação sem fios: defina Modo de Ação para Ligar, abra Emparelhamento e escolha
+   Executar Emparelhamento; depois confirme o código no telemóvel e prima OK na câmara. Numa GR III
+   ou GR IIIx, o emparelhamento está em MENU, E6, Definição Bluetooth: defina Modo de Ação para Lig.
+   com aliment. ligada ou Sempre ligada e, em vez de confirmar o código, introduza no telemóvel o
+   que a câmara mostra. A câmara passa então a constar do ecrã Câmaras, e o GR Photo liga-se a ela
+   sozinho quando é aberto com a câmara por perto.
 2. **Abra a Biblioteca.** O GR Photo liga a câmara, se estiver desligada, e liga-se ao Wi-Fi dela. O
    Android pede-lhe que aprove uma vez a rede da câmara. Toque numa foto para a ver, mantenha
    premido para selecionar várias e transfira as que quiser guardar.

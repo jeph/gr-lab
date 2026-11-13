@@ -510,7 +510,9 @@ extension on FakeGrCamera {
     }
   }
 
-  /// Numeric comparison on the camera: only on Execute Pairing, once.
+  /// The phone asks to bond: only on Execute Pairing, once. The camera
+  /// shows its code and waits for OK (numeric comparison) or for the code
+  /// to be typed on the phone (passkey entry), by [pairsByPasskey].
   Future<void> _pair(_FakeLink link, Duration timeout) async {
     if (_pairing != null) {
       throw const BleException(BleErrorCode.transport, 'pairing in progress');
@@ -528,7 +530,9 @@ extension on FakeGrCamera {
     }
     final pending = _pairing = Completer<bool>();
     final auto = config.autoConfirmPairing;
-    final confirmTimer = auto == null ? null : _after(auto, confirmPairing);
+    final confirmTimer = auto == null
+        ? null
+        : _after(auto, pairsByPasskey ? enterPairingCode : confirmPairing);
     final timeoutTimer = _after(timeout, () {
       if (!pending.isCompleted) {
         pending.completeError(

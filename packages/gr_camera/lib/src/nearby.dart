@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:gr_camera/src/camera_features.dart';
 import 'package:gr_camera/src/environment.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 
@@ -34,6 +35,11 @@ final class NearbyCamera {
 
   /// Identifies the camera in the list: its serial, else its device id.
   String get key => serial ?? deviceId;
+
+  /// What the camera supports as far as its advertisements tell: its
+  /// model. They carry no firmware version, so a feature that starts at
+  /// one reads as unsupported.
+  CameraBody get body => CameraBody(model: model, firmware: null);
 }
 
 /// Lists GR cameras advertising nearby, for picking one to pair. The model,

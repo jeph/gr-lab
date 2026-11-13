@@ -488,6 +488,37 @@ void main() {
     });
   }
 
+  testWidgets("an unreachable GR III's checks name its own Bluetooth menu", (
+    tester,
+  ) async {
+    final app = await _start(
+      tester,
+      config: const FakeCameraConfig(
+        model: 'RICOH GR III',
+        firmware: '2.20',
+        bonded: true,
+        unreachable: true,
+      ),
+      sessionOptions: _failFast,
+    );
+    await pumpRounds(tester, 20);
+    await _tap(tester, const Key('camera-card-power'));
+    await _untilStatus(tester, app, ConnectionStatus.failed);
+    await pumpUntilFound(
+      tester,
+      find.byKey(const Key('camera-card-link-failed')),
+    );
+    await _openSheet(tester, 'failed');
+
+    // A GR III's Action Mode has no On: it is On anytime, On when power
+    // is on or Disable, under Bluetooth Setting.
+    expect(find.text("Action Mode isn't Disable"), findsOneWidget);
+    expect(find.text('MENU → E6 → Bluetooth Setting'), findsOneWidget);
+    expect(find.text('Action Mode is On'), findsNothing);
+
+    await app.dispose();
+  });
+
   testWidgets('with less motion asked for, the linking icon is still', (
     tester,
   ) async {

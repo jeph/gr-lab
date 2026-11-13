@@ -218,10 +218,18 @@ class RadarHero extends StatelessWidget {
 /// A drawing of the camera's rear screen inside a card, so the user knows
 /// what to look for on the camera (mock `b-pair`, `b-pair-code`).
 class CameraScreenHero extends StatelessWidget {
-  const new pairingMenu({super.key}) : _code = false;
-  const new authenticationCode({super.key}) : _code = true;
+  const new pairingMenu({super.key}) : _code = false, okButton = false;
+
+  /// The screen showing the pairing code. A camera that waits for OK to be
+  /// pressed shows the button under the code ([okButton]); one whose code
+  /// is typed on the phone shows the code alone.
+  const new authenticationCode({super.key, this.okButton = true})
+    : _code = true;
 
   final bool _code;
+
+  /// Whether the code screen offers OK.
+  final bool okButton;
 
   @override
   Widget build(BuildContext context) {
@@ -245,7 +253,7 @@ class CameraScreenHero extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               // Placeholder digits: a sample code could be mistaken for the
-              // one to compare.
+              // camera's.
               Text(
                 '• • • • • •',
                 softWrap: false,
@@ -255,12 +263,14 @@ class CameraScreenHero extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
-              const SizedBox(height: 10),
-              _menuItem(
-                l10n.pairingCameraScreenOk,
-                selected: true,
-                compact: true,
-              ),
+              if (okButton) ...[
+                const SizedBox(height: 10),
+                _menuItem(
+                  l10n.pairingCameraScreenOk,
+                  selected: true,
+                  compact: true,
+                ),
+              ],
             ],
           )
         : Column(

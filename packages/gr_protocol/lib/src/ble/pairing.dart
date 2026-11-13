@@ -81,10 +81,12 @@ enum GrPairingStage {
   /// Looking for a powered-on camera.
   scanning,
 
-  /// Connected; the OS pairing is running. The user must confirm the code
-  /// on this device **and** press OK on the camera (GR WORLD copy
-  /// pp+0x695b0; the OK is the camera's numeric-comparison accept,
-  /// research/protocol/firmware-bonding.md §2).
+  /// Connected; the OS pairing is running. With a GR IV the user must
+  /// confirm the code on this device **and** press OK on the camera (GR
+  /// WORLD copy pp+0x695b0; the OK is the camera's numeric-comparison
+  /// accept, research/protocol/firmware-bonding.md §2). With a GR III the
+  /// user types the code the camera shows into this device's prompt
+  /// \[inferred\] (research/protocol/firmware-bonding-gr3.md §1).
   awaitingConfirmation,
 
   /// Bonded; reading Camera Information and writing this client's name.

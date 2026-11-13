@@ -189,8 +189,11 @@ flutter run --dart-define=GR_DEMO=true
 1. **Kopple deine Kamera.** Tippe auf „Kamera hinzufügen“ und folge der Anleitung. Auf der Kamera
    findest du die Kopplung unter MENU → E6 → Drahtlose Kommunikation: Stelle „Aktionsmodus“ auf
    „An“, öffne „Kopplung“ und wähle „Kopplung ausführen“, bestätige dann den Code auf dem Smartphone
-   und drücke an der Kamera OK. Die Kamera steht danach auf dem Bildschirm „Kameras“, und GR Photo
-   verbindet sich von selbst mit ihr, wenn es geöffnet wird und die Kamera in der Nähe ist.
+   und drücke an der Kamera OK. Bei einer GR III oder GR IIIx liegt die Kopplung unter MENU → E6 →
+   Bluetooth-Einstellung: Stelle „Aktionsmodus“ auf „Wenn eingeschalt. an“ oder „Immer an“ und gib
+   den Code, den die Kamera anzeigt, auf dem Smartphone ein, statt ihn zu bestätigen. Die Kamera
+   steht danach auf dem Bildschirm „Kameras“, und GR Photo verbindet sich von selbst mit ihr, wenn
+   es geöffnet wird und die Kamera in der Nähe ist.
 2. **Öffne die Mediathek.** GR Photo schaltet die Kamera ein, falls sie aus ist, und verbindet sich
    mit ihrem WLAN. Android bittet dich einmalig, dem Netzwerk der Kamera zuzustimmen. Tippe auf eine
    Aufnahme, um sie anzusehen, halte gedrückt, um mehrere auszuwählen, und lade herunter, was du

@@ -186,8 +186,11 @@ flutter run --dart-define=GR_DEMO=true
 1. **Accoppia la fotocamera.** Tocca Aggiungi fotocamera e segui la guida. Sulla fotocamera
    l'accoppiamento si trova in MENU, E6, Comunicazione wireless: imposta Modalità operativa su On,
    apri Accoppiamento e scegli Esegui accoppiamento, poi conferma il codice sul telefono e premi OK
-   sulla fotocamera. La fotocamera compare quindi nella schermata Fotocamere, e GR Photo vi si
-   collega da sola quando viene aperta con la fotocamera nelle vicinanze.
+   sulla fotocamera. Su una GR III o GR IIIx l'accoppiamento si trova in MENU, E6, Impostazione
+   Bluetooth: imposta Modalità operativa su Attiva quando accesa o Sempre attiva e, invece di
+   confermare il codice, inserisci sul telefono quello mostrato dalla fotocamera. La fotocamera
+   compare quindi nella schermata Fotocamere, e GR Photo vi si collega da sola quando viene aperta
+   con la fotocamera nelle vicinanze.
 2. **Apri la Libreria.** GR Photo accende la fotocamera se è spenta e si connette al suo Wi-Fi.
    Android chiede di approvare la rete della fotocamera una sola volta. Tocca uno scatto per
    vederlo, tieni premuto per selezionarne più di uno e scarica quelli che vuoi conservare.

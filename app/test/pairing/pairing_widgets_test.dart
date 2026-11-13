@@ -21,6 +21,8 @@ void main() {
                   children: [
                     CameraScreenHero.pairingMenu(),
                     CameraScreenHero.authenticationCode(),
+                    // A camera whose code is typed on the phone.
+                    CameraScreenHero.authenticationCode(okButton: false),
                   ],
                 ),
               ),
@@ -29,6 +31,7 @@ void main() {
         );
         expect(tester.takeException(), isNull);
         expect(find.text('Execute Pairing'), findsOneWidget);
+        expect(find.text('AUTHENTICATION CODE'), findsNWidgets(2));
         expect(find.text('OK'), findsOneWidget);
       });
     }

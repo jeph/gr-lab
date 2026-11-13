@@ -73,6 +73,64 @@ void main() {
     expect(camera.registeredClientName, 'GR Photo Test');
   });
 
+  test('a GR III bonds once its code is typed on the phone; OK on the '
+      'camera confirms nothing', () async {
+    camera = FakeGrCamera(
+      config: const FakeCameraConfig(
+        model: 'RICOH GR III',
+        firmware: '2.20',
+        executePairingOpen: true,
+        advertisingInterval: Duration(milliseconds: 5),
+        connectDelay: Duration.zero,
+        bleLatency: Duration.zero,
+      ),
+      media: syntheticMedia(),
+    );
+    final waiting = Completer<void>();
+    final pairing = pair(
+      camera,
+      onStage: (s) {
+        if (s == GrPairingStage.awaitingConfirmation) waiting.complete();
+      },
+    );
+    await waiting.future;
+    await Future<void>.delayed(ms(50));
+    camera.confirmPairing();
+    await Future<void>.delayed(ms(50));
+    expect(camera.pairingPending, isTrue);
+    expect(camera.bonded, isFalse);
+
+    camera.enterPairingCode();
+    final result = await pairing;
+    expect(result.camera.model, GrModel.gr3);
+    expect(camera.bonded, isTrue);
+    expect(camera.executePairingOpen, isFalse);
+  });
+
+  test('a GR IV has no code to type: only OK on the camera bonds', () async {
+    camera = FakeGrCamera(
+      config: fastConfig(executePairingOpen: true),
+      media: syntheticMedia(),
+    );
+    final waiting = Completer<void>();
+    final pairing = pair(
+      camera,
+      onStage: (s) {
+        if (s == GrPairingStage.awaitingConfirmation) waiting.complete();
+      },
+    );
+    await waiting.future;
+    await Future<void>.delayed(ms(50));
+    camera.enterPairingCode();
+    await Future<void>.delayed(ms(50));
+    expect(camera.pairingPending, isTrue);
+    expect(camera.bonded, isFalse);
+
+    camera.confirmPairing();
+    await pairing;
+    expect(camera.bonded, isTrue);
+  });
+
   test('cancelled on the camera: notConfirmed, no bond', () async {
     camera = FakeGrCamera(
       config: fastConfig(executePairingOpen: true),

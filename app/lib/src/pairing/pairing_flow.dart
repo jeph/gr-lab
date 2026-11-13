@@ -288,14 +288,14 @@ class _PairingFlowState extends State<PairingFlow> {
       _Page.pairing => _PairingPage(
         leading: back,
         trailing: close,
-        cameraName: _selected!.model.shortName,
+        camera: _selected!,
         stage: _stage,
         onCancel: () => _cancelPairing(leave: true),
       ),
       _Page.failed => _FailurePage(
         leading: close,
         error: _pairingError!,
-        cameraName: _selected!.model.shortName,
+        camera: _selected!,
         pairAt: _nextAttemptAt(),
         onPairAgain: _pairAgain,
       ),
@@ -454,6 +454,9 @@ class _FindPage extends StatelessWidget {
         ),
         ..._status(context),
         FootNote(l10n.pairingFindNotListed),
+        // No model is known yet: a camera that is not listed advertised
+        // nothing.
+        FootNote(l10n.pairingFindNotListedBluetoothSetting),
       ],
     );
   }
@@ -721,6 +724,7 @@ class _InstructionsPage extends StatelessWidget {
   Widget _build(BuildContext context, int? wait) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
+    final passkey = camera.body.supports(CameraFeature.passkeyPairing);
     return _PageLayout(
       pageKey: const Key('pairing-instructions'),
       step: 2,
@@ -742,7 +746,9 @@ class _InstructionsPage extends StatelessWidget {
         const CameraScreenHero.pairingMenu(),
         PairingHeadline(
           title: l10n.pairingInstructionsTitle,
-          body: l10n.pairingInstructionsBody,
+          body: camera.body.supports(CameraFeature.bluetoothSettingMenu)
+              ? l10n.pairingInstructionsBodyBluetoothSetting
+              : l10n.pairingInstructionsBody,
         ),
         const SizedBox(height: 24),
         GroupBox(
@@ -762,8 +768,12 @@ class _InstructionsPage extends StatelessWidget {
             ),
             GroupRow(
               icon: Icons.bluetooth_rounded,
-              title: l10n.pairingConfirmCodeTitle,
-              subtitle: l10n.pairingConfirmCodeBody,
+              title: passkey
+                  ? l10n.pairingEnterCodeNextTitle
+                  : l10n.pairingConfirmCodeTitle,
+              subtitle: passkey
+                  ? l10n.pairingEnterCodeNextBody
+                  : l10n.pairingConfirmCodeBody,
             ),
           ],
         ),
@@ -798,20 +808,22 @@ class _PairingPage extends StatelessWidget {
   const new({
     required this.leading,
     required this.trailing,
-    required this.cameraName,
+    required this.camera,
     required this.stage,
     required this.onCancel,
   });
 
   final Widget leading;
   final Widget? trailing;
-  final String cameraName;
+  final NearbyCamera camera;
   final GrPairingStage stage;
   final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final cameraName = camera.model.shortName;
+    final passkey = camera.body.supports(CameraFeature.passkeyPairing);
     final confirming = stage != GrPairingStage.scanning;
     GrStepState state(GrPairingStage s) => s.index < stage.index
         ? GrStepState.done
@@ -837,13 +849,17 @@ class _PairingPage extends StatelessWidget {
       children: [
         const SizedBox(height: 30),
         if (confirming)
-          const CameraScreenHero.authenticationCode()
+          CameraScreenHero.authenticationCode(okButton: !passkey)
         else
           const RadarHero(),
         if (confirming)
           PairingHeadline(
-            title: l10n.pairingCheckCodeTitle,
-            body: l10n.pairingCheckCodeBody,
+            title: passkey
+                ? l10n.pairingEnterCodeTitle
+                : l10n.pairingCheckCodeTitle,
+            body: passkey
+                ? l10n.pairingEnterCodeBody
+                : l10n.pairingCheckCodeBody,
           )
         else
           PairingHeadline(
@@ -859,9 +875,11 @@ class _PairingPage extends StatelessWidget {
                 state(GrPairingStage.scanning),
               ),
               GrStep(
-                l10n.pairingStageConfirm,
+                passkey ? l10n.pairingEnterCodeTitle : l10n.pairingStageConfirm,
                 state(GrPairingStage.awaitingConfirmation),
-                detail: l10n.pairingStageConfirmDetail,
+                detail: passkey
+                    ? l10n.pairingStepEnterCode
+                    : l10n.pairingStageConfirmDetail,
               ),
               GrStep(
                 l10n.pairingStageRegister,
@@ -881,7 +899,7 @@ class _FailurePage extends StatelessWidget {
   const new({
     required this.leading,
     required this.error,
-    required this.cameraName,
+    required this.camera,
     required this.pairAt,
     required this.onPairAgain,
   });
@@ -890,7 +908,7 @@ class _FailurePage extends StatelessWidget {
 
   /// What `pairCamera` threw.
   final Object error;
-  final String cameraName;
+  final NearbyCamera camera;
 
   /// When the camera accepts the next attempt, shown until then.
   final DateTime? pairAt;
@@ -903,7 +921,12 @@ class _FailurePage extends StatelessWidget {
   Widget _build(BuildContext context, int? wait) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
-    final info = PairingFailureInfo.from(error, camera: cameraName, l10n: l10n);
+    final info = PairingFailureInfo.from(
+      error,
+      camera: camera.model.shortName,
+      body: camera.body,
+      l10n: l10n,
+    );
     return _PageLayout(
       pageKey: const Key('pairing-failure'),
       step: 3,

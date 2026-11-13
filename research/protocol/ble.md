@@ -597,7 +597,7 @@ Working notes with more detail: `research/notes/ble/{CamSvcChars,WfbChars,WlanCh
 2. Does the camera really advertise `9A5ED1C5` when on? Statically, GR IV's powered-off BT-only advertiser (`sysmgrd` `load_bt_only_fw::setAdvertData`) hard-codes `0F291746` and tag `03 = 00`, which supports the app's "off" interpretation; Image Sync's scan filter accepts either UUID. BLE wake by bare connection is documented for GR III/IIIx by Image Sync; confirm on GR IV ([hardware plan](../hardware-validation.md), session D).
 
 **Pairing and security**
-3. Pairing method per model (passkey entry vs numeric comparison).
+3. Pairing method per model: found in firmware, not yet seen on a GR III. The GR IV family pairs by Numeric Comparison (camera IO DisplayYesNo, OK on the camera; [firmware bonding §1](firmware-bonding.md#1-smp-configuration), observed with a Mac). The GR III family pairs by Passkey Entry with the camera showing the code and the phone typing it (camera IO DisplayOnly; [GR III firmware bonding §1](firmware-bonding-gr3.md#1-smp-configuration)) **[inferred from code + IO caps]**. Still open: what a phone actually asks for with a GR III ([hardware plan](../hardware-validation.md), session I).
 4. Does the camera reject GATT access before bonding? Which characteristics need encryption?
 5. Does the camera require the phone-name write (`FE3A32F8`) before or after bonding? How is it used (paired-device list)?
 

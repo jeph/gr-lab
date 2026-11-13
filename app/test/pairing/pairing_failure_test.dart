@@ -7,8 +7,13 @@ import 'package:grphoto/src/pairing/pairing_failure.dart';
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
 
-  PairingFailureInfo info(Object error) =>
-      PairingFailureInfo.from(error, camera: 'GR IV', l10n: l10n);
+  PairingFailureInfo info(Object error, {GrModel model = GrModel.gr4}) =>
+      PairingFailureInfo.from(
+        error,
+        camera: model.shortName,
+        body: CameraBody(model: model, firmware: null),
+        l10n: l10n,
+      );
 
   test('a refused stored pairing asks to remove it on both sides', () {
     final failure = info(
@@ -47,6 +52,66 @@ void main() {
     expect(
       info(const GrPairingException(GrPairingFailure.cameraOff, '')).title,
       'GR IV is off',
+    );
+  });
+
+  test('a GR IV is confirmed with OK, a GR III by typing its code', () {
+    const unconfirmed = GrPairingException(
+      GrPairingFailure.notConfirmed,
+      'pairing was not completed',
+      BleException(BleErrorCode.timeout, 'timed out'),
+    );
+    const unregistered = GrPairingException(
+      GrPairingFailure.registrationFailed,
+      'not registered',
+    );
+    const dropped = GrPairingException(
+      GrPairingFailure.connectFailed,
+      'link lost',
+    );
+    const typeCode = "Enter the camera's code on the phone";
+
+    expect(info(unconfirmed).steps.last, 'Press OK on the camera');
+    expect(info(unregistered).body, contains('OK is pressed'));
+    expect(info(dropped).steps.last, contains('press OK'));
+
+    for (final model in [
+      GrModel.gr3,
+      GrModel.gr3x,
+      GrModel.gr3Hdf,
+      GrModel.gr3xHdf,
+    ]) {
+      final reason = model.name;
+      final steps = [
+        ...info(unconfirmed, model: model).steps,
+        ...info(unregistered, model: model).steps,
+        ...info(dropped, model: model).steps,
+      ];
+      expect(steps.where((s) => s.contains('OK')), isEmpty, reason: reason);
+      expect(steps.where((s) => s == typeCode), hasLength(3), reason: reason);
+      expect(
+        info(unregistered, model: model).body,
+        contains('its code is entered on the phone'),
+        reason: reason,
+      );
+    }
+  });
+
+  test("a camera that was not found is asked about its own model's menu", () {
+    const notFound = GrPairingException(GrPairingFailure.notFound, 'no advert');
+    expect(
+      info(notFound).steps,
+      contains(
+        'Check Action Mode is On '
+        '(MENU → E6 Wireless Connection → Wireless Communication)',
+      ),
+    );
+    expect(
+      info(notFound, model: GrModel.gr3x).steps,
+      contains(
+        "Check Action Mode isn't Disable "
+        '(MENU → E6 Wireless Connection → Bluetooth Setting)',
+      ),
     );
   });
 
