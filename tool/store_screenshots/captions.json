@@ -1,0 +1,31 @@
+{
+  "overview": {
+    "title": "Your GR, on your phone",
+    "subtitle": "Browse and save your photos, shoot remotely and build your own looks.",
+    "chips": ["Library", "Live view", "Looks", "Geotagging"]
+  },
+  "library": {
+    "title": "Your whole card, without the wait",
+    "subtitle": "Photos show up as fast as you can scroll."
+  },
+  "viewer": {
+    "title": "Every shot, full screen",
+    "subtitle": "Check your photos properly, then save them as JPEG or RAW."
+  },
+  "live-view": {
+    "title": "See what your GR sees",
+    "subtitle": "Frame, focus and shoot from your phone."
+  },
+  "looks": {
+    "title": "Swap looks in a couple of taps",
+    "subtitle": "Keep every look on your phone and load it straight into C1, C2 or C3."
+  },
+  "look-editor": {
+    "title": "Stop guessing with Image Control",
+    "subtitle": "See what a look does to your own photo before you shoot with it."
+  },
+  "geotagging": {
+    "title": "Remember where you took it",
+    "subtitle": "Your phone gives the GR its location while you shoot."
+  }
+}
