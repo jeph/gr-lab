@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "Jumelé le",
   "camerasDetailsSectionThisCamera": "Cet appareil photo",
   "camerasDetailsTooltip": "Détails de l'appareil photo",
-  "camerasDetailsUnpairHint": "Supprimez aussi ce téléphone dans Appareils jumelés sur l'appareil photo. Tant qu'il y figure, l'appareil photo refuse tout nouveau jumelage avec lui.",
+  "camerasDetailsUnpairHint": "Pour annuler complètement le jumelage, supprimez aussi l'appareil photo dans les réglages Bluetooth de ce téléphone et supprimez ce téléphone dans Appareils jumelés sur l'appareil photo.",
   "camerasIdentityModelSerial": "{model} · N° {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · N° {serial} · fw {firmware}",
   "camerasIdentitySerial": "N° {serial}",

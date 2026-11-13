@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "Gekoppeld",
   "camerasDetailsSectionThisCamera": "Deze camera",
   "camerasDetailsTooltip": "Cameradetails",
-  "camerasDetailsUnpairHint": "Verwijder deze telefoon ook uit Gekoppelde apparaten op de camera. Zolang de telefoon daar nog staat, weigert de camera er opnieuw mee te koppelen.",
+  "camerasDetailsUnpairHint": "Wil je de koppeling helemaal opheffen, verwijder dan ook de camera uit de Bluetooth-instellingen van deze telefoon en verwijder deze telefoon uit Gekoppelde apparaten op de camera.",
   "camerasIdentityModelSerial": "{model} · Nr. {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · Nr. {serial} · fw {firmware}",
   "camerasIdentitySerial": "Nr. {serial}",

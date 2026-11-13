@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "Pari muodostettu",
   "camerasDetailsSectionThisCamera": "Tämä kamera",
   "camerasDetailsTooltip": "Kameran tiedot",
-  "camerasDetailsUnpairHint": "Poista tämä puhelin myös kameran kohdasta Muodostetut laiteparit. Niin kauan kuin puhelin on kameran luettelossa, kamera ei suostu muodostamaan sen kanssa paria uudelleen.",
+  "camerasDetailsUnpairHint": "Jos haluat poistaa laiteparin kokonaan, poista myös kamera tämän puhelimen Bluetooth-asetuksista ja tämä puhelin kameran kohdasta Muodostetut laiteparit.",
   "camerasIdentityModelSerial": "{model} · nro {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · nro {serial} · laiteohj. {firmware}",
   "camerasIdentitySerial": "Nro {serial}",

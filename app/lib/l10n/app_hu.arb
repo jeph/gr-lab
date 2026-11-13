@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "Párosítva",
   "camerasDetailsSectionThisCamera": "Ez a kamera",
   "camerasDetailsTooltip": "Kamera részletei",
-  "camerasDetailsUnpairHint": "Törölje ezt a telefont a kamerán is, a Párosított eszközök menüpontban. Amíg a telefon ott szerepel, a kamera nem engedi újra párosítani.",
+  "camerasDetailsUnpairHint": "A párosítás teljes megszüntetéséhez törölje a kamerát a telefon Bluetooth-beállításaiból is, ezt a telefont pedig a kamerán, a Párosított eszközök menüpontban.",
   "camerasIdentityModelSerial": "{model} · gyári sz. {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · gyári sz. {serial} · fw {firmware}",
   "camerasIdentitySerial": "Gyári sz. {serial}",

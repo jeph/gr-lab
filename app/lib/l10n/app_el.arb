@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "Αντιστοιχίστηκε",
   "camerasDetailsSectionThisCamera": "Αυτή η κάμερα",
   "camerasDetailsTooltip": "Λεπτομέρειες κάμερας",
-  "camerasDetailsUnpairHint": "Διαγράψτε επίσης αυτό το τηλέφωνο από τις Αντιστοιχισμένες Συσκευές στην κάμερα. Όσο η κάμερα το έχει ακόμη στη λίστα, αρνείται να αντιστοιχιστεί ξανά μαζί του.",
+  "camerasDetailsUnpairHint": "Για πλήρη κατάργηση της αντιστοίχισης, διαγράψτε επίσης την κάμερα από τις ρυθμίσεις Bluetooth αυτού του τηλεφώνου και αυτό το τηλέφωνο από τις Αντιστοιχισμένες Συσκευές στην κάμερα.",
   "camerasIdentityModelSerial": "{model} · Αρ. {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · Αρ. {serial} · fw {firmware}",
   "camerasIdentitySerial": "Αρ. {serial}",

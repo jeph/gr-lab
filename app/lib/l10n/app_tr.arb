@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "Eşleştirme tarihi",
   "camerasDetailsSectionThisCamera": "Bu kamera",
   "camerasDetailsTooltip": "Kamera ayrıntıları",
-  "camerasDetailsUnpairHint": "Bu telefonu kameradaki Eşleşmiş Cihazlar listesinden de silin. Telefon o listede durdukça kamera onunla yeniden eşleşmeyi reddeder.",
+  "camerasDetailsUnpairHint": "Eşleşmeyi tamamen kaldırmak için kamerayı bu telefonun Bluetooth ayarlarından, bu telefonu da kameradaki Eşleşmiş Cihazlar listesinden silin.",
   "camerasIdentityModelSerial": "{model} · No. {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · No. {serial} · sürüm {firmware}",
   "camerasIdentitySerial": "No. {serial}",

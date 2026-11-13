@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "Sparowano",
   "camerasDetailsSectionThisCamera": "Ten aparat",
   "camerasDetailsTooltip": "Szczegóły aparatu",
-  "camerasDetailsUnpairHint": "Usuń też ten telefon z listy Sparowane urządzenia w aparacie. Dopóki na niej jest, aparat odmawia ponownego parowania z nim.",
+  "camerasDetailsUnpairHint": "Aby całkowicie usunąć sparowanie, usuń też aparat w ustawieniach Bluetooth tego telefonu, a ten telefon – z listy Sparowane urządzenia w aparacie.",
   "camerasIdentityModelSerial": "{model} · nr {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · nr {serial} · fw {firmware}",
   "camerasIdentitySerial": "nr {serial}",

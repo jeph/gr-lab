@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "Parkopplad",
   "camerasDetailsSectionThisCamera": "Den här kameran",
   "camerasDetailsTooltip": "Kamerainformation",
-  "camerasDetailsUnpairHint": "Ta även bort den här telefonen under Länkade enheter på kameran. Så länge den står kvar där vägrar kameran att parkoppla med den igen.",
+  "camerasDetailsUnpairHint": "Om du vill ta bort parkopplingen helt tar du även bort kameran i telefonens Bluetooth-inställningar och den här telefonen under Länkade enheter på kameran.",
   "camerasIdentityModelSerial": "{model} · nr {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · nr {serial} · fw {firmware}",
   "camerasIdentitySerial": "Nr {serial}",

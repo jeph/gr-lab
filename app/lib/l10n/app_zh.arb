@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "配对日期",
   "camerasDetailsSectionThisCamera": "这台相机",
   "camerasDetailsTooltip": "相机详情",
-  "camerasDetailsUnpairHint": "还需在相机的“已配对设备”中删除这部手机。只要相机仍列有这部手机，就会拒绝与它重新配对。",
+  "camerasDetailsUnpairHint": "要完全取消配对，还需在这部手机的蓝牙设置中删除相机，并在相机的“已配对设备”中删除这部手机。",
   "camerasIdentityModelSerial": "{model} · 序列号 {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · 序列号 {serial} · 固件 {firmware}",
   "camerasIdentitySerial": "序列号 {serial}",

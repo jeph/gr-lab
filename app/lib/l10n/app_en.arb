@@ -93,7 +93,7 @@
   "@camerasDetailsTooltip": {
     "description": "Tooltip of the ⋯ button on the camera card that opens the camera details screen."
   },
-  "camerasDetailsUnpairHint": "Also delete this phone under Paired Devices on the camera. While the camera still lists it, the camera refuses to pair with it again.",
+  "camerasDetailsUnpairHint": "To unpair completely, also delete the camera from this phone's Bluetooth settings and delete this phone from the camera's Paired Devices.",
   "@camerasDetailsUnpairHint": {
     "description": "Note under Forget camera on the camera details screen. Paired Devices is the camera's menu entry."
   },

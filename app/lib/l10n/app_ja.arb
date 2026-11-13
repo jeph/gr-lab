@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "ペアリング日",
   "camerasDetailsSectionThisCamera": "このカメラ",
   "camerasDetailsTooltip": "カメラの詳細",
-  "camerasDetailsUnpairHint": "カメラの「ペアリング済み機器」からも、このスマートフォンを削除してください。カメラ側に残っていると、もう一度ペアリングすることができません。",
+  "camerasDetailsUnpairHint": "ペアリングを完全に解除するには、このスマートフォンのBluetooth設定からカメラを削除し、カメラの「ペアリング済み機器」からもこのスマートフォンを削除してください。",
   "camerasIdentityModelSerial": "{model} · No. {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · No. {serial} · FW {firmware}",
   "camerasIdentitySerial": "No. {serial}",

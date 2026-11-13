@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "Emparelhada",
   "camerasDetailsSectionThisCamera": "Esta câmara",
   "camerasDetailsTooltip": "Detalhes da câmara",
-  "camerasDetailsUnpairHint": "Elimine também este telemóvel em Dispositivos Emparelhados na câmara. Enquanto lá constar, a câmara recusa voltar a emparelhar com ele.",
+  "camerasDetailsUnpairHint": "Para desemparelhar por completo, elimine também a câmara nas definições de Bluetooth deste telemóvel e elimine este telemóvel em Dispositivos Emparelhados na câmara.",
   "camerasIdentityModelSerial": "{model} · N.º {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · N.º {serial} · fw {firmware}",
   "camerasIdentitySerial": "N.º {serial}",

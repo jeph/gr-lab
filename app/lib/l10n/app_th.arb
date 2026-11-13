@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "จับคู่เมื่อ",
   "camerasDetailsSectionThisCamera": "กล้องนี้",
   "camerasDetailsTooltip": "รายละเอียดกล้อง",
-  "camerasDetailsUnpairHint": "ลบโทรศัพท์เครื่องนี้ออกจาก “อุปกรณ์ที่จับคู่” บนกล้องด้วย ตราบใดที่โทรศัพท์ยังอยู่ในรายการนั้น กล้องจะไม่ยอมจับคู่กับโทรศัพท์เครื่องนี้อีก",
+  "camerasDetailsUnpairHint": "หากต้องการยกเลิกการจับคู่ทั้งหมด ให้ลบกล้องออกจากการตั้งค่าบลูทูธของโทรศัพท์เครื่องนี้ และลบโทรศัพท์เครื่องนี้ออกจาก “อุปกรณ์ที่จับคู่” บนกล้องด้วย",
   "camerasIdentityModelSerial": "{model} · หมายเลข {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · หมายเลข {serial} · fw {firmware}",
   "camerasIdentitySerial": "หมายเลข {serial}",

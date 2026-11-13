@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "Сопряжена",
   "camerasDetailsSectionThisCamera": "Эта камера",
   "camerasDetailsTooltip": "Сведения о камере",
-  "camerasDetailsUnpairHint": "Удалите также этот телефон из списка «Сопряженные устройства» на камере. Пока он там есть, камера не даст создать с ним пару заново.",
+  "camerasDetailsUnpairHint": "Чтобы полностью разорвать пару, удалите также камеру в настройках Bluetooth этого телефона, а этот телефон — из списка «Сопряженные устройства» на камере.",
   "camerasIdentityModelSerial": "{model} · № {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · № {serial} · ПО {firmware}",
   "camerasIdentitySerial": "№ {serial}",

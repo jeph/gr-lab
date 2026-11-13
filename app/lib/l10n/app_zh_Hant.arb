@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "配對日期",
   "camerasDetailsSectionThisCamera": "這台相機",
   "camerasDetailsTooltip": "相機詳細資訊",
-  "camerasDetailsUnpairHint": "請一併在相機的「已配對裝置」中刪除這支手機。只要相機仍列有這支手機，就會拒絕再次與它配對。",
+  "camerasDetailsUnpairHint": "若要完全取消配對，請一併從這支手機的 Bluetooth 設定中刪除相機，並在相機的「已配對裝置」中刪除這支手機。",
   "camerasIdentityModelSerial": "{model} · 序號 {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · 序號 {serial} · 韌體 {firmware}",
   "camerasIdentitySerial": "序號 {serial}",

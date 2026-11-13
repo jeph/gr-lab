@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "페어링 날짜",
   "camerasDetailsSectionThisCamera": "이 카메라",
   "camerasDetailsTooltip": "카메라 상세 정보",
-  "camerasDetailsUnpairHint": "카메라의 ‘페어링 된 기기’에서도 이 휴대전화를 삭제하세요. 카메라의 목록에 남아 있으면 카메라가 이 휴대전화와 다시 페어링하지 않습니다.",
+  "camerasDetailsUnpairHint": "페어링을 완전히 해제하려면 이 휴대전화의 Bluetooth 설정에서 카메라를 삭제하고 카메라의 ‘페어링 된 기기’에서도 이 휴대전화를 삭제하세요.",
   "camerasIdentityModelSerial": "{model} · No. {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · No. {serial} · 펌웨어 {firmware}",
   "camerasIdentitySerial": "No. {serial}",

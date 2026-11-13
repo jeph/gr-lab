@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "Parret",
   "camerasDetailsSectionThisCamera": "Dette kamera",
   "camerasDetailsTooltip": "Kameradetaljer",
-  "camerasDetailsUnpairHint": "Slet også denne telefon under Parrede enheder på kameraet. Så længe telefonen står på kameraets liste, nægter kameraet at parre med den igen.",
+  "camerasDetailsUnpairHint": "Hvis du vil fjerne parringen helt, skal du også slette kameraet i denne telefons Bluetooth-indstillinger og slette denne telefon under Parrede enheder på kameraet.",
   "camerasIdentityModelSerial": "{model} · nr. {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · nr. {serial} · fw {firmware}",
   "camerasIdentitySerial": "Nr. {serial}",

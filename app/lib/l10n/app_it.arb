@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "Accoppiata",
   "camerasDetailsSectionThisCamera": "Questa fotocamera",
   "camerasDetailsTooltip": "Dettagli fotocamera",
-  "camerasDetailsUnpairHint": "Elimina anche questo telefono da Dispositivi accoppiati sulla fotocamera. Finché resta in elenco, la fotocamera rifiuta di accoppiarsi di nuovo.",
+  "camerasDetailsUnpairHint": "Per annullare del tutto l'accoppiamento, elimina anche la fotocamera dalle impostazioni Bluetooth di questo telefono ed elimina questo telefono da Dispositivi accoppiati sulla fotocamera.",
   "camerasIdentityModelSerial": "{model} · N. {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · N. {serial} · fw {firmware}",
   "camerasIdentitySerial": "N. {serial}",

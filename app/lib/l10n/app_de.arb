@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "Gekoppelt",
   "camerasDetailsSectionThisCamera": "Diese Kamera",
   "camerasDetailsTooltip": "Kameradetails",
-  "camerasDetailsUnpairHint": "Dieses Smartphone außerdem auf der Kamera unter „Gekoppelte Geräte“ löschen. Solange es dort noch aufgeführt ist, lehnt die Kamera eine erneute Kopplung ab.",
+  "camerasDetailsUnpairHint": "Um die Kopplung vollständig aufzuheben, außerdem die Kamera in den Bluetooth-Einstellungen dieses Smartphones entfernen und dieses Smartphone auf der Kamera unter „Gekoppelte Geräte“ löschen.",
   "camerasIdentityModelSerial": "{model} · Nr. {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · Nr. {serial} · FW {firmware}",
   "camerasIdentitySerial": "Nr. {serial}",

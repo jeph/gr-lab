@@ -20,7 +20,7 @@
   "camerasDetailsPaired": "Spárováno",
   "camerasDetailsSectionThisCamera": "Tento fotoaparát",
   "camerasDetailsTooltip": "Podrobnosti o fotoaparátu",
-  "camerasDetailsUnpairHint": "Smažte tento telefon také ve fotoaparátu v položce Spárovaná zařízení. Dokud ho tam fotoaparát má, odmítne se s ním znovu spárovat.",
+  "camerasDetailsUnpairHint": "Chcete-li párování zrušit úplně, smažte také fotoaparát v nastavení Bluetooth tohoto telefonu a tento telefon ve fotoaparátu v položce Spárovaná zařízení.",
   "camerasIdentityModelSerial": "{model} · č. {serial}",
   "camerasIdentityModelSerialFirmware": "{model} · č. {serial} · fw {firmware}",
   "camerasIdentitySerial": "č. {serial}",
