@@ -11,8 +11,8 @@ enum LookValueKind {
   choice,
 }
 
-/// The values a parameter takes on the wire: [min] to [max] in steps of 1,
-/// without those in [refused].
+/// The values the editor offers for a parameter: [min] to [max] in steps
+/// of 1, without those in [refused].
 @immutable
 final class LookRange {
   /// A range of [kind] from [min] to [max] without [refused].
@@ -21,13 +21,15 @@ final class LookRange {
   /// How the values read.
   final LookValueKind kind;
 
-  /// The lowest value.
+  /// The lowest value, unless it is [refused].
   final int min;
 
   /// The highest value.
   final int max;
 
-  /// Values between [min] and [max] the camera does not take.
+  /// Values between [min] and [max] the camera refuses in a blob (found
+  /// in its firmware). A value outside [min] to [max] is only one the
+  /// editor does not offer: the camera may take it.
   final Set<int> refused;
 
   /// Every value of the range, lowest first.
@@ -36,15 +38,11 @@ final class LookRange {
       if (!refused.contains(v)) v,
   ];
 
-  /// Whether [value] is one of [values].
-  bool takes(int value) =>
-      value >= min && value <= max && !refused.contains(value);
-
   /// The value a parameter gets when a look gains it: 0, as in GR WORLD's
   /// fallback look, which holds 0 for every parameter (code 0x82cd88), or
-  /// [min] when 0 is out of range. The camera's own defaults are
-  /// \[unknown\] for most choices.
-  int get initial => 0.clamp(min, max);
+  /// the lowest of [values] when 0 is not one of them. The camera's own
+  /// defaults are \[unknown\] for most choices.
+  int get initial => values.contains(0) ? 0 : values.first;
 }
 
 const _steps = LookRange(LookValueKind.steps, -4, 4);
@@ -254,7 +252,7 @@ LookRange? lookRange(LookParameter parameter, LookBase? base) =>
       ),
       // The camera refuses 0 (as above), and Type 1 is its default (Ricoh's
       // notes on GR IV Monochrome firmware 1.10).
-      LookParameter.solarizationType => _choices(parameter, min: 1),
+      LookParameter.solarizationType => _choices(parameter, refused: const {0}),
       // The filter effect picks one of four custom filters whose R, G and
       // B values have an unknown range.
       LookParameter.filterEffect => null,

@@ -73,12 +73,14 @@ final class Look {
   }
 
   /// This look on [base] instead: the parameters [base] has, in wire-id
-  /// order, each keeping its value when this look has one that [base]
-  /// takes ([lookRange]) and starting at its initial value when not: HDR
-  /// Tone's Black & White toning is not carried to the Monochrome's HDR
-  /// Tone, which the camera refuses it on. The header stays. That the
-  /// camera wants exactly its base's parameters is \[inferred\] from the
-  /// firmware's per-base settings.
+  /// order, each keeping its value when this look has it and starting at
+  /// its initial value when not. Only a value the camera refuses on [base]
+  /// ([LookRange.refused]) is not kept: HDR Tone's Black & White toning on
+  /// the Monochrome's HDR Tone. A value the editor merely does not offer,
+  /// such as HDR Tone Level 0 in a look from a camera, stays, so setting
+  /// the base a look already has changes nothing the camera takes. The
+  /// header stays. That the camera wants exactly its base's parameters is
+  /// \[inferred\] from the firmware's per-base settings.
   Look withBase(LookBase base) => Look._(
     BleImageControlBlob(
       version: _blob.version,
@@ -135,13 +137,15 @@ final class Look {
   static BleImageControlEntry _entry(LookParameter parameter, int value) =>
       BleImageControlEntry(BleEnumValue.of(parameter._wire), value);
 
-  /// This look's value of [parameter] when [base] takes it, else the
-  /// initial one on [base]. A value whose range is not known is kept.
+  /// This look's value of [parameter], unless the camera refuses it on
+  /// [base] or the look has none: then the initial one on [base].
   int _carried(LookParameter parameter, LookBase base) {
     final value = valueOf(parameter);
-    if (value == null) return _initial(parameter, base);
     final range = lookRange(parameter, base);
-    return range == null || range.takes(value) ? value : range.initial;
+    if (value == null) return range?.initial ?? 0;
+    return range != null && range.refused.contains(value)
+        ? range.initial
+        : value;
   }
 
   static int _initial(LookParameter parameter, LookBase base) =>

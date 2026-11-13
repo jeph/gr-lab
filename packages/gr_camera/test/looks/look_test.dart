@@ -322,5 +322,21 @@ void main() {
     expect(moved.valueOf(type), 1);
     final third = moved.withValue(type, 3);
     expect(third.withBase(LookBase.solarization).valueOf(type), 3);
+    // As GR Photo made such looks before it knew the camera refuses 0.
+    final untyped = moved.withValue(type, 0);
+    expect(untyped.withBase(LookBase.solarization).valueOf(type), 1);
+  });
+
+  test('a value the camera takes but the editor does not offer stays when '
+      "the look's base is set again or changed", () {
+    const level = LookParameter.hdrStrength;
+    expect(lookRange(level, LookBase.hdrTone)!.values, isNot(contains(0)));
+    final levelOff = Look.onBase(LookBase.hdrTone).withValue(level, 0);
+    expect(levelOff.withBase(LookBase.hdrTone).settings, levelOff.settings);
+    expect(levelOff.withBase(LookBase.hdrMono).valueOf(level), 0);
+
+    const toning = LookParameter.toningBleachBypass;
+    final untoned = Look.onBase(LookBase.bleachBypass).withValue(toning, 0);
+    expect(untoned.withBase(LookBase.bleachBypass).settings, untoned.settings);
   });
 }
