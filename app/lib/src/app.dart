@@ -11,6 +11,7 @@ import 'package:grphoto/src/connection/wifi_consent_dialog.dart';
 import 'package:grphoto/src/downloads/download_background.dart';
 import 'package:grphoto/src/home/home_pages.dart';
 import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/toast.dart';
 
 class GrPhotoApp extends StatelessWidget {
   const new({required this.models, super.key});
@@ -39,7 +40,7 @@ class GrPhotoApp extends StatelessWidget {
           navigatorObservers: [models.routes, models.idle.observer],
           builder: (context, child) => IdleInput(
             idle: models.idle,
-            child: DownloadBackground(child: child!),
+            child: DownloadBackground(child: ToastHost(child: child!)),
           ),
           home: const RootScreen(),
         );

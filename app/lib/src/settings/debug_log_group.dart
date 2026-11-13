@@ -7,6 +7,7 @@ import 'package:grphoto/src/debug/debug_log.dart';
 import 'package:grphoto/src/pairing/pairing_widgets.dart';
 import 'package:grphoto/src/widgets/gr_dialog.dart';
 import 'package:grphoto/src/widgets/group.dart';
+import 'package:grphoto/src/widgets/toast.dart';
 
 /// The debug logging switch, export and clear, so a bug report can carry
 /// the app's debug logs, including what went to and from the camera.
@@ -60,7 +61,7 @@ class DebugLogGroup extends StatelessWidget {
   }
 
   Future<void> _export(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final toasts = Toasts.of(context);
     final l10n = context.l10n;
     // The iPad share sheet points at the row it came from.
     final box = context.findRenderObject() as RenderBox?;
@@ -73,14 +74,14 @@ class DebugLogGroup extends StatelessWidget {
     } on Exception {
       // A full disk while copying, or the share sheet failing to open: say
       // so rather than leave the tap without an answer.
-      _show(messenger, l10n.debugLogExportFailed);
+      toasts.failed(l10n.debugLogExportFailed);
       return;
     }
-    if (!exported) _show(messenger, l10n.debugLogEmpty);
+    if (!exported) toasts.failed(l10n.debugLogEmpty);
   }
 
   Future<void> _clear(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final toasts = Toasts.of(context);
     final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -104,18 +105,10 @@ class DebugLogGroup extends StatelessWidget {
     try {
       await log.clear();
     } on Exception {
-      _show(messenger, l10n.debugLogClearFailed);
+      toasts.failed(l10n.debugLogClearFailed);
       return;
     }
-    _show(messenger, l10n.debugLogCleared);
-  }
-
-  /// The screen may have closed while the log was busy.
-  static void _show(ScaffoldMessengerState messenger, String text) {
-    if (!messenger.mounted) return;
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(text)));
+    toasts.done(l10n.debugLogCleared);
   }
 }
 

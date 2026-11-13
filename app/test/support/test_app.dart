@@ -21,6 +21,7 @@ import 'package:grphoto/src/app_scope.dart';
 import 'package:grphoto/src/data/cameras.dart';
 import 'package:grphoto/src/services.dart';
 import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/toast.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 /// The app wired to a [FakeGrCamera], with its data in a temporary
@@ -90,6 +91,7 @@ final class TestApp {
           theme: grTheme(colors),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => ToastHost(child: child!),
           home: home,
         ),
       ),

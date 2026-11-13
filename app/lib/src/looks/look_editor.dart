@@ -18,6 +18,7 @@ import 'package:grphoto/src/sample_photos.dart';
 import 'package:grphoto/src/shoot/shoot_widgets.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/pressable.dart';
+import 'package:grphoto/src/widgets/toast.dart';
 
 /// Opens the editor on [look] under [name]. [saved] is the library entry
 /// it edits, if any; [slot] is the Custom slot it was opened from, which
@@ -240,12 +241,12 @@ class _LookEditorState extends State<LookEditor>
     );
   }
 
-  /// Stores the look, asking for a name when it is new, and says in a snack
-  /// bar whether it reached the phone's storage, or in a dialog which saved
-  /// look has its name or settings already.
+  /// Stores the look, asking for a name when it is new, and says in a toast
+  /// whether it reached the phone's storage, or in a dialog which saved look
+  /// has its name or settings already.
   Future<void> _save() async {
     final l10n = context.l10n;
-    final messenger = ScaffoldMessenger.of(context);
+    final toasts = Toasts.of(context);
     final saved = _saved;
     final data = _look.toBytes();
     final name = saved != null
@@ -269,11 +270,11 @@ class _LookEditorState extends State<LookEditor>
       if (mounted) await showLookConflict(context, conflict);
       return;
     } on FileSystemException {
-      showLooksMessage(messenger, l10n.looksSaveFailed(name));
+      toasts.failed(l10n.looksSaveFailed(name));
       return;
     }
     if (mounted) setState(() => _saved = stored);
-    showLooksMessage(messenger, l10n.looksSaved(name));
+    toasts.done(l10n.looksSaved(name));
   }
 
   Future<void> _load(int number) =>
@@ -305,12 +306,12 @@ class _LookEditorState extends State<LookEditor>
       case _EditorAction.delete:
         final saved = _saved;
         final l10n = context.l10n;
-        final messenger = ScaffoldMessenger.of(context);
+        final toasts = Toasts.of(context);
         if (saved == null || !await confirmDelete(context, saved)) return;
         try {
           await _model.store.delete(saved);
         } on FileSystemException {
-          showLooksMessage(messenger, l10n.looksDeleteFailed(saved.name));
+          toasts.failed(l10n.looksDeleteFailed(saved.name));
           return;
         }
         if (mounted) Navigator.of(context).pop();
@@ -988,7 +989,7 @@ class _LookEditorState extends State<LookEditor>
         right: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-          child: _actions(context, canLoad: canLoad),
+          child: ToastFloor(child: _actions(context, canLoad: canLoad)),
         ),
       ),
     );

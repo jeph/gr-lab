@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/pressable.dart';
+import 'package:grphoto/src/widgets/toast.dart';
 
 /// One page a [Dock] switches to.
 @immutable
@@ -39,18 +40,7 @@ class Dock<T> extends StatelessWidget {
     return Container(
       height: height,
       padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: c.float,
-        borderRadius: BorderRadius.circular(height / 2),
-        border: Border.all(color: c.line2),
-        boxShadow: [
-          BoxShadow(
-            color: c.shadow,
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+      decoration: c.floating(radius: height / 2),
       // The dock floats over the pages' Scaffolds; its own Material gives
       // the labels a text style.
       child: Material(
@@ -74,10 +64,10 @@ class Dock<T> extends StatelessWidget {
 }
 
 /// [child] with [dock] floating at the bottom. The pages keep their content
-/// above the dock, and so do floating snack bars, which Scaffold places
-/// above the view padding. Without a [dock] (Shoot's live view), [child]
-/// gets the whole screen; it keeps its place in the tree either way, so
-/// the pages keep their state when the dock comes and goes.
+/// above the dock, and toasts float above it. Without a [dock] (Shoot's
+/// live view), [child] gets the whole screen; it keeps its place in the
+/// tree either way, so the pages keep their state when the dock comes and
+/// goes.
 class DockLayout extends StatelessWidget {
   const new({required this.dock, required this.child, super.key});
 
@@ -98,9 +88,6 @@ class DockLayout extends StatelessWidget {
                   padding: media.padding.copyWith(
                     bottom: media.padding.bottom + reserved,
                   ),
-                  viewPadding: media.viewPadding.copyWith(
-                    bottom: media.viewPadding.bottom + reserved,
-                  ),
                 ),
           child: child,
         ),
@@ -109,7 +96,7 @@ class DockLayout extends StatelessWidget {
             left: 0,
             right: 0,
             bottom: media.padding.bottom + 12,
-            child: Center(child: dock),
+            child: Center(child: ToastFloor(child: dock)),
           ),
       ],
     );

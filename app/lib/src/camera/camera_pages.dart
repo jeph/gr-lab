@@ -84,20 +84,15 @@ class _CameraPagesState extends State<CameraPages> {
           index: _tab.index,
           children: [
             for (final tab in CameraTab.values)
-              // Every built page's Scaffold shows the same snack bar; only
-              // the one in front may take part in a route's hero flight.
-              HeroMode(
+              TickerMode(
                 enabled: tab == _tab,
-                child: TickerMode(
-                  enabled: tab == _tab,
-                  child: !_built.contains(tab)
-                      ? const SizedBox.shrink()
-                      : switch (tab) {
-                          CameraTab.library => const LibraryScreen(),
-                          CameraTab.shoot => ShootScreen(model: _shoot),
-                          CameraTab.looks => LooksScreen(model: _looks),
-                        },
-                ),
+                child: !_built.contains(tab)
+                    ? const SizedBox.shrink()
+                    : switch (tab) {
+                        CameraTab.library => const LibraryScreen(),
+                        CameraTab.shoot => ShootScreen(model: _shoot),
+                        CameraTab.looks => LooksScreen(model: _looks),
+                      },
               ),
           ],
         ),

@@ -18,6 +18,7 @@ import 'package:grphoto/src/library/viewer.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/gr_dialog.dart';
 import 'package:grphoto/src/widgets/group.dart';
+import 'package:grphoto/src/widgets/toast.dart';
 
 /// The camera's photos (mocks `b-library-ios` / `b-library-android`): the
 /// top bar with the camera pill and settings, filter chips, a grid by day,
@@ -218,15 +219,17 @@ class _LibraryViewState extends State<_LibraryView> {
               left: 12,
               right: 12,
               bottom: 12 + bottomInset,
-              child: _selecting && serial != null
-                  ? _SelectionBar(
-                      serial: serial,
-                      shots: selectedShots,
-                      onDownload: (kind) =>
-                          _download(serial, selectedShots, kind),
-                      onClose: _endSelecting,
-                    )
-                  : const DownloadBar(),
+              child: ToastFloor(
+                child: _selecting && serial != null
+                    ? _SelectionBar(
+                        serial: serial,
+                        shots: selectedShots,
+                        onDownload: (kind) =>
+                            _download(serial, selectedShots, kind),
+                        onClose: _endSelecting,
+                      )
+                    : const DownloadBar(),
+              ),
             ),
           ],
         ),

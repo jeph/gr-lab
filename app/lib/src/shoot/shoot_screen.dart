@@ -20,6 +20,7 @@ import 'package:grphoto/src/shoot/shoot_model.dart';
 import 'package:grphoto/src/shoot/shoot_widgets.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/group.dart';
+import 'package:grphoto/src/widgets/toast.dart';
 
 /// Android delivers the volume buttons to the app as key events; iOS does
 /// not, so the hint only promises them on Android.
@@ -74,9 +75,7 @@ class _ShootScreenState extends State<ShootScreen> {
   void _sayRefused(ShootRefusal refusal) {
     if (!mounted) return;
     final message = shootRefusalMessage(context.l10n, refusal);
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    Toasts.of(context).failed(message);
   }
 
   /// Watching live view is use: it keeps the camera's Wi-Fi from being left
@@ -518,7 +517,7 @@ class ShootPowerLine extends StatelessWidget {
   }
 }
 
-/// The snack bar for a request the camera refused.
+/// The toast for a request the camera refused.
 String shootRefusalMessage(AppLocalizations l10n, ShootRefusal refusal) =>
     switch ((refusal.request, refusal.code)) {
       (ShootRequest.shutter, null) => l10n.shootShutterFailed,

@@ -5,6 +5,7 @@ import 'package:grphoto/l10n/l10n.dart';
 import 'package:grphoto/src/geotag/geotag_controller.dart';
 import 'package:grphoto/src/widgets/gr_dialog.dart';
 import 'package:grphoto/src/widgets/group.dart';
+import 'package:grphoto/src/widgets/toast.dart';
 
 /// Settings' Location group: Delete location history, the one history of
 /// where the phone has been that background geotagging records for every
@@ -16,7 +17,7 @@ class LocationGroup extends StatelessWidget {
   final GeotagController geotag;
 
   Future<void> _delete(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final toasts = Toasts.of(context);
     final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -37,20 +38,11 @@ class LocationGroup extends StatelessWidget {
       ),
     );
     if (confirmed != true) return;
-    final deleted = await geotag.deleteHistory();
-    // The screen may have closed meanwhile.
-    if (!messenger.mounted) return;
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            deleted
-                ? l10n.settingsDeleteHistoryDone
-                : l10n.settingsDeleteHistoryFailed,
-          ),
-        ),
-      );
+    if (await geotag.deleteHistory()) {
+      toasts.done(l10n.settingsDeleteHistoryDone);
+    } else {
+      toasts.failed(l10n.settingsDeleteHistoryFailed);
+    }
   }
 
   @override

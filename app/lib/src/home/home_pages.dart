@@ -68,20 +68,15 @@ class _HomePagesState extends State<HomePages> {
         index: _tab.index,
         children: [
           for (final tab in HomeTab.values)
-            // Both pages' Scaffolds show the same snack bar; only the one in
-            // front may take part in a route's hero flight.
-            HeroMode(
+            TickerMode(
               enabled: tab == _tab,
-              child: TickerMode(
-                enabled: tab == _tab,
-                child: switch (tab) {
-                  HomeTab.cameras => CamerasScreen(
-                    autoConnect: widget.autoConnect,
-                    shown: tab == _tab,
-                  ),
-                  HomeTab.looks => LooksScreen(model: _looks),
-                },
-              ),
+              child: switch (tab) {
+                HomeTab.cameras => CamerasScreen(
+                  autoConnect: widget.autoConnect,
+                  shown: tab == _tab,
+                ),
+                HomeTab.looks => LooksScreen(model: _looks),
+              },
             ),
         ],
       ),

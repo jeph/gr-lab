@@ -181,7 +181,7 @@
   },
   "camerasPowerOffFailed": "Couldn't turn {cameraName} off",
   "@camerasPowerOffFailed": {
-    "description": "Snackbar on the Cameras screen when the camera did not take the request to turn off.",
+    "description": "Toast on the Cameras screen when the camera did not take the request to turn off.",
     "placeholders": {
       "cameraName": {
         "type": "String",
@@ -201,7 +201,7 @@
   },
   "camerasPowerOnFailed": "Couldn't turn {cameraName} on",
   "@camerasPowerOnFailed": {
-    "description": "Snackbar on the Cameras screen when the camera was linked but did not turn on.",
+    "description": "Toast on the Cameras screen when the camera was linked but did not turn on.",
     "placeholders": {
       "cameraName": {
         "type": "String",
@@ -709,7 +709,7 @@
   },
   "debugLogClearFailed": "Couldn't clear the log. Try again.",
   "@debugLogClearFailed": {
-    "description": "Snack bar: deleting the debug log failed."
+    "description": "Toast: deleting the debug log failed."
   },
   "debugLogClearTitle": "Clear the log?",
   "@debugLogClearTitle": {
@@ -717,11 +717,11 @@
   },
   "debugLogCleared": "Log cleared",
   "@debugLogCleared": {
-    "description": "Snack bar: the debug log was deleted."
+    "description": "Toast: the debug log was deleted."
   },
   "debugLogEmpty": "The log is empty. Nothing to export.",
   "@debugLogEmpty": {
-    "description": "Snack bar: export was tapped but the debug log is empty."
+    "description": "Toast: export was tapped but the debug log is empty."
   },
   "debugLogEnable": "Enable debug logging",
   "@debugLogEnable": {
@@ -737,7 +737,7 @@
   },
   "debugLogExportFailed": "Couldn't export the log. Try again.",
   "@debugLogExportFailed": {
-    "description": "Snack bar: exporting the debug log failed."
+    "description": "Toast: exporting the debug log failed."
   },
   "debugLogSizeBytes": "{bytes} B",
   "@debugLogSizeBytes": {
@@ -1415,15 +1415,15 @@
   },
   "liveViewNotOnWifi": "Not on the camera's Wi-Fi",
   "@liveViewNotOnWifi": {
-    "description": "Snack bar: a setting could not be changed because the phone is not on the camera's Wi-Fi."
+    "description": "Toast: a setting could not be changed because the phone is not on the camera's Wi-Fi."
   },
   "liveViewSettingFailed": "The camera didn't change it",
   "@liveViewSettingFailed": {
-    "description": "Snack bar: the camera refused or failed to change an exposure setting."
+    "description": "Toast: the camera refused or failed to change an exposure setting."
   },
   "liveViewSettingFailedCode": "The camera didn't change it ({code})",
   "@liveViewSettingFailedCode": {
-    "description": "Snack bar: the camera refused or failed to change an exposure setting, with the error's technical code.",
+    "description": "Toast: the camera refused or failed to change an exposure setting, with the error's technical code.",
     "placeholders": {
       "code": {
         "type": "String",
@@ -1657,7 +1657,7 @@
   },
   "looksDeleteFailed": "Couldn't delete {name} from this phone.",
   "@looksDeleteFailed": {
-    "description": "Snack bar when deleting a saved look could not be written to the phone's storage.",
+    "description": "Toast when deleting a saved look could not be written to the phone's storage.",
     "placeholders": {
       "name": {
         "type": "String",
@@ -1769,7 +1769,7 @@
   },
   "looksLoadFailed": "The camera didn't take the look into C{number}.",
   "@looksLoadFailed": {
-    "description": "Snack bar when writing a look into a Custom slot failed.",
+    "description": "Toast when writing a look into a Custom slot failed.",
     "placeholders": {
       "number": {
         "type": "int",
@@ -1779,7 +1779,7 @@
   },
   "looksLoadFailedWithCode": "The camera didn't take the look into C{number} ({code}).",
   "@looksLoadFailedWithCode": {
-    "description": "Snack bar when writing a look into a Custom slot failed, with the error's technical code.",
+    "description": "Toast when writing a look into a Custom slot failed, with the error's technical code.",
     "placeholders": {
       "number": {
         "type": "int",
@@ -1803,7 +1803,7 @@
   },
   "looksLoaded": "Loaded {name} into C{number}",
   "@looksLoaded": {
-    "description": "Snack bar after the camera took a look into a Custom slot.",
+    "description": "Toast after the camera took a look into a Custom slot.",
     "placeholders": {
       "name": {
         "type": "String",
@@ -2009,7 +2009,7 @@
   },
   "looksSaveFailed": "Couldn't save {name} on this phone.",
   "@looksSaveFailed": {
-    "description": "Snack bar when a saved look could not be written to the phone's storage.",
+    "description": "Toast when a saved look could not be written to the phone's storage.",
     "placeholders": {
       "name": {
         "type": "String",
@@ -2019,7 +2019,7 @@
   },
   "looksSaved": "Saved {name}",
   "@looksSaved": {
-    "description": "Snack bar after a look was saved.",
+    "description": "Toast after a look was saved.",
     "placeholders": {
       "name": {
         "type": "String",
@@ -2767,11 +2767,11 @@
   },
   "settingsDeleteHistoryDone": "Location history deleted",
   "@settingsDeleteHistoryDone": {
-    "description": "Snack bar after the location history was deleted."
+    "description": "Toast after the location history was deleted."
   },
   "settingsDeleteHistoryFailed": "Couldn't delete the location history",
   "@settingsDeleteHistoryFailed": {
-    "description": "Snack bar in Settings after Delete location history could not delete the recorded places from the phone's storage."
+    "description": "Toast in Settings after Delete location history could not delete the recorded places from the phone's storage."
   },
   "settingsDeleteHistoryTitle": "Delete location history?",
   "@settingsDeleteHistoryTitle": {
@@ -2873,11 +2873,11 @@
   },
   "shootDriveFailed": "The camera didn't change the drive mode",
   "@shootDriveFailed": {
-    "description": "Snack bar: the camera refused or failed to change the drive mode or self-timer."
+    "description": "Toast: the camera refused or failed to change the drive mode or self-timer."
   },
   "shootDriveFailedCode": "The camera didn't change the drive mode ({code})",
   "@shootDriveFailedCode": {
-    "description": "Snack bar: the camera refused or failed to change the drive mode or self-timer, with the error's technical code.",
+    "description": "Toast: the camera refused or failed to change the drive mode or self-timer, with the error's technical code.",
     "placeholders": {
       "code": {
         "type": "String",
@@ -3015,11 +3015,11 @@
   },
   "shootShutterFailed": "The camera didn't take the picture",
   "@shootShutterFailed": {
-    "description": "Snack bar: the camera refused or failed to take a picture."
+    "description": "Toast: the camera refused or failed to take a picture."
   },
   "shootShutterFailedCode": "The camera didn't take the picture ({code})",
   "@shootShutterFailedCode": {
-    "description": "Snack bar: the camera refused or failed to take a picture, with the error's technical code.",
+    "description": "Toast: the camera refused or failed to take a picture, with the error's technical code.",
     "placeholders": {
       "code": {
         "type": "String",

@@ -22,6 +22,7 @@ import 'package:grphoto/src/sample_photos.dart';
 import 'package:grphoto/src/settings/settings_screen.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/group.dart';
+import 'package:grphoto/src/widgets/toast.dart';
 
 /// Where the app opens and where it returns whenever no camera is
 /// connected (mock `b-home` … `b-home-lost`, and `b-welcome` before any
@@ -958,7 +959,7 @@ class _PowerButton extends StatelessWidget {
   final bool? on;
 
   Future<void> _press(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final toasts = Toasts.of(context);
     final l10n = context.l10n;
     final turnOff = on ?? false;
     final done = turnOff
@@ -971,14 +972,10 @@ class _PowerButton extends StatelessWidget {
       _ => false,
     };
     if (done || !linked) return;
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          turnOff
-              ? l10n.camerasPowerOffFailed(camera.name)
-              : l10n.camerasPowerOnFailed(camera.name),
-        ),
-      ),
+    toasts.failed(
+      turnOff
+          ? l10n.camerasPowerOffFailed(camera.name)
+          : l10n.camerasPowerOnFailed(camera.name),
     );
   }
 

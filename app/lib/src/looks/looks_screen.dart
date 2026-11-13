@@ -16,6 +16,7 @@ import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/group.dart';
 import 'package:grphoto/src/widgets/pressable.dart';
 import 'package:grphoto/src/widgets/skeleton.dart';
+import 'package:grphoto/src/widgets/toast.dart';
 
 /// Which saved looks the list shows.
 enum LooksFilter { all, mono, colour }
@@ -56,17 +57,11 @@ class _LooksScreenState extends State<LooksScreen> {
     if (!mounted) return;
     final l10n = context.l10n;
     final code = refusal.code;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            code == null
-                ? l10n.looksLoadFailed(refusal.slot)
-                : l10n.looksLoadFailedWithCode(refusal.slot, code),
-          ),
-        ),
-      );
+    Toasts.of(context).failed(
+      code == null
+          ? l10n.looksLoadFailed(refusal.slot)
+          : l10n.looksLoadFailedWithCode(refusal.slot, code),
+    );
   }
 
   @override
@@ -624,7 +619,7 @@ class _LookMenu extends StatelessWidget {
   Future<void> _act(BuildContext context, _LookAction action) async {
     final look = saved.look;
     final l10n = context.l10n;
-    final messenger = ScaffoldMessenger.of(context);
+    final toasts = Toasts.of(context);
     switch (action) {
       case _LookAction.edit:
         if (look == null) return;
@@ -657,14 +652,14 @@ class _LookMenu extends StatelessWidget {
         } on LookConflict catch (conflict) {
           if (context.mounted) await showLookConflict(context, conflict);
         } on FileSystemException {
-          showLooksMessage(messenger, l10n.looksSaveFailed(name));
+          toasts.failed(l10n.looksSaveFailed(name));
         }
       case _LookAction.delete:
         if (!await confirmDelete(context, saved)) return;
         try {
           await model.store.delete(saved);
         } on FileSystemException {
-          showLooksMessage(messenger, l10n.looksDeleteFailed(saved.name));
+          toasts.failed(l10n.looksDeleteFailed(saved.name));
         }
     }
   }

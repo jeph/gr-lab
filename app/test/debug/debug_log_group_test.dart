@@ -8,6 +8,7 @@ import 'package:grphoto/src/data/settings.dart';
 import 'package:grphoto/src/debug/debug_log.dart';
 import 'package:grphoto/src/settings/debug_log_group.dart';
 import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/toast.dart';
 
 void main() {
   late Directory temp;
@@ -35,6 +36,7 @@ void main() {
           theme: grTheme(GrColors.light),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => ToastHost(child: child!),
           home: Scaffold(
             body: ListView(children: [DebugLogGroup(log: log)]),
           ),

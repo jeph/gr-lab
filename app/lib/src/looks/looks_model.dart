@@ -27,7 +27,7 @@ enum SlotsState {
   needsFirmware,
 }
 
-/// A look the camera did not take, for a snack bar.
+/// A look the camera did not take, for a toast.
 final class LoadRefusal {
   const new(this.slot, this.code);
 
@@ -79,7 +79,7 @@ final class LooksModel extends ChangeNotifier {
   String? _failureCode;
   int? _loading;
 
-  /// A load the camera refused, for a snack bar.
+  /// A load the camera refused, for a toast.
   Stream<LoadRefusal> get refusals => _refusals.stream;
 
   /// Whether this is a camera's Looks page, with its slots to load into.

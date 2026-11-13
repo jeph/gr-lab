@@ -28,6 +28,7 @@ import 'package:grphoto/src/map/photo_map.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/group.dart';
 import 'package:grphoto/src/widgets/skeleton.dart';
+import 'package:grphoto/src/widgets/toast.dart';
 import 'package:video_player/video_player.dart';
 
 /// Full-screen viewer: swipe between [shots] and pinch to zoom. A shot
@@ -1418,7 +1419,7 @@ class _ImageControlRowState extends State<_ImageControlRow> {
     final l10n = context.l10n;
     final models = AppScope.of(context);
     final store = models.looks;
-    final messenger = ScaffoldMessenger.of(context);
+    final toasts = Toasts.of(context);
     final name = await askLookName(context, initial: lookBaseLabel(l10n, look));
     if (name == null || !mounted) return;
     setState(() => _saving = true);
@@ -1440,11 +1441,11 @@ class _ImageControlRowState extends State<_ImageControlRow> {
             ? null
             : orientationToApply(layout, info?.orientation),
       );
-      showLooksMessage(messenger, l10n.looksSaved(name));
+      toasts.done(l10n.looksSaved(name));
     } on LookConflict catch (conflict) {
       if (mounted) unawaited(showLookConflict(context, conflict));
     } on FileSystemException {
-      showLooksMessage(messenger, l10n.looksSaveFailed(name));
+      toasts.failed(l10n.looksSaveFailed(name));
     }
     if (mounted) setState(() => _saving = false);
   }

@@ -12,6 +12,7 @@ import 'package:grphoto/src/looks/looks_store.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/gr_dialog.dart';
 import 'package:grphoto/src/widgets/gr_text_field.dart';
+import 'package:grphoto/src/widgets/toast.dart';
 
 /// The picture standing for a look: the photo it was saved from, turned
 /// upright by [orientation] ([SavedLook.photoOrientation]), or a swatch in
@@ -144,15 +145,8 @@ class MiniTag extends StatelessWidget {
   }
 }
 
-/// Replaces the snack bar [messenger] shows with [text].
-void showLooksMessage(ScaffoldMessengerState messenger, String text) {
-  messenger
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(text)));
-}
-
 /// Asks before loading [look] under [name] into slot [number], naming what
-/// it replaces, then loads it and says so in a snack bar. Returns whether
+/// it replaces, then loads it and says so in a toast. Returns whether
 /// the camera took it; a refusal reaches [LooksModel.refusals].
 Future<bool> confirmAndLoad(
   BuildContext context,
@@ -163,7 +157,7 @@ Future<bool> confirmAndLoad(
 }) async {
   final current = model.slots?[number - 1];
   final l10n = context.l10n;
-  final messenger = ScaffoldMessenger.of(context);
+  final toasts = Toasts.of(context);
   final ok = await showDialog<bool>(
     context: context,
     builder: (context) => GrDialog(
@@ -186,7 +180,7 @@ Future<bool> confirmAndLoad(
   );
   if (ok != true) return false;
   final loaded = await model.load(number, name: name, look: look);
-  if (loaded) showLooksMessage(messenger, l10n.looksLoaded(name, number));
+  if (loaded) toasts.done(l10n.looksLoaded(name, number));
   return loaded;
 }
 

@@ -22,6 +22,7 @@ import 'package:grphoto/src/shoot/shoot_screen.dart';
 import 'package:grphoto/src/shoot/shoot_widgets.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/pressable.dart';
+import 'package:grphoto/src/widgets/toast.dart';
 
 /// Live view (mock `b-shoot`): a viewfinder, always dark, in the chosen
 /// theme when that is dark and in the Dark theme otherwise. The picture is
@@ -145,9 +146,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
       SettingRefusalByCamera(code: final code?) =>
         l10n.liveViewSettingFailedCode(code),
     };
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    Toasts.of(context).failed(message);
   }
 
   Future<void> _pick(String key, String title) async {
@@ -319,15 +318,23 @@ class _LiveLayoutState extends State<_LiveLayout> {
           child: _Scrim(
             key: const Key('live-bottom'),
             edge: Alignment.bottomCenter,
-            child: wide
-                ? _bottomRow(dialKey, readoutsWidth: readoutsWidth, hint: hint)
-                : _bottomStack(dialKey, hint: hint),
+            child: ToastFloor(
+              child: wide
+                  ? _bottomRow(
+                      dialKey,
+                      readoutsWidth: readoutsWidth,
+                      hint: hint,
+                    )
+                  : _bottomStack(dialKey, hint: hint),
+            ),
           ),
         ),
         if (dialKey != null)
           LayoutId(
             id: _Bar.dial,
-            child: SizedBox(width: readoutsWidth, child: _dial(dialKey)),
+            child: ToastFloor(
+              child: SizedBox(width: readoutsWidth, child: _dial(dialKey)),
+            ),
           ),
       ],
     );

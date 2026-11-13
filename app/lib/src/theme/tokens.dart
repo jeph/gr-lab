@@ -207,6 +207,17 @@ final class GrColors extends ThemeExtension<GrColors> {
   Color get accentSoft => accent.withValues(alpha: .14);
   Color get accentLine => accent.withValues(alpha: .32);
 
+  /// The material of what floats over a page, the dock and the toasts: a
+  /// capsule or a card with corners of [radius].
+  BoxDecoration floating({required double radius}) => BoxDecoration(
+    color: float,
+    borderRadius: BorderRadius.circular(radius),
+    border: Border.all(color: line2),
+    boxShadow: [
+      BoxShadow(color: shadow, blurRadius: 24, offset: const Offset(0, 8)),
+    ],
+  );
+
   static GrColors of(BuildContext context) =>
       Theme.of(context).extension<GrColors>()!;
 
@@ -360,10 +371,5 @@ ThemeData grTheme(GrColors c) {
       trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
     ),
     dividerTheme: DividerThemeData(color: c.line, thickness: 1, space: 1),
-    snackBarTheme: SnackBarThemeData(
-      backgroundColor: c.invBg,
-      contentTextStyle: TextStyle(fontFamily: GrFonts.ui, color: c.invFg),
-      behavior: SnackBarBehavior.floating,
-    ),
   );
 }

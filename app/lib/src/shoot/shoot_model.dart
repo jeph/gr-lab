@@ -67,7 +67,7 @@ enum ShootRequest {
   driveMode,
 }
 
-/// A [request] the camera did not carry out, for a snack bar.
+/// A [request] the camera did not carry out, for a toast.
 final class ShootRefusal {
   const new(this.request, this.code);
 
@@ -106,7 +106,7 @@ final class ShootModel extends ChangeNotifier {
   ShootPower _power = ShootPower.idle;
   ShootPowerFailure? _powerFailure;
 
-  /// A shutter or drive change the camera refused, for a snack bar.
+  /// A shutter or drive change the camera refused, for a toast.
   Stream<ShootRefusal> get refusals => _refusals.stream;
 
   ShootPower get power => _power;
