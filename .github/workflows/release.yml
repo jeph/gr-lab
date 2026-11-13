@@ -112,6 +112,14 @@ jobs:
       - name: Install Android build tools
         run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "build-tools;$BUILD_TOOLS_VERSION" > /dev/null'
 
+      # The map's Android code (the maplibre_gl package) is compiled as Java 21, which the runner's default JDK 17
+      # refuses ("invalid source release: 21"). The runner's image also holds JDK 21, and Flutter builds with the
+      # JDK that JAVA_HOME names.
+      - name: Use JDK 21
+        run: |
+          test -x "$JAVA_HOME_21_X64/bin/javac"
+          echo "JAVA_HOME=$JAVA_HOME_21_X64" >> "$GITHUB_ENV"
+
       # The lockfile's versions and digests, and nothing newer. The second run writes AppLocalizations from the ARB
       # files, which the checks read.
       - name: Get packages
