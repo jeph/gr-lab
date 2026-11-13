@@ -37,11 +37,15 @@ FONTS = ROOT / "app" / "assets" / "fonts"
 L10N = ROOT / "app" / "lib" / "l10n"
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
-# The sizes App Store Connect takes for the 6.9-inch iPhone and the 13-inch
-# iPad, which are also what the simulators' screenshots measure.
+# The sizes App Store Connect takes for the 6.9-inch iPhone, the 13-inch
+# iPad and the open iPhone Duo, which are also what the simulators'
+# screenshots measure, and the type unit of each as a share of a hundredth
+# of its width: less on the wider canvases, so the caption keeps its
+# proportions.
 DEVICES = {
-    "iphone": {"width": 1320, "height": 2868},
-    "ipad": {"width": 2064, "height": 2752},
+    "iphone": {"width": 1320, "height": 2868, "unit": 1.0},
+    "ipad": {"width": 2064, "height": 2752, "unit": 0.7},
+    "duo": {"width": 2853, "height": 2007, "unit": 0.5},
 }
 
 # Each shot in the order of the listing: its caption key, its layout, the raw
@@ -65,6 +69,11 @@ SHOTS = [
         "#4FD1C5",
     ),
 ]
+
+# The screens a device shows in a shot instead of those above. The open
+# iPhone Duo has the photo beside the Library's grid, where the others open
+# the viewer on it.
+SCREENS_ON = {"duo": {"viewer": ["library-shot"]}}
 
 # How much calmer a screen is shown than it was taken, each a fraction: the
 # chroma every colour loses, the further share a fully saturated one loses
@@ -152,6 +161,15 @@ p {
 .device.back { filter: brightness(.74); }
 .iphone { --bezel: .021; --radius: .152; }
 .ipad { --bezel: .028; --radius: .062; }
+.duo { --bezel: .011; --radius: .043; }
+/* The fold of the open display. */
+.duo::after {
+  content: ""; position: absolute; top: calc(var(--w) * var(--bezel));
+  bottom: calc(var(--w) * var(--bezel)); left: calc(50%% - var(--w) * .006);
+  width: calc(var(--w) * .012);
+  background: linear-gradient(to right, transparent, rgba(0,0,0,.22) 45%%,
+    rgba(255,255,255,.05) 62%%, transparent);
+}
 .iphone .island {
   position: absolute; left: 50%%; top: calc(var(--w) * (var(--bezel) + .0305));
   width: calc(var(--w) * .276); height: calc(var(--w) * .081);
@@ -181,6 +199,15 @@ LAYOUTS = {
             (0.5, 0.1, 0.82, 0, ""),
         ],
         "pair": [(0.3, 0.04, 0.58, 0, ""), (0.7, 0.35, 0.58, 0, "")],
+    },
+    "duo": {
+        "single": [(0.5, 0.05, 1.1, 0, "")],
+        "trio": [
+            (0.12, 0.24, 0.76, -5, "back"),
+            (0.88, 0.24, 0.76, 5, "back"),
+            (0.5, 0.1, 0.94, 0, ""),
+        ],
+        "pair": [(0.67, 0.03, 0.62, 0, ""), (0.33, 0.42, 0.62, 0, "")],
     },
 }
 
@@ -363,9 +390,7 @@ def page(device, locale, caption, layout, screens, glow, sources):
         f'<span class="chip">{html.escape(c)}</span>' for c in caption.get("chips", [])
     )
     chips = f'<div class="chips">{chips}</div>' if chips else ""
-    # The unit the type scales by: a hundredth of the canvas width on the
-    # iPhone, less on the wider iPad so the caption keeps its proportions.
-    unit = width / 100 * (1.0 if device == "iphone" else 0.7)
+    unit = width / 100 * size["unit"]
     return (
         f'<!doctype html><html lang="{locale.replace("_", "-")}">'
         f'<meta charset="utf-8"><style>{css}</style>'
@@ -436,18 +461,22 @@ def render(device, locale, table, folder):
     size = DEVICES[device]
     raw = WORK / "raw" / device / locale
     (folder / device / locale).mkdir(parents=True)
+    shown = {
+        shot: SCREENS_ON.get(device, {}).get(shot, screens)
+        for shot, _, screens, _ in SHOTS
+    }
     sources = {
         screen: toned(raw / f"{screen}.png", table, folder / device / locale)
-        for _, _, screens, _ in SHOTS
+        for screens in shown.values()
         for screen in screens
     }
     shots = captions(locale, device)
     out = WORK / "out" / device / locale
     out.mkdir(parents=True, exist_ok=True)
-    for number, (shot, layout, screens, glow) in enumerate(SHOTS, start=1):
+    for number, (shot, layout, _, glow) in enumerate(SHOTS, start=1):
         target = out / f"{number:02d}-{shot}.png"
         snap(
-            page(device, locale, shots[shot], layout, screens, glow, sources),
+            page(device, locale, shots[shot], layout, shown[shot], glow, sources),
             size["width"],
             size["height"],
             target,
@@ -479,9 +508,8 @@ if __name__ == "__main__":
         scratch = pathlib.Path(scratch)
         lookup = tone_table(scratch)
         for name in DEVICES:
-            taken = sorted(
-                d.name for d in (WORK / "raw" / name).iterdir() if d.is_dir()
-            )
+            # A device run.sh was not given has no screens.
+            taken = sorted(d.name for d in (WORK / "raw" / name).glob("*/"))
             for code in sys.argv[1:] or taken:
                 if code not in taken:
                     continue

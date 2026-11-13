@@ -14,6 +14,7 @@ import 'package:grphoto/src/library/shot_cell.dart';
 import 'package:grphoto/src/platform/app_dirs.dart';
 import 'package:grphoto/src/platform/background_downloads.dart';
 import 'package:grphoto/src/platform/media_saver.dart';
+import 'package:grphoto/src/platform/window_pose.dart';
 import 'package:grphoto/src/services.dart';
 import 'package:integration_test/integration_test.dart';
 
@@ -217,7 +218,10 @@ FakeMediaSource _media(int scenes) => (photo, size) async {
 /// The demo's services (`buildDemoServices`) with a card and looks that
 /// look used, a camera that already stores locations and no data from an
 /// earlier run.
-Future<AppServices> _services(List<_Scene> scenes) async {
+Future<AppServices> _services(
+  List<_Scene> scenes,
+  PlatformWindowPose pose,
+) async {
   final dirs = await appDirectories();
   final data = Directory('${dirs.data.path}/store-screenshots');
   final cache = Directory('${dirs.cache.path}/store-screenshots');
@@ -260,6 +264,7 @@ Future<AppServices> _services(List<_Scene> scenes) async {
     dataDir: data,
     cacheDir: cache,
     debugLogDir: Directory('${data.path}/debug-log'),
+    windowPose: pose,
     isDemo: true,
   );
 }
@@ -279,8 +284,10 @@ void main() {
     await _readFolders();
     try {
       await _walk(tester);
-    } on Object {
-      // What was on screen when the walk stopped.
+    } on Object catch (error, stack) {
+      // Why the walk stopped and what was on screen: the host ends the app
+      // before the test can report it.
+      File('$_shotDir/failure.txt').writeAsStringSync('$error\n$stack');
       await _snap(tester, 'failure', settle: 0);
       rethrow;
     }
@@ -288,10 +295,23 @@ void main() {
 }
 
 Future<void> _walk(WidgetTester tester) async {
-  // The grid has three columns on a phone and five on a tablet.
+  // An open iPhone Duo held wide, which lays most pages out as two at its
+  // fold. The runner says so shortly after the window is up.
+  final pose = PlatformWindowPose();
+  await _pumpFor(tester, 2);
+  final fold = pose.value.fold;
+  final twoPages = fold != null && fold.height > fold.width;
+  // The grid has three columns on a phone, five on a tablet and six across
+  // two pages.
   final wide = tester.view.physicalSize.width / tester.view.devicePixelRatio;
-  final scenes = _readScenes(perDay: wide < 600 ? 9 : 10);
-  final models = await AppModels.load(await _services(scenes));
+  final scenes = _readScenes(
+    perDay: twoPages
+        ? 12
+        : wide < 600
+        ? 9
+        : 10,
+  );
+  final models = await AppModels.load(await _services(scenes, pose));
   runApp(GrPhotoApp(models: models));
 
   for (final key in ['cameras-add', 'pair-add-1234567', 'pair-start']) {
@@ -325,9 +345,26 @@ Future<void> _walk(WidgetTester tester) async {
   );
   await _snap(tester, 'library', settle: 10);
 
-  // The viewer on an upright photo, then with its details.
-  final upright = scenes.firstWhere((s) => s.portrait).number;
-  await tester.tap(_cell(upright, scenes.length));
+  // The viewer on a photo that fills the window, an upright one unless the
+  // window is two pages wide, then with its details. On two pages the
+  // photo first shows beside the grid, and a tap on it there opens the
+  // viewer.
+  final viewed = twoPages
+      ? scenes.where((s) => !s.portrait).elementAt(3).number
+      : scenes.firstWhere((s) => s.portrait).number;
+  await tester.tap(_cell(viewed, scenes.length));
+  if (twoPages) {
+    await _waitKey(tester, 'shot-pane-scroll');
+    await _snap(tester, 'library-shot', settle: 10);
+    await tester.tap(
+      find
+          .descendant(
+            of: find.byKey(const Key('shot-pane-scroll')),
+            matching: find.byType(AspectRatio),
+          )
+          .first,
+    );
+  }
   await _waitKey(tester, 'viewer-info');
   await _snap(tester, 'viewer', settle: 8);
   await _tapKey(tester, 'viewer-info');
@@ -362,7 +399,13 @@ Future<void> _walk(WidgetTester tester) async {
     await tester.scrollUntilVisible(cell, 200, scrollable: grid);
     await _pumpFor(tester, 1);
     await tester.tap(cell);
-    await _tapKey(tester, 'viewer-info');
+    // Beside the grid a shot has its details in place, once it has taken
+    // the place of the shot before it.
+    if (twoPages) {
+      await _pumpFor(tester, 2);
+    } else {
+      await _tapKey(tester, 'viewer-info');
+    }
     await _tapKey(tester, 'viewer-save-look', seconds: 15);
     await _waitKey(tester, 'looks-name-field');
     await tester.enterText(
@@ -371,7 +414,7 @@ Future<void> _walk(WidgetTester tester) async {
     );
     await _tapKey(tester, 'looks-name-ok');
     await _pumpFor(tester, 4);
-    await _back(tester);
+    if (!twoPages) await _back(tester);
   }
 
   await _tapKey(tester, 'camera-tab-looks');
@@ -431,8 +474,14 @@ Finder _cell(int scene, int scenes) {
   );
 }
 
+/// Goes back from the page on top. A window with a vertical bar has the
+/// page's own button there instead of a [BackButton].
 Future<void> _back(WidgetTester tester) async {
-  await tester.tap(find.byType(BackButton).last);
+  final inBar = [
+    for (final key in ['viewer-back', 'look-editor-back', 'camera-back'])
+      find.byKey(Key(key)).hitTestable(),
+  ].where((button) => button.evaluate().isNotEmpty);
+  await tester.tap(inBar.isEmpty ? find.byType(BackButton).last : inBar.first);
   await _pumpFor(tester, 2);
 }
 

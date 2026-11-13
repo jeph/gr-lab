@@ -1,35 +1,45 @@
 #!/usr/bin/env bash
-# Takes the raw screens of the App Store screenshots on two iOS simulators,
-# an iPhone and an iPad, in the dark theme and in each language asked for,
-# against a simulated camera whose card and looks look used
+# Takes the raw screens of the App Store screenshots on iOS simulators, in
+# the dark theme and in each language asked for, against a simulated camera
+# whose card and looks look used
 # (app/integration_test/store_screens_test.dart). compose.py turns them
 # into the captioned screenshots.
 #
-#   tool/store_screenshots/run.sh <iphone udid> <ipad udid> [locale ...]
+#   tool/store_screenshots/run.sh <device>=<udid> ... [locale ...]
 #
-# A locale is one of the app's (app/l10n.yaml); without any, the screens are
-# taken in English. They go to build/store-screenshots/raw/<device>/<locale>,
-# <device> being `iphone` or `ipad`. List simulators with
-# `xcrun simctl list devices available`; the App Store takes 1320 x 2868
-# (iPhone 17 Pro Max) and 2064 x 2752 (iPad Pro 13-inch).
+# A device is `iphone`, `ipad` or `duo`, with the simulator that stands for
+# it: the App Store takes 1320 x 2868 (iPhone 17 Pro Max), 2064 x 2752
+# (iPad Pro 13-inch) and 2853 x 2007 (iPhone Duo, open). List simulators
+# with `xcrun simctl list devices available`. A locale is one of the app's
+# (app/l10n.yaml); without any, the screens are taken in English. They go to
+# build/store-screenshots/raw/<device>/<locale>.
 #
 # The app is built once, with the walk as its entry point, and each
 # simulator is restarted in each language and runs it: GR Photo follows the
 # phone's language, and so do the status bar and the Lock Screen.
+#
+# An iPhone Duo starts closed, and Xcode 27.1 has no command that opens it:
+# each time the script says so, press Open on the simulator in Device Hub.
+# The walk starts when the inner display comes on. Needs ImageMagick 7
+# (`magick`) to see that it has.
 #
 # The photos on the card are listed in photos.json: Unsplash photos under
 # the Unsplash License, fetched on the first run and kept out of the
 # repository.
 set -euo pipefail
 
-if [[ $# -lt 2 ]]; then
-  echo "usage: $0 <iphone udid> <ipad udid> [locale ...]" >&2
+devices=()
+locales=()
+for argument in "$@"; do
+  case "$argument" in
+  iphone=* | ipad=* | duo=*) devices+=("$argument") ;;
+  *) locales+=("$argument") ;;
+  esac
+done
+if [[ ${#devices[@]} -eq 0 ]]; then
+  echo "usage: $0 <iphone|ipad|duo>=<udid> ... [locale ...]" >&2
   exit 64
 fi
-iphone="$1"
-ipad="$2"
-shift 2
-locales=("$@")
 [[ ${#locales[@]} -gt 0 ]] || locales=(en)
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -105,36 +115,69 @@ set_language() {
   fi
 }
 
+# Records that the user allowed the app's Live Activities both times iOS
+# asks, under the first one (Allow) and under a later one (Always Allow):
+# simctl has no grant for them. The daemon that keeps the record reads it
+# when it starts.
+allow_live_activities() {
+  local udid="$1" daemon=com.apple.liveactivitiesd key
+  xcrun simctl spawn "$udid" defaults write "$daemon" \
+    AppAuthorizationRecords -dict "$bundle" -bool true
+  for key in FirstResponseRecords SecondResponseRecords; do
+    xcrun simctl spawn "$udid" defaults write "$daemon" "$key" -array "$bundle"
+  done
+  xcrun simctl spawn "$udid" launchctl stop "$daemon"
+}
+
+# Takes a simulator's screenshot. An iPhone Duo has two displays, and which
+# of them simctl takes by itself changes with the pose: 3 is the inner one.
+screenshot() {
+  local device="$1" udid="$2" file="$3"
+  if [[ "$device" == duo ]]; then
+    xcrun simctl io "$udid" screenshot --display=3 "$file" >/dev/null 2>&1
+  else
+    xcrun simctl io "$udid" screenshot "$file" >/dev/null 2>&1
+  fi
+}
+
+# Waits for an iPhone Duo to be opened: its inner display is black while it
+# is closed.
+wait_open() {
+  local udid="$1" shots="$2" told=false
+  until screenshot duo "$udid" "$shots/open.png" &&
+    [[ "$(magick "$shots/open.png" -alpha off -format '%[fx:mean>0.01]' info:)" == 1 ]]; do
+    $told || echo "duo: press Open on the simulator in Device Hub" >&2
+    told=true
+    sleep 2
+  done
+  rm -f "$shots/open.png"
+}
+
 # Takes a screenshot for each <name>.request the walk writes into a folder.
 # `failure` is the walk giving up, and cmd-lock its end: it locks the
-# simulator and takes the Lock Screen. The first Live Activity of an app
-# comes with iOS asking whether to allow them, which a tap on Allow
-# answers; where that is depends on the device.
+# simulator and takes the Lock Screen.
 watch_requests() {
-  local udid="$1" shots="$2" allow="$3" request
+  local device="$1" udid="$2" shots="$3" request
   while true; do
     for request in "$shots"/*.request; do
       [[ -e "$request" ]] || continue
       case "$(basename "$request" .request)" in
       cmd-lock)
-        xcrun simctl spawn "$udid" "$work/sim_hid" lock
+        xcrun simctl spawn "$udid" "$work/lock_button"
         sleep 4
-        xcrun simctl spawn "$udid" "$work/sim_hid" lock
+        xcrun simctl spawn "$udid" "$work/lock_button"
         sleep 4
-        # shellcheck disable=SC2086 # Two arguments: x and y.
-        xcrun simctl spawn "$udid" "$work/sim_hid" tap $allow
-        sleep 3
-        xcrun simctl io "$udid" screenshot "$shots/lock-screen.png" >/dev/null 2>&1
+        screenshot "$device" "$udid" "$shots/lock-screen.png"
         touch "$shots/done"
         return
         ;;
       failure)
-        xcrun simctl io "$udid" screenshot "$shots/failure.png" >/dev/null 2>&1
+        screenshot "$device" "$udid" "$shots/failure.png"
         touch "$shots/failed"
         return
         ;;
       *)
-        xcrun simctl io "$udid" screenshot "${request%.request}.png" >/dev/null 2>&1
+        screenshot "$device" "$udid" "${request%.request}.png"
         ;;
       esac
       rm -f "$request"
@@ -145,7 +188,7 @@ watch_requests() {
 
 # Walks the app on one simulator in one language.
 take() {
-  local device="$1" udid="$2" allow="$3" locale="$4"
+  local device="$1" udid="$2" locale="$3"
   local shots="$work/raw/$device/$locale" waited=0 watcher app data
   mkdir -p "$shots"
   rm -f "$shots"/*
@@ -157,6 +200,7 @@ take() {
   set_language "$udid" "$locale"
   xcrun simctl boot "$udid"
   xcrun simctl bootstatus "$udid" >/dev/null
+  [[ "$device" != duo ]] || wait_open "$udid" "$shots"
   # The date as well as the time: a time alone puts the Lock Screen on
   # 1 January. simctl takes an ISO date only with milliseconds and a colon
   # in the time zone, and the simulator (iOS 26.5) keeps its day and month
@@ -171,12 +215,13 @@ take() {
   xcrun simctl ui "$udid" appearance dark
   # Praça do Comércio, Lisbon: where the newest photos of the card are from.
   xcrun simctl location "$udid" set 38.7075,-9.1364
-  # A fresh install, so iOS asks whether to allow Live Activities on every
-  # walk and the tap on Allow always has its button. iOS would also ask for
-  # the location over the screens, where nothing can answer.
+  # A fresh install, so every walk starts from the same state. iOS would
+  # ask for the location over the screens and whether to allow Live
+  # Activities under the first one, where nothing can answer.
   xcrun simctl uninstall "$udid" "$bundle" 2>/dev/null || true
   xcrun simctl install "$udid" "$root/app/build/ios/iphonesimulator/Runner.app"
   xcrun simctl privacy "$udid" grant location-always "$bundle"
+  allow_live_activities "$udid"
   # Where the walk finds its folders: an app started on a simulator gets
   # nothing from the host's environment.
   data="$(xcrun simctl get_app_container "$udid" "$bundle" data)/Library/Application Support"
@@ -184,7 +229,7 @@ take() {
   jq -n --arg shots "$shots" --arg media "$media" '{$shots, $media}' \
     >"$data/store-screenshots.json"
 
-  watch_requests "$udid" "$shots" "$allow" &
+  watch_requests "$device" "$udid" "$shots" &
   watcher=$!
   xcrun simctl launch --console "$udid" "$bundle" >"$shots/app.log" 2>&1 &
   app=$!
@@ -199,7 +244,7 @@ take() {
   xcrun simctl shutdown "$udid"
   rm -f "$shots"/*.request
   if [[ ! -e "$shots/done" ]]; then
-    echo "$device $locale: the walk ended before its last screen; see $shots/app.log" >&2
+    echo "$device $locale: the walk ended before its last screen; see $shots/failure.txt" >&2
     return 1
   fi
   rm -f "$shots/done"
@@ -208,9 +253,9 @@ take() {
 
 # Every language on one simulator, which is left in English.
 take_all() {
-  local device="$1" udid="$2" allow="$3" locale failed=0
+  local device="$1" udid="$2" locale failed=0
   for locale in "${locales[@]}"; do
-    take "$device" "$udid" "$allow" "$locale" || failed=1
+    take "$device" "$udid" "$locale" || failed=1
   done
   set_language "$udid" en
   return $failed
@@ -221,16 +266,18 @@ for locale in "${locales[@]}"; do
 done
 fetch_media
 xcrun -sdk iphonesimulator clang -target arm64-apple-ios17.0-simulator \
-  "$here/sim_hid.c" -o "$work/sim_hid" -framework CoreFoundation
+  "$here/lock_button.c" -o "$work/lock_button" -framework CoreFoundation
 (cd "$root/app" && flutter build ios --simulator --debug --flavor dev \
   --target integration_test/store_screens_test.dart)
 
-take_all iphone "$iphone" "0.72 0.82" &
-on_iphone=$!
-take_all ipad "$ipad" "0.62 0.90" &
-on_ipad=$!
-trap 'kill "$on_iphone" "$on_ipad" 2>/dev/null || true' INT TERM
+running=()
+for device in "${devices[@]}"; do
+  take_all "${device%%=*}" "${device#*=}" &
+  running+=($!)
+done
+trap 'kill "${running[@]}" 2>/dev/null || true' INT TERM
 status=0
-wait "$on_iphone" || status=1
-wait "$on_ipad" || status=1
+for job in "${running[@]}"; do
+  wait "$job" || status=1
+done
 exit $status

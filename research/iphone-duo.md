@@ -17,7 +17,7 @@ Flutter 3.47.9 passes none of this on: `MediaQuery.displayFeatures` is empty on 
 
 ## 2. What the simulator reports
 
-Observed, in points, through `WindowPosePlugin` (§3) and `MediaQuery`. The simulator has no CLI for the hinge: Device Hub (which replaces Simulator.app in Xcode 27) has Closed, Partially Open, Open and Rotate buttons. `xcrun simctl io <device> screenshot --display=1` captures the outer display and `--display=3` the inner one; without `--display` the capture is the inner panel, which is black while the phone is closed.
+Observed, in points, through `WindowPosePlugin` (§3) and `MediaQuery`. The simulator has no CLI for the hinge: Device Hub (which replaces Simulator.app in Xcode 27) has Closed, Partially Open, Open and Rotate buttons. `xcrun simctl io <device> screenshot --display=1` captures the outer display and `--display=3` the inner one; whichever is not in use is black. Without `--display` the capture was the inner display in one session and the outer one, black while the phone was open, in another (2026-11-13), so name the display. The pose does not survive a restart of the simulator: it boots closed. A touch sent to the simulator as an IOKit HID digitizer event, which lands on an iPhone 17 Pro Max and an iPad Pro simulator (iOS 26.5), does nothing on the Duo's open inner display (2026-11-13).
 
 | Pose | Window | Safe-area insets | `verticalBarEdge` | Division region | Occlusion regions |
 |---|---|---|---|---|---|
