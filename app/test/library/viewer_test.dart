@@ -10,6 +10,7 @@ import 'package:grphoto/src/library/image_orientation.dart';
 import 'package:grphoto/src/library/library_screen.dart';
 import 'package:grphoto/src/library/viewer.dart';
 import 'package:grphoto/src/looks/looks_store.dart';
+import 'package:grphoto/src/map/photo_map.dart';
 import 'package:grphoto/src/services.dart';
 import 'package:grphoto/src/widgets/group.dart';
 import 'package:image/image.dart' as img;
@@ -59,21 +60,29 @@ void _delete(TestApp app, String file) {
 
 /// Opens the Library on a camera holding [photos] and the viewer on the
 /// shot keyed [shot], with the shot's details when [info] is set: Info in
-/// the viewer's header shows them.
+/// the viewer's header shows them. The camera has background geotagging on
+/// when [backgroundGeotagging] is set, and the phone's location history
+/// holds [history].
 Future<TestApp> _openViewer(
   WidgetTester tester,
   List<FakePhoto> photos,
   String shot, {
   FakeMediaSource? media,
   bool info = false,
+  bool backgroundGeotagging = false,
+  List<LocationFix> history = const [],
 }) async {
-  final app = (await tester.runAsync(
-    () => createTestApp(
+  final app = (await tester.runAsync(() async {
+    final app = await createTestApp(
       config: FakeCameraConfig(bonded: true, photos: photos),
       saveCamera: true,
       media: media,
-    ),
-  ))!;
+      backgroundGeotagging: backgroundGeotagging,
+    );
+    // Where the phone has been, as background geotagging recorded it.
+    await app.models.geotag.history.add(history);
+    return app;
+  }))!;
   await app.pumpApp(tester);
   await _openLibrary(tester);
   await tapWhenReady(tester, find.byKey(ValueKey(shot)));
@@ -999,5 +1008,172 @@ void main() {
     await pumpUntilFound(tester, _showing('R0000001.JPG'));
 
     await app.dispose();
+  });
+
+  group('the map below the details', () {
+    final map = _inViewer(find.byKey(const Key('viewer-map')));
+    final scroll = _inViewer(find.byKey(const Key('viewer-scroll')));
+    const lisbon = FakePhotoLocation(38.7075, -9.1364, altitude: 12);
+
+    // The place and zoom of the map shown.
+    (GrPhotoLocation, double) shown(WidgetTester tester) {
+      final photoMap = tester.widget<PhotoMap>(
+        find.descendant(of: map, matching: find.byType(PhotoMap)),
+      );
+      return (photoMap.place, photoMap.zoom);
+    }
+
+    double scrollable(WidgetTester tester) => tester
+        .state<ScrollableState>(
+          find.descendant(of: scroll, matching: find.byType(Scrollable)).first,
+        )
+        .position
+        .maxScrollExtent;
+
+    testWidgets('a photo the camera saved a location with has a map of it '
+        'below its details: only the top of the map shows, the photo keeps '
+        'the room above, and scrolling brings the rest up; Info again puts '
+        'the map away with the details', (tester) async {
+      final app = await _openViewer(
+        tester,
+        [FakePhoto('100RICOH', 'R0000001.JPG', _taken(1), location: lisbon)],
+        'sd1|100RICOH/R0000001',
+        info: true,
+      );
+      await pumpUntilFound(tester, map);
+      await pumpRounds(tester, 30);
+
+      expect(shown(tester), (const GrPhotoLocation(38.7075, -9.1364), 14.0));
+      final screen = tester.getRect(_viewer);
+      final card = tester.getRect(map);
+      final details = tester.getRect(_inViewer(find.byType(GroupBox)).first);
+      expect(details.bottom, lessThanOrEqualTo(card.top));
+      // The top of the map is on screen, most of it is not.
+      expect(card.top, lessThan(screen.bottom - 40));
+      expect(card.top, greaterThan(screen.bottom - 120));
+      expect(card.bottom, greaterThan(screen.bottom + 150));
+      // The photo has the screen down to its details.
+      final pages = tester.getRect(_inViewer(find.byType(PageView)));
+      expect(pages.bottom, moreOrLessEquals(details.top, epsilon: 20));
+      expect(pages.height, greaterThan(screen.height * 0.4));
+
+      await tester.drag(scroll, const Offset(0, -400));
+      await pumpRounds(tester, 30);
+      final raised = tester.getRect(map);
+      expect(raised.bottom, lessThanOrEqualTo(screen.bottom));
+      expect(raised.height, card.height);
+
+      await tester.tap(_inViewer(find.byKey(const Key('viewer-info'))));
+      await pumpRounds(tester, 40);
+      expect(map, findsNothing);
+      expect(scrollable(tester), 0);
+      await app.dispose();
+    });
+
+    testWidgets('a photo with no location has no map, and nothing scrolls; '
+        'the half of a pair that has one gives the pair its map', (
+      tester,
+    ) async {
+      final app = await _openViewer(
+        tester,
+        [
+          FakePhoto('100RICOH', 'R0000001.JPG', _taken(1)),
+          FakePhoto('100RICOH', 'R0000002.JPG', _taken(2)),
+          FakePhoto('100RICOH', 'R0000002.DNG', _taken(2), location: lisbon),
+        ],
+        'sd1|100RICOH/R0000001',
+        info: true,
+      );
+      await pumpRounds(tester, 40);
+      expect(map, findsNothing);
+      expect(scrollable(tester), 0);
+      final pages = _inViewer(find.byType(PageView));
+      final before = tester.getRect(pages);
+      await tester.drag(scroll, const Offset(0, -300));
+      await pumpRounds(tester, 20);
+      expect(tester.getRect(pages), before);
+
+      // Newest first: the pair is the page before.
+      await tester.fling(pages, const Offset(300, 0), 1000);
+      await pumpUntilFound(tester, _showing('R0000002.JPG'));
+      await pumpUntilFound(tester, map);
+      expect(shown(tester).$1, const GrPhotoLocation(38.7075, -9.1364));
+      await app.dispose();
+    });
+
+    // The history keeps 90 days, so these photos were taken yesterday.
+    final now = DateTime.now();
+    final yesterday = DateTime(now.year, now.month, now.day - 1, 8, 1);
+    // The phone was here two minutes before them.
+    final recorded = [
+      LocationFix(
+        latitude: 41.1407,
+        longitude: -8.613,
+        accuracy: 30,
+        time: yesterday.subtract(const Duration(minutes: 2)).toUtc(),
+      ),
+    ];
+
+    testWidgets('with background geotagging on, a photo with no location '
+        'shows the place the phone was at when it was taken, from further '
+        'out; a location the camera saved comes first, and a movie has no '
+        'map', (tester) async {
+      final app = await _openViewer(
+        tester,
+        [
+          FakePhoto('100RICOH', 'R0000001.JPG', yesterday),
+          FakePhoto(
+            '100RICOH',
+            'R0000002.JPG',
+            yesterday.add(const Duration(minutes: 1)),
+            location: lisbon,
+          ),
+          FakePhoto(
+            '100RICOH',
+            'R0000003.MOV',
+            yesterday.add(const Duration(minutes: 2)),
+            videoLength: const Duration(seconds: 4),
+          ),
+        ],
+        'sd1|100RICOH/R0000001',
+        info: true,
+        backgroundGeotagging: true,
+        history: recorded,
+      );
+      await pumpUntilFound(tester, map);
+      expect(shown(tester), (const GrPhotoLocation(41.1407, -8.613), 12.0));
+
+      // Newest first: the pages before are the later shots.
+      final pages = _inViewer(find.byType(PageView));
+      await tester.fling(pages, const Offset(300, 0), 1000);
+      await pumpUntilFound(tester, _showing('R0000002.JPG'));
+      await pumpUntil(
+        tester,
+        () => map.evaluate().isNotEmpty && shown(tester).$2 == 14,
+        reason: "the map of the camera's own location",
+      );
+      expect(shown(tester).$1, const GrPhotoLocation(38.7075, -9.1364));
+      await pumpRounds(tester, 30);
+
+      await tester.fling(pages, const Offset(300, 0), 1000);
+      await pumpUntilFound(tester, _showing('R0000003.MOV'));
+      await pumpRounds(tester, 40);
+      expect(map, findsNothing);
+      await app.dispose();
+    });
+
+    testWidgets('with background geotagging off, the location history gives '
+        'a photo no map', (tester) async {
+      final app = await _openViewer(
+        tester,
+        [FakePhoto('100RICOH', 'R0000001.JPG', yesterday)],
+        'sd1|100RICOH/R0000001',
+        info: true,
+        history: recorded,
+      );
+      await pumpRounds(tester, 40);
+      expect(map, findsNothing);
+      await app.dispose();
+    });
   });
 }

@@ -27,6 +27,7 @@ final class FakePhoto {
     this.sv = '200',
     this.xv = '0.0',
     this.imageControl,
+    this.location,
   }) : path = GrPhotoPath(dir, file);
 
   /// Folder on the card, e.g. `100RICOH`.
@@ -83,6 +84,10 @@ final class FakePhoto {
   /// answers 404, as for a movie \[design\]: what the camera answers for
   /// one is \[unknown\].
   final List<int>? imageControl;
+
+  /// The location the camera saved with the photo, which `/info` `gpsInfo`
+  /// reports (http-api.md §2.2); null leaves `gpsInfo` empty.
+  final FakePhotoLocation? location;
 
   /// Upper-case extension: `JPG`, `DNG` or `MOV`.
   String get extension => path.extension;
@@ -141,6 +146,15 @@ final class FakePhoto {
         final dir = shot < 20 ? '100RICOH' : '101RICOH';
         final base = 'R${number.toString().padLeft(7, '0')}';
         final kind = kinds[shot];
+        // A few steps on from the day's place with every shot.
+        final place = _places[day];
+        final location = place == null
+            ? null
+            : FakePhotoLocation(
+                place.$1 + i * 0.0007,
+                place.$2 - i * 0.0011,
+                altitude: 12.0 + i,
+              );
         FakePhoto make(String ext, {Duration? length}) => FakePhoto(
           dir,
           '$base.$ext',
@@ -159,6 +173,9 @@ final class FakePhoto {
           imageControl: kind == 'M'
               ? null
               : FakeLook.presets[shot % FakeLook.presets.length].data,
+          // \[design\] A movie gets none: whether the camera saves a
+          // location with one is \[unknown\].
+          location: kind == 'M' ? null : location,
         );
         switch (kind) {
           case 'P':
@@ -182,8 +199,40 @@ final class FakePhoto {
     return photos;
   }
 
+  /// Where the shots of each day of [defaultCard] were taken: well-known
+  /// public places, and none on the third day, when the camera had no
+  /// location.
+  static const _places = <(double, double)?>[
+    (38.707500, -9.136400),
+    (38.691600, -9.216000),
+    null,
+    (38.797900, -9.390600),
+    (40.208900, -8.426500),
+    (41.140700, -8.613000),
+  ];
+
   @override
   String toString() => '$storage:$dir/$file';
+}
+
+/// The location a camera saved with a photo: what a phone had sent it when
+/// the photo was taken (research/protocol/geotagging.md §1).
+final class FakePhotoLocation {
+  /// The place at [latitude], [longitude] and [altitude], which the phone
+  /// took at [time].
+  const new(this.latitude, this.longitude, {this.altitude = 0, this.time});
+
+  /// Degrees north of the equator.
+  final double latitude;
+
+  /// Degrees east of Greenwich.
+  final double longitude;
+
+  /// Metres.
+  final double altitude;
+
+  /// The position's own time, UTC; null reports the photo's capture time.
+  final DateTime? time;
 }
 
 typedef _P = BleImageControlParameter;

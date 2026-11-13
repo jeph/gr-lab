@@ -37,6 +37,7 @@ object AppEngine {
 
     private var attachedActivity: MainActivity? = null
     private var device: MethodChannel? = null
+    private var map: MethodChannel? = null
 
     /**
      * The engine, created and started when there is none. [dartVmArgs] are
@@ -52,6 +53,7 @@ object AppEngine {
         GeotagHost.runEnded = { releaseIfUnused() }
         val engine = FlutterEngine(app, dartVmArgs)
         registerDeviceChannel(app, engine)
+        map = MapNetwork.register(app, engine.dartExecutor.binaryMessenger)
         engine.dartExecutor.executeDartEntrypoint(DartExecutor.DartEntrypoint.createDefault())
         cache.put(ENGINE_ID, engine)
         return engine
@@ -76,6 +78,8 @@ object AppEngine {
         cache.remove(ENGINE_ID)
         device?.setMethodCallHandler(null)
         device = null
+        map?.setMethodCallHandler(null)
+        map = null
         engine.destroy()
     }
 

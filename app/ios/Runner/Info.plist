@@ -42,9 +42,9 @@
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>GR Photo connects to your camera over its own Wi-Fi network to browse and download photos and videos and to show its live view.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>GR Photo sends your location to your camera while the camera is on. With Always, it also keeps a 90-day location history on this device to add locations to the photos you download. Your location goes only to your camera.</string>
+	<string>GR Photo sends your location to your camera while the camera is on. With Always, it also keeps a 90-day location history on this device to add locations to the photos you download.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>GR Photo sends your location to your camera over Bluetooth while the camera is on, so the camera can save it in the photos you take. Your location goes only to your camera.</string>
+	<string>GR Photo sends your location to your camera over Bluetooth while the camera is on, so the camera can save it in the photos you take.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>GR Photo saves the photos and videos you download from your camera to your library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

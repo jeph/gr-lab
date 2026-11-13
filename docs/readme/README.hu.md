@@ -131,8 +131,8 @@ ne legyen útban, és hogy a Képvezérlés stílusait érdemes legyen benne kez
 - **Témák és nyelvek.** Világos, Sötét, Sötétkamra, Papír és Cianotípia téma, valamint a kamera
   saját menüinek 21 nyelve.
 - **Bizalmas.** Nincs fiók, analitika, hirdetés vagy összeomlás-jelentés. A GR Photo kizárólag az Ön
-  kamerájával kommunikál, a helyzete pedig csak a kamerájába és a saját fotóiba kerül; lásd az
-  [adatvédelmi irányelveket](../../app/assets/privacy.md).
+  kamerájával kommunikál, valamint a fotó készítési helyének térképéhez az OpenFreeMap
+  szolgáltatással; lásd az [adatvédelmi irányelveket](../../app/assets/privacy.md).
 
 ## Követelmények
 
@@ -140,7 +140,7 @@ ne legyen útban, és hogy a Képvezérlés stílusait érdemes legyen benne kez
 - A stílusokhoz GR IV (1.04-es vagy újabb firmware-rel), GR IV HDF vagy GR IV Monochrome
   szükséges. A GR III és a GR IIIx firmware-e nem ad lehetőséget a Képvezérlés beállításainak
   telefonról történő olvasására vagy írására.
-- Android 12 vagy újabb, illetve iOS 15 vagy újabb.
+- Android 12 vagy újabb, illetve iOS 15.5 vagy újabb.
 
 A GR Photo fiatal projekt. A hardvernapló 1.20-s firmware-rel futó GR IV HDF kamerával végzett
 próbákat rögzít: párosítás, csatlakozás, a kamera felébresztése, böngészés, letöltés, élőkép, a

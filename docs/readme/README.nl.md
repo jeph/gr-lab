@@ -131,7 +131,7 @@ Beeldregeling-looks behandelen als iets wat het beheren waard is.
 - **Thema's en talen.** De thema's Licht, Donker, Doka, Papier en Cyanotypie, en de 21 talen van de
   menu's van de camera zelf.
 - **Privé.** Geen accounts, analyses, advertenties of crashrapportage. GR Photo communiceert alleen
-  met je camera, en je locatie gaat alleen naar je camera en in je eigen foto's; zie het
+  met je camera en, voor de kaart van de plek waar een foto is gemaakt, met OpenFreeMap; zie het
   [privacybeleid](../../app/assets/privacy.md).
 
 ## Vereisten
@@ -140,7 +140,7 @@ Beeldregeling-looks behandelen als iets wat het beheren waard is.
 - Voor Looks is een GR IV met firmware 1.04 of hoger, een GR IV HDF of een GR IV Monochrome nodig.
   De firmware van de GR III en GR IIIx biedt geen manier om de instellingen van Beeldregeling vanaf
   een telefoon te lezen of te schrijven.
-- Android 12 of nieuwer, of iOS 15 of nieuwer.
+- Android 12 of nieuwer, of iOS 15.5 of nieuwer.
 
 GR Photo is nog jong. Het hardwarelogboek bevat tests met een GR IV HDF met firmware 1.20: koppelen,
 verbinden, de camera wekken, bladeren, downloaden, live view en wijzigingen van scherpstelling en

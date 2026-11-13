@@ -126,7 +126,7 @@ og at looks til Billedkontrol er noget, det er værd at holde styr på.
 - **Temaer og sprog.** Temaerne Lyst, Mørkt, Mørkekammer, Papir og Cyanotypi og de 21 sprog fra
   kameraets egne menuer.
 - **Privat.** Ingen konti, analyse, reklamer eller nedbrudsrapportering. GR Photo kommunikerer kun
-  med dit kamera, og din lokalitet sendes kun til dit kamera og gemmes kun i dine egne billeder; se
+  med dit kamera og, for at vise kortet over hvor et billede er taget, med OpenFreeMap; se
   [privatlivspolitikken](../../app/assets/privacy.md).
 
 ## Krav
@@ -135,7 +135,7 @@ og at looks til Billedkontrol er noget, det er værd at holde styr på.
 - Looks kræver et GR IV med firmware 1.04 eller nyere, et GR IV HDF eller et GR IV Monochrome.
   Firmwaren i GR III og GR IIIx giver ingen mulighed for at læse eller skrive indstillingerne for
   Billedkontrol fra en telefon.
-- Android 12 eller nyere, eller iOS 15 eller nyere.
+- Android 12 eller nyere, eller iOS 15.5 eller nyere.
 
 GR Photo er en ung app. Hardwareloggen dokumenterer kørsler med et GR IV HDF med firmware 1.20:
 parring, forbindelse, vækning af kameraet, gennemsyn, download, live view samt ændring af fokus og

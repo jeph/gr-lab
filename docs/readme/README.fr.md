@@ -136,8 +136,8 @@ Contrôle de l'image comme quelque chose qui mérite d'être géré.
 - **Thèmes et langues.** Les thèmes Clair, Sombre, Chambre noire, Papier et Cyanotype, et les
   21 langues des menus de l'appareil photo.
 - **Respect de la vie privée.** Ni compte, ni mesure d'audience, ni publicité, ni rapport de
-  plantage. GR Photo ne communique qu'avec votre appareil photo, et votre position ne va qu'à votre
-  appareil photo et dans vos propres photos ; consultez la
+  plantage. GR Photo ne communique qu'avec votre appareil photo et, pour la carte du lieu où une
+  photo a été prise, avec OpenFreeMap ; consultez la
   [politique de confidentialité](../../app/assets/privacy.md).
 
 ## Configuration requise
@@ -146,7 +146,7 @@ Contrôle de l'image comme quelque chose qui mérite d'être géré.
 - Les styles nécessitent un GR IV avec le firmware 1.04 ou ultérieur, un GR IV HDF ou un GR IV
   Monochrome. Le firmware des GR III et GR IIIx n'offre aucun moyen de lire ou d'écrire les réglages
   Contrôle de l'image depuis un téléphone.
-- Android 12 ou version ultérieure, ou iOS 15 ou version ultérieure.
+- Android 12 ou version ultérieure, ou iOS 15.5 ou version ultérieure.
 
 GR Photo est un projet jeune. Le journal des essais sur matériel consigne des sessions avec un GR IV
 HDF sous firmware 1.20 : jumelage, connexion, réveil de l'appareil photo, navigation,

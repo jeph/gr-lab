@@ -435,6 +435,37 @@ void main() {
       expect(ble.connection.deviceId, camera.config.deviceId);
     });
 
+    test('a picture taken while the camera holds a location is saved with '
+        'it, and one taken without is not', () async {
+      final ble = await remote();
+      Future<GrPhotoInfo> shoot() async {
+        final before = camera.photos.length;
+        await http!.shoot(af: GrShootAf.on, pos: GrFocusPoint(50, 50));
+        await until(() => camera.photos.length > before);
+        return await http!.photoInfo(camera.photos.last.path);
+      }
+
+      expect((await shoot()).gpsInfo, '');
+      await ble.setGeoTag(enabled: true);
+      await ble.sendGps(
+        BleGpsInformation.at(
+          latitude: 35.5,
+          longitude: 139.25,
+          altitude: 40,
+          time: DateTime.utc(2026, 11, 12, 1, 2, 3),
+        ),
+      );
+      final located = await shoot();
+      expect(
+        located.gpsInfo,
+        '35.500000,139.250000,40.0,2026-11-12T01:02:03,WGS84',
+      );
+      expect(located.location, const GrPhotoLocation(35.5, 139.25));
+      // Store Location Info off: the camera forgets the location.
+      await ble.setGeoTag(enabled: false);
+      expect((await shoot()).gpsInfo, '');
+    });
+
     test('shoot cancel ends a self-timer countdown without a '
         'picture', () async {
       await remote(fastConfig(bonded: true, selfTimerScale: 0.05));

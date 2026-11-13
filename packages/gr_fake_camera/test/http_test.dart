@@ -204,6 +204,50 @@ void main() {
     expect(unset.raw, isNot(contains('orientation')));
   });
 
+  test('info: gpsInfo holds the location saved with a photo and is empty '
+      'without one', () async {
+    final at = DateTime(2026, 11, 5, 10, 4, 11);
+    await start(
+      fastConfig(
+        photos: [
+          FakePhoto('100RICOH', 'R0000001.JPG', at),
+          FakePhoto(
+            '100RICOH',
+            'R0000002.JPG',
+            at,
+            location: FakePhotoLocation(
+              35.681236,
+              -139.7671254,
+              altitude: 40,
+              time: DateTime.utc(2026, 11, 5, 1, 4, 9),
+            ),
+          ),
+          FakePhoto(
+            '100RICOH',
+            'R0000003.JPG',
+            at,
+            location: const FakePhotoLocation(-33.8568, 151.2153),
+          ),
+        ],
+      ),
+    );
+    Future<GrPhotoInfo> info(String file) =>
+        http.photoInfo(GrPhotoPath('100RICOH', file));
+    final none = await info('R0000001.JPG');
+    expect(none.gpsInfo, '');
+    expect(none.location, isNull);
+    final located = await info('R0000002.JPG');
+    expect(
+      located.gpsInfo,
+      '35.681236,-139.767125,40.0,2026-11-05T01:04:09,WGS84',
+    );
+    expect(located.location, const GrPhotoLocation(35.681236, -139.767125));
+    // Without a time of its own the position has the capture time, in UTC.
+    final timed = (await info('R0000003.JPG')).gpsInfo!.split(',');
+    expect(timed.take(3), ['-33.856800', '151.215300', '0.0']);
+    expect(DateTime.parse('${timed[3]}Z'), at.toUtc());
+  });
+
   test('full download: bytes and Content-Length match the source', () async {
     final media = syntheticMedia();
     await start(fastConfig(), media: media);

@@ -2,7 +2,7 @@
 
 Last updated: 12 November 2026
 
-GR Photo is an app for Ricoh GR cameras. It pairs with your camera over Bluetooth, connects to the camera's own Wi-Fi network, and lets you browse and download your photos and videos and shoot remotely. If you turn geotagging on, it also uses your phone's location to add the place to your photos (see Your location below). GR Photo has no accounts, no analytics, no advertising and no crash reporting. It sends nothing to the developer or to anyone else.
+GR Photo is an app for Ricoh GR cameras. It pairs with your camera over Bluetooth, connects to the camera's own Wi-Fi network, and lets you browse and download your photos and videos and shoot remotely. If you turn geotagging on, it also uses your phone's location to add the place to your photos (see Your location below). GR Photo has no accounts, no analytics, no advertising and no crash reporting. It sends nothing to the developer. The one thing it fetches from the internet is the map of where a photo was taken, from OpenFreeMap (see The map below).
 
 ## What GR Photo keeps on your phone
 
@@ -14,6 +14,7 @@ GR Photo keeps the following in its own app storage on your phone:
 - Your saved looks: the name you gave each one, its Image Control settings, where it came from (a photo's file name or a Custom slot) and, for a look saved from a photo, a smaller copy of that photo, which way up it was taken and the Image Control settings it was taken with.
 - Copies of what your cameras sent, so the Library opens quickly: the list of files on each camera with their date, size and orientation, thumbnails and previews, videos you played, and files that are still being downloaded. These are kept in the app's cache, which your phone may clear when it needs space. GR Photo keeps the thumbnails and previews of all your cameras to 256 MB and the videos you played to 1 GB: when they grow past that, it deletes the ones you looked at or played longest ago first, and fetches them from the camera again when you open them. It does not delete what is on screen, a video while it is open or a video still being copied.
 - Your location history, while background geotagging is on for a camera (see Your location below).
+- The parts of the map you have looked at (see The map below).
 - The debug log, when it is on (see below).
 
 GR Photo reads your camera's Wi-Fi password from the camera over Bluetooth each time it connects and passes it to your phone's Wi-Fi system to join the camera's network. The password is not saved with your paired cameras. While debug logging is on, though, the password is written to the debug log on your phone, like the rest of the exchange with the camera (see below).
@@ -26,7 +27,7 @@ On Android, GR Photo turns off backup to your Google account. When you move to a
 
 ## Your location
 
-GR Photo does not use your phone's location unless you turn one of its two kinds of geotagging on for a camera. Both are off until you do, and your location goes nowhere but to your camera and into your own photos.
+GR Photo does not use your phone's location unless you turn one of its two kinds of geotagging on for a camera. Both are off until you do, and your location goes to your camera and into your own photos. One more thing depends on it: when you look at the details of a photo that background geotagging has a place for, the map of the area around that place is fetched from OpenFreeMap (see The map below). Nothing else of your location leaves your phone.
 
 Live geotagging is a switch on a camera's card under Cameras. GR cameras have no GPS, so while the camera is switched on and linked over Bluetooth, GR Photo finds your phone's precise location and sends it to the camera: latitude, longitude, altitude and the time the location was taken. The camera saves it in the photos you take and keeps it for up to ten minutes after the last one it was sent. Turning Live geotagging on also turns on Store Location Info in the camera's menu, and turning it off turns that off, which makes the camera forget the location. GR Photo finds your location while the camera is on and Store Location Info is on, and for five minutes after the camera is switched off or goes out of reach, so that a location is ready if you switch it on again soon; after that it does not until the camera is back. Live geotagging starts once you have opened GR Photo, carries on while you use another app or lock the phone, and on Android shows a notification with a Stop button while it does. GR Photo does not start by itself when you switch the camera on. GR Photo does not keep the locations it sends to the camera, unless background geotagging is on for a camera as well.
 
@@ -34,14 +35,25 @@ Background geotagging, a switch in each camera's details, is the hands-free kind
 
 While Sync camera clock is on for a camera, which it is unless you turn it off and always is with background geotagging, GR Photo reads the camera's clock and sets it to your phone's time when the two differ.
 
+## The map
+
+When you open a photo's details, in the Library or after taking it in live view, GR Photo shows a map of where the photo was taken if it knows the place. That is the location the camera saved with the photo. For a photo without one, while background geotagging is on for the camera, it is the place in your location history recorded closest to the time the photo was taken, which is the place GR Photo writes into the photo when you download it. A photo with neither has no map, and videos have none.
+
+The map is not included in the app. GR Photo fetches the pieces of it around that place (map tiles and the fonts of its labels) over the internet from OpenFreeMap (openfreemap.org), a free map service that serves OpenStreetMap data. A request names a square of the map about a kilometre across or larger, not the place itself, and carries what every internet request does: your phone's IP address, and the name and version of GR Photo, of its map software and of your phone's system. GR Photo adds nothing to it: no coordinates, no photo or file name, nothing about your camera, and nothing that identifies you or your phone. From these requests OpenFreeMap can tell that someone at your IP address looked at a map of that area. What OpenFreeMap keeps is described in its own privacy policy at openfreemap.org/privacy.
+
+The map is fetched over your phone's internet connection. While your phone is on the camera's Wi-Fi, which has no internet, that is usually mobile data. Without an internet connection the map stays empty.
+
+MapLibre, the open-source map software in GR Photo, keeps the pieces it fetched in GR Photo's app storage, up to about 50 MB with the oldest replaced first, so that a map you have seen can be shown again without fetching it. They stay on your phone.
+
 ## What GR Photo sends, and to whom
 
-GR Photo communicates only with your camera:
+GR Photo communicates with your camera, and with OpenFreeMap for the map:
 
 - Over Bluetooth, to pair with the camera, find it nearby, wake it, turn on its Wi-Fi, read its Wi-Fi network name and password, work as a remote shutter with its shooting settings, read and write the looks in its Custom slots C1 to C3, read and set its clock and, while Live geotagging is on for the camera, send it your phone's location and turn its Store Location Info setting on or off. When pairing, GR Photo gives the camera your phone's name, which the camera shows in its list of paired devices. On Android this is the device name you set; on iOS it is the model, such as iPhone.
 - Over the camera's own Wi-Fi network, to list, preview and download your photos and videos, show the camera's live view and shoot. These requests go only to the camera, at the address 192.168.0.1 on its network.
+- Over the internet with OpenFreeMap, to fetch the map of where a photo was taken (see The map above).
 
-GR Photo makes no other network connections. It sends nothing to the developer or to third parties: no analytics, no usage statistics, no crash reports, no update checks and no advertising. Its fonts and license texts are included in the app.
+GR Photo makes no other network connections. It sends nothing to the developer, and nothing to third parties but those requests for the map: no analytics, no usage statistics, no crash reports, no update checks and no advertising. Its own fonts and its license texts are included in the app.
 
 ## The debug log
 
@@ -56,8 +68,8 @@ The log stays on your phone. On iOS it is in GR Photo's app storage. On Android 
 On Android, GR Photo asks for or uses:
 
 - Nearby devices (Bluetooth scan and connect), to find, pair with and control your camera. GR Photo tells Android that it does not use Bluetooth scans to work out your location.
-- Wi-Fi and network access, to join the camera's Wi-Fi network, which Android asks you to approve, to check that the phone is on it and to send the camera's traffic over it.
-- Internet, which Android requires for any network connection. GR Photo uses it only to talk to the camera.
+- Wi-Fi and network access, to join the camera's Wi-Fi network, which Android asks you to approve, to check that the phone is on it, to send the camera's traffic over it and to send the requests for the map over your internet connection instead.
+- Internet, which Android requires for any network connection. GR Photo uses it to talk to the camera and to fetch the map.
 - Location, only when you turn Live geotagging or Background geotagging on. Live geotagging needs precise location; with approximate location alone it sends nothing, because that can be kilometres off. Allowing location all the time is needed for background geotagging only; live geotagging works with location allowed while the app is in use.
 - Notifications, to show a running download with its progress and buttons to pause or cancel it while you use another app, and to show that live geotagging is running, with a Stop button. Android asks you to allow them the first time you download or turn Live geotagging on. GR Photo sends no other notifications, and downloads and geotagging run whether or not you allow them.
 - Running in the background and keeping the phone awake, only while downloads run or live geotagging is sending locations to a camera that is on, so that they carry on when you leave GR Photo or lock the phone.
@@ -76,7 +88,7 @@ On iOS, GR Photo asks for:
 
 On iOS 26 and later, iOS shows a running download on the Lock Screen and in the Dynamic Island while you use another app. That needs no permission.
 
-GR Photo does not use your phone's camera, microphone or contacts, and it uses your location only for geotagging, as described under Your location. It shows notifications only on Android, and only for running downloads and for live geotagging.
+GR Photo does not use your phone's camera, microphone or contacts, and it uses your location only for geotagging and for the map of where a photo was taken, as described under Your location and The map. It shows notifications only on Android, and only for running downloads and for live geotagging.
 
 ## Deleting your data
 
@@ -84,11 +96,12 @@ GR Photo does not use your phone's camera, microphone or contacts, and it uses y
 - Delete, in a saved look's menu under Looks, removes the look and its copy of the photo from your phone. Looks you loaded into the camera's Custom slots stay on the camera.
 - Delete location history, under Settings, Location, deletes the location history from your phone. Photos you already downloaded keep the location they were given.
 - Clear log, under Settings, Debug log, deletes the debug log from your phone.
-- Uninstalling GR Photo deletes everything GR Photo keeps on your phone, including the location history and the debug log. Photos and videos you saved to your photo library stay there.
+- The parts of the map kept on your phone have no button of their own: clearing GR Photo's storage in your phone's settings, or uninstalling GR Photo, deletes them.
+- Uninstalling GR Photo deletes everything GR Photo keeps on your phone, including the location history, the parts of the map and the debug log. Photos and videos you saved to your photo library stay there.
 
 ## Children
 
-GR Photo is not directed at children. It sends no personal information about anyone, children included, to the developer or to third parties.
+GR Photo is not directed at children. It sends no personal information about anyone, children included, to the developer, and the requests for the map described under The map are all it sends to a third party.
 
 ## Contact
 

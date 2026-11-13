@@ -35,6 +35,7 @@ export 'package:gr_protocol/gr_protocol.dart'
         GrPairingException,
         GrPairingFailure,
         GrPairingStage,
+        GrPhotoLocation,
         GrPhotoPath,
         GrProps,
         GrSessionEvent,

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
@@ -19,6 +21,7 @@ import 'package:grphoto/src/app_scope.dart';
 import 'package:grphoto/src/data/cameras.dart';
 import 'package:grphoto/src/services.dart';
 import 'package:grphoto/src/theme/tokens.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 
 /// The app wired to a [FakeGrCamera], with its data in a temporary
 /// directory.
@@ -189,6 +192,7 @@ Future<TestApp> createTestApp({
   // flutter_test answers every dart:io HttpClient request with 400; the
   // fake camera serves real HTTP on loopback.
   HttpOverrides.global = null;
+  MapLibrePlatform.createInstance = _NoMap.new;
   final root = await Directory.systemTemp.createTemp('grphoto_test_');
   final data = await Directory('${root.path}/data').create();
   final cache = await Directory('${root.path}/cache').create();
@@ -254,6 +258,22 @@ Future<TestApp> createTestApp({
     permission: permission,
     root: root,
   );
+}
+
+/// MapLibre with no native side, which a test does not have: a map is an
+/// empty box that is never created, so the app shows what it draws around
+/// and over one.
+class _NoMap extends MapLibrePlatform {
+  @override
+  Widget buildView(
+    Map<String, dynamic> creationParams,
+    OnPlatformViewCreatedCallback onPlatformViewCreated,
+    Set<Factory<OneSequenceGestureRecognizer>>? gestureRecognizers,
+  ) => const SizedBox.expand();
+
+  @override
+  Never noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError('A map in a test is never created');
 }
 
 /// Pumps until [condition] holds, letting real time pass for sockets and

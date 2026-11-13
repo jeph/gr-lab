@@ -478,7 +478,22 @@ extension on FakeGrCamera {
         'sv': photo.sv,
         'xv': photo.xv,
       },
+      'gpsInfo': _gpsInfo(photo),
     });
+  }
+
+  /// `/info` `gpsInfo` as a GR IV HDF sends it (http-api.md §2.2): empty
+  /// for a photo without a location, else latitude and longitude with six
+  /// decimals, altitude with one, the position's time and the datum. That
+  /// the time is the UTC one the phone sent is \[inferred\].
+  String _gpsInfo(FakePhoto photo) {
+    final location = photo.location;
+    if (location == null) return '';
+    final time = location.time ?? photo.dateTime.toUtc();
+    return '${location.latitude.toStringAsFixed(6)},'
+        '${location.longitude.toStringAsFixed(6)},'
+        '${location.altitude.toStringAsFixed(1)},'
+        '${_stamp(time)},WGS84';
   }
 
   /// `/imgctrl`: the photo's Image Control blob (http-api.md §4.3).

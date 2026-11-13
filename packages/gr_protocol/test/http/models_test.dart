@@ -161,6 +161,32 @@ void main() {
       expect(GrPhotoList({'dirs': 'bad'}).dirs, isEmpty);
     });
 
+    test("photo info: gpsInfo's latitude and longitude, and no location "
+        'for an empty, short or impossible one', () {
+      GrPhotoLocation? location(Object? gpsInfo) =>
+          GrPhotoInfo({'errCode': 200, 'gpsInfo': ?gpsInfo}).location;
+      expect(
+        location('35.681236,139.767125,40.0,2026-11-05T01:04:11,WGS84'),
+        const GrPhotoLocation(35.681236, 139.767125),
+      );
+      expect(
+        location('-33.856800,-70.650000,0.0,2026-11-05T01:04:11,WGS84'),
+        const GrPhotoLocation(-33.8568, -70.65),
+      );
+      // The photo has no location.
+      expect(location(''), isNull);
+      expect(location(null), isNull);
+      // Not the camera's form.
+      expect(location('35.681236'), isNull);
+      expect(location('north,east,0.0'), isNull);
+      expect(location(',,0.0,2026-11-05T01:04:11,WGS84'), isNull);
+      expect(location('NaN,139.767125,0.0'), isNull);
+      // Not on Earth.
+      expect(location('90.000001,0.000000,0.0'), isNull);
+      expect(location('0.000000,-180.000001,0.0'), isNull);
+      expect(location('90.000000,180.000000,0.0'), isNotNull);
+    });
+
     test('transfer item download size follows GR WORLD', () {
       GrTransferItem item(String path, String? size) =>
           GrTransferItem({'index': 3, 'filepath': path, 'size': ?size});

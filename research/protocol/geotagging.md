@@ -129,6 +129,8 @@ Observed 2026-11-12 in files a GR IV and a GR IV HDF (firmware 1.20) had saved w
 - No file carries a time zone (`OffsetTimeOriginal`) or sub-second capture time: only the camera's local time.
 - The DNGs are little-endian classic TIFF, and their GPS pointer is one LONG. A JPEG's EXIF segment is about 39 KB of the 64 KB a segment can hold, so a GPS directory with a position fits in it.
 
+Observed 2026-11-11 (GR IV HDF, firmware 1.20): for a photo saved with a location, `GET /v1/photos/<dir>/<file>/info` reports it in `gpsInfo` as the string of §1.1, the position's own time included, and for a photo without one `gpsInfo` is empty ([HTTP API §2.2](http-api.md#22-per-photo-info)). The files themselves were not read.
+
 **[unknown]** Which GPS tags the camera writes when it has a location (the time and date stamp in particular, which would show the age of the position at capture), and what it writes after the 600 s.
 
 ## 6. Consequences for a client

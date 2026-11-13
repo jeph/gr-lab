@@ -22,7 +22,13 @@ final _day1 = DateTime(2026, 11, 4, 9, 30);
 final _day2 = DateTime(2026, 11, 5, 18, 2, 7);
 
 List<FakePhoto> card() => [
-  FakePhoto('100RICOH', 'R0000001.JPG', _day1, orientation: 6),
+  FakePhoto(
+    '100RICOH',
+    'R0000001.JPG',
+    _day1,
+    orientation: 6,
+    location: const FakePhotoLocation(35.681236, 139.767125),
+  ),
   FakePhoto('100RICOH', 'R0000001.DNG', _day1),
   FakePhoto(
     '100RICOH',
@@ -204,6 +210,9 @@ void main() {
       );
       expect(jpeg.orientation, 6);
       expect(jpeg.taken, _day1);
+      // The location the camera saved with the shot, and none without.
+      expect(jpeg.location, const GrPhotoLocation(35.681236, 139.767125));
+      expect(movie.location, isNull);
     });
 
     test('listingChanges carries storage changes from /v1/changes only, '

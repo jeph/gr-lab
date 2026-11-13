@@ -127,7 +127,7 @@ Ovládání obrazu jako něco, o co stojí za to se starat.
 - **Motivy a jazyky.** Motivy Světlý, Tmavý, Temná komora, Papír a Kyanotypie a 21 jazyků, které
   nabízejí nabídky samotného fotoaparátu.
 - **Soukromí.** Žádné účty, analytika, reklama ani hlášení pádů. GR Photo komunikuje pouze s vaším
-  fotoaparátem a vaše poloha putuje jen do vašeho fotoaparátu a do vašich vlastních fotek; viz
+  fotoaparátem a kvůli mapě místa, kde byla fotka pořízena, se službou OpenFreeMap; viz
   [zásady ochrany soukromí](../../app/assets/privacy.md).
 
 ## Požadavky
@@ -136,7 +136,7 @@ Ovládání obrazu jako něco, o co stojí za to se starat.
 - Vzhledy vyžadují GR IV s firmwarem 1.04 nebo novějším, GR IV HDF nebo GR IV Monochrome. Firmware
   modelů GR III a GR IIIx nenabízí žádný způsob, jak nastavení Ovládání obrazu z telefonu číst nebo
   zapisovat.
-- Android 12 nebo novější, případně iOS 15 nebo novější.
+- Android 12 nebo novější, případně iOS 15.5 nebo novější.
 
 GR Photo je mladý projekt. Protokol testů na hardwaru zaznamenává běhy s GR IV HDF s firmwarem 1.20:
 párování, připojování, probouzení fotoaparátu, procházení, stahování, živý náhled, ostření a změny

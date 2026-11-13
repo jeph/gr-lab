@@ -127,8 +127,8 @@ att stilar för Bildkontroll är något värt att hålla ordning på.
 - **Teman och språk.** Temana Ljust, Mörkt, Mörkrum, Papper och Cyanotypi, och de 21 språken i
   kamerans egna menyer.
 - **Privat.** Inga konton, ingen analys, ingen reklam och ingen kraschrapportering. GR Photo
-  kommunicerar bara med din kamera, och din plats skickas bara till din kamera och sparas bara i
-  dina egna bilder; se [integritetspolicyn](../../app/assets/privacy.md).
+  kommunicerar bara med din kamera och, för kartan över var en bild togs, med OpenFreeMap; se
+  [integritetspolicyn](../../app/assets/privacy.md).
 
 ## Krav
 
@@ -136,7 +136,7 @@ att stilar för Bildkontroll är något värt att hålla ordning på.
 - Stilar kräver en GR IV med firmware 1.04 eller senare, en GR IV HDF eller en GR IV Monochrome.
   Firmware för GR III och GR IIIx ger ingen möjlighet att läsa eller skriva inställningar för
   Bildkontroll från en telefon.
-- Android 12 eller senare, eller iOS 15 eller senare.
+- Android 12 eller senare, eller iOS 15.5 eller senare.
 
 GR Photo är ungt. Hårdvaruloggen innehåller körningar med en GR IV HDF med firmware 1.20:
 parkoppling, anslutning, väckning av kameran, bläddring, hämtning, livevisning samt ändringar av

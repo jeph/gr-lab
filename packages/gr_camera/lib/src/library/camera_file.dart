@@ -51,7 +51,13 @@ final class CameraFile {
 @immutable
 final class FileInfo {
   /// Facts the camera reported; each is null when it left it out.
-  const new({this.taken, this.size, this.duration, this.orientation});
+  const new({
+    this.taken,
+    this.size,
+    this.duration,
+    this.orientation,
+    this.location,
+  });
 
   /// Reads the form [toJson] writes (the on-device cache).
   factory fromJson(Map<String, Object?> json) => FileInfo(
@@ -65,6 +71,13 @@ final class FileInfo {
       _ => null,
     },
     orientation: (json['o'] as num?)?.toInt(),
+    location: switch (json['g']) {
+      [final num latitude, final num longitude] => GrPhotoLocation(
+        latitude.toDouble(),
+        longitude.toDouble(),
+      ),
+      _ => null,
+    },
   );
 
   /// Capture time in the camera's clock (local, no zone).
@@ -79,6 +92,11 @@ final class FileInfo {
   /// EXIF orientation (1–8) the camera reports for the shot; its
   /// thumbnails and previews are stored unrotated.
   final int? orientation;
+
+  /// Where the camera says the shot was taken: the location it saved with
+  /// it, which it has from a phone (the camera has no GPS). Null for a
+  /// shot without one.
+  final GrPhotoLocation? location;
 
   /// \[design\] Whether this and [other], read for one camera path at
   /// different times, describe the same file. The listing gives names only
@@ -96,6 +114,7 @@ final class FileInfo {
     'z': ?size,
     if (duration != null) 'v': duration!.inSeconds,
     'o': ?orientation,
+    if (location case final place?) 'g': [place.latitude, place.longitude],
   };
 
   @override
@@ -104,10 +123,11 @@ final class FileInfo {
       other.taken == taken &&
       other.size == size &&
       other.duration == duration &&
-      other.orientation == orientation;
+      other.orientation == orientation &&
+      other.location == location;
 
   @override
-  int get hashCode => Object.hash(taken, size, duration, orientation);
+  int get hashCode => Object.hash(taken, size, duration, orientation, location);
 }
 
 /// [FileInfo] of the camera's `/info` answer.
@@ -116,11 +136,13 @@ FileInfo fileInfoOf(GrPhotoInfo info) => FileInfo(
   size: info.size,
   duration: info.duration == null ? null : Duration(seconds: info.duration!),
   orientation: info.orientation,
+  location: info.location,
 );
 
-/// Parses the camera's `datetime`. Its format is untested on hardware
-/// (burst-grouping.md), so ISO 8601 and the EXIF `YYYY:MM:DD HH:MM:SS`
-/// form are both accepted, always as the camera's local wall clock.
+/// Parses the camera's `datetime`. A GR IV HDF (firmware 1.20) sends
+/// `YYYY-MM-DDThh:mm:ss` (http-api.md §2.2); what other bodies send is
+/// untested, so ISO 8601 and the EXIF `YYYY:MM:DD HH:MM:SS` form are both
+/// accepted, always as the camera's local wall clock.
 DateTime? parseCameraTime(String? text) {
   if (text == null || text.isEmpty) return null;
   final exif = RegExp(

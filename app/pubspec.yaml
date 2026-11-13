@@ -23,6 +23,7 @@ dependencies:
     path: ../packages/gr_protocol
   image: ^4.12.0
   intl: any
+  maplibre_gl: ^0.28.0
   path_provider: ^2.1.6
   share_plus: ^13.3.1
   video_player: ^2.14.1
@@ -44,6 +45,8 @@ flutter:
     - assets/samples/
     - assets/fonts/Inter-OFL.txt
     - assets/fonts/JetBrainsMono-OFL.txt
+    - assets/map/style.json
+    - assets/map/map-credits.txt
     - assets/photo-credits.txt
     - assets/privacy.md
   shaders:

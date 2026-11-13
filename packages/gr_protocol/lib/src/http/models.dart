@@ -417,10 +417,12 @@ final class GrPhotoInfo extends GrEnvelope {
   /// File size in bytes.
   int? get size => fields.integer('size');
 
-  /// Capture date and time as text; format not established.
+  /// Capture date and time: `YYYY-MM-DDThh:mm:ss` in the camera's clock, no
+  /// zone, from a GR IV HDF (http-api.md §2.2).
   String? get datetime => fields.string('datetime');
 
-  /// Recording time as text; meaning and format not established.
+  /// Recording time as text; meaning and format not established. A GR IV
+  /// HDF sends none (http-api.md §2.2).
   String? get recordedTime => fields.string('recordedTime');
 
   /// EXIF-style orientation 1–8 (connection-imagesync.md §4).
@@ -442,11 +444,19 @@ final class GrPhotoInfo extends GrEnvelope {
   /// Exposure compensation in the `/v1/props` `xv` notation, e.g. `+0.3`.
   String? get xv => fields.string('xv');
 
-  /// Location as text; format not established.
+  /// GR WORLD's model reads this key (http-api.md §1 row 5); a GR IV HDF
+  /// (firmware 1.20) sends none (http-api.md §2.2).
   String? get latLng => fields.string('latLng');
 
-  /// GPS data as text; format not established.
+  /// The location saved with the photo, as
+  /// `<latitude>,<longitude>,<altitude>,<time>,<datum>`
+  /// (`35.681236,139.767125,40.0,2026-11-05T01:04:11,WGS84`), and empty for
+  /// a photo without one (http-api.md §2.2).
   String? get gpsInfo => fields.string('gpsInfo');
+
+  /// Where the photo was taken: the latitude and longitude of [gpsInfo].
+  /// Null when the photo has no location or [gpsInfo] is not of that form.
+  GrPhotoLocation? get location => GrPhotoLocation.tryParse(gpsInfo);
 
   /// Movie length; unit not established.
   int? get duration => fields.integer('duration');
@@ -456,6 +466,47 @@ final class GrPhotoInfo extends GrEnvelope {
 
   /// Image Sync `BeanPhotoInfo.captured`; meaning not established.
   bool? get captured => fields.boolean('captured');
+}
+
+/// Where a photo was taken, in WGS 84 degrees.
+@immutable
+final class GrPhotoLocation {
+  /// The place at [latitude], [longitude].
+  const new(this.latitude, this.longitude);
+
+  /// Degrees north of the equator.
+  final double latitude;
+
+  /// Degrees east of Greenwich.
+  final double longitude;
+
+  /// The place a `gpsInfo` text names (http-api.md §2.2): its first two
+  /// comma-separated values, decimal degrees. Null when [gpsInfo] is null
+  /// or empty (no location), has fewer values, or they are not a latitude
+  /// and a longitude on Earth.
+  static GrPhotoLocation? tryParse(String? gpsInfo) {
+    if (gpsInfo == null) return null;
+    final values = gpsInfo.split(',');
+    if (values.length < 2) return null;
+    final latitude = double.tryParse(values[0].trim());
+    final longitude = double.tryParse(values[1].trim());
+    if (latitude == null || longitude == null) return null;
+    // Also false for a NaN, which compares false with everything.
+    if (!(latitude.abs() <= 90 && longitude.abs() <= 180)) return null;
+    return GrPhotoLocation(latitude, longitude);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is GrPhotoLocation &&
+      other.latitude == latitude &&
+      other.longitude == longitude;
+
+  @override
+  int get hashCode => Object.hash(latitude, longitude);
+
+  @override
+  String toString() => '$latitude,$longitude';
 }
 
 /// `GET /v1/transfers?status=untransferred` (http-api.md §2.5).

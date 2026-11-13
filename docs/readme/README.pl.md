@@ -127,8 +127,8 @@ użytkownikowi i traktowanie stylów Sterowania obrazem jako czegoś, czym warto
 - **Motywy i języki.** Motywy Jasny, Ciemny, Ciemnia, Papier i Cyjanotypia oraz 21 języków,
   w których dostępne jest menu samego aparatu.
 - **Prywatna.** Żadnych kont, analityki, reklam ani raportowania awarii. GR Photo komunikuje się
-  wyłącznie z Twoim aparatem, a Twoja lokalizacja trafia tylko do Twojego aparatu i do Twoich
-  własnych zdjęć; zobacz [politykę prywatności](../../app/assets/privacy.md).
+  wyłącznie z Twoim aparatem oraz, aby pokazać mapę miejsca wykonania zdjęcia, z usługą OpenFreeMap;
+  zobacz [politykę prywatności](../../app/assets/privacy.md).
 
 ## Wymagania
 
@@ -136,7 +136,7 @@ użytkownikowi i traktowanie stylów Sterowania obrazem jako czegoś, czym warto
 - Style wymagają GR IV z oprogramowaniem sprzętowym w wersji 1.04 lub nowszej, GR IV HDF albo
   GR IV Monochrome. Oprogramowanie sprzętowe GR III i GR IIIx nie daje żadnej możliwości odczytu
   ani zapisu ustawień Sterowania obrazem z telefonu.
-- Android 12 lub nowszy albo iOS 15 lub nowszy.
+- Android 12 lub nowszy albo iOS 15.5 lub nowszy.
 
 GR Photo to młody projekt. Dziennik testów sprzętowych zawiera przebiegi z GR IV HDF
 z oprogramowaniem sprzętowym 1.20: parowanie, łączenie, wybudzanie aparatu, przeglądanie,

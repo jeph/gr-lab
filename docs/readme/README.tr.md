@@ -130,7 +130,7 @@ Görüntü Kontrolü stillerini yönetilmeye değer bir şey olarak görmek.
 - **Temalar ve diller.** Açık, Koyu, Karanlık oda, Kâğıt ve Siyanotip temaları ile kameranın kendi
   menülerindeki 21 dil.
 - **Gizliliğinize saygılı.** Hesap, analiz, reklam veya çökme raporlaması yoktur. GR Photo yalnızca
-  kameranızla haberleşir, konumunuz da yalnızca kameranıza ve kendi fotoğraflarınıza gider;
+  kameranızla ve bir fotoğrafın çekildiği yerin haritası için OpenFreeMap ile haberleşir;
   [gizlilik politikasına](../../app/assets/privacy.md) bakın.
 
 ## Gereksinimler
@@ -139,7 +139,7 @@ Görüntü Kontrolü stillerini yönetilmeye değer bir şey olarak görmek.
 - Stiller için yazılım sürümü 1.04 veya sonrası olan bir GR IV, bir GR IV HDF ya da bir GR IV
   Monochrome gerekir. GR III ve GR IIIx yazılımı, Görüntü Kontrolü ayarlarını telefondan okumanın
   veya yazmanın bir yolunu sunmaz.
-- Android 12 veya sonrası ya da iOS 15 veya sonrası.
+- Android 12 veya sonrası ya da iOS 15.5 veya sonrası.
 
 GR Photo henüz yeni bir uygulamadır. Donanım günlüğünde, yazılım sürümü 1.20 olan bir GR IV HDF ile
 yapılan denemeler kayıtlıdır: eşleştirme, bağlanma, kamerayı uyandırma, göz atma, indirme, canlı

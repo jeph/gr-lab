@@ -121,7 +121,7 @@ treating Image Control looks as something worth managing.
 - **Themes and languages.** Light, Dark, Darkroom, Paper and Cyanotype themes, and the 21 languages
   of the camera's own menus.
 - **Private.** No accounts, analytics, advertising or crash reporting. GR Photo talks only to your
-  camera, and your location goes only to your camera and into your own photos; see the
+  camera and, for the map of where a photo was taken, to OpenFreeMap; see the
   [privacy policy](app/assets/privacy.md).
 
 ## Requirements
@@ -129,7 +129,7 @@ treating Image Control looks as something worth managing.
 - A Ricoh GR III, GR IIIx or GR IV, including the HDF bodies and the GR IV Monochrome.
 - Looks need a GR IV on firmware 1.04 or later, a GR IV HDF or a GR IV Monochrome. The GR III and
   GR IIIx firmware offers no way to read or write Image Control settings from a phone.
-- Android 12 or newer, or iOS 15 or newer.
+- Android 12 or newer, or iOS 15.5 or newer.
 
 GR Photo is young. The hardware log records runs with a GR IV HDF on firmware 1.20: pairing,
 connecting, waking the camera, browsing, downloading, live view, focus and exposure changes. GR III

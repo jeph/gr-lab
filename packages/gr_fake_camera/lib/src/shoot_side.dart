@@ -348,6 +348,17 @@ extension on FakeGrCamera {
       tv: _settings['tv']!,
       sv: sv == 'auto' ? '200' : sv,
       xv: _settings['xv']!,
+      // \[inferred\] A shot taken while the camera holds a location is
+      // saved with it (geotagging.md §1.3, http-api.md §2.2).
+      location: switch (_heldLocation) {
+        final held? => FakePhotoLocation(
+          held.latitude,
+          held.longitude,
+          altitude: held.altitude,
+          time: held.fixTime,
+        ),
+        null => null,
+      },
     );
     // The template may itself be a capture; its bytes are its source's.
     if (template != null) {

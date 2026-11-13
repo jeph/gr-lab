@@ -71,6 +71,15 @@ flutter {
     source = "../.."
 }
 
+dependencies {
+    // MapNetwork gives MapLibre its HTTP client. Both libraries come with
+    // the maplibre_gl plugin, which does not pass them on to the app, so
+    // they are named here to compile against only: keep the versions the
+    // ones the plugin's build.gradle has.
+    compileOnly("org.maplibre.gl:android-sdk-opengl:13.7.1")
+    compileOnly("com.squareup.okhttp3:okhttp:5.4.0")
+}
+
 // Every build first runs the workspace's static checks (format, analyzer,
 // camera layer boundary) and stops when one fails (AGENTS.md, "Checks").
 val flutterSdk: String =

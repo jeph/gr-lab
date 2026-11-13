@@ -11,7 +11,7 @@ The camera has no burst or group ID that we know of. Any grouping the app does i
 | Request | Returns | Burst information |
 |---|---|---|
 | Photo list `GET /v1/photos` | Folder and file names only | None, apart from consecutive file numbers |
-| Per-photo info `GET /v1/photos/<dir>/<file>/info` | `datetime`, `recordedTime`, size, orientation, aspect ratio, `av`/`tv`/`sv`/`xv`, location | No drive mode, sequence number or group ID |
+| Per-photo info `GET /v1/photos/<dir>/<file>/info` | `datetime`, size, orientation, aspect ratio, `av`/`tv`/`sv`/`xv`, location (`gpsInfo`); GR WORLD also reads `recordedTime` and `latLng`, which a GR IV HDF does not send ([HTTP API §2.2](protocol/http-api.md#22-per-photo-info)) | No drive mode, sequence number or group ID |
 | Thumbnail / preview `?size=thumb`, `?size=view` | Image bytes | **Unknown**: not inspected (see below) |
 
 **What GR WORLD does with that** (static analysis of 2.0.0, see [http-api](protocol/http-api.md) §2.2): after listing, it runs a background loop that requests the info for each listed photo, shows "Getting info" (情報取得中です), stops the loop when a download starts, and stores the results in a local `photo_info` table. So one info request per photo is GR WORLD's normal behaviour. Whether it skips photos already in the table is **[inferred]**, not traced.
@@ -31,7 +31,7 @@ The camera has no burst or group ID that we know of. Any grouping the app does i
 
 1. **Which `DriveMode` values the GR IV writes** for continuous shooting (and per speed, if it has more than one) and for bracketing. We have no GR IV burst file.
 2. **Whether thumbnails or previews carry the EXIF/maker note.** If they do, the grid gets the drive mode with no extra requests.
-3. **The time formats.** The one JPEG we have stores its capture time in whole seconds (no `SubSecTimeOriginal`). The format of the info's `datetime` and `recordedTime` is untested, so whether any time field has sub-second precision is unknown.
+3. **The time formats.** The one JPEG we have stores its capture time in whole seconds (no `SubSecTimeOriginal`). The info's `datetime` has whole seconds too (`YYYY-MM-DDThh:mm:ss`, observed 2026-11-11 on a GR IV HDF, firmware 1.20, [HTTP API §2.2](protocol/http-api.md#22-per-photo-info)), and that camera sends no `recordedTime`, so no time field the camera reports has sub-second precision.
 4. **Whether the camera supports HTTP range requests** (`Range: bytes=0-65535` answered with 206). Without them, reading the start of a file means starting a full download and closing it early. TCP buffering means more than 40 KB may cross the network, and the camera may do the same work as for a full download. The cost of that is unmeasured.
 5. **Request cost.** The only timed request so far took 72 ms (the `latest/info` error in `trace-2026-11-08T00-33-30-489977Z.jsonl`). Info, thumbnail and partial-read timings on a full card are unmeasured.
 6. **Whether any field marks press boundaries**, such as a frame counter that restarts with each press. `DriveMode` only says the camera was in continuous mode. Finer timestamps alone would not separate one long press from several quick presses.

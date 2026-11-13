@@ -128,8 +128,8 @@ estilos de Controlo de Imagem como algo que merece ser gerido.
 - **Temas e idiomas.** Temas Claro, Escuro, Câmara escura, Papel e Cianotipia, e os 21 idiomas dos
   menus da própria câmara.
 - **Privado.** Sem contas, análise de dados, publicidade nem relatórios de falhas. O GR Photo
-  comunica apenas com a sua câmara, e a sua localização vai apenas para a sua câmara e para as suas
-  próprias fotos; consulte a [política de privacidade](../../app/assets/privacy.md).
+  comunica apenas com a sua câmara e, para o mapa do local onde uma foto foi tirada, com o
+  OpenFreeMap; consulte a [política de privacidade](../../app/assets/privacy.md).
 
 ## Requisitos
 
@@ -137,7 +137,7 @@ estilos de Controlo de Imagem como algo que merece ser gerido.
 - Os Estilos precisam de uma GR IV com o firmware 1.04 ou posterior, de uma GR IV HDF ou de uma
   GR IV Monochrome. O firmware da GR III e da GR IIIx não oferece forma de ler ou gravar as
   definições de Controlo de Imagem a partir de um telemóvel.
-- Android 12 ou posterior, ou iOS 15 ou posterior.
+- Android 12 ou posterior, ou iOS 15.5 ou posterior.
 
 O GR Photo é recente. O registo de hardware documenta testes com uma GR IV HDF com o firmware 1.20:
 emparelhar, ligar, despertar a câmara, percorrer as fotos, transferir, vista ao vivo e alterações de

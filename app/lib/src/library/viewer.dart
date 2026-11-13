@@ -11,6 +11,7 @@ import 'package:grphoto/l10n/l10n.dart';
 import 'package:grphoto/src/app_scope.dart';
 import 'package:grphoto/src/connection/idle_disconnect.dart';
 import 'package:grphoto/src/downloads/download_engine.dart';
+import 'package:grphoto/src/geotag/geotag_controller.dart';
 import 'package:grphoto/src/library/format.dart';
 import 'package:grphoto/src/library/image_orientation.dart';
 import 'package:grphoto/src/library/library_model.dart';
@@ -18,10 +19,12 @@ import 'package:grphoto/src/library/library_scope.dart';
 import 'package:grphoto/src/library/movie_scrubber.dart';
 import 'package:grphoto/src/library/shot.dart';
 import 'package:grphoto/src/library/shot_cell.dart';
+import 'package:grphoto/src/library/shot_over_details.dart';
 import 'package:grphoto/src/looks/look_photo.dart';
 import 'package:grphoto/src/looks/look_spec.dart';
 import 'package:grphoto/src/looks/look_widgets.dart';
 import 'package:grphoto/src/looks/looks_store.dart';
+import 'package:grphoto/src/map/photo_map.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/group.dart';
 import 'package:grphoto/src/widgets/skeleton.dart';
@@ -33,8 +36,11 @@ import 'package:video_player/video_player.dart';
 /// whether to download its JPEG, its RAW or both. A tap on a photo puts
 /// the header away and the next one brings it back. Info shows the file's
 /// details below the shot, and Info again or a tap on the photo puts them
-/// away. A photo shown larger than its preview, or zoomed, is replaced by
-/// the full JPEG once it arrives; a mark in its corner says so until then.
+/// away. Below the details of a shot whose place is known is a map of it,
+/// of which only the top shows until the viewer is scrolled up, so that
+/// the shot keeps the screen. A photo shown larger than its preview, or
+/// zoomed, is replaced by the full JPEG once it arrives; a mark in its
+/// corner says so until then.
 ///
 /// The viewer follows the camera's listing: a shot that leaves it (deleted
 /// on the camera, or its card taken out) leaves the swipe list, a pair
@@ -312,62 +318,92 @@ class _ShotViewerState extends State<ShotViewer> with TickerProviderStateMixin {
             ),
             child: Stack(
               children: [
-                Column(
-                  children: [
-                    // The header's room, which a shot with the whole
-                    // screen takes: the header lies over it then.
-                    AnimatedBuilder(
-                      animation: _immersed,
-                      builder: (context, _) => SizedBox(
-                        height: headerHeight * (1 - _immersed.value),
+                // With a map below the details the column is taller than
+                // the screen, which shows the map's top: a scroll brings
+                // the rest of it up.
+                LayoutBuilder(
+                  builder: (context, viewer) => SingleChildScrollView(
+                    key: const Key('viewer-scroll'),
+                    // A zoomed photo keeps drags to itself.
+                    physics: _photoHeld
+                        ? const NeverScrollableScrollPhysics()
+                        : null,
+                    child: ShotOverDetails(
+                      height: viewer.maxHeight,
+                      belowShown:
+                          MediaQuery.paddingOf(context).bottom + _mapPeek,
+                      shot: Column(
+                        children: [
+                          // The header's room, which a shot with the whole
+                          // screen takes: the header lies over it then.
+                          AnimatedBuilder(
+                            animation: _immersed,
+                            builder: (context, _) => SizedBox(
+                              height: headerHeight * (1 - _immersed.value),
+                            ),
+                          ),
+                          Expanded(
+                            child: serial == null
+                                ? const SizedBox.shrink()
+                                : PageView.builder(
+                                    controller: _pages,
+                                    physics: _photoHeld
+                                        ? const NeverScrollableScrollPhysics()
+                                        : const PageScrollPhysics(),
+                                    itemCount: _shots.length,
+                                    onPageChanged: _onPageChanged,
+                                    // A page whose shot stays keeps its state
+                                    // (zoom, playback) when shots before it
+                                    // are dropped.
+                                    findChildIndexCallback: (key) {
+                                      final i = _shots.indexWhere(
+                                        (s) => ValueKey(s) == key,
+                                      );
+                                      return i < 0 ? null : i;
+                                    },
+                                    itemBuilder: (context, i) {
+                                      final s = _shots[i];
+                                      return s.isVideo
+                                          ? _VideoPage(
+                                              key: ValueKey(s),
+                                              serial: serial,
+                                              shot: s,
+                                              active: i == _index,
+                                              immersed: _immersed,
+                                            )
+                                          : _PhotoPage(
+                                              key: ValueKey(s),
+                                              serial: serial,
+                                              shot: s,
+                                              immersed: _immersed,
+                                              headerVisibility:
+                                                  _headerVisibility,
+                                              onHold: _onPhotoHold,
+                                              onTap: _onPhotoTap,
+                                            );
+                                    },
+                                  ),
+                          ),
+                        ],
+                      ),
+                      details: _DetailsBar(
+                        immersed: _immersed,
+                        child: SafeArea(
+                          top: false,
+                          bottom: false,
+                          child: _Details(shot: shot, model: library.model),
+                        ),
+                      ),
+                      below: _DetailsBar(
+                        immersed: _immersed,
+                        child: _ShotMap(
+                          serial: serial,
+                          shot: shot,
+                          model: library.model,
+                        ),
                       ),
                     ),
-                    Expanded(
-                      child: serial == null
-                          ? const SizedBox.shrink()
-                          : PageView.builder(
-                              controller: _pages,
-                              physics: _photoHeld
-                                  ? const NeverScrollableScrollPhysics()
-                                  : const PageScrollPhysics(),
-                              itemCount: _shots.length,
-                              onPageChanged: _onPageChanged,
-                              // A page whose shot stays keeps its state
-                              // (zoom, playback) when shots before it
-                              // are dropped.
-                              findChildIndexCallback: (key) {
-                                final i = _shots.indexWhere(
-                                  (s) => ValueKey(s) == key,
-                                );
-                                return i < 0 ? null : i;
-                              },
-                              itemBuilder: (context, i) {
-                                final s = _shots[i];
-                                return s.isVideo
-                                    ? _VideoPage(
-                                        key: ValueKey(s),
-                                        serial: serial,
-                                        shot: s,
-                                        active: i == _index,
-                                        immersed: _immersed,
-                                      )
-                                    : _PhotoPage(
-                                        key: ValueKey(s),
-                                        serial: serial,
-                                        shot: s,
-                                        immersed: _immersed,
-                                        headerVisibility: _headerVisibility,
-                                        onHold: _onPhotoHold,
-                                        onTap: _onPhotoTap,
-                                      );
-                              },
-                            ),
-                    ),
-                    _DetailsBar(
-                      immersed: _immersed,
-                      child: _Details(shot: shot, model: library.model),
-                    ),
-                  ],
+                  ),
                 ),
                 Positioned(
                   top: 0,
@@ -505,10 +541,19 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// The shot's details, below it. As the shot takes the whole screen
-/// ([immersed] going from 0 to 1) they slide off the bottom of the screen
-/// and leave their room to it. Away, they are not built: they ask the
-/// camera for the photo's Image Control, which nothing shows then.
+/// How much of the map below a shot's details shows before the viewer is
+/// scrolled \[design\]: enough to tell that it is a map and that there is
+/// more of it, and no more, so the shot keeps the screen.
+const _mapPeek = 64.0;
+
+/// The height of the map below a shot's details.
+const _mapHeight = 280.0;
+
+/// The shot's details, or what is below them. As the shot takes the whole
+/// screen ([immersed] going from 0 to 1) they slide off the bottom of the
+/// screen and leave their room to it. Away, they are not built: they ask
+/// the camera for the photo's Image Control and draw a map, which nothing
+/// shows then.
 class _DetailsBar extends StatelessWidget {
   const new({required this.immersed, required this.child});
 
@@ -524,9 +569,126 @@ class _DetailsBar extends StatelessWidget {
       animation: immersed,
       builder: (context, child) =>
           immersed.isCompleted ? const SizedBox.shrink() : child!,
-      child: SafeArea(top: false, child: child),
+      child: child,
     ),
   );
+}
+
+/// What is below a shot's details: a map with a pin where the shot was
+/// taken, and the room the bottom edge of the screen keeps free.
+///
+/// The place is the location the camera saved with the shot, which it had
+/// from live geotagging. A photo without one gets the place background
+/// geotagging gives it when it is downloaded
+/// ([GeotagController.backgroundPlace]), while that is on for the camera.
+/// A shot with neither has no map.
+class _ShotMap extends StatefulWidget {
+  const new({required this.serial, required this.shot, required this.model});
+
+  /// The camera of [shot]; null without one, which has no history to ask.
+  final String? serial;
+  final Shot shot;
+  final LibraryModel model;
+
+  @override
+  State<_ShotMap> createState() => _ShotMapState();
+}
+
+class _ShotMapState extends State<_ShotMap> {
+  late GeotagController _geotag;
+
+  /// The camera, shot and capture time [_fromHistory] was asked for; null
+  /// when the history is not asked.
+  (String, String, DateTime)? _asked;
+
+  /// What the location history has for [_asked].
+  GrPhotoLocation? _fromHistory;
+
+  /// The location the camera saved with the shot: with the file shown, or
+  /// with the other half of a pair.
+  GrPhotoLocation? get _saved {
+    final shot = widget.shot;
+    for (final file in [shot.primary, ...shot.files]) {
+      final location = widget.model.info(file)?.location;
+      if (location != null) return location;
+    }
+    return null;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _geotag = AppScope.of(context).geotag;
+    _askHistory();
+  }
+
+  @override
+  void didUpdateWidget(_ShotMap old) {
+    super.didUpdateWidget(old);
+    // Also when the camera's answer about the shot arrives: the viewer
+    // builds again then.
+    _askHistory();
+  }
+
+  /// Asks the location history where the shot was taken, unless it was
+  /// asked that already. A shot the camera saved a location with is not
+  /// looked up, nor is a movie, which gets none at download, nor a shot
+  /// whose capture time is not known yet.
+  void _askHistory() {
+    final shot = widget.shot;
+    final serial = widget.serial;
+    final taken = widget.model.info(shot.primary)?.taken;
+    final asking =
+        serial == null || taken == null || shot.isVideo || _saved != null
+        ? null
+        : (serial, shot.key, taken);
+    if (asking == _asked) return;
+    _asked = asking;
+    _fromHistory = null;
+    if (asking == null) return;
+    unawaited(_lookUp(asking));
+  }
+
+  Future<void> _lookUp((String, String, DateTime) asking) async {
+    final (serial, _, taken) = asking;
+    final fix = await _geotag.backgroundPlace(serial, taken);
+    if (!mounted || asking != _asked || fix == null) return;
+    setState(() => _fromHistory = GrPhotoLocation(fix.latitude, fix.longitude));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final saved = _saved;
+    final place = saved ?? _fromHistory;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (place != null)
+          SafeArea(
+            top: false,
+            bottom: false,
+            child: GroupBox(
+              key: const Key('viewer-map'),
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              children: [
+                SizedBox(
+                  height: _mapHeight,
+                  child: PhotoMap(
+                    place: place,
+                    // \[design\] The streets around a location the camera
+                    // saved, which the phone took as the photo was; the
+                    // part of town around one from the history, which
+                    // records a place only now and then.
+                    zoom: saved != null ? 14 : 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        SizedBox(height: MediaQuery.paddingOf(context).bottom),
+      ],
+    );
+  }
 }
 
 class _PhotoPage extends StatefulWidget {

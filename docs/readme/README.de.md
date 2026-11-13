@@ -133,8 +133,8 @@ zu stehen und Looks für die Bildsteuerung als etwas zu behandeln, das Verwaltun
 - **Designs und Sprachen.** Die Designs Hell, Dunkel, Dunkelkammer, Papier und Cyanotypie sowie die
   21 Sprachen der Kameramenüs.
 - **Privat.** Keine Konten, keine Analyse, keine Werbung, keine Absturzberichte. GR Photo spricht
-  nur mit deiner Kamera, und dein Standort geht nur an deine Kamera und in deine eigenen Fotos;
-  siehe die [Datenschutzerklärung](../../app/assets/privacy.md).
+  nur mit deiner Kamera und, für die Karte des Aufnahmeorts eines Fotos, mit OpenFreeMap; siehe die
+  [Datenschutzerklärung](../../app/assets/privacy.md).
 
 ## Voraussetzungen
 
@@ -142,7 +142,7 @@ zu stehen und Looks für die Bildsteuerung als etwas zu behandeln, das Verwaltun
 - Looks setzen eine GR IV mit Firmware 1.04 oder neuer, eine GR IV HDF oder eine GR IV Monochrome
   voraus. Die Firmware der GR III und GR IIIx bietet keine Möglichkeit, Einstellungen der
   Bildsteuerung von einem Smartphone aus zu lesen oder zu schreiben.
-- Android 12 oder neuer bzw. iOS 15 oder neuer.
+- Android 12 oder neuer bzw. iOS 15.5 oder neuer.
 
 GR Photo ist jung. Das Hardware-Protokoll verzeichnet Durchläufe mit einer GR IV HDF mit Firmware
 1.20: Koppeln, Verbinden, Wecken der Kamera, Durchsehen, Herunterladen, Live-View, Fokus- und

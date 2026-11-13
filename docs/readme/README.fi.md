@@ -128,7 +128,7 @@ tieltäsi, ja Kuvansäätö-tyylejä kohdellaan asiana, jota kannattaa hallita.
 - **Teemat ja kielet.** Teemat Vaalea, Tumma, Pimiö, Paperi ja Sinikopio sekä kameran omien
   valikoiden 21 kieltä.
 - **Yksityinen.** Ei tilejä, analytiikkaa, mainoksia eikä kaatumisraportointia. GR Photo viestii
-  vain kamerasi kanssa, ja sijaintisi päätyy vain kameraasi ja omiin kuviisi; katso
+  vain kamerasi kanssa sekä, kuvan ottopaikan karttaa varten, OpenFreeMapin kanssa; katso
   [tietosuojakäytäntö](../../app/assets/privacy.md).
 
 ## Vaatimukset
@@ -137,7 +137,7 @@ tieltäsi, ja Kuvansäätö-tyylejä kohdellaan asiana, jota kannattaa hallita.
 - Tyylit edellyttävät GR IV ‑kameraa, jossa on laiteohjelmisto 1.04 tai uudempi, GR IV HDF ‑kameraa
   tai GR IV Monochrome ‑kameraa. GR III:n ja GR IIIx:n laiteohjelmisto ei tarjoa mitään tapaa lukea
   tai kirjoittaa Kuvansäätö-asetuksia puhelimesta.
-- Android 12 tai uudempi taikka iOS 15 tai uudempi.
+- Android 12 tai uudempi taikka iOS 15.5 tai uudempi.
 
 GR Photo on nuori. Laitteistolokiin on kirjattu ajoja GR IV HDF ‑kameralla, jossa on laiteohjelmisto
 1.20: parinmuodostus, yhdistäminen, kameran herättäminen, selaus, lataus, live-kuva sekä

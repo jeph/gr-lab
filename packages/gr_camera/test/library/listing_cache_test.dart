@@ -98,7 +98,12 @@ void main() {
       await writeCachedListing(cache, serial, (
         files: [jpeg, movie],
         info: {
-          jpeg.key: FileInfo(taken: listedAt, size: 4096, orientation: 6),
+          jpeg.key: FileInfo(
+            taken: listedAt,
+            size: 4096,
+            orientation: 6,
+            location: const GrPhotoLocation(35.681236, -139.767125),
+          ),
           movie.key: const FileInfo(duration: Duration(seconds: 14)),
         },
         listedAt: listedAt,
@@ -109,7 +114,12 @@ void main() {
       expect(read.info[jpeg.key]?.taken, listedAt);
       expect(read.info[jpeg.key]?.size, 4096);
       expect(read.info[jpeg.key]?.orientation, 6);
+      expect(
+        read.info[jpeg.key]?.location,
+        const GrPhotoLocation(35.681236, -139.767125),
+      );
       expect(read.info[movie.key]?.duration, const Duration(seconds: 14));
+      expect(read.info[movie.key]?.location, isNull);
       expect(await readCachedListing(cache, 'another'), isNull);
       expect(Directory('${cache.path}/$serial').listSync().map((e) => e.path), [
         '${cache.path}/$serial/library.json',

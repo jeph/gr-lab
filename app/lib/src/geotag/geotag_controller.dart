@@ -303,6 +303,19 @@ final class GeotagController extends ChangeNotifier {
     await history.add(fixes);
   });
 
+  /// Where the phone was when [serial]'s camera took a photo at [taken],
+  /// the camera's clock read as local time: the position background
+  /// geotagging gives the photo when it is downloaded ([geotagger]). Null
+  /// while background geotagging is off for the camera, and when the
+  /// [history] has no position for a photo taken then
+  /// ([LocationHistory.nearest]). Positions the phone recorded meanwhile
+  /// are taken over first.
+  Future<LocationFix?> backgroundPlace(String serial, DateTime taken) async {
+    if (!(_camera(serial)?.backgroundGeotagging ?? false)) return null;
+    await drainHistory();
+    return await history.nearest(taken.toUtc());
+  }
+
   /// Opens the page of the phone's settings where [need] is allowed.
   Future<void> openSettings(GeotagNeed need) async {
     await _guard<void>(
