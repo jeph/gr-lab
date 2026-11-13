@@ -204,11 +204,11 @@ The object pool contains these FBP method-channel names and no others: `connect`
    **[observed in code]**
 2. **Power off**: `B58CE84C = 00` is written only from the power button's off branch and after a firmware update (single writer 0xe4b1c8, caller closure 0x99bc5c). Disconnect never writes it **[observed in code]**.
 3. **No GATT write** announces "leaving" other than WLAN-off.
-4. **No disconnect on pause/background** was found. Every caller of 0xe1f068 / 0xd431f0 / 0xd439ac is one of:
+4. **No Bluetooth disconnect on pause/background.** Every caller of 0xe1f068 / 0xd431f0 / 0xd439ac is one of:
    - a UI handler closure (0xe1eb00, 0xe1fab8, 0xe1fec4, 0x998014, 0xe4f058, 0xe20014);
    - a connect flow;
    - a cancel closure (0x5912dc).
-   So the link stays open while the process lives. The link is not held by a foreground service; only location / transfer use `flutter_foreground_task` (ble.md §Android plugin) **[observed for the bounded caller set; absence elsewhere inferred]**.
+   So the Bluetooth link stays open while the process lives. The link is not held by a foreground service; only location / transfer use `flutter_foreground_task` (ble.md §Android plugin) **[observed for the bounded caller set; absence elsewhere inferred]**. The camera's Wi-Fi, though, is released 60 s after the app is paused: the lifecycle handler calls 0xd49450 (step 1.1 above) without 0xe1f2f8, so WLAN off and the phone leaving the network, with the Bluetooth link kept ([connection lifecycle §6](connection-lifecycle.md#6-loss-detection-backgroundforeground-teardown), "Background Wi-Fi release") **[observed in code]**.
 5. **Unexpected link loss**: `DeviceManager _onBleConnectionStateChanged` (0xe855a4) shows a snackbar, and listener 0xe86418 posts "Ble接続が切断されました。" ("BLE connection was lost"). Neither reconnects; the next feature calls `ensureConnected` (ble.md §Disconnect handling, re-checked call graph).
 
 ---
