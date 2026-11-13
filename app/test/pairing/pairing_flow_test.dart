@@ -312,6 +312,13 @@ void main() {
       expect(app.models.cameras.current!.name, 'GR III');
       expect(find.text('GR III is paired'), findsOneWidget);
 
+      // The session links once the camera is saved, as after any pairing.
+      await pumpUntil(
+        tester,
+        () => app.models.connection.status == ConnectionStatus.bluetooth,
+        reason: 'linked after pairing',
+      );
+
       await app.dispose();
     });
   }
