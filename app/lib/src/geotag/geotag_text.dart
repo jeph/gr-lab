@@ -15,7 +15,9 @@ String geotagStatusText(AppLocalizations l10n, GeotagStatus status) =>
       GeotagStatus.needsApp => l10n.geotagStatusNeedsApp,
       GeotagStatus.waitingForCamera => l10n.geotagStatusWaitingForCamera,
       GeotagStatus.offOnCamera => l10n.geotagStatusOffOnCamera,
-      GeotagStatus.waitingForLocation => l10n.geotagStatusWaitingForLocation,
+      // The user has nothing to do while the phone finds its position, so
+      // it reads as running.
+      GeotagStatus.waitingForLocation ||
       GeotagStatus.sending => l10n.geotagStatusSending,
     };
 

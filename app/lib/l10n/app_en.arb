@@ -1015,13 +1015,13 @@
   "@geotagStatusLocationOff": {
     "description": "Location services are switched off for the whole phone. Shown under the Live geotagging switch on the camera's card, below its description, while this keeps live geotagging from running. A button to the phone's settings follows. Also shown in the camera's details when turning background geotagging on was refused for this reason."
   },
-  "geotagStatusNeedsApp": "The camera was switched on while GR Photo was closed. Geotagging starts when GR Photo is open.",
+  "geotagStatusNeedsApp": "Please open GR Photo to start geotagging",
   "@geotagStatusNeedsApp": {
-    "description": "The camera came on while GR Photo was not on screen, and the phone did not let geotagging start from there. The text of Android's notification then."
+    "description": "The camera came on while GR Photo was not on screen, and the phone did not let geotagging start from there: asks the user to open GR Photo, which starts it. Shown under the Live geotagging switch on the camera's card, below its description."
   },
-  "geotagStatusOffOnCamera": "Store Location Info is off on the camera",
+  "geotagStatusOffOnCamera": "Please enable Store Location Info on the camera to enable geotagging",
   "@geotagStatusOffOnCamera": {
-    "description": "The camera's own menu setting that lets it take a location is off: someone turned it off in the camera's menu. Shown under the Live geotagging switch on the camera's card, below its description. A Turn on button follows. Also the text of Android's notification while geotagging runs with GR Photo not on screen. Store Location Info is the camera's menu entry: write it as the camera's menu does in this language."
+    "description": "The camera's own menu setting that lets it take a location is off: someone turned it off in the camera's menu. Asks the user to turn it on, since the camera takes no location without it. Shown under the Live geotagging switch on the camera's card, below its description. A Turn on button follows. Also the text of Android's notification while geotagging runs with GR Photo not on screen. Store Location Info is the camera's menu entry: write it as the camera's menu does in this language."
   },
   "geotagStatusPermissionDenied": "GR Photo isn't allowed to use this phone's location",
   "@geotagStatusPermissionDenied": {
@@ -1031,9 +1031,9 @@
   "@geotagStatusPreciseNeeded": {
     "description": "The user allowed GR Photo only the approximate location, which is too coarse to tag photos with. Shown under the Live geotagging switch on the camera's card, below its description, while this keeps live geotagging from running. A button to the phone's settings follows. Also shown in the camera's details when turning background geotagging on was refused for this reason. Name precise and approximate location as the phone's own settings do."
   },
-  "geotagStatusSending": "Sending this phone's location to the camera",
+  "geotagStatusSending": "Geotagging using this phone's location",
   "@geotagStatusSending": {
-    "description": "Geotagging is running: the camera holds a location the phone sent. The text of Android's notification while geotagging runs with GR Photo not on screen."
+    "description": "Geotagging is running: the camera gets this phone's location, or will as soon as the phone has a position good enough to send. The text of Android's notification while geotagging runs with GR Photo not on screen."
   },
   "geotagStatusStopped": "Stopped. It starts again the next time the camera is switched on.",
   "@geotagStatusStopped": {
@@ -1043,13 +1043,9 @@
   "@geotagStatusUnsupported": {
     "description": "The camera's model or firmware has no geotagging over Bluetooth. Status of geotagging for such a camera; its card has no Live geotagging switch."
   },
-  "geotagStatusWaitingForCamera": "Starts when the camera is switched on and in reach",
+  "geotagStatusWaitingForCamera": "Camera not connected",
   "@geotagStatusWaitingForCamera": {
-    "description": "Geotagging is on, and the camera is off or out of Bluetooth reach. The text of Android's notification while geotagging runs with GR Photo not on screen."
-  },
-  "geotagStatusWaitingForLocation": "Waiting for this phone's location",
-  "@geotagStatusWaitingForLocation": {
-    "description": "The camera is on, and the phone has no position good enough to send yet. The text of Android's notification while geotagging runs with GR Photo not on screen."
+    "description": "Geotagging is on, and the camera is off or out of Bluetooth reach. The text of Android's notification while geotagging runs with GR Photo not on screen. Keep it short."
   },
   "geotagSwitch": "Live geotagging",
   "@geotagSwitch": {

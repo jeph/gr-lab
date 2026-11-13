@@ -40,7 +40,8 @@ const _whatItDoes =
     "Geotags photos on the camera while it's connected to GR Photo";
 const _notAllowed = "GR Photo isn't allowed to use this phone's location";
 const _phoneLocationOff = 'Location is turned off on this phone';
-const _offOnCamera = 'Store Location Info is off on the camera';
+const _offOnCamera =
+    'Please enable Store Location Info on the camera to enable geotagging';
 const _pausedByPhone = 'This phone can pause GR Photo while its screen is off';
 
 /// A made-up position the phone takes now.

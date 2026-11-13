@@ -220,7 +220,7 @@ void main() {
       await _until(
         () =>
             location.runNotice?.text ==
-            "Sending this phone's location to the camera",
+            "Geotagging using this phone's location",
       );
       expect(location.runNotice!.title, 'Geotagging: GR IV');
       expect(location.runNotice!.stopLabel, 'Stop');
@@ -247,10 +247,21 @@ void main() {
       await _until(() => geotag.status == GeotagStatus.offOnCamera);
       await _settle();
       expect(app.camera.storeLocationInfo, isFalse);
+      expect(
+        location.runNotice!.text,
+        'Please enable Store Location Info on the camera to enable '
+        'geotagging',
+      );
 
       await geotag.turnOnStoreLocationInfo();
       expect(app.camera.storeLocationInfo, isTrue);
       await _until(() => geotag.status == GeotagStatus.waitingForLocation);
+      // Waiting for the phone's position reads as running.
+      await _until(
+        () =>
+            location.runNotice?.text ==
+            "Geotagging using this phone's location",
+      );
     });
 
     test('without a session the status says what the phone lacks, and '
