@@ -176,7 +176,6 @@
   "downloadStatePaused": "Пауза",
   "downloadStateQueued": "В очереди",
   "downloadStateRunning": "Загрузка",
-  "geotagClockSection": "Часы",
   "geotagAllowBackground": "Разрешить в фоне",
   "geotagAlwaysBody": "Фоновым геотегам нужно записывать геопозицию этого телефона, когда GR Photo закрыто. Чтобы включить их, выберите вариант «{choice}» в настройках геопозиции телефона. История геопозиции используется только для добавления геотегов в фото и никогда никому не передается.",
   "geotagAlwaysNotNow": "Не сейчас",

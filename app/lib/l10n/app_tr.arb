@@ -176,7 +176,6 @@
   "downloadStatePaused": "Duraklatıldı",
   "downloadStateQueued": "Sırada",
   "downloadStateRunning": "İndiriliyor",
-  "geotagClockSection": "Saat",
   "geotagAllowBackground": "Arka planda izin ver",
   "geotagAlwaysBody": "Arka planda konum etiketlemenin, GR Photo kapalıyken bu telefonun konumunu kaydetmesi gerekir. Açmak için telefonunuzun konum ayarlarında şu seçeneği belirleyin: “{choice}”. Konum geçmişiniz yalnızca fotoğraflara konum etiketi eklemek için kullanılır ve asla paylaşılmaz.",
   "geotagAlwaysNotNow": "Şimdi değil",

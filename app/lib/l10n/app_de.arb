@@ -176,7 +176,6 @@
   "downloadStatePaused": "Pausiert",
   "downloadStateQueued": "Wartet",
   "downloadStateRunning": "Download läuft",
-  "geotagClockSection": "Uhr",
   "geotagAllowBackground": "Im Hintergrund erlauben",
   "geotagAlwaysBody": "Hintergrund-Geotagging muss den Standort dieses Smartphones aufzeichnen, wenn GR Photo geschlossen ist. Zum Einschalten in den Standorteinstellungen des Smartphones „{choice}“ auswählen. Der Standortverlauf wird ausschließlich zum Geotagging von Fotos verwendet und niemals weitergegeben.",
   "geotagAlwaysNotNow": "Jetzt nicht",

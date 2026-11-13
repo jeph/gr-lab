@@ -176,7 +176,6 @@
   "downloadStatePaused": "Szüneteltetve",
   "downloadStateQueued": "Sorban áll",
   "downloadStateRunning": "Letöltés folyamatban",
-  "geotagClockSection": "Óra",
   "geotagAllowBackground": "Engedélyezés a háttérben",
   "geotagAlwaysBody": "A háttérbeli geocímkézésnek rögzítenie kell a telefon helyzetét, amikor a GR Photo be van zárva. A bekapcsolásához a telefon helybeállításaiban ezt a lehetőséget válassza: „{choice}”. A helyelőzményeket a GR Photo kizárólag a fotók geocímkézésére használja, és soha nem osztja meg.",
   "geotagAlwaysNotNow": "Most nem",

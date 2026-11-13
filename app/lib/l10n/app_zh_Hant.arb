@@ -176,7 +176,6 @@
   "downloadStatePaused": "已暫停",
   "downloadStateQueued": "等候中",
   "downloadStateRunning": "下載中",
-  "geotagClockSection": "時鐘",
   "geotagAllowBackground": "允許在背景執行",
   "geotagAlwaysBody": "背景地理標記需要在 GR Photo 關閉時記錄這支手機的位置。若要開啟此功能，請在手機的位置設定中選擇「{choice}」。你的位置記錄只會用於為照片加入地理標記，絕不會分享。",
   "geotagAlwaysNotNow": "稍後再說",

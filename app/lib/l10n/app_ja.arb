@@ -176,7 +176,6 @@
   "downloadStatePaused": "一時停止中",
   "downloadStateQueued": "待機中",
   "downloadStateRunning": "ダウンロード中",
-  "geotagClockSection": "時計",
   "geotagAllowBackground": "バックグラウンドで許可",
   "geotagAlwaysBody": "バックグラウンドジオタグは、GR Photoを閉じている間にこのスマートフォンの位置情報を記録する必要があります。オンにするには、スマートフォンの位置情報の設定で「{choice}」を選択してください。位置情報の履歴は写真へのジオタグ付けにのみ使用され、共有されることはありません。",
   "geotagAlwaysNotNow": "今はしない",

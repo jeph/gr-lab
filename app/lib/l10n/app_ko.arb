@@ -176,7 +176,6 @@
   "downloadStatePaused": "일시 정지됨",
   "downloadStateQueued": "대기 중",
   "downloadStateRunning": "다운로드 중",
-  "geotagClockSection": "시계",
   "geotagAllowBackground": "백그라운드에서 허용",
   "geotagAlwaysBody": "백그라운드 위치 태그는 GR Photo가 닫혀 있을 때 이 휴대전화의 위치를 기록해야 합니다. 켜려면 휴대전화의 위치 설정에서 “{choice}” 옵션을 선택하세요. 위치 기록은 사진에 위치 태그를 추가하는 데에만 사용되며 절대 공유되지 않습니다.",
   "geotagAlwaysNotNow": "나중에",

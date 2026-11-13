@@ -1065,10 +1065,6 @@
   "@geotagSwitch": {
     "description": "Title of the switch on the camera's card, under the Library, Shoot and Looks buttons, that turns live geotagging on or off for this camera: while the camera is on, the phone sends it its location over Bluetooth and the camera saves it in each photo. Use the name the screen that explains geotagging gives live geotagging."
   },
-  "geotagClockSection": "Clock",
-  "@geotagClockSection": {
-    "description": "Heading of the section in the camera's details with the Sync camera clock row: the camera's date and time."
-  },
   "geotagSyncClock": "Sync camera clock",
   "@geotagSyncClock": {
     "description": "Title of the switch row in the camera's details that keeps the camera's clock on the phone's time."

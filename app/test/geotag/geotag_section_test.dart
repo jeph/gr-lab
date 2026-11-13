@@ -170,17 +170,22 @@ void main() {
     expect(_in(_row, _subtitle), findsOneWidget);
     expect(_switchOf(tester, _switch).value, isFalse);
     expect(_in(_clockRow, 'Sync camera clock'), findsOneWidget);
-    // In a section of its own, not with the location rows.
-    expect(find.text('CLOCK'), findsOneWidget);
+    // With the camera's own rows, between its name and when it was
+    // paired, not in a section of its own or with the location rows.
+    expect(find.text('CLOCK'), findsNothing);
     expect(
-      find.descendant(
-        of: find.ancestor(
-          of: find.byKey(_row),
-          matching: find.byType(GroupBox),
-        ),
-        matching: find.byKey(_clockRow),
-      ),
-      findsNothing,
+      tester
+          .widgetList<GroupRow>(
+            find.descendant(
+              of: find.ancestor(
+                of: find.byKey(_clockRow),
+                matching: find.byType(GroupBox),
+              ),
+              matching: find.byType(GroupRow),
+            ),
+          )
+          .map((row) => row.title),
+      ['Name', 'Sync camera clock', 'Paired'],
     );
     expect(_in(_clockRow, _clockSubtitle), findsOneWidget);
     expect(_switchOf(tester, _clockSwitch).value, isTrue);

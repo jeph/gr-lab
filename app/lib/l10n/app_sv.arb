@@ -176,7 +176,6 @@
   "downloadStatePaused": "Pausad",
   "downloadStateQueued": "I kö",
   "downloadStateRunning": "Hämtar",
-  "geotagClockSection": "Klocka",
   "geotagAllowBackground": "Tillåt i bakgrunden",
   "geotagAlwaysBody": "Geotaggning i bakgrunden behöver registrera den här telefonens plats när GR Photo är stängt. Välj ”{choice}” i telefonens platsinställningar för att slå på det. Din platshistorik används bara för att geotagga bilder och delas aldrig.",
   "geotagAlwaysNotNow": "Inte nu",

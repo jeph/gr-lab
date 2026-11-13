@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:grphoto/l10n/l10n.dart';
@@ -13,7 +15,7 @@ import 'package:grphoto/src/widgets/gr_dialog.dart';
 import 'package:grphoto/src/widgets/group.dart';
 
 /// One paired camera, from ⋯ on the Cameras screen (mock
-/// `b-camera-detail`): rename it, its background geotagging and clock
+/// `b-camera-detail`): rename it, its clock, its background geotagging
 /// ([GeotagSection]), or forget it.
 /// Connecting is on the Cameras screen: the camera card and its sheet, or
 /// the camera's row.
@@ -71,8 +73,9 @@ class CameraDetailsScreen extends StatelessWidget {
                       chevron: true,
                       onTap: () => showRenameCameraDialog(context, camera),
                     ),
+                    _SyncClockRow(camera: camera),
                     GroupRow(
-                      icon: Icons.schedule_rounded,
+                      icon: Icons.event_outlined,
                       title: context.l10n.camerasDetailsPaired,
                       trailing: TrailingFit.value(
                         context,
@@ -149,6 +152,38 @@ class _Header extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Sync camera clock: on unless the user turns it off. Background
+/// geotagging, which matches a photo by the time the camera wrote into
+/// it, holds it on ([SavedCamera.keepsClock]) with the switch disabled.
+/// Its line says what it does, whatever its state.
+class _SyncClockRow extends StatelessWidget {
+  const new({required this.camera});
+
+  final SavedCamera camera;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final geotag = AppScope.of(context).geotag;
+    final on = camera.keepsClock;
+    final locked = camera.backgroundGeotagging;
+    void set({required bool on}) =>
+        unawaited(geotag.setSyncClock(camera.serial, on: on));
+    return GroupRow(
+      key: const Key('camera-details-clock'),
+      icon: Icons.schedule_rounded,
+      title: l10n.geotagSyncClock,
+      subtitle: l10n.geotagSyncClockSubtitle,
+      trailing: Switch(
+        key: const Key('camera-details-clock-switch'),
+        value: on,
+        onChanged: locked ? null : (on) => set(on: on),
+      ),
+      onTap: locked ? null : () => set(on: !on),
     );
   }
 }

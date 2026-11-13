@@ -176,7 +176,6 @@
   "downloadStatePaused": "Keskeytetty",
   "downloadStateQueued": "Jonossa",
   "downloadStateRunning": "Ladataan",
-  "geotagClockSection": "Kello",
   "geotagAllowBackground": "Salli taustalla",
   "geotagAlwaysBody": "Taustapaikkamerkinnän on tallennettava tämän puhelimen sijainti, kun GR Photo on suljettu. Ota se käyttöön valitsemalla puhelimen sijaintiasetuksista ”{choice}”. Sijaintihistoriaasi käytetään vain kuvien paikkamerkintään, eikä sitä koskaan jaeta.",
   "geotagAlwaysNotNow": "Ei nyt",

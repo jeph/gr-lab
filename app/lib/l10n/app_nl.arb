@@ -176,7 +176,6 @@
   "downloadStatePaused": "Gepauzeerd",
   "downloadStateQueued": "In wachtrij",
   "downloadStateRunning": "Downloaden",
-  "geotagClockSection": "Klok",
   "geotagAllowBackground": "Toestaan op de achtergrond",
   "geotagAlwaysBody": "Geotagging op de achtergrond moet de locatie van deze telefoon vastleggen wanneer GR Photo gesloten is. Kies “{choice}” in de locatie-instellingen van je telefoon om het aan te zetten. Je locatiegeschiedenis wordt alleen gebruikt om foto's te geotaggen en wordt nooit gedeeld.",
   "geotagAlwaysNotNow": "Niet nu",
