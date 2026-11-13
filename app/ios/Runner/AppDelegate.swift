@@ -45,6 +45,9 @@ import gr_camera
     if let registrar = registry.registrar(forPlugin: "GrPhotoBackgroundDownloadsPlugin") {
       BackgroundDownloadsPlugin.register(with: registrar)
     }
+    if let registrar = registry.registrar(forPlugin: "GrPhotoWindowPosePlugin") {
+      WindowPosePlugin.register(with: registrar)
+    }
     if let registrar = registry.registrar(forPlugin: "GrPhotoDevicePlugin") {
       // The name the camera shows under Paired Devices. Since iOS 16 this
       // is the model ("iPhone") unless the app holds a special entitlement.

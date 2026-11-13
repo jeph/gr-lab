@@ -73,3 +73,16 @@ In the viewer, which a shot in the Library opens and so does the last shot in li
 So that the photo keeps the screen, only the top of the map shows under the details, enough to tell that it is a map and that there is more of it. Scrolling the viewer up brings the whole map into view. The map is a picture to look at: it is not dragged, zoomed or turned, so a drag over it scrolls the viewer. Info again, or a tap on the photo, puts the details and the map away. While a photo is zoomed the viewer does not scroll.
 
 The map is drawn by MapLibre from OpenFreeMap's tiles, which are OpenStreetMap data, in the colours of the app's theme. The tiles are fetched over the internet, the only thing GR Photo fetches from anywhere but a camera (see the [privacy policy](../app/assets/privacy.md)). On Android, where everything else GR Photo sends goes to the camera's Wi-Fi while that is joined, the map's requests go over the phone's own internet connection instead, usually mobile data. Without an internet connection the pin stands on empty ground in the theme's colour.
+
+## Foldable phones
+
+On an iPhone Duo the camera's pages follow the phone's pose. Closed, and open and held wide, iOS keeps a strip down one side of the screen for bars that stand upright, with the time and the status at its top. GR Photo puts each page's buttons there, under the status (Back and Settings, New look on Looks, Info and Download in the viewer, × and the exposure mode in live view), and the tab bar stands upright at the foot of the strip with icons only. Open and held upright, the bars lie across the screen again and the top bar sits beside the status.
+
+Where the screen folds down its middle with room for a page on either side, on an open iPhone Duo held wide or an Android foldable held the same way, the pages use the two sides:
+
+- The Library has six columns. Tapping a photo shows it on the second page with its details, Download and the map, while the grid keeps the first; tapping that photo opens the full-screen viewer, and Back puts the second page away before it leaves the Library.
+- Looks has the camera's Custom slots on the first page and the looks on the phone on the second. Holding a look and dragging it onto a slot loads it there, after the same confirmation as Load into from its menu.
+- The look editor has the picture and the photos to preview on the first page and the controls on the second.
+- In live view, open and held wide on an iPhone Duo, the picture has nothing over it: the camera and Remote / Live view go above it, the readouts and the chips below it, and the shutter and the last shot stand in the strip.
+
+With the phone folded part of the way, nothing but a picture lies across the fold. Half-open on a table, live view and the look editor show the picture in the half that stands up and every control in the half that lies flat.

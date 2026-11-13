@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
+import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,8 +15,11 @@ import 'package:grphoto/src/looks/look_compare.dart';
 import 'package:grphoto/src/looks/look_preview.dart';
 import 'package:grphoto/src/looks/looks_store.dart';
 import 'package:grphoto/src/sample_photos.dart';
+import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/group.dart';
 import 'package:grphoto/src/widgets/skeleton.dart';
 
+import '../support/duo_window.dart';
 import '../support/test_app.dart';
 
 const _quietLiveness = GrSessionOptions(
@@ -135,6 +139,67 @@ List<Rect> _smallPictures(WidgetTester tester, int count) => [
 
 Look _slotLook(TestApp app, int number) =>
     Look.fromBytes(Uint8List.fromList(app.camera.lookSlot(number).data))!;
+
+/// A look saved on the phone as Plain: what C1 holds, moved to Vivid.
+Future<SavedLook> _savePlain(WidgetTester tester, TestApp app) async {
+  final saved = await tester.runAsync(
+    () => app.models.looks.add(
+      name: 'Plain',
+      data: _slotLook(app, 1).withBase(LookBase.vivid).toBytes(),
+    ),
+  );
+  return saved!;
+}
+
+/// Gives the app [window] of an iPhone Duo, as closing, unfolding or
+/// turning one does, and lets the app lay itself out in it.
+Future<void> _toDuo(WidgetTester tester, TestApp app, DuoWindow window) async {
+  setDuoWindow(tester, app.windowPose, window);
+  await pumpRounds(tester, 3);
+}
+
+/// The vertical bar of an iPhone Duo under the system's status, where the
+/// app's buttons stand: closed, and open and held wide.
+const _closedBar = Rect.fromLTRB(382, 174, 466, 678);
+const _wideBar = Rect.fromLTRB(867, 124, 951, 669);
+
+/// The buttons with [keys] stand in [bar], one under the other in that
+/// order, each 36 pt across.
+void _expectInBar(WidgetTester tester, Rect bar, List<String> keys) {
+  Rect? above;
+  for (final key in keys) {
+    final button = tester.getRect(find.byKey(Key(key)));
+    expect(bar.expandToInclude(button), bar, reason: key);
+    expect(button.size, const Size(36, 36), reason: key);
+    if (above != null) {
+      expect(button.top, greaterThan(above.bottom), reason: key);
+    }
+    above = button;
+  }
+}
+
+/// The two pages of [window], an iPhone Duo's held wide: what its insets
+/// leave on either side of its fold, which is a line down the middle of
+/// its band while the display lies flat.
+({Rect first, Rect second}) _pagesOf(DuoWindow window) {
+  final band = window.pose.fold!;
+  final fold = window.pose.halfOpen
+      ? band
+      : Rect.fromLTRB(band.center.dx, band.top, band.center.dx, band.bottom);
+  final inside = window.insets.deflateRect(Offset.zero & window.size);
+  return (
+    first: Rect.fromLTRB(inside.left, 0, fold.left, window.size.height),
+    second: Rect.fromLTRB(fold.right, 0, inside.right, window.size.height),
+  );
+}
+
+/// The editor's parameters that are built, in the order it lists them.
+Finder _parameters() => find.byWidgetPredicate(
+  (widget) => switch (widget.key) {
+    ValueKey<String>(:final value) => value.startsWith('look-param:'),
+    _ => false,
+  },
+);
 
 void main() {
   testWidgets('Looks turns the camera on and shows what C1-C3 hold', (
@@ -524,6 +589,304 @@ void main() {
       moreOrLessEquals(tester.getRect(title).center.dy, epsilon: 1),
     );
     expect(rect('camera-settings').left, greaterThan(rect('looks-new').right));
+    await app.dispose();
+  });
+
+  testWidgets('on a closed iPhone Duo Back, Settings and New look stand in '
+      'the vertical bar under the status, the title has no button beside '
+      'it, and the page keeps clear of the bar', (tester) async {
+    final app = await _inLooks(tester);
+    await pumpUntilFound(tester, _inSlot(1, 'Tokyo Night'));
+    final saved = await _savePlain(tester, app);
+    await _toDuo(tester, app, DuoWindow.closed);
+    final row = find.byKey(ValueKey('look:${saved.id}'));
+    await pumpUntilFound(tester, row);
+    expect(tester.takeException(), isNull);
+
+    const buttons = ['camera-back', 'camera-settings', 'looks-new'];
+    _expectInBar(tester, _closedBar, buttons);
+    final page = find.byKey(const Key('looks'));
+    final title = find.descendant(of: page, matching: find.byType(PageTitle));
+    expect(
+      find.descendant(of: title, matching: find.byType(RoundIconButton)),
+      findsNothing,
+    );
+    final pill = find.byKey(const Key('camera-pill'));
+    // The window has no inset at the top here: the page keeps clear of the
+    // display's rounded corner itself.
+    expect(tester.getRect(pill).top, greaterThanOrEqualTo(14));
+    final slots = [
+      for (var n = 1; n <= 3; n++) find.byKey(Key('looks-slot-$n')),
+    ];
+    // The chips scroll sideways: what shows of them is their row.
+    final chips = find
+        .ancestor(
+          of: find.byKey(const ValueKey('looks-chip:colour')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    for (final part in [pill, title, ...slots, chips, row]) {
+      expect(
+        tester.getRect(part).right,
+        lessThanOrEqualTo(_closedBar.left),
+        reason: part.describeMatch(Plurality.one),
+      );
+    }
+    // As on a phone, the slots are side by side above the saved looks.
+    expect(
+      tester.getRect(slots[1]).left,
+      greaterThan(tester.getRect(slots.first).right),
+    );
+    expect(
+      tester.getRect(row).top,
+      greaterThan(tester.getRect(slots.first).bottom),
+    );
+    await app.dispose();
+  });
+
+  testWidgets("on a closed iPhone Duo the phone's Looks has Settings and "
+      'New look in the vertical bar; opened and turned upright, where no '
+      'such bar is, they are beside the title again, under the band the '
+      'status is in, and the page is as it was left', (tester) async {
+    final app = await _start(tester, saveCamera: false);
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+    final page = find.byKey(const Key('looks'));
+    final title = find.descendant(of: page, matching: find.byType(PageTitle));
+    await pumpUntilFound(tester, title);
+    await _toDuo(tester, app, DuoWindow.closed);
+    expect(tester.takeException(), isNull);
+
+    final besideTitle = find.descendant(
+      of: title,
+      matching: find.byType(RoundIconButton),
+    );
+    _expectInBar(tester, _closedBar, ['camera-settings', 'looks-new']);
+    expect(besideTitle, findsNothing);
+    // The window has no inset at the top here: the page keeps clear of the
+    // display's rounded corner itself.
+    expect(tester.getRect(title).top, greaterThanOrEqualTo(14));
+    expect(tester.getRect(title).right, lessThanOrEqualTo(_closedBar.left));
+
+    final mono = find.byKey(const ValueKey('looks-chip:mono'));
+    await tapWhenReady(tester, mono);
+    expect(tester.widget<GrChip>(mono).selected, isTrue);
+    final state = tester.state(page);
+
+    await _toDuo(tester, app, DuoWindow.upright);
+    expect(tester.takeException(), isNull);
+    expect(tester.state(page), same(state));
+    expect(tester.widget<GrChip>(mono).selected, isTrue);
+    expect(besideTitle, findsNWidgets(2));
+    expect(
+      tester.getRect(title).top,
+      greaterThanOrEqualTo(DuoWindow.upright.insets.top),
+    );
+    await app.dispose();
+  });
+
+  for (final window in [DuoWindow.open, DuoWindow.book]) {
+    testWidgets('on an iPhone Duo held wide (${window.name}) the camera '
+        'has the page before the fold, with its top bar, the title and '
+        'its slots as rows, and the saved looks have the page after it; '
+        'nothing lies across the fold', (tester) async {
+      final app = await _inLooks(tester);
+      await pumpUntilFound(tester, _inSlot(1, 'Tokyo Night'));
+      final saved = await _savePlain(tester, app);
+      await _toDuo(tester, app, window);
+      final row = find.byKey(ValueKey('look:${saved.id}'));
+      await pumpUntilFound(tester, row);
+      expect(tester.takeException(), isNull);
+
+      final pages = _pagesOf(window);
+      final page = find.byKey(const Key('looks'));
+      final title = find.descendant(of: page, matching: find.byType(PageTitle));
+      final slots = [
+        for (var n = 1; n <= 3; n++) find.byKey(Key('looks-slot-$n')),
+      ];
+      final beforeFold = [
+        find.byKey(const Key('camera-pill')),
+        find.descendant(of: title, matching: find.text('Looks')),
+        ...slots,
+        for (var n = 1; n <= 3; n++) find.byKey(Key('looks-slot-menu-$n')),
+      ];
+      final afterFold = [
+        // The chips scroll sideways: what shows of them is their row.
+        find
+            .ancestor(
+              of: find.byKey(const ValueKey('looks-chip:all')),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+        row,
+        find.byKey(Key('look-menu:${saved.id}')),
+      ];
+      for (final (onPage, parts) in [
+        (pages.first, beforeFold),
+        (pages.second, afterFold),
+      ]) {
+        for (final part in parts) {
+          expect(
+            onPage.expandToInclude(tester.getRect(part)),
+            onPage,
+            reason: part.describeMatch(Plurality.one),
+          );
+        }
+      }
+      // The slots are rows, one under the other, most of the page wide.
+      final rows = [for (final slot in slots) tester.getRect(slot)];
+      for (final (i, slotRow) in rows.indexed.skip(1)) {
+        expect(slotRow.top, greaterThan(rows[i - 1].bottom));
+        expect(slotRow.left, rows.first.left);
+      }
+      expect(rows.first.width, greaterThan(pages.first.width * .7));
+      expect(_inSlot(1, 'Positive Film'), findsOneWidget);
+
+      const buttons = ['camera-back', 'camera-settings', 'looks-new'];
+      _expectInBar(tester, _wideBar, buttons);
+      expect(
+        find.descendant(of: title, matching: find.byType(RoundIconButton)),
+        findsNothing,
+      );
+      await app.dispose();
+    });
+  }
+
+  testWidgets('on an iPhone Duo half-open like a book a saved look held '
+      'and dragged across the fold onto a slot is loaded into it, and the '
+      'accent colour outlines the slot under it', (tester) async {
+    final app = await _inLooks(tester);
+    await pumpUntilFound(tester, _inSlot(1, 'Tokyo Night'));
+    final saved = await _savePlain(tester, app);
+    await _toDuo(tester, app, DuoWindow.book);
+    final row = find.byKey(ValueKey('look:${saved.id}'));
+    await pumpUntilFound(tester, row);
+    final slot = find.byKey(const Key('looks-slot-3'));
+    final outline = find.ancestor(
+      of: slot,
+      matching: find.byType(AnimatedContainer),
+    );
+    Color outlineColor() {
+      final frame = tester.widget<AnimatedContainer>(outline.first);
+      return (frame.decoration! as BoxDecoration).border!.top.color;
+    }
+
+    final accent = GrColors.of(tester.element(slot)).accent;
+    expect(outlineColor(), isNot(accent));
+
+    final drag = await tester.startGesture(tester.getCenter(row));
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await drag.moveTo(tester.getCenter(slot));
+    await tester.pump();
+    expect(outlineColor(), accent);
+    await drag.up();
+    await tester.pump();
+    expect(outlineColor(), isNot(accent));
+
+    await tapWhenReady(tester, find.byKey(const Key('looks-load-confirm')));
+    await pumpUntilFound(tester, find.text('Loaded Plain into C3'));
+    expect(_slotLook(app, 3).base, LookBase.vivid);
+    expect(app.camera.lookSlot(3).name, 'Plain');
+    expect(app.camera.lookSlot(1).name, 'Tokyo Night', reason: 'C1 untouched');
+    await app.dispose();
+  });
+
+  testWidgets("on an iPhone Duo open and held upright the camera's top bar "
+      'is in the band at the top, beside the status, and the title and '
+      'the page come under it in one column', (tester) async {
+    final app = await _inLooks(tester);
+    await pumpUntilFound(tester, _inSlot(1, 'Tokyo Night'));
+    await _toDuo(tester, app, DuoWindow.upright);
+    expect(tester.takeException(), isNull);
+
+    final band = DuoWindow.upright.insets.top;
+    final status = DuoWindow.upright.pose.occlusions.single;
+    final topBar = [
+      for (final key in ['camera-back', 'camera-pill', 'camera-settings'])
+        tester.getRect(find.byKey(Key(key))),
+    ];
+    for (final button in topBar) {
+      expect(button.top, greaterThanOrEqualTo(0));
+      expect(button.bottom, lessThanOrEqualTo(band));
+      expect(button.right, lessThanOrEqualTo(status.left));
+    }
+    final page = find.byKey(const Key('looks'));
+    final title = find.descendant(of: page, matching: find.byType(PageTitle));
+    final titleText = find.descendant(of: title, matching: find.text('Looks'));
+    expect(
+      tester.getRect(titleText).top,
+      greaterThanOrEqualTo(topBar.first.bottom),
+    );
+    // No vertical bar here: New look is beside the title.
+    expect(
+      find.descendant(of: title, matching: find.byKey(const Key('looks-new'))),
+      findsOneWidget,
+    );
+    // The fold lies across the window: the page stays one column.
+    Rect slot(int n) => tester.getRect(find.byKey(Key('looks-slot-$n')));
+    expect(slot(2).left, greaterThan(slot(1).right));
+    expect(slot(2).top, slot(1).top);
+    await app.dispose();
+  });
+
+  testWidgets('an Android foldable unfolded with its hinge upright gives '
+      "the camera's slots and the saved looks a page each, with the "
+      'buttons where a phone has them; with the hinge lying across, and '
+      'on a phone held on its side, the page is one column', (tester) async {
+    final app = await _inLooks(tester);
+    await pumpUntilFound(tester, _inSlot(1, 'Tokyo Night'));
+    final saved = await _savePlain(tester, app);
+    final row = find.byKey(ValueKey('look:${saved.id}'));
+    final page = find.byKey(const Key('looks'));
+    final title = find.descendant(of: page, matching: find.byType(PageTitle));
+    final newLook = find.descendant(
+      of: title,
+      matching: find.byKey(const Key('looks-new')),
+    );
+    Rect slot(int n) => tester.getRect(find.byKey(Key('looks-slot-$n')));
+    void expectOneColumn() {
+      expect(tester.takeException(), isNull);
+      expect(slot(2).left, greaterThan(slot(1).right));
+      expect(slot(3).left, greaterThan(slot(2).right));
+      expect(slot(2).top, slot(1).top);
+      expect(tester.getRect(row).top, greaterThan(slot(1).bottom));
+      expect(tester.getRect(row).left, lessThan(slot(1).right));
+      expect(find.byKey(const Key('looks-slot-menu-1')), findsNothing);
+      expect(newLook, findsOneWidget);
+    }
+
+    tester.view
+      ..physicalSize = const Size(750, 830)
+      ..devicePixelRatio = 1
+      ..displayFeatures = [_fold(const Rect.fromLTWH(365, 0, 20, 830))];
+    await pumpRounds(tester, 3);
+    await pumpUntilFound(tester, row);
+    expect(tester.takeException(), isNull);
+    final beforeHinge = [
+      for (final key in ['camera-back', 'camera-pill', 'camera-settings'])
+        tester.getRect(find.byKey(Key(key))),
+      tester.getRect(newLook),
+      for (var n = 1; n <= 3; n++) slot(n),
+    ];
+    for (final part in beforeHinge) {
+      expect(part.right, lessThanOrEqualTo(365));
+    }
+    expect(slot(2).top, greaterThan(slot(1).bottom));
+    expect(
+      tester.getRect(find.byKey(const ValueKey('looks-chip:all'))).left,
+      greaterThanOrEqualTo(385),
+    );
+    expect(tester.getRect(row).left, greaterThanOrEqualTo(385));
+    expect(tester.getRect(row).right, lessThanOrEqualTo(750));
+
+    tester.view.displayFeatures = [_fold(const Rect.fromLTWH(0, 405, 750, 20))];
+    await pumpRounds(tester, 3);
+    expectOneColumn();
+
+    tester.view
+      ..physicalSize = const Size(956, 440)
+      ..displayFeatures = const [];
+    await pumpRounds(tester, 3);
+    expectOneColumn();
     await app.dispose();
   });
 
@@ -1355,6 +1718,91 @@ void main() {
     await app.dispose();
   });
 
+  testWidgets('at an upright hinge the photos are a grid only where that '
+      'leaves the picture the height a photo wider than tall needs: what '
+      'the preview has to say takes of that height, and with it the '
+      'photos stay a strip', (tester) async {
+    const page = 395.0;
+    final app = await _start(tester, saveCamera: false);
+    final looks = app.models.looks;
+    final jpeg = File(samplePhotos.first.asset).readAsBytesSync();
+    final (plain, older) = (await tester.runAsync(() async {
+      final plain = await looks.add(
+        name: 'Plain',
+        data: Look.onBase(LookBase.standard).toBytes(),
+        photo: jpeg,
+      );
+      final added = await looks.add(
+        name: 'Older',
+        data: Uint8List.fromList(app.camera.lookSlot(3).data),
+        photo: jpeg,
+      );
+      // As a look saved before GR Photo kept the photo's own look, which
+      // the preview says it does not know.
+      final older = SavedLook(
+        id: added.id,
+        name: added.name,
+        data: added.data,
+        created: added.created,
+      );
+      await looks.update(older);
+      return (plain, older);
+    }))!;
+    // Without a note the grid leaves the picture 12 pt more than it needs.
+    tester.view
+      ..physicalSize = const Size(2 * page + 20, 480)
+      ..devicePixelRatio = 1
+      ..displayFeatures = [_fold(const Rect.fromLTWH(page, 0, 20, 480))];
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+    final compare = find.byType(LookCompare);
+    final note = find.byKey(const Key('look-preview-note'));
+    Future<void> open(SavedLook look) async {
+      await tapWhenReady(tester, find.byKey(ValueKey('look:${look.id}')));
+      await pumpUntilFound(tester, find.byKey(const Key('look-editor')));
+      await pumpUntilFound(tester, find.byType(LookPreview));
+      await pumpRounds(tester, 30);
+      expect(tester.takeException(), isNull);
+    }
+
+    void expectPictureHasRoom() {
+      final picture = tester.getRect(compare);
+      expect(picture.width, closeTo(page, .01));
+      expect(picture.height, greaterThanOrEqualTo(page * 2 / 3 - .01));
+    }
+
+    // Its own photo, then the samples.
+    const count = 7;
+    await open(plain);
+    expect(note, findsNothing);
+    final inGrid = _smallPictures(tester, count);
+    expect(inGrid[4].top, greaterThan(inGrid.first.bottom));
+    expect(inGrid.first.width, greaterThan(70));
+    expectPictureHasRoom();
+    await tester.pageBack();
+    await pumpUntil(
+      tester,
+      () => find.byKey(const Key('look-editor')).evaluate().isEmpty,
+      reason: 'editor closed',
+    );
+
+    await open(older);
+    expect(note, findsOneWidget);
+    final inStrip = _smallPictures(tester, count);
+    for (final picture in inStrip) {
+      expect(picture.top, inStrip.first.top);
+    }
+    expect(
+      tester.getRect(note).top,
+      greaterThanOrEqualTo(tester.getRect(compare).bottom),
+    );
+    expect(
+      inStrip.first.top,
+      greaterThanOrEqualTo(tester.getRect(note).bottom),
+    );
+    expectPictureHasRoom();
+    await app.dispose();
+  });
+
   testWidgets('on a foldable half-open on a table the picture and its two '
       'controls have the upright half, and the photos and every other '
       'control the flat half, in two columns; full screen keeps to the '
@@ -1497,6 +1945,180 @@ void main() {
     expect(
       tester.getRect(strip).top,
       greaterThanOrEqualTo(tester.getRect(compare).bottom),
+    );
+    await app.dispose();
+  });
+
+  testWidgets('on a closed iPhone Duo the editor has Back and its menu in '
+      "the vertical bar under the status and the look's name alone "
+      'across the top; the menu opens and Back leaves', (tester) async {
+    final app = await _start(tester, saveCamera: false);
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+    await tapWhenReady(tester, find.byKey(const Key('looks-new')));
+    await _editorOpen(tester);
+    await _toDuo(tester, app, DuoWindow.closed);
+    expect(tester.takeException(), isNull);
+
+    final back = find.byKey(const Key('look-editor-back'));
+    final menu = find.byKey(const Key('look-editor-menu'));
+    _expectInBar(tester, _closedBar, ['look-editor-back', 'look-editor-menu']);
+    final bar = find.byType(AppBar);
+    expect(find.byType(BackButton), findsNothing);
+    expect(find.descendant(of: bar, matching: menu), findsNothing);
+    final name = find.descendant(of: bar, matching: find.text('Standard'));
+    // The window has no inset at the top here: the name keeps clear of the
+    // display's rounded corner itself.
+    expect(tester.getRect(name).top, greaterThanOrEqualTo(14));
+    for (final part in [
+      name,
+      find.byType(LookCompare),
+      find.byType(PreviewPhotoSwitch),
+      find.byKey(const Key('look-save')),
+    ]) {
+      expect(
+        tester.getRect(part).right,
+        lessThanOrEqualTo(_closedBar.left),
+        reason: part.describeMatch(Plurality.one),
+      );
+    }
+
+    await tapWhenReady(tester, menu);
+    await pumpUntilFound(tester, find.text('Rename'));
+    await tester.tapAt(Offset.zero);
+    await pumpUntil(tester, () => find.text('Rename').evaluate().isEmpty);
+
+    await tapWhenReady(tester, back);
+    await pumpUntil(
+      tester,
+      () => find.byKey(const Key('look-editor')).evaluate().isEmpty,
+      reason: 'the editor closed',
+    );
+    await app.dispose();
+  });
+
+  for (final window in [DuoWindow.open, DuoWindow.book]) {
+    testWidgets('on an iPhone Duo held wide (${window.name}) the editor '
+        'has the pictures on the page before the fold, under the name and '
+        'with the photos in a grid, and the controls on the page after '
+        'it, a whole group of parameters in view', (tester) async {
+      final app = await _start(tester, saveCamera: false);
+      await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+      await tapWhenReady(tester, find.byKey(const Key('looks-new')));
+      await _editorOpen(tester);
+      await _toDuo(tester, app, window);
+      expect(tester.takeException(), isNull);
+
+      final pages = _pagesOf(window);
+      final bar = find.byType(AppBar);
+      final name = tester.getRect(
+        find.descendant(of: bar, matching: find.text('Standard')),
+      );
+      final compare = tester.getRect(find.byType(LookCompare));
+      final photos = _smallPictures(tester, samplePhotos.length);
+      for (final part in [name, compare, ...photos]) {
+        expect(pages.first.expandToInclude(part), pages.first);
+      }
+      expect(name.top, greaterThanOrEqualTo(14));
+      expect(compare.top, greaterThanOrEqualTo(name.bottom));
+      expect(compare.width, closeTo(pages.first.width, .01));
+      // Room for a photo wider than tall to fill the page's width.
+      expect(compare.height, greaterThanOrEqualTo(compare.width * 2 / 3));
+      // The photos are a grid under the picture: two rows of three, each
+      // far larger than in a strip, clear of the system's bar along the
+      // bottom edge.
+      expect(photos.first.top, greaterThanOrEqualTo(compare.bottom));
+      expect(photos.first.width, greaterThan(100));
+      expect(photos[2].top, photos.first.top);
+      expect(photos[3].top, greaterThan(photos.first.bottom));
+      expect(photos[3].left, photos.first.left);
+      final aboveSystemBar = window.size.height - window.insets.bottom;
+      expect(photos.last.bottom, lessThanOrEqualTo(aboveSystemBar));
+
+      final bases = tester.getRect(find.byKey(const Key('look-bases')));
+      final groups = tester.getRect(find.byKey(const Key('look-groups')));
+      final save = tester.getRect(find.byKey(const Key('look-save')));
+      for (final part in [bases, groups, save]) {
+        expect(pages.second.expandToInclude(part), pages.second);
+      }
+      expect(save.bottom, lessThanOrEqualTo(aboveSystemBar));
+      // The controls have the whole height of their page: they start
+      // beside the name, above the picture.
+      expect(bases.top, lessThan(compare.top));
+      final parameters = _parameters();
+      final count = parameters.evaluate().length;
+      expect(count, greaterThanOrEqualTo(2));
+      for (var i = 0; i < count && i < 6; i++) {
+        final parameter = tester.getRect(parameters.at(i));
+        expect(parameter.top, greaterThanOrEqualTo(groups.bottom));
+        expect(parameter.bottom, lessThanOrEqualTo(save.top));
+      }
+
+      _expectInBar(tester, _wideBar, ['look-editor-back', 'look-editor-menu']);
+      expect(find.byType(BackButton), findsNothing);
+      await app.dispose();
+    });
+  }
+
+  testWidgets('on an iPhone Duo half-open on a table the picture has the '
+      'upright half under the bar across the top, and the photos and '
+      'every control the flat half; opened flat, the editor is as on any '
+      'upright screen and keeps what it holds', (tester) async {
+    const window = DuoWindow.tabletop;
+    final app = await _start(tester, saveCamera: false);
+    await tapWhenReady(tester, find.byKey(const Key('home-tab-looks')));
+    await tapWhenReady(tester, find.byKey(const Key('looks-new')));
+    await _editorOpen(tester);
+    await _toDuo(tester, app, window);
+    expect(tester.takeException(), isNull);
+
+    final fold = window.pose.fold!;
+    final compare = find.byType(LookCompare);
+    final strip = find.byType(PreviewPhotoSwitch);
+    final bases = find.byKey(const Key('look-bases'));
+    final groups = find.byKey(const Key('look-groups'));
+    final save = find.byKey(const Key('look-save'));
+    final bar = tester.getRect(find.byType(AppBar));
+    // No vertical bar here: Back and the menu are in the bar across the
+    // top, under the band the status is in.
+    for (final button in [
+      find.byType(BackButton),
+      find.byKey(const Key('look-editor-menu')),
+    ]) {
+      final inBar = tester.getRect(button);
+      expect(inBar.top, greaterThanOrEqualTo(window.insets.top));
+      expect(inBar.bottom, lessThanOrEqualTo(bar.bottom));
+    }
+    expect(
+      tester.getRect(compare),
+      rectMoreOrLessEquals(
+        Rect.fromLTRB(0, bar.bottom, window.size.width, fold.top),
+        epsilon: .01,
+      ),
+    );
+    expect(tester.getRect(strip).top, greaterThanOrEqualTo(fold.bottom));
+    expect(
+      tester.getRect(bases).top,
+      greaterThanOrEqualTo(tester.getRect(strip).bottom),
+    );
+    expect(
+      tester.getRect(groups).left,
+      greaterThanOrEqualTo(tester.getRect(bases).right),
+    );
+    expect(tester.getRect(groups).top, greaterThanOrEqualTo(fold.bottom));
+    expect(tester.getRect(save).top, greaterThan(fold.bottom));
+    expect(
+      tester.getRect(save).bottom,
+      lessThanOrEqualTo(window.size.height - window.insets.bottom),
+    );
+
+    final state = tester.state(compare);
+    await _toDuo(tester, app, DuoWindow.upright);
+    expect(tester.takeException(), isNull);
+    expect(tester.state(compare), same(state));
+    expect(tester.getRect(compare).width, closeTo(window.size.width, .01));
+    expect(
+      tester.getRect(compare).bottom,
+      lessThanOrEqualTo(tester.getRect(bases).top),
     );
     await app.dispose();
   });

@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gr_camera/gr_camera.dart';
 
 import 'package:grphoto/l10n/l10n.dart';
+import 'package:grphoto/src/camera/camera_top_bar.dart';
 import 'package:grphoto/src/looks/look_base_stepper.dart';
 import 'package:grphoto/src/looks/look_compare.dart';
 import 'package:grphoto/src/looks/look_spec.dart';
@@ -19,6 +19,7 @@ import 'package:grphoto/src/shoot/shoot_widgets.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/pressable.dart';
 import 'package:grphoto/src/widgets/toast.dart';
+import 'package:grphoto/src/widgets/window_layout.dart';
 
 /// Opens the editor on [look] under [name]. [saved] is the library entry
 /// it edits, if any; [slot] is the Custom slot it was opened from, which
@@ -70,11 +71,17 @@ Future<void> openNewLook(BuildContext context, LooksModel model) async {
 /// that is short and wide \[design\]. It sits above the controls, beside
 /// them where the screen is wider than it is tall, and scrolls with them
 /// where it is too short for both \[design\]. On a foldable each has one
-/// side of an upright fold, and half-open on a table the picture has the
-/// upright half and everything else the flat one \[design\]. Its button
-/// grows it to the whole screen, with the choice of photo and of
+/// side of an upright fold, where the photos are a grid of larger pictures
+/// if the page has the height, and half-open on a table the picture has
+/// the upright half and everything else the flat one \[design\]. Its
+/// button grows it to the whole screen, with the choice of photo and of
 /// comparison and nothing else; a tap on its pictures is the comparison's
 /// own there and in its place \[design\].
+///
+/// In a window with a [VerticalBar] the way back and the menu stand in
+/// that ([BarColumn]) and the bar across the top is the look's name alone,
+/// over the preview's page only where the fold divides the window
+/// \[design\]: the controls then have their page's whole height.
 class LookEditor extends StatefulWidget {
   const new({
     required this.model,
@@ -324,16 +331,26 @@ class _LookEditorState extends State<LookEditor>
     builder: (context, _) {
       final canLoad = _model.canLoad(_look);
       final table = _tableFold(context);
-      final book = table == null ? _bookFold(context) : null;
+      final book = table == null
+          ? WindowFold.book(context, leastPage: _narrowestControls)
+          : null;
+      final inPlace = _expansion.isDismissed;
+      final buttonsInBar = VerticalBar.of(context) != null;
+      final nameOnPreviewPage = buttonsInBar && book != null;
       // The same under either parent, so that it keeps its state when it
       // moves between them.
       final preview = KeyedSubtree(
         key: _previewKey,
         child: Builder(
-          builder: (context) => _preview(context, pictureAlone: table != null),
+          builder: (context) => _preview(
+            context,
+            pictureAlone: table != null,
+            // On its way to the whole screen and there, the picture gets
+            // all the room the photos can spare.
+            photosInGrid: book != null && inPlace,
+          ),
         ),
       );
-      final inPlace = _expansion.isDismissed;
       return PopScope(
         canPop: !_fullscreen,
         onPopInvokedWithResult: (didPop, _) {
@@ -348,24 +365,38 @@ class _LookEditorState extends State<LookEditor>
             // above all.
             Offstage(
               offstage: _expansion.isCompleted,
-              child: Scaffold(
-                key: const Key('look-editor'),
-                appBar: _bar(context, canLoad: canLoad),
-                body: SafeArea(
-                  top: false,
-                  bottom: false,
-                  child: LayoutBuilder(
-                    builder: (context, box) => _layout(
-                      context,
-                      box,
-                      // Its place keeps its size while it is away.
-                      preview: KeyedSubtree(
-                        key: _placeKey,
-                        child: inPlace ? preview : const SizedBox.expand(),
+              child: BarColumn(
+                buttons: [
+                  _backInBar(context),
+                  _menu(context, canLoad: canLoad, round: true),
+                ],
+                child: Scaffold(
+                  key: const Key('look-editor'),
+                  appBar: nameOnPreviewPage
+                      ? null
+                      : buttonsInBar
+                      ? _nameBar(context)
+                      : _bar(context, canLoad: canLoad),
+                  body: SafeArea(
+                    // Under a bar across the top this is no inset: the bar
+                    // has taken it.
+                    bottom: false,
+                    child: LayoutBuilder(
+                      builder: (context, box) => _layout(
+                        context,
+                        box,
+                        // Its place keeps its size while it is away.
+                        preview: KeyedSubtree(
+                          key: _placeKey,
+                          child: inPlace ? preview : const SizedBox.expand(),
+                        ),
+                        canLoad: canLoad,
+                        table: table,
+                        book: book,
+                        nameOverPreview: nameOnPreviewPage
+                            ? _nameBar(context)
+                            : null,
                       ),
-                      canLoad: canLoad,
-                      table: table,
-                      book: book,
                     ),
                   ),
                 ),
@@ -455,71 +486,102 @@ class _LookEditorState extends State<LookEditor>
 
   /// The look's name, the way back and the menu of what else to do with
   /// the look.
-  PreferredSizeWidget _bar(BuildContext context, {required bool canLoad}) {
+  PreferredSizeWidget _bar(BuildContext context, {required bool canLoad}) =>
+      AppBar(
+        leading: const BackButton(),
+        title: Text(_name, overflow: TextOverflow.ellipsis),
+        actions: [_menu(context, canLoad: canLoad, round: false)],
+      );
+
+  /// The look's name alone, in a window whose [VerticalBar] has the way
+  /// back and the menu. It starts the row \[design\]: nothing is left to
+  /// centre it between. The window has no inset at the top there, so the
+  /// name keeps clear of the display's corner itself.
+  PreferredSizeWidget _nameBar(BuildContext context) => PreferredSize(
+    preferredSize: const Size.fromHeight(
+      kToolbarHeight + StatusBandBar.cornerMargin,
+    ),
+    child: SafeArea(
+      bottom: false,
+      minimum: const EdgeInsets.only(top: StatusBandBar.cornerMargin),
+      child: AppBar(
+        primary: false,
+        automaticallyImplyLeading: false,
+        centerTitle: false,
+        title: Text(_name, overflow: TextOverflow.ellipsis),
+      ),
+    ),
+  );
+
+  /// The way back, as a button of the window's [VerticalBar].
+  Widget _backInBar(BuildContext context) => RoundIconButton(
+    key: const Key('look-editor-back'),
+    icon: Icons.arrow_back_ios_new_rounded,
+    iconSize: 16,
+    label: MaterialLocalizations.of(context).backButtonTooltip,
+    onTap: () => Navigator.of(context).maybePop(),
+  );
+
+  /// The menu of what else to do with the look: a button of the app bar,
+  /// or [round] as the buttons of the window's [VerticalBar] are
+  /// ([RoundIconButton]).
+  Widget _menu(
+    BuildContext context, {
+    required bool canLoad,
+    required bool round,
+  }) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
-    return AppBar(
-      leading: const BackButton(),
-      title: Text(_name, overflow: TextOverflow.ellipsis),
-      actions: [
-        PopupMenuButton<_EditorAction>(
-          key: const Key('look-editor-menu'),
-          icon: const Icon(Icons.more_horiz_rounded),
-          tooltip: l10n.looksMore,
-          onSelected: (a) => unawaited(_act(a)),
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: _EditorAction.rename,
-              child: Text(l10n.looksRename),
-            ),
-            if (_model.onCamera)
-              for (final (n, a) in const [
-                (1, _EditorAction.load1),
-                (2, _EditorAction.load2),
-                (3, _EditorAction.load3),
-              ])
-                PopupMenuItem(
-                  value: a,
-                  enabled: canLoad,
-                  child: Text(l10n.looksLoadInto(n)),
-                ),
-            if (_saved != null)
-              PopupMenuItem(
-                value: _EditorAction.delete,
-                child: Text(
-                  l10n.looksDelete,
-                  style: TextStyle(color: c.danger),
-                ),
-              ),
-          ],
+    final button = PopupMenuButton<_EditorAction>(
+      key: const Key('look-editor-menu'),
+      icon: round ? null : const Icon(Icons.more_horiz_rounded),
+      tooltip: l10n.looksMore,
+      borderRadius: round ? BorderRadius.circular(18) : null,
+      onSelected: (a) => unawaited(_act(a)),
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: _EditorAction.rename,
+          child: Text(l10n.looksRename),
         ),
+        if (_model.onCamera)
+          for (final (n, a) in const [
+            (1, _EditorAction.load1),
+            (2, _EditorAction.load2),
+            (3, _EditorAction.load3),
+          ])
+            PopupMenuItem(
+              value: a,
+              enabled: canLoad,
+              child: Text(l10n.looksLoadInto(n)),
+            ),
+        if (_saved != null)
+          PopupMenuItem(
+            value: _EditorAction.delete,
+            child: Text(l10n.looksDelete, style: TextStyle(color: c.danger)),
+          ),
       ],
+      child: round
+          ? SizedBox.square(
+              dimension: 36,
+              child: Icon(Icons.more_horiz_rounded, size: 18, color: c.t1),
+            )
+          : null,
+    );
+    if (!round) return button;
+    return Material(
+      color: c.s2,
+      shape: CircleBorder(side: BorderSide(color: c.line)),
+      child: button,
     );
   }
-
-  /// The fold or hinge the window lies across; null on a device without
-  /// one, on a foldable's cover screen and in a window to one side of it.
-  static ui.DisplayFeature? _foldOf(BuildContext context) =>
-      MediaQuery.displayFeaturesOf(context)
-          .where(
-            (feature) =>
-                feature.type == ui.DisplayFeatureType.fold ||
-                feature.type == ui.DisplayFeatureType.hinge,
-          )
-          .firstOrNull;
 
   /// The fold of a foldable that is half-open on a table, where the window
   /// has room for the picture above it and for the controls under it: its
   /// bounds in the window, and how much of the window's height lies under
   /// it. [context] is the editor's own, whose insets are the window's.
   static ({Rect fold, double flat})? _tableFold(BuildContext context) {
-    final feature = _foldOf(context);
-    if (feature == null ||
-        feature.state != ui.DisplayFeatureState.postureHalfOpened) {
-      return null;
-    }
-    final fold = feature.bounds;
-    if (fold.width <= fold.height) return null;
+    final fold = WindowFold.table(context);
+    if (fold == null) return null;
     final window = MediaQuery.sizeOf(context);
     final upright =
         fold.top - MediaQuery.paddingOf(context).top - kToolbarHeight;
@@ -529,35 +591,22 @@ class _LookEditorState extends State<LookEditor>
     return (fold: fold, flat: flat);
   }
 
-  /// The fold of a foldable where it stands upright in the window, flat or
-  /// half-open like a book, with room for the controls on either side:
-  /// the width ahead of it, which the preview takes, and its own.
-  /// [context] is the editor's own, whose insets are the window's.
-  static ({double preview, double gap})? _bookFold(BuildContext context) {
-    final fold = _foldOf(context)?.bounds;
-    if (fold == null || fold.height <= fold.width) return null;
-    final insets = MediaQuery.paddingOf(context);
-    final left = fold.left - insets.left;
-    final right = MediaQuery.sizeOf(context).width - insets.right - fold.right;
-    if (math.min(left, right) < _narrowestControls) return null;
-    final leftFirst = Directionality.of(context) == TextDirection.ltr;
-    return (preview: leftFirst ? left : right, gap: fold.width);
-  }
-
   /// [preview] and the controls in a [box]: the preview above the
   /// controls, beside them where the box is wider than it is tall, and
   /// scrolling with them where it is too short for both. On a foldable
   /// whose fold stands upright ([book]) they are beside each other with the
-  /// fold between them, whatever the box's shape, and on one half-open on
-  /// a [table] the preview has the upright half and the controls, led by
-  /// the choice of photo, the flat one \[design\].
+  /// fold between them, whatever the box's shape, [nameOverPreview] above
+  /// the preview where the window has no bar across its top, and on one
+  /// half-open on a [table] the preview has the upright half and the
+  /// controls, led by the choice of photo, the flat one \[design\].
   Widget _layout(
     BuildContext context,
     BoxConstraints box, {
     required Widget preview,
     required bool canLoad,
     required ({Rect fold, double flat})? table,
-    required ({double preview, double gap})? book,
+    required BookFold? book,
+    required PreferredSizeWidget? nameOverPreview,
   }) {
     if (table != null) {
       final gap = table.fold.height;
@@ -623,7 +672,20 @@ class _LookEditorState extends State<LookEditor>
                 ),
               ]
             : [
-                SizedBox(width: book.preview, child: besideControls),
+                SizedBox(
+                  width: book.first,
+                  child: nameOverPreview == null
+                      ? besideControls
+                      : Column(
+                          children: [
+                            SizedBox.fromSize(
+                              size: nameOverPreview.preferredSize,
+                              child: nameOverPreview,
+                            ),
+                            Expanded(child: besideControls),
+                          ],
+                        ),
+                ),
                 SizedBox(width: math.max(1, book.gap), child: line),
                 Expanded(child: controls),
               ],
@@ -698,9 +760,15 @@ class _LookEditorState extends State<LookEditor>
   /// The picture with its controls over its top corners, then what to know
   /// about the preview and the photos to pick from, which stand at the
   /// picture's side instead in a short and wide window ([_stripAtSide]).
+  /// With [photosInGrid] the photos under the picture are a grid of larger
+  /// pictures where that leaves the picture its room ([_gridLeavesPicture]).
   /// With [pictureAlone] it is the picture and its controls only, and the
   /// rest is elsewhere ([_photoChoice]).
-  Widget _preview(BuildContext context, {required bool pictureAlone}) {
+  Widget _preview(
+    BuildContext context, {
+    required bool pictureAlone,
+    required bool photosInGrid,
+  }) {
     final shown = _shown(context.l10n);
     final picture = KeyedSubtree(
       key: _paneKey,
@@ -733,26 +801,66 @@ class _LookEditorState extends State<LookEditor>
       ),
     );
     if (pictureAlone) return picture;
-    final atSide = _stripAtSide(MediaQuery.sizeOf(context));
-    return Column(
-      children: [
-        Expanded(
-          child: atSide
-              ? Row(
-                  children: [
-                    _strip(context, shown.index, Axis.vertical),
-                    Expanded(child: picture),
-                  ],
-                )
-              : picture,
-        ),
-        // Above the photos, so they stay where they are when the note
-        // comes, goes or changes length.
-        ?_note(context, shown.note),
-        if (!atSide) _strip(context, shown.index, Axis.horizontal),
-      ],
+    // Above the photos, so they stay where they are when the note comes,
+    // goes or changes length.
+    final note = _note(context, shown.note);
+    if (_stripAtSide(MediaQuery.sizeOf(context))) {
+      return Column(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                _photoSwitch(context, shown.index, PreviewPhotoLayout.column),
+                Expanded(child: picture),
+              ],
+            ),
+          ),
+          ?note,
+        ],
+      );
+    }
+    return LayoutBuilder(
+      builder: (context, place) => Column(
+        children: [
+          Expanded(child: picture),
+          ?note,
+          _photoSwitch(
+            context,
+            shown.index,
+            photosInGrid && _gridLeavesPicture(context, place, note: shown.note)
+                ? PreviewPhotoLayout.grid
+                : PreviewPhotoLayout.row,
+          ),
+        ],
+      ),
     );
   }
+
+  /// Whether the photos as a grid under the picture, with [note] between
+  /// them, leave the picture, in the preview's [place], the height a photo
+  /// wider than tall needs to fill the width \[design\].
+  bool _gridLeavesPicture(
+    BuildContext context,
+    BoxConstraints place, {
+    required String? note,
+  }) {
+    final grid = PreviewPhotoSwitch.gridHeight(
+      count: _photos.length,
+      width: place.maxWidth - _aroundPhotosAcross.horizontal,
+    );
+    final underPicture =
+        _noteHeight(context, note, width: place.maxWidth) +
+        grid +
+        _aroundPhotosAcross.vertical;
+    return place.maxHeight - underPicture >= place.maxWidth / _widePhotoShape;
+  }
+
+  /// Around the photos to pick from where they lie under the picture.
+  static const _aroundPhotosAcross = EdgeInsets.fromLTRB(16, 12, 16, 4);
+
+  /// Width over height of a photo held the way the camera is built: wider
+  /// than tall.
+  static const double _widePhotoShape = 3 / 2;
 
   /// How far the controls over the picture are from its place's corners.
   static const double _overPicture = 8;
@@ -766,7 +874,7 @@ class _LookEditorState extends State<LookEditor>
       mainAxisSize: MainAxisSize.min,
       children: [
         ?_note(context, shown.note),
-        _strip(context, shown.index, Axis.horizontal),
+        _photoSwitch(context, shown.index, PreviewPhotoLayout.row),
       ],
     );
   }
@@ -776,29 +884,68 @@ class _LookEditorState extends State<LookEditor>
       ? null
       : Padding(
           key: const Key('look-preview-note'),
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+          padding: _aroundNote,
           child: Align(
             alignment: AlignmentDirectional.centerStart,
-            child: Text(
-              note,
-              style: TextStyle(fontSize: 12.5, color: GrColors.of(context).t2),
-            ),
+            child: Text(note, style: _noteStyle(context)),
           ),
         );
 
-  /// The photos to preview on, [shown] picked: in a row that fills the
-  /// width, or a column that fills the height.
-  Widget _strip(BuildContext context, int shown, Axis axis) {
+  /// Around what the preview says about itself.
+  static const _aroundNote = EdgeInsets.fromLTRB(20, 8, 20, 0);
+
+  /// How [_note] is written.
+  static TextStyle _noteStyle(BuildContext context) =>
+      TextStyle(fontSize: 12.5, color: GrColors.of(context).t2);
+
+  /// How tall [_note] is with [note] in a [width]; nothing without one.
+  /// The photos' layout is chosen before the note is laid out, so its
+  /// words are laid out here as [Text] lays them out. [context] has the
+  /// text style the note is under.
+  double _noteHeight(
+    BuildContext context,
+    String? note, {
+    required double width,
+  }) {
+    if (note == null) return 0;
+    final defaults = DefaultTextStyle.of(context);
+    final style = defaults.style.merge(_noteStyle(context));
+    final words = TextPainter(
+      text: TextSpan(
+        text: note,
+        style: MediaQuery.boldTextOf(context)
+            ? style.merge(const TextStyle(fontWeight: FontWeight.bold))
+            : style,
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      locale: Localizations.maybeLocaleOf(context),
+      textHeightBehavior:
+          defaults.textHeightBehavior ??
+          DefaultTextHeightBehavior.maybeOf(context),
+    )..layout(maxWidth: math.max(0, width - _aroundNote.horizontal));
+    final height = words.height + _aroundNote.vertical;
+    words.dispose();
+    return height;
+  }
+
+  /// The photos to preview on, [shown] picked: in a row or a grid that
+  /// fills the width, or a column that fills the height.
+  Widget _photoSwitch(
+    BuildContext context,
+    int shown,
+    PreviewPhotoLayout layout,
+  ) {
     final l10n = context.l10n;
-    final across = axis == Axis.horizontal;
+    final down = layout == PreviewPhotoLayout.column;
     return Padding(
-      padding: across
-          ? const EdgeInsets.fromLTRB(16, 12, 16, 4)
-          : const EdgeInsetsDirectional.fromSTEB(16, 8, 8, 8),
+      padding: down
+          ? const EdgeInsetsDirectional.fromSTEB(16, 8, 8, 8)
+          : _aroundPhotosAcross,
       child: Align(
-        alignment: across
-            ? AlignmentDirectional.centerStart
-            : Alignment.topCenter,
+        alignment: down
+            ? Alignment.topCenter
+            : AlignmentDirectional.centerStart,
         child: PreviewPhotoSwitch(
           photos: _photos,
           labels: [
@@ -808,7 +955,7 @@ class _LookEditorState extends State<LookEditor>
           ],
           selected: shown,
           onSelect: (i) => setState(() => _picked = i),
-          axis: axis,
+          layout: layout,
           ownFirst: _hasOwnPhoto,
         ),
       ),

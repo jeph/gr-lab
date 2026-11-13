@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:grphoto/l10n/l10n.dart';
 import 'package:grphoto/src/app_scope.dart';
+import 'package:grphoto/src/camera/camera_top_bar.dart';
 import 'package:grphoto/src/connection/idle_disconnect.dart';
 import 'package:grphoto/src/downloads/download_engine.dart';
 import 'package:grphoto/src/geotag/geotag_controller.dart';
@@ -25,10 +26,12 @@ import 'package:grphoto/src/looks/look_spec.dart';
 import 'package:grphoto/src/looks/look_widgets.dart';
 import 'package:grphoto/src/looks/looks_store.dart';
 import 'package:grphoto/src/map/photo_map.dart';
+import 'package:grphoto/src/platform/window_pose.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/group.dart';
 import 'package:grphoto/src/widgets/skeleton.dart';
 import 'package:grphoto/src/widgets/toast.dart';
+import 'package:grphoto/src/widgets/window_layout.dart';
 import 'package:video_player/video_player.dart';
 
 /// Full-screen viewer: swipe between [shots] and pinch to zoom. A shot
@@ -51,17 +54,36 @@ import 'package:video_player/video_player.dart';
 /// like the others from then on. The viewer also closes when the Library
 /// switches to another camera: its shots are not on that camera, and it
 /// has no listing of theirs to follow any more \[design\].
+///
+/// In a window with a [VerticalBar] (a foldable iPhone, closed or open and
+/// held wide) Back, Info and Download stand in the bar and the header is
+/// the shot's name alone. On the closed phone the details show from the
+/// start \[design\]: a photo is as wide as that window, which leaves the
+/// room below it for them. On the open one, two pages at its fold
+/// ([pagesAtFold]), the details are the second page, beside the shot on
+/// the first, instead of below it \[design\]; an Android foldable keeps
+/// them below the shot.
 class ShotViewer extends StatefulWidget {
-  const new({required this.shots, required this.initialIndex, super.key});
+  const new({
+    required this.shots,
+    required this.initialIndex,
+    super.key,
+    this.onShown,
+  });
 
   final List<Shot> shots;
   final int initialIndex;
+
+  /// Told the shot that shows whenever it is another: after a swipe, and
+  /// when the one shown left the listing.
+  final ValueChanged<Shot>? onShown;
 
   @override
   State<ShotViewer> createState() => _ShotViewerState();
 }
 
-class _ShotViewerState extends State<ShotViewer> with TickerProviderStateMixin {
+class _ShotViewerState extends State<ShotViewer>
+    with TickerProviderStateMixin, _ShotPages<ShotViewer> {
   late final LibraryContext _library = LibraryScope.of(context);
 
   /// The camera of [_shots]: the listing's camera when the viewer opened.
@@ -69,7 +91,11 @@ class _ShotViewerState extends State<ShotViewer> with TickerProviderStateMixin {
 
   /// [ShotViewer.shots] not known to have left the listing, in their
   /// order, as the listing has them now.
+  @override
   late final List<Shot> _shots = [...widget.shots];
+
+  @override
+  int get _firstIndex => widget.initialIndex;
 
   /// Keys of the [_shots] a listing has had: these leave with the listing.
   final Set<String> _listed = {};
@@ -78,14 +104,14 @@ class _ShotViewerState extends State<ShotViewer> with TickerProviderStateMixin {
   /// far more than new listings (each file's info, its refresh starting
   /// and ending); matching every shot again is for a new listing only.
   List<Shot>? _followed;
-  late final PageController _pages = PageController(
-    initialPage: widget.initialIndex,
-  );
-  late int _index = widget.initialIndex;
 
-  /// The photo shown keeps drags to itself ([_PhotoPage.onHold]) instead of
-  /// letting them swipe to another shot.
-  bool _photoHeld = false;
+  /// The shot's pages under the header's room. They keep their state
+  /// (zoom, playback) when a fold comes or goes and the details change
+  /// sides.
+  final GlobalKey _shotKey = GlobalKey();
+
+  /// Whether the window the viewer opened in decided [_infoShown].
+  bool _opened = false;
 
   /// The shot's details show below it, so it lies between them and the
   /// header instead of having the whole screen.
@@ -143,6 +169,14 @@ class _ShotViewerState extends State<ShotViewer> with TickerProviderStateMixin {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_opened) {
+      _opened = true;
+      // \[design\] The closed foldable iPhone: the details start in place.
+      if (VerticalBar.of(context) != null && pagesAtFold(context) == null) {
+        _infoShown = true;
+        _immersion.value = 0;
+      }
+    }
     final brightness = Theme.of(context).brightness;
     _appStatusBar = SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -157,7 +191,6 @@ class _ShotViewerState extends State<ShotViewer> with TickerProviderStateMixin {
   @override
   void dispose() {
     _library.model.removeListener(_followListing);
-    _pages.dispose();
     _immersed.dispose();
     _immersion.dispose();
     _headerVisibility.dispose();
@@ -174,18 +207,6 @@ class _ShotViewerState extends State<ShotViewer> with TickerProviderStateMixin {
     } else {
       _setHeaderShown(!_headerShown);
     }
-  }
-
-  void _onPhotoHold(bool held) {
-    if (held == _photoHeld) return;
-    // A swipe between shots that is under way goes on: stopped, it would
-    // leave the pages between two shots.
-    if (held &&
-        _pages.hasClients &&
-        _pages.position.isScrollingNotifier.value) {
-      return;
-    }
-    setState(() => _photoHeld = held);
   }
 
   void _setInfoShown(bool shown) {
@@ -267,7 +288,7 @@ class _ShotViewerState extends State<ShotViewer> with TickerProviderStateMixin {
       if (kept[index] != shown) _photoHeld = false;
     });
     if (dropped && _pages.hasClients) _pages.jumpToPage(index);
-    if (kept[index].isVideo) _setHeaderShown(true);
+    if (kept[index] != shown) _onShown(kept[index]);
   }
 
   /// Closes the viewer's route, also when another route covers it.
@@ -284,15 +305,18 @@ class _ShotViewerState extends State<ShotViewer> with TickerProviderStateMixin {
     }
   }
 
-  void _onPageChanged(int index) {
-    // Also reported after [_followListing] jumped to [_index].
-    if (index == _index) return;
-    setState(() {
-      _index = index;
-      _photoHeld = false;
-    });
-    if (_shots[index].isVideo) _setHeaderShown(true);
+  @override
+  void _onShown(Shot shot) {
+    if (shot.isVideo) _setHeaderShown(true);
+    widget.onShown?.call(shot);
   }
+
+  /// [button] of the header where it stands in the window's vertical bar:
+  /// it goes and comes with the header.
+  Widget _inBar(Widget button) => FadeTransition(
+    opacity: _headerVisibility,
+    child: IgnorePointer(ignoring: !_headerShown, child: button),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -302,137 +326,580 @@ class _ShotViewerState extends State<ShotViewer> with TickerProviderStateMixin {
     final library = _library;
     final serial = _serial;
     final shot = _shots[_index];
-    final headerHeight = MediaQuery.paddingOf(context).top + kToolbarHeight;
+    final c = GrColors.of(context);
+    final l10n = context.l10n;
+    final bar = VerticalBar.of(context);
+    final book = bar == null ? null : pagesAtFold(context);
+    final media = MediaQuery.of(context);
+    // A window with a vertical bar has no inset at its top, where the
+    // display's corners are rounded.
+    final headerTop = bar == null
+        ? media.padding.top
+        : max(media.padding.top, StatusBandBar.cornerMargin);
+    final headerHeight = headerTop + kToolbarHeight;
     return ListenableBuilder(
       listenable: Listenable.merge([library.model, library.engine]),
       builder: (context, _) {
         for (final f in shot.files) {
           unawaited(library.model.ensureInfo(f));
         }
-        return Scaffold(
-          body: AnimatedBuilder(
-            animation: _immersed,
-            // Black around a shot that has the whole screen.
-            builder: (context, child) => ColoredBox(
-              color: Colors.black.withValues(alpha: _immersed.value),
-              child: child,
+        final download = serial == null
+            ? null
+            : _DownloadAction(
+                key: const ValueKey('viewer-download'),
+                serial: serial,
+                shot: shot,
+                engine: library.engine,
+                look: bar == null ? _DownloadLook.header : _DownloadLook.bar,
+              );
+        final shotUnderHeader = Column(
+          key: _shotKey,
+          children: [
+            // The header's room, which a shot with the whole screen
+            // takes: the header lies over it then.
+            AnimatedBuilder(
+              animation: _immersed,
+              builder: (context, _) =>
+                  SizedBox(height: headerHeight * (1 - _immersed.value)),
             ),
-            child: Stack(
-              children: [
-                // With a map below the details the column is taller than
-                // the screen, which shows the map's top: a scroll brings
-                // the rest of it up.
-                LayoutBuilder(
-                  builder: (context, viewer) => SingleChildScrollView(
-                    key: const Key('viewer-scroll'),
-                    // A zoomed photo keeps drags to itself.
-                    physics: _photoHeld
-                        ? const NeverScrollableScrollPhysics()
-                        : null,
-                    child: ShotOverDetails(
-                      height: viewer.maxHeight,
-                      belowShown:
-                          MediaQuery.paddingOf(context).bottom + _mapPeek,
-                      shot: Column(
-                        children: [
-                          // The header's room, which a shot with the whole
-                          // screen takes: the header lies over it then.
-                          AnimatedBuilder(
-                            animation: _immersed,
-                            builder: (context, _) => SizedBox(
-                              height: headerHeight * (1 - _immersed.value),
+            Expanded(
+              child: serial == null
+                  ? const SizedBox.shrink()
+                  : _buildPages(
+                      serial: serial,
+                      immersed: _immersed,
+                      headerVisibility: _headerVisibility,
+                      onPhotoTap: _onPhotoTap,
+                    ),
+            ),
+          ],
+        );
+        final details = SafeArea(
+          top: false,
+          bottom: false,
+          child: _Details(shot: shot, model: library.model),
+        );
+        final map = _ShotMap(serial: serial, shot: shot, model: library.model);
+        return BarColumn(
+          buttons: [
+            if (bar != null) ...[
+              _inBar(
+                RoundIconButton(
+                  key: const Key('viewer-back'),
+                  icon: Icons.arrow_back_ios_new_rounded,
+                  iconSize: 16,
+                  label: MaterialLocalizations.of(context).backButtonTooltip,
+                  onTap: () => Navigator.of(context).maybePop(),
+                ),
+              ),
+              _inBar(
+                Semantics(
+                  selected: _infoShown,
+                  child: RoundIconButton(
+                    key: const Key('viewer-info'),
+                    icon: _infoShown
+                        ? Icons.info_rounded
+                        : Icons.info_outline_rounded,
+                    label: l10n.viewerInfo,
+                    color: _infoShown ? c.invBg : null,
+                    iconColor: _infoShown ? c.invFg : null,
+                    onTap: () => _setInfoShown(!_infoShown),
+                  ),
+                ),
+              ),
+              if (download != null) _inBar(download),
+            ],
+          ],
+          child: Scaffold(
+            body: AnimatedBuilder(
+              animation: _immersed,
+              // Black around a shot that has the whole screen.
+              builder: (context, child) => ColoredBox(
+                color: Colors.black.withValues(alpha: _immersed.value),
+                child: child,
+              ),
+              child: MediaQuery(
+                data: media.copyWith(
+                  padding: media.padding.copyWith(top: headerTop),
+                ),
+                // Beside the vertical bar, not under it.
+                child: SafeArea(
+                  top: false,
+                  bottom: false,
+                  left: bar?.side == BarSide.left,
+                  right: bar?.side == BarSide.right,
+                  child: Stack(
+                    children: [
+                      if (book == null)
+                        // With a map below the details the column is
+                        // taller than the screen, which shows the map's
+                        // top: a scroll brings the rest of it up.
+                        LayoutBuilder(
+                          builder: (context, viewer) => SingleChildScrollView(
+                            key: const Key('viewer-scroll'),
+                            // A zoomed photo keeps drags to itself.
+                            physics: _photoHeld
+                                ? const NeverScrollableScrollPhysics()
+                                : null,
+                            child: ShotOverDetails(
+                              height: viewer.maxHeight,
+                              belowShown:
+                                  MediaQuery.paddingOf(context).bottom +
+                                  _mapPeek,
+                              shot: shotUnderHeader,
+                              details: _DetailsBar(
+                                immersed: _immersed,
+                                child: details,
+                              ),
+                              below: _DetailsBar(
+                                immersed: _immersed,
+                                child: map,
+                              ),
                             ),
                           ),
-                          Expanded(
-                            child: serial == null
-                                ? const SizedBox.shrink()
-                                : PageView.builder(
-                                    controller: _pages,
-                                    physics: _photoHeld
-                                        ? const NeverScrollableScrollPhysics()
-                                        : const PageScrollPhysics(),
-                                    itemCount: _shots.length,
-                                    onPageChanged: _onPageChanged,
-                                    // A page whose shot stays keeps its state
-                                    // (zoom, playback) when shots before it
-                                    // are dropped.
-                                    findChildIndexCallback: (key) {
-                                      final i = _shots.indexWhere(
-                                        (s) => ValueKey(s) == key,
-                                      );
-                                      return i < 0 ? null : i;
-                                    },
-                                    itemBuilder: (context, i) {
-                                      final s = _shots[i];
-                                      return s.isVideo
-                                          ? _VideoPage(
-                                              key: ValueKey(s),
-                                              serial: serial,
-                                              shot: s,
-                                              active: i == _index,
-                                              immersed: _immersed,
-                                            )
-                                          : _PhotoPage(
-                                              key: ValueKey(s),
-                                              serial: serial,
-                                              shot: s,
-                                              immersed: _immersed,
-                                              headerVisibility:
-                                                  _headerVisibility,
-                                              onHold: _onPhotoHold,
-                                              onTap: _onPhotoTap,
-                                            );
-                                    },
-                                  ),
+                        )
+                      else
+                        _ShotBesideDetails(
+                          immersed: _immersed,
+                          book: book,
+                          top: headerHeight,
+                          shot: shotUnderHeader,
+                          details: SingleChildScrollView(
+                            key: const Key('viewer-details-scroll'),
+                            child: Column(children: [details, map]),
                           ),
-                        ],
-                      ),
-                      details: _DetailsBar(
-                        immersed: _immersed,
-                        child: SafeArea(
-                          top: false,
-                          bottom: false,
-                          child: _Details(shot: shot, model: library.model),
                         ),
-                      ),
-                      below: _DetailsBar(
-                        immersed: _immersed,
-                        child: _ShotMap(
-                          serial: serial,
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        child: _Header(
+                          shown: _headerShown,
+                          visibility: _headerVisibility,
+                          immersed: _immersed,
                           shot: shot,
                           model: library.model,
+                          buttonsInBar: bar != null,
+                          infoShown: _infoShown,
+                          onInfo: () => _setInfoShown(!_infoShown),
+                          download: bar == null ? download : null,
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  child: _Header(
-                    shown: _headerShown,
-                    visibility: _headerVisibility,
-                    immersed: _immersed,
-                    shot: shot,
-                    model: library.model,
-                    infoShown: _infoShown,
-                    onInfo: () => _setInfoShown(!_infoShown),
-                    download: serial == null
-                        ? null
-                        : _DownloadAction(
-                            key: const ValueKey('viewer-download'),
-                            serial: serial,
-                            shot: shot,
-                            engine: library.engine,
-                          ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// What the viewer and the Library's pane ([ShotPane]) share: the pages
+/// their shots are swiped through, and which of them shows.
+mixin _ShotPages<W extends StatefulWidget> on State<W> {
+  /// The shots swiped through, in their order.
+  List<Shot> get _shots;
+
+  /// Which of [_shots] shows first.
+  int get _firstIndex;
+
+  late final PageController _pages;
+
+  /// Which of [_shots] shows.
+  late int _index;
+
+  /// The photo shown keeps drags to itself ([_PhotoPage.onHold]) instead of
+  /// letting them swipe to another shot.
+  bool _photoHeld = false;
+
+  /// [shot] came to show instead of another.
+  void _onShown(Shot shot);
+
+  // Set here and not when first read: the pane's first index is its
+  // controller's, which has moved on by the time a shot is swiped to.
+  @override
+  void initState() {
+    super.initState();
+    _index = _firstIndex;
+    _pages = PageController(initialPage: _index);
+  }
+
+  @override
+  void dispose() {
+    _pages.dispose();
+    super.dispose();
+  }
+
+  void _onPhotoHold(bool held) {
+    if (held == _photoHeld) return;
+    // A swipe between shots that is under way goes on: stopped, it would
+    // leave the pages between two shots.
+    if (held &&
+        _pages.hasClients &&
+        _pages.position.isScrollingNotifier.value) {
+      return;
+    }
+    setState(() => _photoHeld = held);
+  }
+
+  void _onPageChanged(int index) {
+    // Also reported after a jump to [_index].
+    if (index == _index) return;
+    setState(() {
+      _index = index;
+      _photoHeld = false;
+    });
+    _onShown(_shots[index]);
+  }
+
+  /// [_shots], of the camera [serial], as pages to swipe through.
+  /// [immersed] and [headerVisibility] are those of [_PhotoPage].
+  Widget _buildPages({
+    required String serial,
+    required Animation<double> immersed,
+    required Animation<double> headerVisibility,
+    required VoidCallback onPhotoTap,
+  }) => PageView.builder(
+    controller: _pages,
+    physics: _photoHeld
+        ? const NeverScrollableScrollPhysics()
+        : const PageScrollPhysics(),
+    itemCount: _shots.length,
+    onPageChanged: _onPageChanged,
+    // A page whose shot stays keeps its state (zoom, playback) when shots
+    // before it come or go.
+    findChildIndexCallback: (key) {
+      final i = _shots.indexWhere((s) => ValueKey(s) == key);
+      return i < 0 ? null : i;
+    },
+    itemBuilder: (context, i) {
+      final s = _shots[i];
+      return s.isVideo
+          ? _VideoPage(
+              key: ValueKey(s),
+              serial: serial,
+              shot: s,
+              active: i == _index,
+              immersed: immersed,
+            )
+          : _PhotoPage(
+              key: ValueKey(s),
+              serial: serial,
+              shot: s,
+              immersed: immersed,
+              headerVisibility: headerVisibility,
+              onHold: _onPhotoHold,
+              onTap: onPhotoTap,
+            );
+    },
+  );
+}
+
+/// The narrowest page the Library and the viewer put beside another at a
+/// fold \[design\]: a small phone's width, which holds three columns of
+/// the grid, or a shot with its details.
+const _leastPageAtFold = 320.0;
+
+/// The two pages of a window with a fold standing upright in it
+/// ([WindowFold.book]), as a page has them that lies beside the window's
+/// [VerticalBar] and reaches the window's other edges: each with the
+/// window's inset on its side, unless that is the bar's strip. Null in a
+/// window that is one page. [context] is one whose insets are the
+/// window's.
+BookFold? pagesAtFold(BuildContext context) {
+  final book = WindowFold.book(context, leastPage: _leastPageAtFold);
+  if (book == null) return null;
+  final insets = MediaQuery.paddingOf(context);
+  final barSide = VerticalBar.of(context)?.side;
+  final left = barSide == BarSide.left ? 0.0 : insets.left;
+  final right = barSide == BarSide.right ? 0.0 : insets.right;
+  final leftFirst = Directionality.of(context) == TextDirection.ltr;
+  return BookFold(
+    first: book.first + (leftFirst ? left : right),
+    gap: book.gap,
+    second: book.second + (leftFirst ? right : left),
+  );
+}
+
+/// What the Library's [ShotPane] shows: one of the grid's shots. The
+/// Library opens it on a shot ([show]), keeps it to the grid ([follow])
+/// and closes it; the pane moves it as its shots are swiped through
+/// ([moveTo]).
+final class ShotPaneController extends ChangeNotifier {
+  List<Shot> _shots = const [];
+  int _index = 0;
+  bool _open = false;
+
+  /// The grid's shots, in its order, as they were when the pane last
+  /// followed them.
+  List<Shot> get shots => _shots;
+
+  /// Which of [shots] the pane shows, or showed last.
+  int get index => _index;
+
+  bool get isOpen => _open;
+
+  /// The shot the pane shows; null while it is closed.
+  Shot? get shown => _open ? _shots[_index] : null;
+
+  /// Opens the pane on the shot of [shots] at [index], or takes an open
+  /// one there.
+  void show(List<Shot> shots, int index) {
+    if (_open && identical(shots, _shots) && index == _index) return;
+    _shots = shots;
+    _index = index;
+    _open = true;
+    notifyListeners();
+  }
+
+  /// Takes the pane to the shot of [shots] at [index], which was swiped
+  /// to.
+  void moveTo(int index) {
+    if (!_open || index == _index) return;
+    _index = index;
+    notifyListeners();
+  }
+
+  /// Takes [shots], the grid's as they are now. The shot shown stays, at
+  /// its place among them; one that left the grid gives way to the next
+  /// one that stayed, or to the last one before it when none follows, and
+  /// the pane closes when none of its shots is left.
+  void follow(List<Shot> shots) {
+    if (!_open || identical(shots, _shots)) return;
+    final places = {for (final (i, s) in shots.indexed) s.key: i};
+    final nearestFirst = [
+      ..._shots.skip(_index),
+      ..._shots.take(_index).toList().reversed,
+    ];
+    final place = nearestFirst.map((s) => places[s.key]).nonNulls.firstOrNull;
+    if (place == null) {
+      _open = false;
+    } else {
+      _shots = shots;
+      _index = place;
+    }
+    notifyListeners();
+  }
+
+  void close() {
+    if (!_open) return;
+    _open = false;
+    notifyListeners();
+  }
+}
+
+/// The shape of the room [ShotPane] gives its shot \[design\]: the
+/// sensor's, so a photo taken with the camera held level fills the page's
+/// width.
+const double _paneShotShape = 3 / 2;
+
+/// A shot of the Library beside its grid, on the second of the two pages
+/// of a window with a fold standing upright in it ([pagesAtFold], mock
+/// `duo-inner-split`): the shot at the top of the page, fitted to its
+/// width, then its name with Download, its details and the map of where
+/// it was taken, which scroll when the page is too short for them. A
+/// swipe on the shot moves through the grid's shots, a tap on a photo
+/// opens it in the full-screen viewer ([onOpen]), and a movie plays in
+/// place.
+class ShotPane extends StatefulWidget {
+  const new({required this.controller, required this.onOpen, super.key});
+
+  /// Says which shot shows, and is told the one swiped to. The same one
+  /// for as long as the pane is there.
+  final ShotPaneController controller;
+
+  /// The photo shown was tapped.
+  final VoidCallback onOpen;
+
+  @override
+  State<ShotPane> createState() => _ShotPaneState();
+}
+
+class _ShotPaneState extends State<ShotPane> with _ShotPages<ShotPane> {
+  late final LibraryContext _library = LibraryScope.of(context);
+
+  /// The shot at [_index] when the controller last said which shows.
+  late Shot? _shown = widget.controller.shown;
+
+  @override
+  List<Shot> get _shots => widget.controller.shots;
+
+  @override
+  int get _firstIndex => widget.controller.index;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onController);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onController);
+    super.dispose();
+  }
+
+  /// Shows the shot the controller is at. One that was not swiped to (a
+  /// cell of the grid was tapped, or shots before it came or went) has
+  /// its page jumped to, which ends a swipe under way.
+  void _onController() {
+    final shown = widget.controller.shown;
+    // Closed: the Library takes the pane away.
+    if (shown == null) return;
+    final index = widget.controller.index;
+    final moved = index != _index;
+    setState(() {
+      _index = index;
+      // Another shot has another page (keyed by the shot), unzoomed.
+      if (shown != _shown) _photoHeld = false;
+      _shown = shown;
+    });
+    if (moved && _pages.hasClients) _pages.jumpToPage(index);
+  }
+
+  @override
+  void _onShown(Shot shot) => widget.controller.moveTo(_index);
+
+  @override
+  Widget build(BuildContext context) {
+    final library = _library;
+    final serial = library.model.serial;
+    final shot = widget.controller.shown;
+    // Closed, or its camera gone: the Library is taking the pane away.
+    if (shot == null || serial == null) return const SizedBox.shrink();
+    final c = GrColors.of(context);
+    final leftFirst = Directionality.of(context) == TextDirection.ltr;
+    // The window's inset on the side of the fold is the other page's.
+    return MediaQuery.removePadding(
+      context: context,
+      removeLeft: leftFirst,
+      removeRight: !leftFirst,
+      child: ListenableBuilder(
+        listenable: Listenable.merge([library.model, library.engine]),
+        builder: (context, _) {
+          for (final f in shot.files) {
+            unawaited(library.model.ensureInfo(f));
+          }
+          return SafeArea(
+            bottom: false,
+            child: SingleChildScrollView(
+              key: const Key('shot-pane-scroll'),
+              // A zoomed photo keeps drags to itself.
+              physics: _photoHeld ? const NeverScrollableScrollPhysics() : null,
+              child: Column(
+                children: [
+                  AspectRatio(
+                    aspectRatio: _paneShotShape,
+                    // The details are always in place, and there is no
+                    // header.
+                    child: _buildPages(
+                      serial: serial,
+                      immersed: kAlwaysDismissedAnimation,
+                      headerVisibility: kAlwaysCompleteAnimation,
+                      onPhotoTap: widget.onOpen,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(
+                      20,
+                      12,
+                      16,
+                      0,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _ShotName(
+                            shot: shot,
+                            model: library.model,
+                            color: c.t1,
+                            detailColor: c.t2,
+                            alignment: CrossAxisAlignment.start,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        _DownloadAction(
+                          key: const ValueKey('pane-download'),
+                          serial: serial,
+                          shot: shot,
+                          engine: library.engine,
+                          look: _DownloadLook.labelled,
+                        ),
+                      ],
+                    ),
+                  ),
+                  _Details(shot: shot, model: library.model),
+                  _ShotMap(serial: serial, shot: shot, model: library.model),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// The viewer's two pages at a fold ([pagesAtFold]): the [shot] on the
+/// first and its [details], which begin [top] down the window, on the
+/// second. As the shot takes the whole screen ([immersed] going from 0 to
+/// 1) it grows across the fold and they leave by the window's far edge.
+/// Away, they are not built: they ask the camera for the photo's Image
+/// Control and draw a map, which nothing shows then.
+class _ShotBesideDetails extends StatelessWidget {
+  const new({
+    required this.immersed,
+    required this.book,
+    required this.top,
+    required this.shot,
+    required this.details,
+  });
+
+  final Animation<double> immersed;
+  final BookFold book;
+  final double top;
+  final Widget shot;
+  final Widget details;
+
+  @override
+  Widget build(BuildContext context) {
+    final leftFirst = Directionality.of(context) == TextDirection.ltr;
+    final acrossFold = book.gap + book.second;
+    final secondPage = Padding(
+      padding: EdgeInsetsDirectional.only(start: book.gap, top: top),
+      // The window's inset on the side of the fold is the first page's.
+      child: MediaQuery.removePadding(
+        context: context,
+        removeLeft: leftFirst,
+        removeRight: !leftFirst,
+        child: details,
+      ),
+    );
+    return AnimatedBuilder(
+      animation: immersed,
+      builder: (context, _) => Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: shot),
+          if (!immersed.isCompleted)
+            ClipRect(
+              child: SizedBox(
+                width: acrossFold * (1 - immersed.value),
+                // At its full width whatever shows of it, so it slides
+                // instead of being laid out again narrower.
+                child: OverflowBox(
+                  alignment: AlignmentDirectional.topStart,
+                  minWidth: acrossFold,
+                  maxWidth: acrossFold,
+                  child: secondPage,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -443,7 +910,9 @@ class _ShotViewerState extends State<ShotViewer> with TickerProviderStateMixin {
 /// screen ([immersed] at 1) it is white on the scrim of the badges over
 /// photos, so it reads on a bright photo and a dark one, and fades away
 /// and back with [visibility]; above a shot with its details ([immersed]
-/// at 0) it is the app's bar.
+/// at 0) it is the app's bar. With its buttons in the window's vertical
+/// bar ([buttonsInBar]) it is the shot's name alone, from the start of
+/// the window.
 class _Header extends StatelessWidget {
   const new({
     required this.shown,
@@ -451,6 +920,7 @@ class _Header extends StatelessWidget {
     required this.immersed,
     required this.shot,
     required this.model,
+    required this.buttonsInBar,
     required this.infoShown,
     required this.onInfo,
     required this.download,
@@ -467,6 +937,10 @@ class _Header extends StatelessWidget {
   final Animation<double> immersed;
   final Shot shot;
   final LibraryModel model;
+
+  /// Back, Info and Download stand in the window's [VerticalBar], not
+  /// here.
+  final bool buttonsInBar;
   final bool infoShown;
   final VoidCallback onInfo;
   final Widget? download;
@@ -474,11 +948,6 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    final taken = model.info(shot.primary)?.taken;
-    final subtitle = [
-      if (taken != null) formatDayTime(context, taken, DateTime.now()),
-      ?storageLabel(context, shot.storage),
-    ].join(' · ');
     return IgnorePointer(
       ignoring: !shown,
       child: AnimatedBuilder(
@@ -490,54 +959,95 @@ class _Header extends StatelessWidget {
             child: Opacity(
               opacity: visibility.value,
               child: AppBar(
-                leading: const BackButton(),
+                automaticallyImplyLeading: !buttonsInBar,
+                leading: buttonsInBar ? null : const BackButton(),
+                centerTitle: buttonsInBar ? false : null,
+                titleSpacing: buttonsInBar ? 20 : null,
                 foregroundColor: foreground,
                 backgroundColor: Color.lerp(
                   c.bg,
                   GrColors.photoBadgeScrim,
                   immersed.value,
                 ),
-                title: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      shot.primary.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: foreground,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GrFonts.monoStyle(
-                        context,
-                        size: 11,
-                        color: Color.lerp(c.t2, Colors.white70, immersed.value),
-                      ),
-                    ),
-                  ],
+                title: _ShotName(
+                  shot: shot,
+                  model: model,
+                  color: foreground,
+                  detailColor: Color.lerp(c.t2, Colors.white70, immersed.value),
+                  alignment: buttonsInBar
+                      ? CrossAxisAlignment.start
+                      : CrossAxisAlignment.center,
                 ),
                 actions: [
-                  IconButton(
-                    key: const Key('viewer-info'),
-                    tooltip: context.l10n.viewerInfo,
-                    isSelected: infoShown,
-                    onPressed: onInfo,
-                    icon: const Icon(Icons.info_outline_rounded),
-                    selectedIcon: const Icon(Icons.info_rounded),
-                  ),
-                  ?download,
+                  if (!buttonsInBar) ...[
+                    IconButton(
+                      key: const Key('viewer-info'),
+                      tooltip: context.l10n.viewerInfo,
+                      isSelected: infoShown,
+                      onPressed: onInfo,
+                      icon: const Icon(Icons.info_outline_rounded),
+                      selectedIcon: const Icon(Icons.info_rounded),
+                    ),
+                    ?download,
+                  ],
                 ],
               ),
             ),
           );
         },
       ),
+    );
+  }
+}
+
+/// A shot's name over when it was taken and where it is stored.
+class _ShotName extends StatelessWidget {
+  const new({
+    required this.shot,
+    required this.model,
+    required this.color,
+    required this.detailColor,
+    required this.alignment,
+  });
+
+  final Shot shot;
+  final LibraryModel model;
+  final Color? color;
+
+  /// The colour of when it was taken and where it is stored.
+  final Color? detailColor;
+
+  /// Where the two lines are across the room they have.
+  final CrossAxisAlignment alignment;
+
+  @override
+  Widget build(BuildContext context) {
+    final taken = model.info(shot.primary)?.taken;
+    final takenAndStorage = [
+      if (taken != null) formatDayTime(context, taken, DateTime.now()),
+      ?storageLabel(context, shot.storage),
+    ].join(' · ');
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: alignment,
+      children: [
+        Text(
+          shot.primary.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+        Text(
+          takenAndStorage,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GrFonts.monoStyle(context, size: 11, color: detailColor),
+        ),
+      ],
     );
   }
 }
@@ -1574,29 +2084,43 @@ class _ImageControlSkeleton extends StatelessWidget {
   );
 }
 
-/// Downloads the shot, from the viewer's header: a RAW+JPEG pair asks
-/// whether to download its JPEG, its RAW or both, also after a failed
-/// download, so a failed JPEG never keeps its RAW from being chosen; any
-/// other shot starts at once, or retries its failed job. Its icon and its
-/// tooltip say that the shot's files are downloading (a ring fills as they
-/// do) or queued, that their job failed, or that they were downloaded.
-/// Saved files can always be downloaded again: the app cannot see whether
-/// they are still on the phone.
+/// Where a [_DownloadAction] stands, which decides its shape.
+enum _DownloadLook {
+  /// An icon in the viewer's header.
+  header,
+
+  /// A round button in the window's vertical bar.
+  bar,
+
+  /// A button that says what it does, beside the shot's name in the
+  /// Library's pane.
+  labelled,
+}
+
+/// Downloads the shot: a RAW+JPEG pair asks whether to download its JPEG,
+/// its RAW or both, also after a failed download, so a failed JPEG never
+/// keeps its RAW from being chosen; any other shot starts at once, or
+/// retries its failed job. Its icon and its tooltip, or its text where it
+/// has one ([look]), say that the shot's files are downloading (a ring
+/// fills as they do) or queued, that their job failed, or that they were
+/// downloaded. Saved files can always be downloaded again: the app cannot
+/// see whether they are still on the phone.
 class _DownloadAction extends StatelessWidget {
   const new({
     required this.serial,
     required this.shot,
     required this.engine,
+    required this.look,
     super.key,
   });
 
   final String serial;
   final Shot shot;
   final DownloadEngine engine;
+  final _DownloadLook look;
 
   @override
   Widget build(BuildContext context) {
-    final color = IconTheme.of(context).color;
     final l10n = context.l10n;
     final files = shot.files;
     final jobs = [
@@ -1631,34 +2155,77 @@ class _DownloadAction extends StatelessWidget {
     } else {
       onTap = () => unawaited(engine.enqueueFiles(serial, shot, addable));
     }
-    return IconButton(
-      tooltip: text,
-      // The header's colour: the app's own is dark over a photo in the
-      // light theme. Fainter, except while downloading: the ring is to be
-      // read, though nothing is left to tap for.
-      disabledColor: running ? color : color?.withValues(alpha: .38),
-      onPressed: onTap,
-      icon: running
-          ? Stack(
-              alignment: Alignment.center,
-              children: [
-                const Icon(Icons.arrow_downward_rounded, size: 14),
-                SizedBox.square(
-                  dimension: 24,
-                  child: ValueListenableBuilder(
-                    valueListenable: engine.progress,
-                    builder: (context, p, _) => CircularProgressIndicator(
-                      value: p.fraction,
-                      strokeWidth: 2,
-                      color: color,
-                      backgroundColor: color?.withValues(alpha: .24),
-                    ),
-                  ),
-                ),
-              ],
-            )
-          : Icon(icon),
+    // In [color], and fainter over a part not yet downloaded.
+    Widget ring(Color? color) => ValueListenableBuilder(
+      valueListenable: engine.progress,
+      builder: (context, p, _) => CircularProgressIndicator(
+        value: p.fraction,
+        strokeWidth: 2,
+        color: color,
+        backgroundColor: color?.withValues(alpha: .24),
+      ),
     );
+    switch (look) {
+      case _DownloadLook.header:
+        final color = IconTheme.of(context).color;
+        return IconButton(
+          tooltip: text,
+          // The header's colour: the app's own is dark over a photo in
+          // the light theme. Fainter, except while downloading: the ring
+          // is to be read, though nothing is left to tap for.
+          disabledColor: running ? color : color?.withValues(alpha: .38),
+          onPressed: onTap,
+          icon: running
+              ? Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    const Icon(Icons.arrow_downward_rounded, size: 14),
+                    SizedBox.square(dimension: 24, child: ring(color)),
+                  ],
+                )
+              : Icon(icon),
+        );
+      case _DownloadLook.bar:
+        final c = GrColors.of(context);
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            RoundIconButton(
+              icon: running ? Icons.arrow_downward_rounded : icon,
+              iconSize: running ? 14 : 18,
+              label: text,
+              onTap: onTap,
+              iconColor: onTap == null && !running ? c.t3 : null,
+            ),
+            if (running)
+              IgnorePointer(
+                child: SizedBox.square(dimension: 24, child: ring(c.t1)),
+              ),
+          ],
+        );
+      case _DownloadLook.labelled:
+        final c = GrColors.of(context);
+        return FilledButton.icon(
+          onPressed: onTap,
+          style: FilledButton.styleFrom(
+            backgroundColor: c.invBg,
+            foregroundColor: c.invFg,
+            minimumSize: const Size(0, 40),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+          ),
+          icon: running
+              // In the button's colour, which is fainter while nothing is
+              // left to tap for.
+              ? Builder(
+                  builder: (context) => SizedBox.square(
+                    dimension: 16,
+                    child: ring(IconTheme.of(context).color),
+                  ),
+                )
+              : Icon(icon, size: 18),
+          label: Text(text),
+        );
+    }
   }
 
   /// Asks which files of the pair to download (bottom sheet) and queues

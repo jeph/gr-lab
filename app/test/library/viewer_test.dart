@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -15,6 +16,7 @@ import 'package:grphoto/src/services.dart';
 import 'package:grphoto/src/widgets/group.dart';
 import 'package:image/image.dart' as img;
 
+import '../support/duo_window.dart';
 import '../support/test_app.dart';
 
 final Finder _viewer = find.byType(ShotViewer);
@@ -92,6 +94,54 @@ Future<TestApp> _openViewer(
   }
   return app;
 }
+
+/// Opens the Library of a camera holding `R0000001.JPG` to `R0000003.JPG`
+/// on an iPhone Duo in [window], and the viewer on the last of them. Open
+/// and held wide, the Library shows the shot beside its grid first, where
+/// a tap on the photo opens the viewer.
+Future<TestApp> _openViewerOnDuo(WidgetTester tester, DuoWindow window) async {
+  final app = (await tester.runAsync(
+    () => createTestApp(
+      config: FakeCameraConfig(
+        bonded: true,
+        photos: [
+          for (var n = 1; n <= 3; n++)
+            FakePhoto('100RICOH', 'R000000$n.JPG', _taken(n)),
+        ],
+      ),
+      saveCamera: true,
+    ),
+  ))!;
+  await app.pumpApp(tester);
+  await _openLibrary(tester);
+  setDuoWindow(tester, app.windowPose, window);
+  await tapWhenReady(
+    tester,
+    find.byKey(const ValueKey('sd1|100RICOH/R0000003')),
+  );
+  final beside = find.descendant(
+    of: find.byType(ShotPane),
+    matching: find.byType(PageView),
+  );
+  await pumpUntil(
+    tester,
+    () => _viewer.evaluate().isNotEmpty || beside.evaluate().isNotEmpty,
+    reason: 'the shot in the viewer or beside the Library',
+  );
+  if (_viewer.evaluate().isEmpty) await tapWhenReady(tester, beside);
+  await pumpUntilFound(tester, _viewer);
+  // The route has finished sliding in.
+  await pumpRounds(tester, 30);
+  expect(tester.takeException(), isNull, reason: window.name);
+  return app;
+}
+
+/// The fold of a foldable at [bounds] of the window, flat.
+DisplayFeature _fold(Rect bounds) => DisplayFeature(
+  bounds: bounds,
+  type: DisplayFeatureType.fold,
+  state: DisplayFeatureState.postureFlat,
+);
 
 /// The pair `R0000001` loses [deleted]; the viewer shows the shot left,
 /// whose Download no longer asks which files and downloads only [kept].
@@ -1175,5 +1225,223 @@ void main() {
       expect(map, findsNothing);
       await app.dispose();
     });
+  });
+
+  group('on an iPhone Duo', () {
+    final pages = _inViewer(find.byType(PageView));
+    final header = _inViewer(find.byType(AppBar));
+    final details = _inViewer(find.byType(GroupBox));
+    const buttons = ['viewer-back', 'viewer-info', 'viewer-download'];
+    Finder button(String key) => find.byKey(ValueKey(key));
+
+    // Back, Info and Download stand in [strip], the window's bar under
+    // the status, one under the other, and the header has none of them.
+    void expectButtonsInBar(WidgetTester tester, Rect strip) {
+      for (final key in buttons) {
+        expect(button(key).hitTestable(), findsOne, reason: key);
+        final rect = tester.getRect(button(key));
+        expect(strip.expandToInclude(rect), strip, reason: key);
+        expect(
+          find.descendant(of: header, matching: button(key)),
+          findsNothing,
+          reason: key,
+        );
+      }
+      expect(
+        tester.getRect(button(buttons[0])).bottom,
+        lessThanOrEqualTo(tester.getRect(button(buttons[1])).top),
+      );
+      expect(
+        tester.getRect(button(buttons[1])).bottom,
+        lessThanOrEqualTo(tester.getRect(button(buttons[2])).top),
+      );
+      expect(_inViewer(find.byType(BackButton)), findsNothing);
+    }
+
+    testWidgets('closed, the viewer opens with the details below the '
+        'photo, beside the bar down its side, where Back, Info and '
+        'Download stand; Info puts the details away and brings them '
+        'back', (tester) async {
+      final app = await _openViewerOnDuo(tester, DuoWindow.closed);
+      // The bar's strip, under the status at its top.
+      const strip = Rect.fromLTRB(382, 174, 466, 678);
+      expectButtonsInBar(tester, strip);
+      final name = tester.getRect(_showing('R0000003.JPG'));
+      // The window has no inset at its top, where its corners are rounded.
+      expect(name.top, greaterThanOrEqualTo(14));
+      expect(name.right, lessThanOrEqualTo(strip.left));
+      expect(tester.getRect(header).right, lessThanOrEqualTo(strip.left));
+
+      Rect photo() => tester.getRect(pages);
+      expect(photo().left, 0);
+      expect(photo().right, closeTo(strip.left, .5));
+      expect(photo().top, closeTo(tester.getRect(header).bottom, .5));
+      final withDetails = photo().height;
+      // Room for a photo of the sensor's shape, as wide as the window.
+      expect(withDetails, greaterThanOrEqualTo(strip.left * 2 / 3));
+      expect(tester.getRect(details).top, greaterThanOrEqualTo(photo().bottom));
+      expect(tester.getRect(details).right, lessThanOrEqualTo(strip.left));
+      expect(tester.getRect(details).bottom, lessThanOrEqualTo(678));
+
+      await tester.tap(button('viewer-info'));
+      await pumpRounds(tester, 30);
+      expect(tester.takeException(), isNull);
+      expect(details, findsNothing);
+      expect(photo(), const Rect.fromLTRB(0, 0, 382, 678));
+      expectButtonsInBar(tester, strip);
+
+      await tester.tap(button('viewer-info'));
+      await pumpRounds(tester, 30);
+      expect(details, findsOneWidget);
+      expect(photo().height, withDetails);
+
+      await app.dispose();
+    });
+
+    for (final window in [DuoWindow.open, DuoWindow.book]) {
+      testWidgets('held wide (${window.name}), the viewer opens with the '
+          'photo across the window beside the bar; Info shows the details '
+          'as the second page, with the photo on the first, and a tap on '
+          'the photo puts them away', (tester) async {
+        final app = await _openViewerOnDuo(tester, window);
+        // The bar's strip, under the status at its top, and the pages
+        // either side of the fold: one line when flat.
+        const strip = Rect.fromLTRB(867, 124, 951, 669);
+        final fold = window.pose.fold!;
+        final firstPageEnd = window.pose.halfOpen ? fold.left : fold.center.dx;
+        final secondPageStart = window.pose.halfOpen
+            ? fold.right
+            : fold.center.dx;
+        expectButtonsInBar(tester, strip);
+        expect(details, findsNothing);
+        expect(tester.getRect(pages), const Rect.fromLTRB(0, 0, 867, 669));
+
+        await tester.tap(button('viewer-info'));
+        await pumpRounds(tester, 30);
+        expect(tester.takeException(), isNull);
+        final photo = tester.getRect(pages);
+        final headerBottom = tester.getRect(header).bottom;
+        expect(photo.left, 0);
+        expect(photo.right, closeTo(firstPageEnd, .5));
+        expect(photo.top, closeTo(headerBottom, .5));
+        expect(photo.bottom, 669);
+        final beside = tester.getRect(details);
+        expect(beside.left, greaterThanOrEqualTo(secondPageStart));
+        expect(beside.right, lessThanOrEqualTo(strip.left));
+        expect(beside.top, greaterThanOrEqualTo(headerBottom));
+        expectButtonsInBar(tester, strip);
+
+        await tester.tap(pages);
+        await pumpRounds(tester, 30);
+        expect(details, findsNothing);
+        expect(tester.getRect(pages), const Rect.fromLTRB(0, 0, 867, 669));
+
+        await app.dispose();
+      });
+    }
+
+    testWidgets('the viewer keeps its shot and the page that shows it as '
+        'the phone opens, turns upright and closes; in a window without '
+        'the bar its buttons are in its header, under the band at the '
+        'top', (tester) async {
+      final app = await _openViewerOnDuo(tester, DuoWindow.closed);
+      await tester.fling(pages, const Offset(-300, 0), 1000);
+      await pumpUntilFound(tester, _showing('R0000002.JPG'));
+      await pumpRounds(tester, 30);
+      final viewer = tester.state(_viewer);
+      final shown = tester.state(pages);
+      for (final window in [
+        DuoWindow.open,
+        DuoWindow.upright,
+        DuoWindow.book,
+        DuoWindow.tabletop,
+        DuoWindow.closed,
+      ]) {
+        setDuoWindow(tester, app.windowPose, window);
+        await pumpRounds(tester, 15);
+        expect(tester.takeException(), isNull, reason: window.name);
+        expect(tester.state(_viewer), same(viewer), reason: window.name);
+        expect(tester.state(pages), same(shown), reason: window.name);
+        expect(_showing('R0000002.JPG'), findsOneWidget, reason: window.name);
+        if (window.pose.barSide != null) {
+          final strip = window == DuoWindow.closed
+              ? const Rect.fromLTRB(382, 174, 466, 678)
+              : const Rect.fromLTRB(867, 124, 951, 669);
+          expectButtonsInBar(tester, strip);
+          continue;
+        }
+        final back = _inViewer(find.byType(BackButton));
+        expect(back.hitTestable(), findsOne, reason: window.name);
+        expect(
+          tester.getRect(back).top,
+          greaterThanOrEqualTo(window.insets.top),
+          reason: window.name,
+        );
+        for (final key in ['viewer-info', 'viewer-download']) {
+          expect(
+            find.descendant(of: header, matching: button(key)).hitTestable(),
+            findsOne,
+            reason: '$key, ${window.name}',
+          );
+        }
+      }
+
+      await app.dispose();
+    });
+  });
+
+  testWidgets('without a vertical bar the viewer is as on a phone, also on '
+      'a phone on its side and on a foldable with its hinge upright: its '
+      'buttons in the header, the photo across the window and the details '
+      'below it', (tester) async {
+    final app = await _openViewer(tester, [
+      FakePhoto('100RICOH', 'R0000001.JPG', _taken(1)),
+    ], 'sd1|100RICOH/R0000001');
+    addTearDown(tester.view.reset);
+    final pages = _inViewer(find.byType(PageView));
+    final header = _inViewer(find.byType(AppBar));
+    final details = _inViewer(find.byType(GroupBox));
+    final info = find.byKey(const Key('viewer-info'));
+    Future<void> expectAsOnAPhone(Size window) async {
+      await pumpRounds(tester, 30);
+      expect(tester.takeException(), isNull, reason: '$window');
+      for (final button in [
+        find.byType(BackButton),
+        info,
+        find.byKey(const ValueKey('viewer-download')),
+      ]) {
+        expect(
+          find.descendant(of: header, matching: button).hitTestable(),
+          findsOne,
+          reason: '$window',
+        );
+      }
+      expect(details, findsNothing, reason: '$window');
+      expect(tester.getSize(pages), window);
+    }
+
+    tester.view
+      ..physicalSize = const Size(2868, 1320)
+      ..devicePixelRatio = 3;
+    await expectAsOnAPhone(const Size(956, 440));
+
+    const window = Size(750, 830);
+    tester.view
+      ..physicalSize = window
+      ..devicePixelRatio = 1
+      ..displayFeatures = [_fold(const Rect.fromLTWH(365, 0, 20, 830))];
+    await expectAsOnAPhone(window);
+    await tester.tap(info);
+    await pumpRounds(tester, 30);
+    expect(tester.takeException(), isNull);
+    expect(tester.getRect(pages).top, tester.getRect(header).bottom);
+    expect(tester.getRect(pages).width, window.width);
+    expect(
+      tester.getRect(details).top,
+      greaterThanOrEqualTo(tester.getRect(pages).bottom),
+    );
+    expect(tester.getRect(details).width, lessThanOrEqualTo(window.width));
+
+    await app.dispose();
   });
 }

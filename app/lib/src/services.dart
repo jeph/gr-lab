@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:gr_camera/gr_camera.dart';
+import 'package:grphoto/src/platform/window_pose.dart';
 
 /// Saves downloaded camera files into the device photo library.
 abstract interface class MediaSaver {
@@ -163,10 +164,15 @@ final class AppServices {
     ],
     this.askBeforeWifiJoin = false,
     this.isDemo = false,
-  });
+    ValueListenable<WindowPose>? windowPose,
+  }) : windowPose = windowPose ?? ValueNotifier(WindowPose.none);
 
   /// The camera layer: Bluetooth, the camera's Wi-Fi and its tracing.
   final GrCameraEnvironment camera;
+
+  /// The vertical bar and the fold of the app's window on a foldable
+  /// iPhone; [WindowPose.none] everywhere else.
+  final ValueListenable<WindowPose> windowPose;
 
   /// The [GrCameraEnvironment]'s trace sink, pointed at the debug log by
   /// `AppModels.load`.

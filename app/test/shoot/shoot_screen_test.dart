@@ -1,3 +1,5 @@
+import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,9 +15,11 @@ import 'package:grphoto/src/library/shot_cell.dart';
 import 'package:grphoto/src/library/viewer.dart';
 import 'package:grphoto/src/shoot/live_view_controller.dart';
 import 'package:grphoto/src/shoot/shoot_screen.dart';
+import 'package:grphoto/src/shoot/shoot_widgets.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/pressable.dart';
 
+import '../support/duo_window.dart';
 import '../support/test_app.dart';
 
 /// Liveness probes would otherwise run every 5 s against a camera
@@ -55,6 +59,26 @@ Future<void> _untilReady(WidgetTester tester) => pumpUntil(
       tester.widget<Pressable>(find.byKey(const Key('shoot-shutter'))).onTap !=
       null,
   reason: 'shutter enabled',
+);
+
+/// Waits until [page] fills the test's window: its route has come in, and
+/// a new size of the window has reached it.
+Future<void> _untilFills(WidgetTester tester, Finder page) => pumpUntil(
+  tester,
+  () =>
+      tester.getRect(page) ==
+      Offset.zero & tester.view.physicalSize / tester.view.devicePixelRatio,
+  reason: 'the page in its window',
+);
+
+/// The fold of an Android foldable at [bounds] of the window, flat or
+/// [halfOpen].
+DisplayFeature _fold(Rect bounds, {bool halfOpen = false}) => DisplayFeature(
+  bounds: bounds,
+  type: DisplayFeatureType.fold,
+  state: halfOpen
+      ? DisplayFeatureState.postureHalfOpened
+      : DisplayFeatureState.postureFlat,
 );
 
 String _stat(WidgetTester tester, String key) {
@@ -378,6 +402,107 @@ void main() {
       expect(find.byKey(Key(key)).hitTestable(), findsOne, reason: key);
     }
     expect(tapReaches(tester, inBar, shutter), isTrue);
+    await app.dispose();
+  });
+
+  testWidgets('on a closed iPhone Duo, Back and Settings stand in the bar '
+      'down its side, under the status, and Remote keeps to the rest of the '
+      'window; open and upright, its top bar is beside the status in the '
+      'band at the top, and Remote is still the same page', (tester) async {
+    final app = await _inShoot(tester);
+    await _untilReady(tester);
+    final remote = find.byKey(const Key('shoot-remote'));
+    final page = tester.state(remote);
+    final shutter = tester.state(find.byType(ShutterButton));
+    Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+    Future<void> foldTo(DuoWindow window) async {
+      setDuoWindow(tester, app.windowPose, window);
+      await _untilFills(tester, remote);
+      expect(tester.takeException(), isNull, reason: window.name);
+    }
+
+    await foldTo(DuoWindow.closed);
+    // The bar's strip, under the status at its top.
+    const strip = Rect.fromLTRB(382, 174, 466, 678);
+    for (final key in ['camera-back', 'camera-settings']) {
+      expect(find.byKey(Key(key)).hitTestable(), findsOne, reason: key);
+      expect(strip.expandToInclude(rect(key)), strip, reason: key);
+    }
+    expect(
+      rect('camera-back').bottom,
+      lessThanOrEqualTo(rect('camera-settings').top),
+    );
+    for (final key in [
+      'camera-pill',
+      'shoot-mode',
+      'shoot-stat-mode',
+      'shoot-stat-battery',
+      'shoot-shutter',
+      'shoot-timer',
+      'shoot-drive',
+    ]) {
+      expect(find.byKey(Key(key)).hitTestable(), findsOne, reason: key);
+      expect(rect(key).right, lessThanOrEqualTo(strip.left), reason: key);
+    }
+    // The window has no inset at its top, where its corners are rounded.
+    expect(rect('camera-pill').top, greaterThanOrEqualTo(14));
+
+    await foldTo(DuoWindow.upright);
+    // The band at the top, as far as the status in its last 144.
+    const band = Rect.fromLTRB(0, 0, 525, 82);
+    for (final key in ['camera-back', 'camera-pill', 'camera-settings']) {
+      expect(find.byKey(Key(key)).hitTestable(), findsOne, reason: key);
+      expect(band.expandToInclude(rect(key)), band, reason: key);
+    }
+    expect(
+      rect('camera-back').right,
+      lessThanOrEqualTo(rect('camera-pill').left),
+    );
+    expect(
+      rect('camera-pill').right,
+      lessThanOrEqualTo(rect('camera-settings').left),
+    );
+    expect(
+      rect('shoot-mode').top,
+      greaterThanOrEqualTo(rect('camera-back').bottom),
+    );
+    expect(tester.state(remote), same(page));
+    expect(tester.state(find.byType(ShutterButton)), same(shutter));
+    await app.dispose();
+  });
+
+  testWidgets("a phone keeps Remote's top bar under its status bar, and on "
+      'its side between the insets of its camera cutout', (tester) async {
+    final app = await _inShoot(tester);
+    await _untilReady(tester);
+    final remote = find.byKey(const Key('shoot-remote'));
+    Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+
+    tester.view
+      ..physicalSize = const Size(393, 852)
+      ..devicePixelRatio = 1
+      ..padding = const FakeViewPadding(top: 59, bottom: 34);
+    await _untilFills(tester, remote);
+    expect(tester.takeException(), isNull);
+    // Under the status bar and the bar's own margin of 6.
+    expect(rect('camera-back').topLeft, const Offset(18, 65));
+    expect(rect('camera-settings').right, 393 - 18);
+    expect(rect('shoot-mode').top, greaterThan(rect('camera-back').bottom));
+
+    tester.view
+      ..physicalSize = const Size(956, 440)
+      ..padding = const FakeViewPadding(left: 62, right: 62, bottom: 20);
+    await _untilFills(tester, remote);
+    expect(tester.takeException(), isNull);
+    expect(rect('camera-back').left, 62 + 18);
+    expect(rect('camera-settings').right, 956 - 62 - 18);
+    // Remote / Live view is in the bar, the shutter beside the rest.
+    expect(
+      rect('shoot-mode').center.dy,
+      closeTo(rect('camera-back').center.dy, .5),
+    );
+    expect(rect('shoot-mode').top, greaterThanOrEqualTo(6));
+    expect(rect('shoot-timer').right, lessThan(rect('shoot-shutter').left));
     await app.dispose();
   });
 
@@ -798,6 +923,407 @@ void main() {
           tester.getRect(find.byKey(const Key('live-dial-av'))).top - 8,
         ),
       );
+      await app.dispose();
+    });
+
+    testWidgets('on a closed iPhone Duo, × and the exposure mode stand in '
+        'the bar down its side, under the status; the picture takes the '
+        'width the bar leaves, with the other controls above and below it '
+        'as on a phone', (tester) async {
+      final app = await inLiveView(tester);
+      setDuoWindow(tester, app.windowPose, DuoWindow.closed);
+      await pumpUntilFound(tester, find.byKey(const Key('live-exposure')));
+      await pumpRounds(tester, 3);
+      expect(tester.takeException(), isNull);
+      Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+      // The bar's strip, under the status at its top, and the bottom of
+      // the window above the system's inset.
+      const strip = Rect.fromLTRB(382, 174, 466, 678);
+      const bottom = 678 - 34.0;
+      for (final key in ['live-close', 'live-exposure']) {
+        expect(find.byKey(Key(key)).hitTestable(), findsOne, reason: key);
+        expect(strip.expandToInclude(rect(key)), strip, reason: key);
+      }
+      final picture = rect('live-turned-0');
+      expect(picture.left, closeTo(0, .5));
+      expect(picture.right, closeTo(strip.left, .5));
+      for (final key in ['camera-pill', 'shoot-mode', 'live-chip-drive']) {
+        final control = rect(key);
+        expect(control.bottom, lessThanOrEqualTo(picture.top), reason: key);
+        expect(control.right, lessThanOrEqualTo(strip.left), reason: key);
+      }
+      // The window has no inset at its top, where its corners are rounded.
+      expect(rect('camera-pill').top, greaterThanOrEqualTo(14));
+      for (final key in [
+        'live-readout-av',
+        'live-readout-xv',
+        'live-last-shot',
+        'shoot-shutter',
+      ]) {
+        final control = rect(key);
+        expect(control.top, greaterThanOrEqualTo(picture.bottom), reason: key);
+        expect(control.right, lessThanOrEqualTo(strip.left), reason: key);
+        expect(control.bottom, lessThanOrEqualTo(bottom), reason: key);
+      }
+      expect(
+        rect('shoot-shutter').top,
+        greaterThanOrEqualTo(rect('live-readout-av').bottom),
+      );
+      expect(find.byKey(const Key('shoot-shutter')).hitTestable(), findsOne);
+      await app.dispose();
+    });
+
+    testWidgets('on an open iPhone Duo held wide, the picture is as large '
+        'as fits between a row of controls above it and one below it, with '
+        'nothing over it, and the shutter and the last shot stand in the '
+        'bar under × and the exposure mode; half-open like a book, only '
+        'the picture crosses the fold', (tester) async {
+      final app = await inLiveView(tester);
+      setDuoWindow(tester, app.windowPose, DuoWindow.open);
+      await pumpUntilFound(tester, find.byKey(const Key('live-exposure')));
+      await pumpUntil(
+        tester,
+        () => find.text('f/2.8').evaluate().isNotEmpty,
+        reason: 'aperture readout',
+      );
+      await pumpRounds(tester, 3);
+      expect(tester.takeException(), isNull);
+      Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+      // The bar's strip, under the status at its top, and the bottom of
+      // the window above the system's inset.
+      const strip = Rect.fromLTRB(867, 124, 951, 669);
+      const bottom = 669 - 34.0;
+      const above = ['camera-pill', 'shoot-mode'];
+      const readouts = [
+        'live-readout-av',
+        'live-readout-tv',
+        'live-readout-sv',
+        'live-readout-xv',
+      ];
+      const inBar = [
+        'live-close',
+        'live-exposure',
+        'shoot-shutter',
+        'live-last-shot',
+      ];
+      // The chips scroll in what their row leaves them.
+      final chips = find
+          .ancestor(
+            of: find.byKey(const Key('live-chip-drive')),
+            matching: find.byType(SingleChildScrollView),
+          )
+          .first;
+
+      final picture = rect('live-turned-0');
+      expect(picture.left, greaterThanOrEqualTo(0));
+      expect(picture.right, lessThanOrEqualTo(strip.left));
+      for (final (i, key) in inBar.indexed) {
+        final control = rect(key);
+        expect(find.byKey(Key(key)).hitTestable(), findsOne, reason: key);
+        expect(strip.expandToInclude(control), strip, reason: key);
+        expect(control.bottom, lessThanOrEqualTo(bottom), reason: key);
+        if (i > 0) {
+          expect(
+            control.top,
+            greaterThanOrEqualTo(rect(inBar[i - 1]).bottom),
+            reason: key,
+          );
+        }
+      }
+      // Halfway down the bar, with a margin on either side of it.
+      final shutter = rect('shoot-shutter');
+      expect(shutter.center.dy, closeTo(strip.bottom / 2, .5));
+      expect(shutter.left - strip.left, greaterThanOrEqualTo(8));
+      expect(strip.right - shutter.right, greaterThanOrEqualTo(8));
+      for (final key in above) {
+        final control = rect(key);
+        expect(control.bottom, lessThanOrEqualTo(picture.top), reason: key);
+        expect(control.right, lessThanOrEqualTo(strip.left), reason: key);
+      }
+      for (final control in [
+        for (final key in readouts) rect(key),
+        tester.getRect(chips),
+      ]) {
+        expect(control.top, greaterThanOrEqualTo(picture.bottom));
+        expect(control.right, lessThanOrEqualTo(strip.left));
+        expect(control.bottom, lessThanOrEqualTo(bottom));
+      }
+      // The rows leave the picture all the room between them.
+      expect(picture.top - rect('shoot-mode').bottom, lessThan(24));
+      expect(rect('live-readout-av').top - picture.bottom, lessThan(24));
+
+      // The dial opens in the row below the picture, in the chips' place:
+      // it keeps off the picture too, and moves nothing.
+      final readoutsAtRest = [for (final key in readouts) rect(key)];
+      final dial = find.byKey(const Key('live-dial-av'));
+      await tester.tap(find.byKey(const Key('live-readout-av')));
+      await pumpUntilFound(tester, dial);
+      // Risen into its place.
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(tester.takeException(), isNull);
+      expect(dial.hitTestable(), findsOne);
+      final open = tester.getRect(dial);
+      expect(open.top, greaterThanOrEqualTo(picture.bottom));
+      expect(open.left, greaterThanOrEqualTo(rect('live-readout-xv').right));
+      expect(open.right, lessThanOrEqualTo(strip.left));
+      expect(open.bottom, lessThanOrEqualTo(bottom));
+      expect(rect('live-turned-0'), picture);
+      expect([for (final key in readouts) rect(key)], readoutsAtRest);
+
+      setDuoWindow(tester, app.windowPose, DuoWindow.book);
+      await pumpRounds(tester, 3);
+      expect(tester.takeException(), isNull);
+      // The band the display folds along.
+      const foldLeft = 455.5;
+      const foldRight = 495.5;
+      expect(rect('live-turned-0'), picture);
+      expect(picture.left, lessThan(foldLeft));
+      expect(picture.right, greaterThan(foldRight));
+      for (final key in ['camera-pill', ...readouts]) {
+        expect(rect(key).right, lessThanOrEqualTo(foldLeft), reason: key);
+      }
+      expect(rect('shoot-mode').left, greaterThanOrEqualTo(foldRight));
+      expect(tester.getRect(dial).left, greaterThanOrEqualTo(foldRight));
+      expect(tester.getRect(dial).right, lessThanOrEqualTo(strip.left));
+      // Closed again, the chips are back in its place.
+      await tester.tap(find.byKey(const Key('live-readout-av')));
+      await pumpUntil(
+        tester,
+        () => dial.evaluate().isEmpty,
+        reason: 'the dial closed',
+      );
+      expect(tester.getRect(chips).left, greaterThanOrEqualTo(foldRight));
+      expect(rect('live-chip-drive').left, greaterThanOrEqualTo(foldRight));
+
+      // What shows in the picture's place until frames come keeps to one
+      // side of the fold.
+      app.camera.poweredOn = false;
+      final turnOn = find.byKey(const Key('shoot-turn-on'));
+      await pumpUntilFound(tester, turnOn);
+      expect(tester.takeException(), isNull);
+      expect(turnOn.hitTestable(), findsOne);
+      expect(tester.getRect(turnOn).right, lessThanOrEqualTo(foldLeft));
+      await tester.tap(turnOn);
+      await pumpUntilFound(tester, find.byKey(const Key('live-picture')));
+      await app.dispose();
+    });
+
+    testWidgets('on an iPhone Duo half-open on a table, the picture fills '
+        'the half that stands up, under the camera beside the status, and '
+        'every control is in the half that lies flat, the open dial too; '
+        'flat again, the controls are above and below the picture', (
+      tester,
+    ) async {
+      final app = await inLiveView(tester);
+      setDuoWindow(tester, app.windowPose, DuoWindow.tabletop);
+      await pumpUntilFound(tester, find.byKey(const Key('live-exposure')));
+      await pumpUntil(
+        tester,
+        () => find.text('f/2.8').evaluate().isNotEmpty,
+        reason: 'aperture readout',
+      );
+      await pumpRounds(tester, 3);
+      expect(tester.takeException(), isNull);
+      Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+      // The band the display folds along, the band at the top as far as
+      // the status in its last 144, and the bottom of the window above the
+      // system's inset.
+      const foldTop = 455.5;
+      const foldBottom = 495.5;
+      const band = Rect.fromLTRB(0, 0, 525, 82);
+      const bottom = 951 - 34.0;
+      const controls = [
+        'shoot-mode',
+        'live-close',
+        'live-exposure',
+        'live-chip-drive',
+        'live-readout-av',
+        'live-readout-xv',
+        'live-last-shot',
+        'shoot-shutter',
+        'live-hint',
+      ];
+      List<Rect> placed() => [for (final key in controls) rect(key)];
+
+      final picture = rect('live-turned-0');
+      expect(picture.top, closeTo(band.bottom, .5));
+      expect(picture.bottom, closeTo(foldTop, .5));
+      expect(
+        picture.bottom,
+        lessThanOrEqualTo(foldTop + precisionErrorTolerance),
+      );
+      expect(band.expandToInclude(rect('camera-pill')), band);
+      for (final key in controls) {
+        final control = rect(key);
+        expect(control.top, greaterThanOrEqualTo(foldBottom), reason: key);
+        expect(control.bottom, lessThanOrEqualTo(bottom), reason: key);
+      }
+      for (final key in ['live-close', 'live-readout-av', 'shoot-shutter']) {
+        expect(find.byKey(Key(key)).hitTestable(), findsOne, reason: key);
+      }
+
+      final atRest = placed();
+      await tester.tap(find.byKey(const Key('live-readout-av')));
+      await pumpUntilFound(tester, find.byKey(const Key('live-dial-av')));
+      // Risen into its place.
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byKey(const Key('live-dial-av')).hitTestable(), findsOne);
+      final dial = rect('live-dial-av');
+      expect(dial.top, greaterThanOrEqualTo(foldBottom));
+      expect(dial.bottom, lessThanOrEqualTo(rect('live-readout-av').top));
+      expect(placed(), atRest);
+      expect(rect('live-turned-0'), picture);
+
+      setDuoWindow(tester, app.windowPose, DuoWindow.upright);
+      await pumpRounds(tester, 3);
+      expect(tester.takeException(), isNull);
+      final flat = rect('live-turned-0');
+      expect(flat.width, closeTo(669, .5));
+      expect(rect('live-close').top, greaterThanOrEqualTo(band.bottom));
+      expect(rect('live-close').bottom, lessThanOrEqualTo(flat.top));
+      expect(rect('shoot-shutter').top, greaterThanOrEqualTo(flat.bottom));
+      await app.dispose();
+    });
+
+    testWidgets('folding, unfolding and turning an iPhone Duo leaves live '
+        'view as it is: the stream, the open dial and the picture on the '
+        'screen', (tester) async {
+      final app = await inLiveView(tester);
+      setDuoWindow(tester, app.windowPose, DuoWindow.closed);
+      await pumpUntil(
+        tester,
+        () => find.text('f/2.8').evaluate().isNotEmpty,
+        reason: 'aperture readout',
+      );
+      await pumpRounds(tester, 3);
+      await tester.tap(find.byKey(const Key('live-readout-av')));
+      await pumpUntilFound(tester, find.byKey(const Key('live-dial-av')));
+      final page = tester.state(find.byKey(const Key('shoot-live')));
+      final shown = find.descendant(
+        of: find.byKey(const Key('live-picture')),
+        matching: find.byType(Image),
+      );
+      final image = tester.state(shown);
+      for (final window in [
+        DuoWindow.open,
+        DuoWindow.tabletop,
+        DuoWindow.upright,
+        DuoWindow.book,
+        DuoWindow.closed,
+      ]) {
+        setDuoWindow(tester, app.windowPose, window);
+        await pumpRounds(tester, 3);
+        final reason = window.name;
+        expect(tester.takeException(), isNull, reason: reason);
+        expect(
+          tester.state(find.byKey(const Key('shoot-live'))),
+          same(page),
+          reason: reason,
+        );
+        expect(tester.state(shown), same(image), reason: reason);
+        expect(
+          find.byKey(const Key('live-dial-av')).hitTestable(),
+          findsOne,
+          reason: reason,
+        );
+        expect(app.camera.liveViewStreams, 1, reason: reason);
+      }
+      await app.dispose();
+    });
+
+    testWidgets('a phone on its side and an Android foldable keep their '
+        'layouts, whether its fold is flat or half-open like a book; '
+        'half-open on a table, the picture is above its fold and every '
+        'control below it', (tester) async {
+      final app = await inLiveView(tester);
+      await pumpUntilFound(tester, find.byKey(const Key('live-exposure')));
+      await pumpUntil(
+        tester,
+        () => find.text('f/2.8').evaluate().isNotEmpty,
+        reason: 'aperture readout',
+      );
+      Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+      const controls = [
+        'shoot-mode',
+        'live-close',
+        'live-exposure',
+        'live-chip-drive',
+        'live-readout-av',
+        'live-readout-xv',
+        'live-last-shot',
+        'shoot-shutter',
+      ];
+      List<Rect> placed() => [
+        for (final key in ['live-turned-0', 'camera-pill', ...controls])
+          rect(key),
+      ];
+      Future<void> show(Size window, {DisplayFeature? fold}) async {
+        tester.view
+          ..physicalSize = window
+          ..devicePixelRatio = 1
+          ..displayFeatures = [?fold];
+        await pumpRounds(tester, 3);
+        expect(tester.takeException(), isNull, reason: '$window, $fold');
+      }
+
+      // A phone on its side: a rail on each side of the picture.
+      await show(const Size(956, 440));
+      final onItsSide = rect('live-turned-0');
+      expect(onItsSide.height, 440);
+      expect(onItsSide.center.dx, closeTo(956 / 2, .5));
+      for (final key in ['live-close', 'live-exposure', 'camera-pill']) {
+        expect(rect(key).right, lessThanOrEqualTo(onItsSide.left), reason: key);
+      }
+      for (final key in [
+        'live-readout-av',
+        'shoot-shutter',
+        'live-last-shot',
+      ]) {
+        expect(
+          rect(key).left,
+          greaterThanOrEqualTo(onItsSide.right),
+          reason: key,
+        );
+      }
+
+      // A foldable open, its fold standing upright.
+      await show(const Size(823, 707));
+      final open = placed();
+      for (final halfOpen in [false, true]) {
+        await show(
+          const Size(823, 707),
+          fold: _fold(
+            const Rect.fromLTWH(411.5, 0, 0, 707),
+            halfOpen: halfOpen,
+          ),
+        );
+        expect(placed(), open, reason: 'half-open: $halfOpen');
+      }
+
+      // Turned, its fold lies across the window.
+      const foldAcross = Rect.fromLTWH(0, 411.5, 707, 0);
+      await show(const Size(707, 823));
+      final turned = placed();
+      await show(const Size(707, 823), fold: _fold(foldAcross));
+      expect(placed(), turned);
+
+      await show(const Size(707, 823), fold: _fold(foldAcross, halfOpen: true));
+      final picture = rect('live-turned-0');
+      expect(
+        picture.bottom,
+        lessThanOrEqualTo(foldAcross.top + precisionErrorTolerance),
+      );
+      expect(picture.top, greaterThanOrEqualTo(rect('camera-pill').bottom));
+      for (final key in [...controls, 'live-hint']) {
+        expect(
+          rect(key).top,
+          greaterThanOrEqualTo(foldAcross.bottom),
+          reason: key,
+        );
+      }
+
+      await show(const Size(707, 823));
+      expect(placed(), turned);
       await app.dispose();
     });
 

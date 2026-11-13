@@ -6,6 +6,7 @@ import 'package:grphoto/src/debug/debug_log.dart';
 import 'package:grphoto/src/platform/app_dirs.dart';
 import 'package:grphoto/src/platform/background_downloads.dart';
 import 'package:grphoto/src/platform/media_saver.dart';
+import 'package:grphoto/src/platform/window_pose.dart';
 import 'package:grphoto/src/services.dart';
 
 /// Services for a real camera: the camera layer on the phone's Bluetooth
@@ -23,6 +24,7 @@ Future<AppServices> buildDeviceServices() async {
     cacheDir: dirs.cache,
     debugLogDir: await DebugLog.platformDirectory(),
     askBeforeWifiJoin: Platform.isAndroid,
+    windowPose: PlatformWindowPose(),
   );
 }
 

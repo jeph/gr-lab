@@ -519,11 +519,26 @@ class LookCompareModeSwitch extends StatelessWidget {
   }
 }
 
+/// How [PreviewPhotoSwitch] lays its small pictures out.
+enum PreviewPhotoLayout {
+  /// In a row, which shares the width it is given.
+  row,
+
+  /// In a column, which shares the height it is given.
+  column,
+
+  /// In rows of larger pictures, across the width it is given.
+  grid,
+}
+
 /// The photos a look can be previewed on, as small pictures to pick from
-/// (mock `look-photos` A). They share the length of [axis] between them,
-/// each up to a largest size, so that every photo is in view and none of
-/// them scrolls \[design\]. With [ownFirst] the first is the look's own
-/// photo: it carries a mark, and a line sets it apart from the others.
+/// (mock `look-photos` A). In a row or a column they share its length
+/// between them, each up to a largest size, so that every photo is in view
+/// and none of them scrolls \[design\]. In a grid they are larger, in the
+/// shape of the camera's photos, and fill the width in two rows, each
+/// again up to a largest size \[design\]. With [ownFirst] the first is the
+/// look's own photo: it carries a mark, and in a row or a column a line
+/// sets it apart from the others.
 class PreviewPhotoSwitch extends StatelessWidget {
   const new({
     required this.photos,
@@ -531,7 +546,7 @@ class PreviewPhotoSwitch extends StatelessWidget {
     required this.selected,
     required this.onSelect,
     super.key,
-    this.axis = Axis.horizontal,
+    this.layout = PreviewPhotoLayout.row,
     this.ownFirst = false,
   });
 
@@ -541,25 +556,53 @@ class PreviewPhotoSwitch extends StatelessWidget {
   final List<String> labels;
   final int selected;
   final ValueChanged<int> onSelect;
-
-  /// Across, as a row, or down, as a column.
-  final Axis axis;
+  final PreviewPhotoLayout layout;
   final bool ownFirst;
 
   /// The most a small picture takes in a row and in a column; it gives up
-  /// length along [axis] when the photos have less than that each.
+  /// length along the row or the column when the photos have less than
+  /// that each.
   static const Size _largestAcross = Size(58, 40);
   static const Size _largestDown = Size(52, 52);
 
   static const double _gap = 2;
 
+  /// The most a picture of a grid takes, which is also its shape: a photo
+  /// wider than tall, as the camera takes it.
+  static const Size _largestInGrid = Size(150, 100);
+
+  static const int _gridRows = 2;
+  static const double _gridGap = 8;
+
+  /// How many pictures each row of a grid of [count] photos has.
+  static int _gridColumns(int count) => math.max(1, (count / _gridRows).ceil());
+
+  /// The size of each picture of a grid of [columns] in a [width].
+  static Size _gridPictureSize(int columns, double width) {
+    final pictureWidth = ui.clampDouble(
+      (width - (columns - 1) * _gridGap) / columns,
+      0,
+      _largestInGrid.width,
+    );
+    return Size(pictureWidth, pictureWidth / _largestInGrid.aspectRatio);
+  }
+
+  /// How tall a grid of [count] photos is in a [width].
+  static double gridHeight({required int count, required double width}) {
+    final columns = _gridColumns(count);
+    final rows = (count / columns).ceil();
+    return rows * _gridPictureSize(columns, width).height +
+        (rows - 1) * _gridGap;
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = GrColors.of(context);
-    final down = axis == Axis.vertical;
+    if (layout == PreviewPhotoLayout.grid) return _grid(c);
+    final down = layout == PreviewPhotoLayout.column;
     final ownApart = ownFirst && photos.length > 1;
     return Flex(
-      direction: axis,
+      direction: down ? Axis.vertical : Axis.horizontal,
       mainAxisSize: MainAxisSize.min,
       children: [
         for (var i = 0; i < photos.length; i++) ...[
@@ -567,7 +610,7 @@ class PreviewPhotoSwitch extends StatelessWidget {
           Flexible(
             child: SizedBox.fromSize(
               size: down ? _largestDown : _largestAcross,
-              child: _small(c, i),
+              child: _small(c, i, longSide: _longSide),
             ),
           ),
           if (i == 0 && ownApart)
@@ -585,9 +628,37 @@ class PreviewPhotoSwitch extends StatelessWidget {
     );
   }
 
+  /// The photos in rows of [_gridColumns] pictures, which share the width.
+  Widget _grid(GrColors c) => LayoutBuilder(
+    builder: (context, box) {
+      final columns = _gridColumns(photos.length);
+      final pictureSize = _gridPictureSize(columns, box.maxWidth);
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: _gridGap,
+        children: [
+          for (var first = 0; first < photos.length; first += columns)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              spacing: _gridGap,
+              children: [
+                for (var i = first; i < first + columns; i++)
+                  if (i < photos.length)
+                    SizedBox.fromSize(
+                      size: pictureSize,
+                      child: _small(c, i, longSide: _longSideInGrid),
+                    ),
+              ],
+            ),
+        ],
+      );
+    },
+  );
+
   /// The small picture of photo [i], which picks it; ringed when it is the
-  /// one picked.
-  Widget _small(GrColors c, int i) => Tooltip(
+  /// one picked. It is decoded [longSide] pixels on its long side.
+  Widget _small(GrColors c, int i, {required int longSide}) => Tooltip(
     message: labels[i],
     child: Semantics(
       button: true,
@@ -616,7 +687,7 @@ class PreviewPhotoSwitch extends StatelessWidget {
                 child: ExifOrientation(
                   orientation: photos[i].orientation ?? 1,
                   child: Image(
-                    image: _decodedSmall(photos[i].image),
+                    image: _decodedSmall(photos[i].image, longSide),
                     fit: BoxFit.cover,
                     excludeFromSemantics: true,
                   ),
@@ -647,19 +718,26 @@ class PreviewPhotoSwitch extends StatelessWidget {
     ),
   );
 
-  /// [photo] decoded no larger than a small picture needs, however large
-  /// the preview asks for it: there may be several of them.
-  static ImageProvider _decodedSmall(ImageProvider photo) => ResizeImage(
-    switch (photo) {
-      ResizeImage(:final imageProvider) => imageProvider,
-      _ => photo,
-    },
-    width: _longSide,
-    height: _longSide,
-    policy: ResizeImagePolicy.fit,
-  );
+  /// [photo] decoded no larger than a small picture needs, [longSide]
+  /// pixels on its long side, however large the preview asks for it: there
+  /// may be several of them.
+  static ImageProvider _decodedSmall(ImageProvider photo, int longSide) =>
+      ResizeImage(
+        switch (photo) {
+          ResizeImage(:final imageProvider) => imageProvider,
+          _ => photo,
+        },
+        width: longSide,
+        height: longSide,
+        policy: ResizeImagePolicy.fit,
+      );
 
-  /// Pixels on the long side of a small picture: enough for the short
-  /// side of a 3:2 photo to fill it at four device pixels to one.
+  /// Pixels on the long side of a small picture of a row or a column:
+  /// enough for the short side of a 3:2 photo to fill it at four device
+  /// pixels to one.
   static const int _longSide = 240;
+
+  /// Pixels on the long side of a picture of a grid: enough to fill the
+  /// largest at four device pixels to one.
+  static const int _longSideInGrid = 600;
 }

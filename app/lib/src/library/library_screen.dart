@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:grphoto/l10n/l10n.dart';
 import 'package:grphoto/src/app_scope.dart';
 import 'package:grphoto/src/camera/camera_top_bar.dart';
@@ -15,14 +17,24 @@ import 'package:grphoto/src/library/library_scope.dart';
 import 'package:grphoto/src/library/shot.dart';
 import 'package:grphoto/src/library/shot_cell.dart';
 import 'package:grphoto/src/library/viewer.dart';
+import 'package:grphoto/src/platform/window_pose.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/gr_dialog.dart';
 import 'package:grphoto/src/widgets/group.dart';
 import 'package:grphoto/src/widgets/toast.dart';
+import 'package:grphoto/src/widgets/window_layout.dart';
 
 /// The camera's photos (mocks `b-library-ios` / `b-library-android`): the
 /// top bar with the camera pill and settings, filter chips, a grid by day,
 /// selection with a download bar, and the download mini bar.
+///
+/// In a window of two pages at a fold ([pagesAtFold]: a foldable held
+/// open like a book, mocks `duo-inner-library` and `duo-inner-split`) the
+/// grid lies across both pages, six shots wide, with the filters beside
+/// the title, until a shot is tapped. That shot shows on the second page
+/// ([ShotPane]) and the Library keeps the first, laid out as on a phone;
+/// Back puts the shot away again. Half-open, the grid's two halves and
+/// what floats over it keep to their sides of the fold.
 class LibraryScreen extends StatelessWidget {
   const new({super.key});
 
@@ -49,21 +61,50 @@ class _LibraryViewState extends State<_LibraryView> {
   bool _permissionDialogOpen = false;
   bool _listening = false;
 
+  /// The shot beside the grid, in a window of two pages at a fold.
+  final _pane = ShotPaneController();
+
+  /// The camera of the shot [_pane] shows.
+  String? _paneSerial;
+
+  /// The key of the shot [_pane] showed when the grid last brought its
+  /// line into view; null with the pane closed.
+  String? _revealedShotKey;
+
+  /// The top bar, for how much of the grid it covers when it is back.
+  final GlobalKey _topBarKey = GlobalKey();
+
+  /// The grid, for where its lines are.
+  final GlobalKey _gridKey = GlobalKey();
+
+  /// How many shots wide, and how tall, the grid's lines of shots were
+  /// last laid out.
+  int _columns = 3;
+  double _cellExtent = 0;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_listening) {
       _listening = true;
       _library.engine.addListener(_onEngine);
+      _library.engine.addListener(_followGrid);
+      _library.model.addListener(_followGrid);
+      _pane.addListener(_onPaneShot);
       // The engine is the app's: the photo library may have refused it
       // while the camera pages were closed.
       _onEngine();
     }
+    // A window that is one page has no room for a shot beside the grid.
+    if (pagesAtFold(context) == null) _pane.close();
   }
 
   @override
   void dispose() {
     _library.engine.removeListener(_onEngine);
+    _library.engine.removeListener(_followGrid);
+    _library.model.removeListener(_followGrid);
+    _pane.dispose();
     super.dispose();
   }
 
@@ -99,14 +140,158 @@ class _LibraryViewState extends State<_LibraryView> {
     await _library.engine.enqueue(serial, shots, kinds: {kind});
   }
 
-  void _open(List<Shot> shots, int index) {
-    Navigator.of(context).push(
+  void _setFilter(LibraryFilter filter) {
+    setState(() => _filter = filter);
+    _followGrid();
+  }
+
+  /// Opens the viewer on the shot of [shots] at [index]. A shot beside
+  /// the grid gives way to the one the viewer ended on.
+  Future<void> _open(List<Shot> shots, int index) async {
+    var last = shots[index];
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => LibraryScope(
           library: _library,
-          child: ShotViewer(shots: shots, initialIndex: index),
+          child: ShotViewer(
+            shots: shots,
+            initialIndex: index,
+            onShown: (shot) => last = shot,
+          ),
         ),
       ),
+    );
+    if (!mounted || !_pane.isOpen) return;
+    final now = _library.grid.filtered(_filter)?.shots;
+    if (now == null) return;
+    final place = now.indexWhere((s) => s.key == last.key);
+    if (place >= 0) _showBeside(now, place);
+  }
+
+  /// Shows the shot of [shots], the grid's, at [index] beside the grid.
+  void _showBeside(List<Shot> shots, int index) {
+    _paneSerial = _library.model.serial;
+    _pane.show(shots, index);
+  }
+
+  /// Opens the viewer on the shot beside the grid.
+  void _openShown() => unawaited(_open(_pane.shots, _pane.index));
+
+  /// Keeps the shot beside the grid to the grid's shots: those of its
+  /// camera that the filter leaves.
+  void _followGrid() {
+    if (!_pane.isOpen) return;
+    final shots = _library.model.serial == _paneSerial
+        ? _library.grid.filtered(_filter)?.shots
+        : null;
+    if (shots == null) {
+      _pane.close();
+    } else {
+      _pane.follow(shots);
+    }
+  }
+
+  /// Another shot shows beside the grid, or none does any more: once the
+  /// grid is laid out for that, the shot's line is brought into view.
+  void _onPaneShot() {
+    final key = _pane.shown?.key;
+    if (key == _revealedShotKey) return;
+    _revealedShotKey = key;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _revealPaneShot());
+  }
+
+  /// Scrolls the grid, when it has to, so that the line of the shot
+  /// [_pane] shows, or showed last, is in view, clear of the bars that
+  /// float over the grid's top and bottom. The grid has other columns once
+  /// the pane opens or closes, which moves its lines, and a swipe in the
+  /// pane goes on to shots further along. A line too far away to be built
+  /// is first jumped to where it is worked out to be ([afterJump] is set
+  /// from then on).
+  void _revealPaneShot({bool afterJump = false}) {
+    final grid = _gridKey.currentContext;
+    final shots = _library.grid.filtered(_filter)?.shots;
+    if (!mounted || grid == null || !identical(shots, _pane.shots)) return;
+    final sliver = grid.findRenderObject()! as RenderSliverMultiBoxAdaptor;
+    final lines = _library.grid.lines(_pane.shots, _columns).lines;
+    final shown = _pane.index;
+    final place = lines.indexWhere(
+      (l) =>
+          l is GridShotsLine &&
+          l.first <= shown &&
+          shown < l.first + l.shots.length,
+    );
+    if (place < 0) return;
+    RenderBox? line;
+    var dayLabelExtent = _dayLabelExtentGuess;
+    for (
+      var built = sliver.firstChild;
+      built != null;
+      built = sliver.childAfter(built)
+    ) {
+      final at = sliver.indexOf(built);
+      if (at == place) line = built;
+      if (lines.elementAtOrNull(at) case GridDayLine(
+        section: DaySection(day: _?),
+      )) {
+        dayLabelExtent = built.size.height;
+      }
+    }
+    final position = Scrollable.of(grid).position;
+    final bottomBarRoom = _bottomBarRoom + MediaQuery.paddingOf(context).bottom;
+    if (line != null) {
+      final viewport = RenderAbstractViewport.of(line);
+      final topBar = _topBarKey.currentContext?.findRenderObject();
+      final topBarRoom = topBar is RenderSliver
+          ? topBar.geometry?.maxPaintExtent ?? 0
+          : 0.0;
+      final lineAtTop = viewport.getOffsetToReveal(line, 0).offset - topBarRoom;
+      final lineAtBottom =
+          viewport.getOffsetToReveal(line, 1).offset + bottomBarRoom;
+      final scrolled = position.pixels;
+      final inView = scrolled > lineAtTop
+          ? lineAtTop
+          : max(scrolled, lineAtBottom);
+      final to = min(
+        max(inView, position.minScrollExtent),
+        position.maxScrollExtent,
+      );
+      if ((to - scrolled).abs() < 1) return;
+      if (afterJump || MediaQuery.disableAnimationsOf(context)) {
+        position.jumpTo(to);
+      } else {
+        unawaited(
+          position.animateTo(
+            to,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+          ),
+        );
+      }
+      return;
+    }
+    // Not where it was worked out to be: the grid stays where it is.
+    if (afterJump) return;
+    double extent(GridLine line) => switch (line) {
+      GridDayLine(section: DaySection(day: null)) => _undatedGap,
+      GridDayLine() => dayLabelExtent,
+      GridShotsLine(:final endsDay) => _cellExtent + (endsDay ? 0 : _cellGap),
+    };
+    var before = 0.0;
+    var fromLine = 0.0;
+    for (final (at, line) in lines.indexed) {
+      if (at < place) {
+        before += extent(line);
+      } else {
+        fromLine += extent(line);
+      }
+    }
+    final lineStart = sliver.constraints.precedingScrollExtent + before;
+    final viewportExtent = position.viewportDimension;
+    final centred = lineStart - (viewportExtent - extent(lines[place])) / 2;
+    final end = lineStart + fromLine + bottomBarRoom - viewportExtent;
+    position.jumpTo(max(position.minScrollExtent, min(centred, end)));
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _revealPaneShot(afterJump: true),
     );
   }
 
@@ -116,6 +301,7 @@ class _LibraryViewState extends State<_LibraryView> {
       _library.model,
       _library.engine,
       _app.connection,
+      _pane,
     ]),
     builder: (context, _) => _build(context),
   );
@@ -149,134 +335,280 @@ class _LibraryViewState extends State<_LibraryView> {
         : model.connected
         ? null
         : l10n.libraryConnecting;
-
-    return PopScope(
-      canPop: !_selecting,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _selecting) _endSelecting();
-      },
-      child: Scaffold(
-        body: Stack(
-          children: [
-            RefreshIndicator(
-              onRefresh: model.refresh,
-              notificationPredicate: (n) => model.connected && n.depth == 0,
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                  const SliverCameraTopBar(),
-                  SliverSafeArea(
-                    top: false,
-                    bottom: false,
-                    sliver: SliverToBoxAdapter(
-                      child: PageTitle(
-                        l10n.libraryTitle,
-                        status: _Progress(progress),
-                      ),
+    final c = GrColors.of(context);
+    final bar = VerticalBar.of(context);
+    final book = pagesAtFold(context);
+    // The two pages while a shot shows on the second: the Library has the
+    // first.
+    final besideShot = _pane.isOpen ? book : null;
+    // Without one the grid lies across both, and keeps the fold between
+    // them clear while the window is half-open.
+    final acrossFold = book != null && besideShot == null;
+    final clearOfFold = book != null && besideShot == null && book.gap > 0
+        ? book
+        : null;
+    final pastFold = clearOfFold == null
+        ? 0.0
+        : clearOfFold.gap + clearOfFold.second;
+    // Pages that meet with no gap between them have a line there.
+    final pageEdge = besideShot == null || besideShot.gap > 0
+        ? null
+        : BorderDirectional(start: BorderSide(color: c.line));
+    final chips = showsFailure || filtered == null || all == null || all.isEmpty
+        ? null
+        : _Chips(
+            filter: _filter,
+            counts: filtered.counts,
+            onSelect: _setFilter,
+            besideTitle: acrossFold,
+          );
+    final title = PageTitle(
+      l10n.libraryTitle,
+      // Where the grid lies across two pages the filters are beside the
+      // title, and what the Library waits for after them: the row they
+      // had goes to the photos.
+      status: chips == null || !acrossFold
+          ? _Progress(progress)
+          : Row(
+              children: [
+                Expanded(child: chips),
+                if (progress != null) ...[
+                  const SizedBox(width: 12),
+                  _Progress(progress),
+                ],
+              ],
+            ),
+    );
+    final page = Stack(
+      children: [
+        RefreshIndicator(
+          onRefresh: model.refresh,
+          notificationPredicate: (n) => model.connected && n.depth == 0,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverCameraTopBar(key: _topBarKey),
+              SliverPadding(
+                padding: EdgeInsetsDirectional.only(end: pastFold),
+                sliver: SliverSafeArea(
+                  top: false,
+                  bottom: false,
+                  sliver: SliverToBoxAdapter(child: title),
+                ),
+              ),
+              if (showsFailure)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+                    child: ConnectFailureView(
+                      camera: camera,
+                      failure: wifiFailure,
+                      connection: _app.connection,
                     ),
                   ),
-                  if (showsFailure)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                        child: ConnectFailureView(
-                          camera: camera,
-                          failure: wifiFailure,
-                          connection: _app.connection,
-                        ),
-                      ),
-                    )
-                  else ...[
-                    if (all != null && progress == null && model.error != null)
-                      SliverToBoxAdapter(
-                        child: _UpdateFailedLine(onRetry: model.refresh),
-                      ),
-                    if (filtered != null && all!.isNotEmpty)
-                      SliverToBoxAdapter(
-                        child: _Chips(
-                          filter: _filter,
-                          counts: filtered.counts,
-                          onSelect: (f) => setState(() => _filter = f),
-                        ),
-                      ),
-                    if (shots == null || shots.isEmpty || serial == null)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: _EmptyState(
-                          model: model,
-                          connection: _app.connection,
-                          filter: _filter,
-                        ),
-                      )
-                    else
-                      _grid(context, serial, shots),
-                  ],
-                  SliverToBoxAdapter(child: SizedBox(height: 96 + bottomInset)),
-                ],
+                )
+              else ...[
+                if (all != null && progress == null && model.error != null)
+                  SliverToBoxAdapter(
+                    child: _UpdateFailedLine(onRetry: model.refresh),
+                  ),
+                if (chips != null && !acrossFold)
+                  SliverToBoxAdapter(child: chips),
+                if (shots == null || shots.isEmpty || serial == null)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _EmptyState(
+                      model: model,
+                      connection: _app.connection,
+                      filter: _filter,
+                    ),
+                  )
+                else
+                  // The grid's own width says how many shots go across
+                  // it: beside a shot, or a vertical bar, it is not the
+                  // window's.
+                  SliverLayoutBuilder(
+                    builder: (context, grid) => _grid(
+                      context,
+                      serial,
+                      shots,
+                      width: grid.crossAxisExtent,
+                      acrossFold: acrossFold,
+                      clearOfFold: clearOfFold,
+                      tapShowsBeside: book != null,
+                    ),
+                  ),
+              ],
+              SliverToBoxAdapter(
+                child: SizedBox(height: _bottomBarRoom + bottomInset),
               ),
+            ],
+          ),
+        ),
+        PositionedDirectional(
+          start: 12,
+          end: 12 + pastFold,
+          bottom: 12 + bottomInset,
+          child: ToastFloor(
+            child: _selecting && serial != null
+                ? _SelectionBar(
+                    serial: serial,
+                    shots: selectedShots,
+                    onDownload: (kind) =>
+                        _download(serial, selectedShots, kind),
+                    onClose: _endSelecting,
+                  )
+                : const DownloadBar(),
+          ),
+        ),
+      ],
+    );
+
+    return PopScope(
+      canPop: !_selecting && besideShot == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        // Back ends choosing shots, and after that puts the shot beside
+        // the grid away.
+        if (_selecting) {
+          _endSelecting();
+        } else {
+          _pane.close();
+        }
+      },
+      child: CameraBarColumn(
+        child: Scaffold(
+          // Beside the window's vertical bar, not under it.
+          body: SafeArea(
+            top: false,
+            bottom: false,
+            left: bar?.side == BarSide.left,
+            right: bar?.side == BarSide.right,
+            child: Stack(
+              children: [
+                // At the same place with a shot beside it and without, so
+                // the Library keeps its state.
+                PositionedDirectional(
+                  top: 0,
+                  bottom: 0,
+                  start: 0,
+                  end: besideShot == null ? 0 : null,
+                  width: besideShot?.first,
+                  child: _FirstPage(
+                    besideSecond: besideShot != null,
+                    child: page,
+                  ),
+                ),
+                if (besideShot != null)
+                  PositionedDirectional(
+                    top: 0,
+                    bottom: 0,
+                    start: besideShot.first + besideShot.gap,
+                    end: 0,
+                    child: DecoratedBox(
+                      position: DecorationPosition.foreground,
+                      decoration: BoxDecoration(border: pageEdge),
+                      child: ShotPane(controller: _pane, onOpen: _openShown),
+                    ),
+                  ),
+              ],
             ),
-            Positioned(
-              left: 12,
-              right: 12,
-              bottom: 12 + bottomInset,
-              child: ToastFloor(
-                child: _selecting && serial != null
-                    ? _SelectionBar(
-                        serial: serial,
-                        shots: selectedShots,
-                        onDownload: (kind) =>
-                            _download(serial, selectedShots, kind),
-                        onClose: _endSelecting,
-                      )
-                    : const DownloadBar(),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  /// [shots] by day, a line at a time ([gridLines]).
-  Widget _grid(BuildContext context, String serial, List<Shot> shots) {
+  /// [shots] by day, a line at a time ([gridLines]), in a grid [width]
+  /// wide: five shots to a line from 600 wide and three in a narrower
+  /// one, or six where the grid lies across two pages at a fold
+  /// ([acrossFold]) \[design\]: an even count has cells end near the fold.
+  /// With [clearOfFold], those pages, three are on either page and none on
+  /// the fold. A tap on a shot opens it in the viewer, or beside the grid
+  /// when [tapShowsBeside].
+  Widget _grid(
+    BuildContext context,
+    String serial,
+    List<Shot> shots, {
+    required double width,
+    required bool acrossFold,
+    required BookFold? clearOfFold,
+    required bool tapShowsBeside,
+  }) {
     final model = _library.model;
     final engine = _library.engine;
-    final columns = MediaQuery.sizeOf(context).width >= 600 ? 5 : 3;
+    final columns = acrossFold
+        ? 6
+        : width >= 600
+        ? 5
+        : 3;
+    final cellExtent = _cellExtentIn(width, columns, clearOfFold);
+    _columns = columns;
+    _cellExtent = cellExtent;
+    final shownKey = _pane.shown?.key;
     final now = DateTime.now();
     final (:lines, :indexOf) = _library.grid.lines(shots, columns);
+    void onTap(Shot shot, int index) {
+      if (_selecting) {
+        _toggle(shot);
+      } else if (tapShowsBeside) {
+        _showBeside(shots, index);
+      } else {
+        unawaited(_open(shots, index));
+      }
+    }
+
     Widget cell(Shot shot, int index) => ShotCell(
       key: ValueKey(shot.key),
       serial: serial,
       shot: shot,
       mark: _markFor(engine, serial, shot),
       duration: model.info(shot.primary)?.duration,
-      onTap: () => _selecting ? _toggle(shot) : _open(shots, index),
+      shown: shot.key == shownKey,
+      onTap: () => onTap(shot, index),
       onLongPress: () => _selecting ? _toggle(shot) : _startSelecting(shot),
+    );
+    // The line of [row], which starts at [first] among the shots, in the
+    // columns [from] up to [to].
+    Widget cells(List<Shot> row, int first, int from, int to) => Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var column = from; column < to; column++) ...[
+          if (column > from) const SizedBox(width: _cellGap),
+          Expanded(
+            child: column < row.length
+                ? cell(row[column], first + column)
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ],
     );
     Widget line(GridLine line) => switch (line) {
       GridDayLine(section: DaySection(:final day?, shots: final ofDay)) =>
         _DayLabel(title: formatDay(context, day, now), shots: ofDay),
-      GridDayLine() => const SizedBox(height: 8),
+      GridDayLine() => const SizedBox(height: _undatedGap),
       GridShotsLine(:final first, shots: final row, :final endsDay) => Padding(
         padding: EdgeInsets.only(bottom: endsDay ? 0 : _cellGap),
-        child: Row(
-          children: [
-            for (var column = 0; column < columns; column++) ...[
-              if (column > 0) const SizedBox(width: _cellGap),
-              Expanded(
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: column < row.length
-                      ? cell(row[column], first + column)
-                      : null,
+        child: SizedBox(
+          height: cellExtent,
+          child: clearOfFold == null
+              ? cells(row, first, 0, columns)
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      width: clearOfFold.first,
+                      child: cells(row, first, 0, columns ~/ 2),
+                    ),
+                    SizedBox(width: clearOfFold.gap),
+                    Expanded(child: cells(row, first, columns ~/ 2, columns)),
+                  ],
                 ),
-              ),
-            ],
-          ],
         ),
       ),
     };
     return SliverList.builder(
+      key: _gridKey,
       itemCount: lines.length,
       // A line that moves, as the lines under a label that just appeared
       // do, keeps its cells and the pictures they loaded or wait for.
@@ -303,6 +635,50 @@ class _LibraryViewState extends State<_LibraryView> {
 
 /// Space between the grid's cells.
 const double _cellGap = 2;
+
+/// Over the grid's leading shots without a date, when dated days follow
+/// them.
+const double _undatedGap = 8;
+
+/// About as tall as a day's label is at the default text size: its height
+/// while no label is laid out to measure.
+const double _dayLabelExtentGuess = 44;
+
+/// At the grid's end, for the bar that floats over the bottom of the
+/// Library.
+const double _bottomBarRoom = 96;
+
+/// How tall the cells of a grid [width] wide and [columns] shots across
+/// are: as tall as wide, or as the cells on the wider page are wide where
+/// the grid's halves keep to the pages either side of a fold
+/// ([clearOfFold]) \[design\].
+double _cellExtentIn(double width, int columns, BookFold? clearOfFold) {
+  final (room, cells) = clearOfFold == null
+      ? (width, columns)
+      : (max(clearOfFold.first, clearOfFold.second), columns ~/ 2);
+  return (room - (cells - 1) * _cellGap) / cells;
+}
+
+/// [child], the Library's page, as the first of two pages at a fold when
+/// [besideSecond]: the window's inset on the far side is the second
+/// page's then, not its own.
+class _FirstPage extends StatelessWidget {
+  const new({required this.besideSecond, required this.child});
+
+  final bool besideSecond;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final leftFirst = Directionality.of(context) == TextDirection.ltr;
+    return MediaQuery.removePadding(
+      context: context,
+      removeLeft: besideSecond && !leftFirst,
+      removeRight: besideSecond && leftFirst,
+      child: child,
+    );
+  }
+}
 
 /// Explains how to allow photo-library access after the OS refused it.
 Future<void> showPermissionGuidance(BuildContext context) {
@@ -409,11 +785,16 @@ class _Chips extends StatelessWidget {
     required this.filter,
     required this.counts,
     required this.onSelect,
+    required this.besideTitle,
   });
 
   final LibraryFilter filter;
   final Map<LibraryFilter, int> counts;
   final ValueChanged<LibraryFilter> onSelect;
+
+  /// In the title's row, which has margins of its own, instead of in a
+  /// row under it.
+  final bool besideTitle;
 
   static String _label(AppLocalizations l10n, LibraryFilter f) => switch (f) {
     LibraryFilter.all => l10n.libraryFilterAll,
@@ -426,7 +807,9 @@ class _Chips extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
     scrollDirection: Axis.horizontal,
-    padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
+    padding: besideTitle
+        ? EdgeInsets.zero
+        : const EdgeInsets.fromLTRB(20, 14, 20, 4),
     child: Row(
       children: [
         for (final f in LibraryFilter.values) ...[

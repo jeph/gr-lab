@@ -21,6 +21,7 @@ import 'package:grphoto/src/shoot/shoot_widgets.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/group.dart';
 import 'package:grphoto/src/widgets/toast.dart';
+import 'package:grphoto/src/widgets/window_layout.dart';
 
 /// Android delivers the volume buttons to the app as key events; iOS does
 /// not, so the hint only promises them on Android.
@@ -119,6 +120,8 @@ class _ShootScreenState extends State<ShootScreen> {
 /// battery, one large shutter, the self-timer and the drive. They are
 /// stacked ([_stack]), or in a window too short for that and wide enough
 /// (a phone on its side) the shutter goes beside the rest ([_beside]).
+/// In a window with a [VerticalBar], Back and Settings stand in that
+/// ([CameraBarColumn]).
 class _RemoteView extends StatelessWidget {
   const new({required this.model});
 
@@ -142,22 +145,35 @@ class _RemoteView extends StatelessWidget {
   static const _besideWidth = 600.0;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    key: const Key('shoot-remote'),
-    body: SafeArea(
-      child: LayoutBuilder(
-        builder: (context, box) {
-          // The stack would have to shrink the shutter, then scroll.
-          final short = box.maxHeight < _stackRestHeight + _maxShutterSize;
-          final wide =
-              box.maxWidth >=
-              MediaQuery.textScalerOf(context).scale(_besideWidth);
-          return short && wide
-              ? _beside(context)
-              : _stack(context, box.maxHeight);
-        },
+  Widget build(BuildContext context) => CameraBarColumn(
+    child: Scaffold(
+      key: const Key('shoot-remote'),
+      body: SafeArea(
+        // A status band is not kept clear: the top bar goes in it, beside
+        // the status ([_topBar]).
+        top: StatusBand.of(context) == null,
+        child: LayoutBuilder(
+          builder: (context, box) {
+            // The stack would have to shrink the shutter, then scroll.
+            final short = box.maxHeight < _stackRestHeight + _maxShutterSize;
+            final wide =
+                box.maxWidth >=
+                MediaQuery.textScalerOf(context).scale(_besideWidth);
+            return short && wide
+                ? _beside(context)
+                : _stack(context, box.maxHeight);
+          },
+        ),
       ),
     ),
+  );
+
+  /// The top bar, with [middle] in it, clear of the system's status: in
+  /// the window's status band where it has one, and under the rounded
+  /// corners of a window with a [VerticalBar].
+  Widget _topBar({Widget? middle}) => StatusBandBar(
+    barHeight: CameraTopBar.height,
+    child: CameraTopBar(middle: middle),
   );
 
   /// Everything in one column, which scrolls in a window of [height] too
@@ -171,7 +187,7 @@ class _RemoteView extends StatelessWidget {
         children: [
           Column(
             children: [
-              const CameraTopBar(),
+              _topBar(),
               const SizedBox(height: 14),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -202,7 +218,7 @@ class _RemoteView extends StatelessWidget {
   /// so they show between its buttons \[design\].
   Widget _beside(BuildContext context) => CustomScrollView(
     slivers: [
-      PinnedHeaderSliver(child: CameraTopBar(middle: _modeSwitch())),
+      PinnedHeaderSliver(child: _topBar(middle: _modeSwitch())),
       SliverLayoutBuilder(
         builder: (context, sliver) {
           // What the bar leaves of the window.

@@ -19,9 +19,11 @@ import 'package:grphoto/l10n/l10n.dart';
 import 'package:grphoto/src/app.dart';
 import 'package:grphoto/src/app_scope.dart';
 import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/platform/window_pose.dart';
 import 'package:grphoto/src/services.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/toast.dart';
+import 'package:grphoto/src/widgets/window_layout.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
 /// The app wired to a [FakeGrCamera], with its data in a temporary
@@ -43,6 +45,7 @@ final class TestApp {
     required this.media,
     required this.background,
     required this.location,
+    required this.windowPose,
     required this._permission,
     required this._root,
   });
@@ -60,6 +63,11 @@ final class TestApp {
   /// The phone's location service as the app sees it: its access, fixes,
   /// run notice and recorded history are scripted here.
   final FakePhoneLocation location;
+
+  /// What a foldable iPhone says of the app's window: its vertical bar and
+  /// its fold. [WindowPose.none], as on any other phone, until a test sets
+  /// it (`setDuoWindow` sets it with the window's size and insets).
+  final ValueNotifier<WindowPose> windowPose;
   final _Permission _permission;
   final Directory _root;
   WidgetTester? _tester;
@@ -91,7 +99,10 @@ final class TestApp {
           theme: grTheme(colors),
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          builder: (context, child) => ToastHost(child: child!),
+          builder: (context, child) => WindowPoseScope(
+            pose: windowPose,
+            child: ToastHost(child: child!),
+          ),
           home: home,
         ),
       ),
@@ -229,7 +240,9 @@ Future<TestApp> createTestApp({
   final background = RecordingBackgroundDownloads();
   final phone = location ?? FakePhoneLocation();
   final trace = TraceRelay();
+  final windowPose = ValueNotifier(WindowPose.none);
   final services = AppServices(
+    windowPose: windowPose,
     camera: GrCameraEnvironment(
       ble: ble,
       wifi: wifi == null ? camera.wifi : wifi(camera.wifi),
@@ -257,6 +270,7 @@ Future<TestApp> createTestApp({
     media: saver,
     background: background,
     location: phone,
+    windowPose: windowPose,
     permission: permission,
     root: root,
   );

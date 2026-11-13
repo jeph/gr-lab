@@ -15,6 +15,7 @@ import 'package:grphoto/src/library/library_scope.dart';
 import 'package:grphoto/src/library/shot.dart';
 import 'package:grphoto/src/library/shot_cell.dart';
 import 'package:grphoto/src/library/viewer.dart';
+import 'package:grphoto/src/platform/window_pose.dart';
 import 'package:grphoto/src/shoot/live_view_controller.dart';
 import 'package:grphoto/src/shoot/shoot_format.dart';
 import 'package:grphoto/src/shoot/shoot_model.dart';
@@ -23,6 +24,7 @@ import 'package:grphoto/src/shoot/shoot_widgets.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/pressable.dart';
 import 'package:grphoto/src/widgets/toast.dart';
+import 'package:grphoto/src/widgets/window_layout.dart';
 
 /// Live view (mock `b-shoot`): a viewfinder, always dark, in the chosen
 /// theme when that is dark and in the Dark theme otherwise. The picture is
@@ -33,6 +35,12 @@ import 'package:grphoto/src/widgets/toast.dart';
 /// anywhere between them. The exposure readouts edit on a dial; × goes
 /// back to Remote. The last shot is the newest picture taken since live
 /// view was opened, and a tap on it opens the viewer on all of them.
+///
+/// In a window with a [VerticalBar] (a foldable iPhone, closed or open and
+/// held wide) × and the exposure mode stand in the bar, and in a wide one
+/// the shutter and the last shot too: the bar is the rail at its end. On a
+/// foldable that is half-open on a table the picture is in the half that
+/// stands up and every control in the half that lies flat.
 class LiveViewPage extends StatelessWidget {
   const new({required this.model, super.key});
 
@@ -47,15 +55,9 @@ class LiveViewPage extends StatelessWidget {
         data: grTheme(
           chosen.brightness == Brightness.dark ? chosen : GrColors.dark,
         ),
-        child: Builder(
-          builder: (context) => Scaffold(
-            key: const Key('shoot-live'),
-            backgroundColor: Colors.black,
-            body: ListenableBuilder(
-              listenable: model.liveView,
-              builder: (context, _) => _LiveLayout(model: model),
-            ),
-          ),
+        child: ListenableBuilder(
+          listenable: model.liveView,
+          builder: (context, _) => _LiveLayout(model: model),
         ),
       ),
     );
@@ -226,6 +228,46 @@ class _LiveLayoutState extends State<_LiveLayout> {
   /// joining the camera's Wi-Fi a place \[design\].
   static const _minRoomBetweenBars = 48.0;
 
+  /// The padding of the row the controls start with, and its height at
+  /// the default text size: its padding and its 36 pt buttons.
+  static const _topRowPadding = EdgeInsets.fromLTRB(18, 6, 18, 0);
+  static const double _topRowHeight = 6 + 36;
+
+  /// The shutter in a [VerticalBar] fits the bar's width with a margin on
+  /// either side \[design\].
+  static const _barShutterSize = 64.0;
+
+  /// Under the last shot at the foot of a [VerticalBar], at least: as far
+  /// as the dock stands from it on the other pages \[design\].
+  static const _barFoot = 16.0;
+
+  /// Each page of a window that folds down its middle holds one part of
+  /// the rows of [_barsBesideBar] where it is at least this wide
+  /// \[design\].
+  static const _minFoldPageWidth = 280.0;
+
+  /// Between the camera at the top of [_table] and the picture.
+  static const _tableTopGap = 8.0;
+
+  /// The half of a foldable on a table that stands up shows the picture
+  /// where it has at least this height for it under the camera \[design\].
+  static const _minTablePictureHeight = 120.0;
+
+  /// Height of the controls in the flat half of [_table], about: those of
+  /// [_bars] and the room kept for the dial.
+  static double _tableControlsHeight(TextScaler text, {required bool wide}) =>
+      _barsHeight(text, wide: wide) + _dialRoom;
+
+  /// Width of the readouts in a window of [size]: in a row with the last
+  /// shot and the shutter ([inRow]), or in a row of their own.
+  static double _readoutsWidth(Size size, {required bool inRow}) => inRow
+      ? math.min(_maxReadoutsWidth, size.width - 2 * (24 + _shutterSize + 12))
+      : size.width - 32;
+
+  /// Whether × and the exposure mode stand in the window's [VerticalBar]
+  /// ([BarColumn]), and so nowhere among the other controls.
+  bool get _buttonsInBar => VerticalBar.of(context) != null;
+
   bool get _streaming => _live.phase == LiveViewPhase.streaming;
 
   /// Width over height of the picture as shown: the frame, turned upright
@@ -246,8 +288,10 @@ class _LiveLayoutState extends State<_LiveLayout> {
   /// the picture, the bars do unless they would hide more than a third of
   /// its height and the rails less of its width: a row of controls over
   /// each end of a large picture hides little of it, rails squeezed in
-  /// beside it do not read well \[design\].
+  /// beside it do not read well \[design\]. They never do in a window with
+  /// a [VerticalBar], which takes the place of a rail.
   bool _controlsInRails(Size size, Size picture, {required bool wide}) {
+    if (VerticalBar.of(context) != null) return false;
     final bars = _barsHeight(MediaQuery.textScalerOf(context), wide: wide);
     if (size.height - bars < _minRoomBetweenBars) return true;
     final underBars =
@@ -260,28 +304,74 @@ class _LiveLayoutState extends State<_LiveLayout> {
     return underBars > 1 / 3 && underRails < underBars;
   }
 
+  /// The fold of a foldable that is half-open on a table, where it leaves
+  /// a window of [window] in size with [insets] a half that stands up with
+  /// room for a picture and a half that lies flat with room for every
+  /// control ([_table]); null otherwise. [wide] is whether the controls
+  /// can take a row each.
+  Rect? _tableFold(Size window, EdgeInsets insets, {required bool wide}) {
+    final fold = WindowFold.table(context);
+    if (fold == null) return null;
+    final uprightHeight = fold.top - insets.top;
+    if (uprightHeight < _topRowHeight + _minTablePictureHeight) return null;
+    final flatHeight = window.height - insets.bottom - fold.bottom;
+    final text = MediaQuery.textScalerOf(context);
+    return flatHeight >= _tableControlsHeight(text, wide: wide) ? fold : null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final dialKey = _dialKey != null && _editable(_dialKey!) != null
         ? _dialKey
         : null;
+    final window = MediaQuery.sizeOf(context);
+    final insets = MediaQuery.paddingOf(context);
+    final bar = VerticalBar.of(context);
     // As far in from one side of the screen as from the other: a phone on
     // its side has its camera cutout at one, and the picture stays in the
-    // middle of the screen.
-    final insets = MediaQuery.paddingOf(context);
-    return SafeArea(
-      minimum: EdgeInsets.symmetric(
-        horizontal: math.max(insets.left, insets.right),
-      ),
-      child: LayoutBuilder(
-        builder: (context, box) {
-          final size = box.biggest;
-          final wide = size.width >= _wideWidth;
-          final picture = _largestWithin(size, _pictureAspect);
-          return _controlsInRails(size, picture, wide: wide)
-              ? _rails(size, picture, dialKey)
-              : _bars(size, picture, dialKey, wide: wide);
-        },
+    // middle of the screen. A vertical bar is no cutout but the page's
+    // own: the picture is in the middle of what the bar leaves.
+    final side = bar == null ? math.max(insets.left, insets.right) : 0.0;
+    final wide =
+        window.width - math.max(insets.horizontal, 2 * side) >= _wideWidth;
+    final tableFold = _tableFold(window, insets, wide: wide);
+    // The bar where it is the rail at the end of the controls.
+    final railBar = wide && tableFold == null ? bar : null;
+    return BarColumn(
+      buttons: [_close(), ?_exposureMode()],
+      child: Scaffold(
+        key: const Key('shoot-live'),
+        backgroundColor: Colors.black,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            SafeArea(
+              // On a table the camera goes beside the system's status, not
+              // under it ([_tableTop]).
+              top: tableFold == null,
+              minimum: EdgeInsets.only(
+                left: side,
+                right: side,
+                top: bar == null ? 0 : StatusBandBar.cornerMargin,
+              ),
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  final size = box.biggest;
+                  if (tableFold != null) {
+                    return _table(size, tableFold, dialKey, wide: wide);
+                  }
+                  if (railBar != null) return _barsBesideBar(size, dialKey);
+                  final picture = _largestWithin(size, _pictureAspect);
+                  return _controlsInRails(size, picture, wide: wide)
+                      ? _rails(size, picture, dialKey)
+                      : _bars(size, picture, dialKey, wide: wide);
+                },
+              ),
+            ),
+            if (railBar != null)
+              ..._barRail(railBar, window, bottomInset: insets.bottom),
+          ],
+        ),
       ),
     );
   }
@@ -295,50 +385,298 @@ class _LiveLayoutState extends State<_LiveLayout> {
     final hint =
         size.height - picture.height >=
         _barsHeight(text, wide: wide) + _hintHeight(text);
-    final readoutsWidth = wide
-        ? math.min(_maxReadoutsWidth, size.width - 2 * (24 + _shutterSize + 12))
-        : size.width - 32;
-    return CustomMultiChildLayout(
-      delegate: _BarsLayout(picture: _streaming ? picture : null),
-      children: [
-        LayoutId(
-          id: _Bar.picture,
-          child: _Picture(model: _model),
-        ),
-        LayoutId(
-          id: _Bar.top,
-          child: _Scrim(
-            key: const Key('live-top'),
-            edge: Alignment.topCenter,
-            child: _top(wide: wide),
-          ),
-        ),
-        LayoutId(
-          id: _Bar.bottom,
-          child: _Scrim(
-            key: const Key('live-bottom'),
-            edge: Alignment.bottomCenter,
-            child: ToastFloor(
-              child: wide
-                  ? _bottomRow(
-                      dialKey,
-                      readoutsWidth: readoutsWidth,
-                      hint: hint,
-                    )
-                  : _bottomStack(dialKey, hint: hint),
-            ),
-          ),
-        ),
-        if (dialKey != null)
-          LayoutId(
-            id: _Bar.dial,
-            child: ToastFloor(
-              child: SizedBox(width: readoutsWidth, child: _dial(dialKey)),
-            ),
-          ),
-      ],
+    final readoutsWidth = _readoutsWidth(size, inRow: wide);
+    return _barsAround(
+      picture: _streaming ? picture : null,
+      top: _top(wide: wide),
+      bottom: ToastFloor(
+        child: wide
+            ? _bottomRow(dialKey, readoutsWidth: readoutsWidth, hint: hint)
+            : _bottomStack(dialKey, hint: hint),
+      ),
+      dial: dialKey == null
+          ? null
+          : SizedBox(width: readoutsWidth, child: _dial(dialKey)),
     );
   }
+
+  /// [top] and [bottom], the controls above and below the picture, as a
+  /// [_BarsLayout] places them, with [dial] over the picture above
+  /// [bottom]. The picture is [picture] in size; without one it gets the
+  /// room between the controls, of which what shows until frames come
+  /// keeps to the first [stepsWidth]. With [fold] it ends above that and
+  /// [bottom] starts under it.
+  Widget _barsAround({
+    required Widget top,
+    required Widget bottom,
+    Widget? dial,
+    Size? picture,
+    double? stepsWidth,
+    Rect? fold,
+  }) => CustomMultiChildLayout(
+    delegate: _BarsLayout(picture: picture, fold: fold),
+    children: [
+      LayoutId(
+        id: _Bar.picture,
+        child: _Picture(model: _model, stepsWidth: stepsWidth),
+      ),
+      LayoutId(
+        id: _Bar.top,
+        child: _Scrim(
+          key: const Key('live-top'),
+          edge: Alignment.topCenter,
+          child: top,
+        ),
+      ),
+      LayoutId(
+        id: _Bar.bottom,
+        child: _Scrim(
+          key: const Key('live-bottom'),
+          edge: Alignment.bottomCenter,
+          child: bottom,
+        ),
+      ),
+      if (dial != null)
+        LayoutId(
+          id: _Bar.dial,
+          child: ToastFloor(child: dial),
+        ),
+    ],
+  );
+
+  /// The controls in a wide window with a [VerticalBar], which is the rail
+  /// at its end ([_barRail]): a row above the picture and a row below it,
+  /// and the picture as large as fits between them, with nothing over it
+  /// \[design\]. Each row is in two parts, one on each page of a display
+  /// that folds down the middle of the window ([WindowFold.book]): the
+  /// camera and Remote / Live view above, the readouts and the chips
+  /// below. Only the picture crosses the fold \[design\]: one cut in two
+  /// is worse than one with a crease in it. The dial opens beside the
+  /// readouts, in the chips' place \[design\]: it keeps off the picture
+  /// too, and moves nothing.
+  Widget _barsBesideBar(Size size, String? dialKey) {
+    final fold = WindowFold.book(context, leastPage: _minFoldPageWidth);
+    final firstPage = fold?.first ?? size.width / 2;
+    final foldGap = fold?.gap ?? 0;
+    final readoutsWidth = math.min(_maxReadoutsWidth, firstPage - 2 * 16);
+    return _barsAround(
+      // Not across a fold that is half-open, where they would not read.
+      stepsWidth: foldGap > 0 ? firstPage : null,
+      top: Padding(
+        padding: const EdgeInsets.only(top: 6, bottom: 12),
+        child: _inTwoParts(
+          firstWidth: firstPage,
+          gap: foldGap,
+          first: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 18),
+            child: CameraPill(),
+          ),
+          second: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _modeSwitch(),
+          ),
+        ),
+      ),
+      bottom: ToastFloor(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: _inTwoParts(
+            firstWidth: firstPage,
+            gap: foldGap,
+            first: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SizedBox(
+                width: readoutsWidth,
+                child: _readoutsFor(dialKey),
+              ),
+            ),
+            second: dialKey == null
+                ? _chipsRow()
+                : Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: _maxReadoutsWidth,
+                      ),
+                      child: _dial(dialKey),
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// [first] and [second] in a row, each from the start of its part of
+  /// it: [first] in the first [firstWidth], [second] in what [gap] leaves
+  /// after that.
+  Widget _inTwoParts({
+    required double firstWidth,
+    required double gap,
+    required Widget first,
+    required Widget second,
+  }) => Row(
+    children: [
+      SizedBox(
+        width: firstWidth,
+        child: Align(
+          alignment: AlignmentDirectional.centerStart,
+          heightFactor: 1,
+          child: first,
+        ),
+      ),
+      SizedBox(width: gap),
+      Expanded(
+        child: Align(
+          alignment: AlignmentDirectional.centerStart,
+          heightFactor: 1,
+          child: second,
+        ),
+      ),
+    ],
+  );
+
+  /// The shutter and the last shot in [bar], the rail at the end of
+  /// [_barsBesideBar], under × and the exposure mode: the shutter halfway
+  /// down a window of [window] in size, where the thumb of the hand that
+  /// holds the phone rests, and the last shot at the bar's foot, clear of
+  /// the system's [bottomInset].
+  List<Widget> _barRail(
+    VerticalBar bar,
+    Size window, {
+    required double bottomInset,
+  }) {
+    final left = bar.side == BarSide.left ? 0.0 : null;
+    final right = bar.side == BarSide.right ? 0.0 : null;
+    return [
+      Positioned(
+        top: (window.height - _barShutterSize) / 2,
+        left: left,
+        right: right,
+        width: bar.width,
+        child: Center(child: _shutter(size: _barShutterSize)),
+      ),
+      Positioned(
+        bottom: math.max(bottomInset, _barFoot),
+        left: left,
+        right: right,
+        width: bar.width,
+        child: Center(child: _lastShot()),
+      ),
+    ];
+  }
+
+  /// On a foldable that is half-open on a table: the picture in the half
+  /// that stands up, between the camera ([_tableTop]) and [fold], and
+  /// every control in the half that lies flat, where a tap does not rock
+  /// the phone \[design\]. Nothing lies on the fold. The readouts, the
+  /// last shot and the shutter are stacked as on a phone, or in a [wide]
+  /// window whose flat half is too short for that in a row. The dial
+  /// opens in room kept for it above the readouts, and the flat half
+  /// scrolls where the controls still come out taller than it.
+  Widget _table(Size size, Rect fold, String? dialKey, {required bool wide}) {
+    final text = MediaQuery.textScalerOf(context);
+    final flatHeight = size.height - fold.bottom;
+    final stacked =
+        !wide || flatHeight >= _tableControlsHeight(text, wide: false);
+    final hint =
+        flatHeight >=
+        _tableControlsHeight(text, wide: !stacked) + _hintHeight(text);
+    final readoutsWidth = _readoutsWidth(size, inRow: !stacked);
+    return _barsAround(
+      fold: fold,
+      top: _tableTop(),
+      bottom: SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: flatHeight),
+          child: Column(
+            // The shutter stays at the near edge, the choices under the
+            // fold, and the dial opens in the room between them.
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _tableChoices(),
+              ToastFloor(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      height: _dialRoom,
+                      child: dialKey == null
+                          ? null
+                          : Align(
+                              alignment: Alignment.bottomCenter,
+                              child: SizedBox(
+                                width: readoutsWidth,
+                                child: _dial(dialKey),
+                              ),
+                            ),
+                    ),
+                    if (stacked)
+                      _bottomStack(dialKey, hint: hint)
+                    else
+                      _bottomRow(
+                        dialKey,
+                        readoutsWidth: readoutsWidth,
+                        hint: hint,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// The camera at the top of [_table], clear of the system's status: in
+  /// the window's [StatusBand] where it has one, which the picture stays
+  /// under.
+  Widget _tableTop() {
+    final band = StatusBand.of(context);
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: band?.height ?? 0),
+      child: const Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          StatusBandBar(
+            barHeight: _topRowHeight + _tableTopGap,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(18, 6, 18, _tableTopGap),
+              child: Row(children: [Flexible(child: CameraPill())]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Remote / Live view, with × and the exposure mode where the window
+  /// has no [VerticalBar] for them, over the chips: what the flat half of
+  /// [_table] starts with.
+  Widget _tableChoices() => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Padding(
+        // Clear of the fold above it.
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+        child: Row(
+          spacing: 8,
+          children: [
+            Expanded(
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: _modeSwitch(),
+              ),
+            ),
+            if (!_buttonsInBar) ...[_close(), ?_exposureMode()],
+          ],
+        ),
+      ),
+      const SizedBox(height: 12),
+      _chipsRow(),
+    ],
+  );
 
   /// The controls in a rail at each end of a window of [size], where the
   /// hands hold a phone on its side: ×, the camera and the chips at the
@@ -465,45 +803,58 @@ class _LiveLayoutState extends State<_LiveLayout> {
       height: 36,
       constraints: const BoxConstraints(minWidth: 36),
       padding: const EdgeInsets.symmetric(horizontal: 9),
-      alignment: Alignment.center,
       decoration: BoxDecoration(
         color: c.s2.withValues(alpha: _surfaceOpacity),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: c.line2),
       ),
-      child: Text(
-        exposureLabel(context.l10n, exposure),
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: c.accent,
+      // As wide as its text takes, in a column as in a row.
+      child: Center(
+        widthFactor: 1,
+        child: Text(
+          exposureLabel(context.l10n, exposure),
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: c.accent,
+          ),
         ),
       ),
     );
   }
 
-  /// ×, the camera, Remote / Live view, the exposure mode and the chips:
+  Widget _modeSwitch() =>
+      ShootModeSwitch(mode: _model.mode, onChanged: (m) => _model.mode = m);
+
+  /// The chips in a row, which scrolls where it is too long.
+  Widget _chipsRow() => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: Row(spacing: 8, children: _chips()),
+  );
+
+  /// The camera, Remote / Live view and the chips, with × and the
+  /// exposure mode where the window has no [VerticalBar] for them:
   /// stacked in three rows, or when [wide] in two.
   Widget _top({required bool wide}) {
-    final close = _close();
-    final exposure = _exposureMode();
-    final remoteOrLiveView = ShootModeSwitch(
-      mode: _model.mode,
-      onChanged: (m) => _model.mode = m,
-    );
+    final close = _buttonsInBar ? null : _close();
+    final exposure = _buttonsInBar ? null : _exposureMode();
+    final remoteOrLiveView = _modeSwitch();
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(18, 6, 18, 0),
+          padding: _topRowPadding,
           child: Row(
             children: wide
                 ? [
                     Expanded(
                       child: Row(
                         children: [
-                          close,
-                          const SizedBox(width: 8),
+                          if (close != null) ...[
+                            close,
+                            const SizedBox(width: 8),
+                          ],
                           const Flexible(child: CameraPill()),
                         ],
                       ),
@@ -520,8 +871,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
                     ),
                   ]
                 : [
-                    close,
-                    const SizedBox(width: 8),
+                    if (close != null) ...[close, const SizedBox(width: 8)],
                     const Expanded(
                       child: Align(
                         alignment: AlignmentDirectional.centerStart,
@@ -540,11 +890,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
           ),
         ],
         const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(spacing: 8, children: _chips()),
-        ),
+        _chipsRow(),
         const SizedBox(height: 12),
       ],
     );
@@ -668,7 +1014,8 @@ class _LiveLayoutState extends State<_LiveLayout> {
     onSelect: (v) => unawaited(_set(key, v)),
   );
 
-  Widget _shutter() => DecoratedBox(
+  /// The shutter, [size] across.
+  Widget _shutter({double size = _shutterSize}) => DecoratedBox(
     // Sets the shutter off from a bright picture under it.
     decoration: BoxDecoration(
       shape: BoxShape.circle,
@@ -678,9 +1025,10 @@ class _LiveLayoutState extends State<_LiveLayout> {
     ),
     child: ShutterButton(
       model: _model,
-      size: _shutterSize,
+      size: size,
       color: const Color(0xFFF6F4EF),
-      ringGap: 5,
+      // In proportion: 5 at its full size.
+      ringGap: size / 16,
     ),
   );
 
@@ -710,16 +1058,24 @@ Size _largestWithin(Size size, double aspect) =>
 /// The parts [_BarsLayout] places.
 enum _Bar { picture, top, bottom, dial }
 
-/// Places [_LiveLayoutState._bars]: the controls at the top and the bottom
-/// of its box, the dial above the bottom ones, and the picture centred
-/// between them as far as the box allows.
+/// Places [_LiveLayoutState._barsAround]: the controls at the top and the
+/// bottom of its box, the dial above the bottom ones, and the picture
+/// centred between them as far as the box allows.
 class _BarsLayout extends MultiChildLayoutDelegate {
-  new({this.picture});
+  new({this.picture, this.fold});
 
   /// The picture's size, which may reach under the controls; null while
   /// there is none, when what shows in its place (the steps of joining the
-  /// camera's Wi-Fi) gets the room between the controls.
+  /// camera's Wi-Fi) gets the room between the controls, and where the
+  /// picture is to be as large as fits in that room.
   final Size? picture;
+
+  /// The fold of a foldable that is half-open on a table
+  /// ([_LiveLayoutState._table]), in a box that starts at the top of the
+  /// window: the room for the picture ends above it, and the bottom
+  /// controls get the room under it instead of the height they take at
+  /// the bottom of the box.
+  final Rect? fold;
 
   @override
   void performLayout(Size size) {
@@ -728,8 +1084,12 @@ class _BarsLayout extends MultiChildLayoutDelegate {
       maxWidth: size.width,
       maxHeight: size.height,
     );
+    final fold = this.fold;
+    final bottomBar = fold == null
+        ? bar
+        : bar.tighten(height: size.height - fold.bottom);
     final top = layoutChild(_Bar.top, bar).height;
-    final bottom = size.height - layoutChild(_Bar.bottom, bar).height;
+    final bottom = size.height - layoutChild(_Bar.bottom, bottomBar).height;
     positionChild(_Bar.top, Offset.zero);
     positionChild(_Bar.bottom, Offset(0, bottom));
     if (hasChild(_Bar.dial)) {
@@ -740,14 +1100,15 @@ class _BarsLayout extends MultiChildLayoutDelegate {
       );
     }
     final picture = this.picture;
+    final pictureBottom = fold?.top ?? bottom;
     final box = picture == null
-        ? Rect.fromLTRB(0, top, size.width, math.max(top, bottom))
+        ? Rect.fromLTRB(0, top, size.width, math.max(top, pictureBottom))
         : Offset(
                 (size.width - picture.width) / 2,
                 math.max(
                   0,
                   math.min(
-                    (top + bottom - picture.height) / 2,
+                    (top + pictureBottom - picture.height) / 2,
                     size.height - picture.height,
                   ),
                 ),
@@ -758,7 +1119,8 @@ class _BarsLayout extends MultiChildLayoutDelegate {
   }
 
   @override
-  bool shouldRelayout(_BarsLayout old) => old.picture != picture;
+  bool shouldRelayout(_BarsLayout old) =>
+      old.picture != picture || old.fold != fold;
 }
 
 /// [child] on a shade that is darkest at [edge] of the window and fades
@@ -804,9 +1166,13 @@ class _Scrim extends StatelessWidget {
 /// with the focus mark; or, until frames come, the steps of joining the
 /// camera's Wi-Fi or why it failed.
 class _Picture extends StatelessWidget {
-  const new({required this.model});
+  const new({required this.model, this.stepsWidth});
 
   final ShootModel model;
+
+  /// How much of the picture's room, from its start, what shows until
+  /// frames come keeps to; null for all of it.
+  final double? stepsWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -856,21 +1222,27 @@ class _Picture extends StatelessWidget {
           ],
         );
       }
+      final stepsWidth = this.stepsWidth;
       // The picture's room may be short (a landscape window): the steps
       // scroll then.
       return LayoutBuilder(
         builder: (context, box) => SingleChildScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: box.maxHeight),
-            child: Center(
-              child: Padding(
-                key: Key('live-${phase.name}'),
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                // A block in the middle of a wide window, not lines
-                // across it.
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: content,
+            child: Padding(
+              padding: EdgeInsetsDirectional.only(
+                end: stepsWidth == null ? 0 : box.maxWidth - stepsWidth,
+              ),
+              child: Center(
+                child: Padding(
+                  key: Key('live-${phase.name}'),
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  // A block in the middle of a wide window, not lines
+                  // across it.
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: content,
+                  ),
                 ),
               ),
             ),

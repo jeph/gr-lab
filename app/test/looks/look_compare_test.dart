@@ -496,28 +496,30 @@ void main() {
     expect(find.byTooltip('Sample'), findsOneWidget);
   });
 
-  /// Seven photos, the first the look's own when [ownFirst], in a strip
-  /// along [axis] that has [length] to share between them.
+  /// Seven photos, the first the look's own when [ownFirst], laid out as
+  /// [layout] says with [length] to share between them: the width of a row
+  /// or a grid, the height of a column.
   Future<void> showStrip(
     WidgetTester tester, {
     required double length,
-    Axis axis = Axis.horizontal,
+    PreviewPhotoLayout layout = PreviewPhotoLayout.row,
     bool ownFirst = true,
   }) async {
+    final down = layout == PreviewPhotoLayout.column;
     final photo = await photoOf(tester);
     await tester.pumpWidget(
       MaterialApp(
         theme: grTheme(GrColors.light),
         home: Center(
           child: SizedBox(
-            width: axis == Axis.horizontal ? length : null,
-            height: axis == Axis.vertical ? length : null,
+            width: down ? null : length,
+            height: down ? length : null,
             child: PreviewPhotoSwitch(
               photos: [for (var i = 0; i < 7; i++) photo],
               labels: [for (var i = 0; i < 7; i++) 'Photo $i'],
               selected: 2,
               onSelect: (_) {},
-              axis: axis,
+              layout: layout,
               ownFirst: ownFirst,
             ),
           ),
@@ -560,7 +562,7 @@ void main() {
 
   testWidgets('down the side of a picture the small pictures share the '
       'height instead', (tester) async {
-    await showStrip(tester, length: 300, axis: Axis.vertical);
+    await showStrip(tester, length: 300, layout: PreviewPhotoLayout.column);
     final strip = tester.getRect(find.byType(PreviewPhotoSwitch));
     final pictures = smallPictures(tester);
     expect(tester.takeException(), isNull);
@@ -576,36 +578,73 @@ void main() {
     }
     expect(pictures.first.height, inInclusiveRange(36, 42));
 
-    await showStrip(tester, length: 600, axis: Axis.vertical);
+    await showStrip(tester, length: 600, layout: PreviewPhotoLayout.column);
     expect(smallPictures(tester).first.height, 52);
   });
 
-  testWidgets("the look's own photo carries a mark and a line sets it apart "
-      'from the others; without one of its own no photo is marked', (
-    tester,
-  ) async {
+  testWidgets('in a grid the pictures are larger, in the shape of the '
+      "camera's photos, and fill the width in two rows, each no larger "
+      'than it needs where it is wide', (tester) async {
+    await showStrip(tester, length: 420, layout: PreviewPhotoLayout.grid);
+    final grid = tester.getRect(find.byType(PreviewPhotoSwitch));
+    var pictures = smallPictures(tester);
+    expect(tester.takeException(), isNull);
+    for (final (i, picture) in pictures.indexed) {
+      expect(
+        grid.expandToInclude(picture),
+        rectMoreOrLessEquals(grid),
+        reason: 'photo $i',
+      );
+      expect(picture.width, closeTo(pictures.first.width, .01));
+      expect(picture.size.aspectRatio, closeTo(3 / 2, .01));
+    }
+    // Seven photos: four in the first row, three in the second.
+    expect(pictures.first.width, inInclusiveRange(90, 100));
+    expect(pictures[3].top, pictures.first.top);
+    expect(pictures[3].right, closeTo(grid.right, .01));
+    expect(pictures[4].top, greaterThan(pictures.first.bottom));
+    expect(pictures[4].left, pictures.first.left);
+    expect(pictures.last.bottom, closeTo(grid.bottom, .01));
+    expect(
+      PreviewPhotoSwitch.gridHeight(count: 7, width: 420),
+      closeTo(pictures.last.bottom - pictures.first.top, .01),
+    );
+
+    await showStrip(tester, length: 800, layout: PreviewPhotoLayout.grid);
+    pictures = smallPictures(tester);
+    expect(pictures.first.size, const Size(150, 100));
+    expect(pictures[3].right, lessThan(700), reason: 'they stay together');
+  });
+
+  testWidgets("the look's own photo carries a mark, and in a row or a "
+      'column a line sets it apart from the others; without one of its own '
+      'no photo is marked', (tester) async {
     final mark = find.byKey(const Key('look-photo-own'));
     final line = find.byKey(const Key('look-photo-own-line'));
-    for (final axis in Axis.values) {
-      await showStrip(tester, length: 320, axis: axis);
+    for (final layout in PreviewPhotoLayout.values) {
+      await showStrip(tester, length: 320, layout: layout);
       final pictures = smallPictures(tester);
       expect(
         pictures.first.inflate(5).contains(tester.getCenter(mark)),
         isTrue,
-        reason: 'on the first photo, $axis',
+        reason: 'on the first photo, $layout',
       );
       expect(
         pictures[1].contains(tester.getCenter(mark)),
         isFalse,
-        reason: 'not on the second, $axis',
+        reason: 'not on the second, $layout',
       );
-      final between = tester.getCenter(line);
-      final (after, before, at) = axis == Axis.horizontal
-          ? (pictures.first.right, pictures[1].left, between.dx)
-          : (pictures.first.bottom, pictures[1].top, between.dy);
-      expect(at, inExclusiveRange(after, before), reason: '$axis');
       // The mark is no button of its own: its photo takes the tap.
       expect(mark.hitTestable(), findsNothing);
+      if (layout == PreviewPhotoLayout.grid) {
+        expect(line, findsNothing);
+        continue;
+      }
+      final between = tester.getCenter(line);
+      final (after, before, at) = layout == PreviewPhotoLayout.row
+          ? (pictures.first.right, pictures[1].left, between.dx)
+          : (pictures.first.bottom, pictures[1].top, between.dy);
+      expect(at, inExclusiveRange(after, before), reason: '$layout');
     }
 
     await showStrip(tester, length: 320, ownFirst: false);

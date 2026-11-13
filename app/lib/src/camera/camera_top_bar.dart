@@ -7,9 +7,12 @@ import 'package:grphoto/src/connection/camera_pill.dart';
 import 'package:grphoto/src/settings/settings_screen.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/scroll_away_header.dart';
+import 'package:grphoto/src/widgets/window_layout.dart';
 
 /// The row at the top of the camera's pages (mock `.topbar`): back to the
-/// Cameras screen, the camera pill and Settings.
+/// Cameras screen, the camera pill and Settings. In a window with a
+/// [VerticalBar] it is the camera pill alone: Back and Settings stand in
+/// the bar ([CameraBarColumn]).
 class CameraTopBar extends StatelessWidget {
   const new({super.key, this.middle});
 
@@ -23,15 +26,13 @@ class CameraTopBar extends StatelessWidget {
   /// \[design\].
   static const _minSideWidth = 144.0;
 
+  /// The bar's height at the default text size: its padding and its
+  /// 36 pt buttons.
+  static const double height = 6 + 36;
+
   @override
   Widget build(BuildContext context) {
-    final back = RoundIconButton(
-      key: const Key('camera-back'),
-      icon: Icons.arrow_back_ios_new_rounded,
-      iconSize: 16,
-      label: context.l10n.cameraBarCameras,
-      onTap: () => Navigator.of(context).maybePop(),
-    );
+    final ownButtons = VerticalBar.of(context) == null;
     const padding = EdgeInsets.fromLTRB(18, 6, 18, 0);
     final middle = this.middle;
     if (middle == null) {
@@ -39,16 +40,20 @@ class CameraTopBar extends StatelessWidget {
         padding: padding,
         child: Row(
           children: [
-            back,
-            const SizedBox(width: 8),
+            if (ownButtons) ...[
+              const CameraBackButton(),
+              const SizedBox(width: 8),
+            ],
             const Expanded(
               child: Align(
                 alignment: AlignmentDirectional.centerStart,
                 child: CameraPill(),
               ),
             ),
-            const SizedBox(width: 8),
-            const SettingsButton(),
+            if (ownButtons) ...[
+              const SizedBox(width: 8),
+              const SettingsButton(),
+            ],
           ],
         ),
       );
@@ -61,8 +66,10 @@ class CameraTopBar extends StatelessWidget {
             Expanded(
               child: Row(
                 children: [
-                  back,
-                  const SizedBox(width: 8),
+                  if (ownButtons) ...[
+                    const CameraBackButton(),
+                    const SizedBox(width: 8),
+                  ],
                   const Flexible(child: CameraPill()),
                 ],
               ),
@@ -77,17 +84,50 @@ class CameraTopBar extends StatelessWidget {
                 child: middle,
               ),
             ),
-            const Expanded(
-              child: Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: SettingsButton(),
-              ),
+            Expanded(
+              child: ownButtons
+                  ? const Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: SettingsButton(),
+                    )
+                  : const SizedBox.shrink(),
             ),
           ],
         ),
       ),
     );
   }
+}
+
+/// A page of the camera with Back and Settings, and then [more], down the
+/// window's [VerticalBar] where it has one ([BarColumn]). [CameraTopBar]
+/// leaves them out there.
+class CameraBarColumn extends StatelessWidget {
+  const new({required this.child, super.key, this.more = const []});
+
+  /// The page's own buttons, under Settings.
+  final List<Widget> more;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => BarColumn(
+    buttons: [const CameraBackButton(), const SettingsButton(), ...more],
+    child: child,
+  );
+}
+
+/// Goes back from the camera's pages to the Cameras screen.
+class CameraBackButton extends StatelessWidget {
+  const new({super.key});
+
+  @override
+  Widget build(BuildContext context) => RoundIconButton(
+    key: const Key('camera-back'),
+    icon: Icons.arrow_back_ios_new_rounded,
+    iconSize: 16,
+    label: context.l10n.cameraBarCameras,
+    onTap: () => Navigator.of(context).maybePop(),
+  );
 }
 
 /// [CameraTopBar] as the first sliver of a page that scrolls
@@ -105,8 +145,8 @@ class SliverCameraTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const SliverScrollAwayHeader(
-    child: SafeArea(
-      bottom: false,
+    child: StatusBandBar(
+      barHeight: CameraTopBar.height + _bottomGap,
       child: Padding(
         padding: EdgeInsets.only(bottom: _bottomGap),
         child: CameraTopBar(),

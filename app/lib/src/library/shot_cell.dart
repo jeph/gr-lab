@@ -557,6 +557,8 @@ class _CameraImageState extends State<CameraImage> {
 }
 
 /// One grid item: thumbnail, format tag and a status badge (mock `.cell`).
+/// The cell of the shot that shows beside the grid ([shown]) is outlined
+/// like a selected one.
 class ShotCell extends StatelessWidget {
   const new({
     required this.serial,
@@ -566,6 +568,7 @@ class ShotCell extends StatelessWidget {
     required this.onLongPress,
     super.key,
     this.duration,
+    this.shown = false,
   });
 
   final String serial;
@@ -574,6 +577,9 @@ class ShotCell extends StatelessWidget {
   final Duration? duration;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+
+  /// The Library shows this shot beside the grid (`ShotPane`).
+  final bool shown;
 
   @override
   Widget build(BuildContext context) {
@@ -584,7 +590,9 @@ class ShotCell extends StatelessWidget {
         formatLabel(context, shot.format),
         shot.primary.name,
       ),
-      selected: selected,
+      // The shot on show is the chosen one, unless shots are being chosen
+      // for a download and this one is not.
+      selected: selected || (shown && mark != CellMark.unselected),
       button: true,
       child: Pressable(
         onTap: onTap,
@@ -612,8 +620,9 @@ class ShotCell extends StatelessWidget {
             Positioned(left: 5, bottom: 5, child: PhotoTag(_tag(context))),
             if (_badge(c) case final badge?)
               Positioned(top: 6, right: 6, child: badge),
-            if (selected)
+            if (selected || shown)
               DecoratedBox(
+                key: shown ? const Key('shot-cell-shown') : null,
                 decoration: BoxDecoration(
                   border: Border.all(color: c.accent, width: 3),
                 ),

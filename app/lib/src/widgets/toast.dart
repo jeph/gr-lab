@@ -3,7 +3,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'package:grphoto/src/platform/window_pose.dart';
 import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/window_layout.dart';
 
 /// The app's toasts, as a screen shows them: a short message that
 /// something worked ([done]) or did not ([failed]), in a capsule of the
@@ -140,6 +142,7 @@ class _ToastHostState extends State<ToastHost>
   @override
   Widget build(BuildContext context) {
     final toast = _toast;
+    final bar = VerticalBar.of(context);
     return _ToastScope(
       host: this,
       child: Stack(
@@ -147,9 +150,10 @@ class _ToastHostState extends State<ToastHost>
         children: [
           widget.child,
           if (toast != null)
+            // Centred over the pages, not over a vertical bar beside them.
             Positioned(
-              left: 16,
-              right: 16,
+              left: 16 + (bar?.side == BarSide.left ? bar!.width : 0),
+              right: 16 + (bar?.side == BarSide.right ? bar!.width : 0),
               bottom: _bottom,
               child: Center(
                 child: AnimatedBuilder(

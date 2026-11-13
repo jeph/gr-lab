@@ -8,6 +8,7 @@ import 'package:grphoto/src/data/cameras.dart';
 import 'package:grphoto/src/platform/app_dirs.dart';
 import 'package:grphoto/src/platform/background_downloads.dart';
 import 'package:grphoto/src/platform/media_saver.dart';
+import 'package:grphoto/src/platform/window_pose.dart';
 import 'package:grphoto/src/services.dart';
 
 /// Services backed by a simulated GR IV, for the emulator/simulator and for
@@ -77,6 +78,7 @@ Future<AppServices> buildDemoServices() async {
     // As with a real camera, so the demo shows the same first join.
     askBeforeWifiJoin: Platform.isAndroid,
     isDemo: true,
+    windowPose: PlatformWindowPose(),
   );
 }
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' show DisplayFeature, DisplayFeatureState, DisplayFeatureType;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,7 +13,9 @@ import 'package:grphoto/src/library/shot_cell.dart';
 import 'package:grphoto/src/library/viewer.dart';
 import 'package:grphoto/src/services.dart';
 import 'package:grphoto/src/widgets/group.dart';
+import 'package:grphoto/src/widgets/toast.dart';
 
+import '../support/duo_window.dart';
 import '../support/test_app.dart';
 
 /// Pictures the grid has loaded, keyed `image:view:<file key>`
@@ -82,6 +85,119 @@ Future<void> _openLibrary(WidgetTester tester) async {
   );
   if (library.evaluate().isEmpty) await tapWhenReady(tester, button);
   await pumpUntilFound(tester, library);
+}
+
+/// The key of the shot of [_nameOf] [n].
+String _shotOf(int n) => 'sd1|100RICOH/R${n.toString().padLeft(7, '0')}';
+
+/// The name of the [n]th file of [_libraryOf].
+String _nameOf(int n) => 'R${n.toString().padLeft(7, '0')}.JPG';
+
+/// The Library of a camera holding [count] JPEGs taken on one day, a
+/// minute apart: `R0000001.JPG` first and `R<count>.JPG` last, which the
+/// grid starts with. Every date is known, so the grid is one day's.
+Future<TestApp> _libraryOf(WidgetTester tester, int count) async {
+  final app = (await tester.runAsync(
+    () => createTestApp(
+      config: FakeCameraConfig(
+        bonded: true,
+        httpLatency: Duration.zero,
+        photos: [
+          for (var n = 1; n <= count; n++)
+            FakePhoto('100RICOH', _nameOf(n), DateTime(2026, 11, 5, 12, n)),
+        ],
+      ),
+      saveCamera: true,
+    ),
+  ))!;
+  await app.pumpApp(tester);
+  await _openLibrary(tester);
+  final model = app.models.library.model;
+  await pumpUntil(tester, () => model.shots != null, reason: 'listing');
+  for (final s in model.shots!) {
+    unawaited(model.ensureInfo(s.primary));
+  }
+  await pumpUntil(
+    tester,
+    () => model.shots!.every((s) => model.info(s.primary) != null),
+    reason: 'every date',
+  );
+  await pumpUntilFound(tester, _cell(_shotOf(count)));
+  return app;
+}
+
+/// Gives the app the window of an iPhone Duo in [window], and time to lay
+/// its pages out for it.
+Future<void> _toDuo(WidgetTester tester, TestApp app, DuoWindow window) async {
+  setDuoWindow(tester, app.windowPose, window);
+  await pumpRounds(tester, 15);
+  expect(tester.takeException(), isNull, reason: window.name);
+}
+
+/// The fold of a foldable at [bounds] of the window, flat.
+DisplayFeature _fold(Rect bounds) => DisplayFeature(
+  bounds: bounds,
+  type: DisplayFeatureType.fold,
+  state: DisplayFeatureState.postureFlat,
+);
+
+/// The Library's page, which scrolls.
+final Finder _page = find.descendant(
+  of: find.byType(LibraryScreen),
+  matching: find.byType(CustomScrollView),
+);
+
+/// What scrolls [_page], and how far.
+ScrollableState _pageScroll(WidgetTester tester) =>
+    tester.state<ScrollableState>(
+      find.descendant(of: _page, matching: find.byType(Scrollable)).first,
+    );
+
+/// The text of the Library's title.
+final Finder _title = find
+    .descendant(of: find.byType(PageTitle), matching: find.byType(Text))
+    .first;
+
+/// The bar for the shots chosen with a long press.
+final Finder _selectionBar = find.ancestor(
+  of: find.byKey(const ValueKey('selection-download:jpeg')),
+  matching: find.byType(ToastFloor),
+);
+
+/// The outline of the cell whose shot shows beside the grid.
+final Finder _shownMark = find.byKey(const Key('shot-cell-shown'));
+
+/// Where every cell the grid has built is.
+List<Rect> _cellRects(WidgetTester tester) {
+  final cells = find.byType(ShotCell);
+  return [
+    for (var i = 0; i < cells.evaluate().length; i++)
+      tester.getRect(cells.at(i)),
+  ];
+}
+
+/// How many shots the grid's first line has: the [newest] of
+/// [_libraryOf] and those before it.
+int _firstLineCount(WidgetTester tester, int newest) {
+  final top = tester.getTopLeft(_cell(_shotOf(newest))).dy;
+  var count = 1;
+  while (count < newest) {
+    final next = _cell(_shotOf(newest - count));
+    if (next.evaluate().isEmpty || tester.getTopLeft(next).dy != top) break;
+    count++;
+  }
+  return count;
+}
+
+/// The cell of the grid whose centre is nearest to [point].
+Finder _cellNearest(WidgetTester tester, Offset point) {
+  final cells = find.byType(ShotCell);
+  double distance(int i) => (tester.getCenter(cells.at(i)) - point).distance;
+  var nearest = 0;
+  for (var i = 1; i < cells.evaluate().length; i++) {
+    if (distance(i) < distance(nearest)) nearest = i;
+  }
+  return find.byKey(tester.widget(cells.at(nearest)).key!);
 }
 
 void main() {
@@ -1032,6 +1148,406 @@ void main() {
       () => find.textContaining('Copying').evaluate().isNotEmpty,
       reason: 'the copy starts once the camera answers',
     );
+
+    await app.dispose();
+  });
+
+  testWidgets('on a closed iPhone Duo, Back and Settings stand in the bar '
+      'down its side, under the status; the Library keeps to the rest of '
+      'the window, three shots to a line, and is the same page, scrolled '
+      'as far, in a window without the bar', (tester) async {
+    final app = await _libraryOf(tester, 40);
+    final page = _pageScroll(tester);
+    await _toDuo(tester, app, DuoWindow.closed);
+    Rect rect(String key) => tester.getRect(find.byKey(ValueKey(key)));
+    // The bar's strip, under the status at its top, and the bottom of the
+    // window above the system's inset.
+    const strip = Rect.fromLTRB(382, 174, 466, 678);
+    const bottom = 678 - 34.0;
+    for (final key in ['camera-back', 'camera-settings']) {
+      expect(find.byKey(Key(key)).hitTestable(), findsOne, reason: key);
+      expect(strip.expandToInclude(rect(key)), strip, reason: key);
+    }
+    expect(
+      rect('camera-back').bottom,
+      lessThanOrEqualTo(rect('camera-settings').top),
+    );
+    // The window has no inset at its top, where its corners are rounded.
+    expect(rect('camera-pill').top, greaterThanOrEqualTo(14));
+    expect(rect('camera-pill').right, lessThanOrEqualTo(strip.left));
+    final title = tester.getRect(_title);
+    final chip = rect('chip:all');
+    expect(title.right, lessThanOrEqualTo(strip.left));
+    expect(chip.top, greaterThanOrEqualTo(title.bottom));
+    expect(chip.right, lessThanOrEqualTo(strip.left));
+
+    expect(_firstLineCount(tester, 40), 3);
+    expect(tester.getRect(_cell(_shotOf(40))).left, 0);
+    expect(tester.getRect(_cell(_shotOf(38))).right, closeTo(strip.left, .5));
+    for (final cell in _cellRects(tester)) {
+      expect(cell.right, lessThanOrEqualTo(strip.left + .5));
+    }
+    // Nothing of the page takes a tap under the bar.
+    final besideCells = Offset(
+      strip.center.dx,
+      tester.getCenter(_cell(_shotOf(38))).dy,
+    );
+    expect(tapReaches(tester, besideCells, find.byType(ShotCell)), isFalse);
+    final besideChips = Offset(strip.center.dx, chip.center.dy);
+    expect(tapReaches(tester, besideChips, find.byType(GrChip)), isFalse);
+
+    await tester.longPress(_cell(_shotOf(40)));
+    await tester.pump();
+    final selection = tester.getRect(_selectionBar);
+    expect(selection.right, lessThanOrEqualTo(strip.left));
+    expect(selection.bottom, lessThanOrEqualTo(bottom));
+    await tester.binding.handlePopRoute();
+    await pumpUntil(
+      tester,
+      () => _selectionBar.evaluate().isEmpty,
+      reason: 'no shots chosen',
+    );
+
+    await tester.drag(_page, const Offset(0, -300));
+    await pumpRounds(tester, 20);
+    final scrolled = page.position.pixels;
+    expect(scrolled, greaterThan(200));
+    await _toDuo(tester, app, DuoWindow.upright);
+    expect(_pageScroll(tester), same(page));
+    expect(page.position.pixels, closeTo(scrolled, 1));
+    await _toDuo(tester, app, DuoWindow.closed);
+    expect(_pageScroll(tester), same(page));
+    expect(page.position.pixels, closeTo(scrolled, 1));
+
+    await app.dispose();
+  });
+
+  for (final window in [DuoWindow.open, DuoWindow.book]) {
+    testWidgets('on an iPhone Duo held wide (${window.name}) the Library '
+        'lies across both pages, six shots to a line, the filters beside its '
+        'title; half-open, nothing of it is on the fold', (tester) async {
+      final app = await _libraryOf(tester, 40);
+      await _toDuo(tester, app, window);
+      Rect rect(String key) => tester.getRect(find.byKey(ValueKey(key)));
+      // The bar's strip, under the status at its top.
+      const strip = Rect.fromLTRB(867, 124, 951, 669);
+      for (final key in ['camera-back', 'camera-settings']) {
+        expect(find.byKey(Key(key)).hitTestable(), findsOne, reason: key);
+        expect(strip.expandToInclude(rect(key)), strip, reason: key);
+      }
+      expect(rect('camera-pill').top, greaterThanOrEqualTo(14));
+
+      expect(_firstLineCount(tester, 40), 6);
+      for (final cell in _cellRects(tester)) {
+        expect(cell.right, lessThanOrEqualTo(strip.left + .5));
+      }
+      final title = tester.getRect(_title);
+      final chip = rect('chip:all');
+      expect(chip.left, greaterThanOrEqualTo(title.right));
+      expect(chip.center.dy, inExclusiveRange(title.top, title.bottom));
+      expect(
+        tester.getRect(_cell(_shotOf(40))).top,
+        greaterThanOrEqualTo(chip.bottom),
+      );
+
+      if (window.pose.halfOpen) {
+        final fold = window.pose.fold!;
+        // Three shots on either page.
+        expect(
+          tester.getRect(_cell(_shotOf(38))).right,
+          closeTo(fold.left, .5),
+        );
+        expect(
+          tester.getRect(_cell(_shotOf(37))).left,
+          closeTo(fold.right, .5),
+        );
+        for (final cell in _cellRects(tester)) {
+          expect(cell.deflate(.5).overlaps(fold), isFalse);
+        }
+        expect(
+          tester.getRect(find.byType(PageTitle)).right,
+          lessThanOrEqualTo(fold.left + .5),
+        );
+        // The filters scroll in what the title leaves of the first page.
+        final onFold = Offset(fold.center.dx, chip.center.dy);
+        expect(tapReaches(tester, onFold, find.byType(GrChip)), isFalse);
+        await tester.longPress(_cell(_shotOf(40)));
+        await tester.pump();
+        expect(
+          tester.getRect(_selectionBar).right,
+          lessThanOrEqualTo(fold.left),
+        );
+      }
+
+      await app.dispose();
+    });
+  }
+
+  testWidgets('on an open iPhone Duo a tap on a shot shows it on the second '
+      'page, beside the Library on the first, which stays the same page; '
+      'another shot tapped or swiped to shows instead, a tap on the photo '
+      'opens the viewer, and the shot the viewer ended on shows after it; '
+      'Back ends choosing shots, then puts the shot away, then '
+      'leaves', (tester) async {
+    final app = await _libraryOf(tester, 40);
+    await _toDuo(tester, app, DuoWindow.open);
+    final page = _pageScroll(tester);
+    final pane = find.byType(ShotPane);
+    final viewer = find.byType(ShotViewer);
+    Finder inPane(Finder finder) => find.descendant(of: pane, matching: finder);
+    Finder inViewer(Finder finder) =>
+        find.descendant(of: viewer, matching: finder);
+    Finder markOf(int n) =>
+        find.descendant(of: _cell(_shotOf(n)), matching: _shownMark);
+    // Where the display folds, and where the bar's strip starts.
+    const fold = 475.5;
+    const strip = 867.0;
+
+    await tester.tap(_cell(_shotOf(40)));
+    await pumpUntilFound(tester, inPane(find.text(_nameOf(40))));
+    await pumpRounds(tester, 15);
+    expect(tester.takeException(), isNull);
+    expect(viewer, findsNothing);
+    expect(_pageScroll(tester), same(page));
+    // The Library has the first page, laid out as on a phone.
+    expect(_firstLineCount(tester, 40), 3);
+    for (final cell in _cellRects(tester)) {
+      expect(cell.right, lessThanOrEqualTo(fold + .5));
+    }
+    expect(
+      tester.getRect(find.byType(PageTitle)).right,
+      lessThanOrEqualTo(fold + .5),
+    );
+    expect(
+      tester.getRect(find.byKey(const ValueKey('chip:all'))).top,
+      greaterThanOrEqualTo(tester.getRect(_title).bottom),
+    );
+    expect(markOf(40), findsOne);
+    // The shot has the second: the photo across its top, then its name
+    // with Download, then its details.
+    expect(tester.getRect(pane).left, closeTo(fold, .5));
+    expect(tester.getRect(pane).right, closeTo(strip, .5));
+    final photo = tester.getRect(inPane(find.byType(PageView)));
+    expect(photo.top, 0);
+    expect(photo.left, closeTo(fold, .5));
+    expect(photo.right, closeTo(strip, .5));
+    final download = tester.getRect(
+      inPane(find.byKey(const ValueKey('pane-download'))),
+    );
+    final details = tester.getRect(inPane(find.byType(GroupBox)));
+    expect(download.top, greaterThanOrEqualTo(photo.bottom));
+    expect(download.right, lessThanOrEqualTo(strip));
+    expect(details.top, greaterThanOrEqualTo(download.bottom));
+    expect(details.left, greaterThanOrEqualTo(fold));
+    expect(details.right, lessThanOrEqualTo(strip));
+
+    await tester.tap(_cell(_shotOf(38)));
+    await pumpUntilFound(tester, inPane(find.text(_nameOf(38))));
+    await pumpRounds(tester, 15);
+    expect(inPane(find.text(_nameOf(40))), findsNothing);
+    expect(_shownMark, findsOne);
+    expect(markOf(38), findsOne);
+
+    await tester.fling(
+      inPane(find.byType(PageView)),
+      const Offset(-300, 0),
+      1000,
+    );
+    await pumpUntilFound(tester, inPane(find.text(_nameOf(37))));
+    // The pages take no tap until they have come to rest.
+    final swipe = tester
+        .widget<PageView>(inPane(find.byType(PageView)))
+        .controller!
+        .position
+        .isScrollingNotifier;
+    await pumpUntil(tester, () => !swipe.value, reason: 'the swipe ended');
+    await pumpRounds(tester, 15);
+    expect(_shownMark, findsOne);
+    expect(markOf(37), findsOne);
+
+    await tester.tap(inPane(find.byType(PageView)));
+    await pumpUntilFound(tester, inViewer(find.text(_nameOf(37))));
+    // The route has finished sliding in.
+    await pumpRounds(tester, 30);
+    await tester.fling(
+      inViewer(find.byType(PageView)),
+      const Offset(-600, 0),
+      1000,
+    );
+    await pumpUntilFound(tester, inViewer(find.text(_nameOf(36))));
+    await pumpRounds(tester, 30);
+    await tester.binding.handlePopRoute();
+    await pumpUntil(
+      tester,
+      () => viewer.evaluate().isEmpty,
+      reason: 'viewer closed',
+    );
+    await pumpUntilFound(tester, inPane(find.text(_nameOf(36))));
+    await pumpRounds(tester, 15);
+    expect(_shownMark, findsOne);
+    expect(markOf(36), findsOne);
+
+    await tester.longPress(_cell(_shotOf(39)));
+    await tester.pump();
+    expect(tester.getRect(_selectionBar).right, lessThanOrEqualTo(fold));
+    expect(pane, findsOne);
+    await tester.binding.handlePopRoute();
+    await pumpUntil(
+      tester,
+      () => _selectionBar.evaluate().isEmpty,
+      reason: 'no shots chosen',
+    );
+    expect(pane, findsOne);
+    // The bar's Back, as the system's.
+    await tester.tap(find.byKey(const Key('camera-back')));
+    await pumpUntil(
+      tester,
+      () => pane.evaluate().isEmpty,
+      reason: 'the shot put away',
+    );
+    await pumpRounds(tester, 15);
+    expect(tester.takeException(), isNull);
+    expect(_pageScroll(tester), same(page));
+    expect(_shownMark, findsNothing);
+    expect(_firstLineCount(tester, 40), 6);
+    await tester.binding.handlePopRoute();
+    await pumpUntil(
+      tester,
+      () => find.byType(LibraryScreen).evaluate().isEmpty,
+      reason: 'the Library left',
+    );
+
+    await app.dispose();
+  });
+
+  testWidgets('closing an iPhone Duo, or turning it upright, puts the shot '
+      'beside the Library away and leaves the Library scrolled to where it '
+      'was', (tester) async {
+    final app = await _libraryOf(tester, 40);
+    await _toDuo(tester, app, DuoWindow.open);
+    final page = _pageScroll(tester);
+    final pane = find.byType(ShotPane);
+    await tester.tap(_cell(_shotOf(40)));
+    await pumpUntilFound(tester, pane);
+    await tester.drag(_page, const Offset(0, -300));
+    await pumpRounds(tester, 20);
+    // A shot in the middle of the first page: the closed phone's window,
+    // scrolled as far, has it in view too.
+    final cell = _cellNearest(tester, tester.getCenter(_page));
+    await tester.tap(cell);
+    await pumpRounds(tester, 20);
+    expect(find.descendant(of: cell, matching: _shownMark), findsOne);
+    final scrolled = page.position.pixels;
+    expect(scrolled, greaterThan(200));
+
+    await _toDuo(tester, app, DuoWindow.closed);
+    expect(pane, findsNothing);
+    expect(_shownMark, findsNothing);
+    expect(_pageScroll(tester), same(page));
+    expect(page.position.pixels, closeTo(scrolled, 1));
+    expect(cell.hitTestable(), findsOne);
+    for (final built in _cellRects(tester)) {
+      expect(built.right, lessThanOrEqualTo(382.5));
+    }
+
+    // Opened again, the Library has both pages.
+    await _toDuo(tester, app, DuoWindow.open);
+    expect(pane, findsNothing);
+    await tapWhenReady(tester, cell);
+    await pumpUntilFound(tester, pane);
+    await _toDuo(tester, app, DuoWindow.upright);
+    expect(pane, findsNothing);
+    expect(_pageScroll(tester), same(page));
+    expect(find.byType(ShotViewer), findsNothing);
+
+    await app.dispose();
+  });
+
+  testWidgets('a phone on its side, and a foldable whose fold lies across '
+      'its window, keep five shots to a line, Back and Settings in the top '
+      'bar and the filters under the title, and open a shot in the '
+      'viewer', (tester) async {
+    final app = await _libraryOf(tester, 12);
+    addTearDown(tester.view.reset);
+    Rect rect(String key) => tester.getRect(find.byKey(ValueKey(key)));
+    final viewer = find.byType(ShotViewer);
+    Future<void> expectAsBefore(String window) async {
+      await pumpRounds(tester, 15);
+      expect(tester.takeException(), isNull, reason: window);
+      expect(_firstLineCount(tester, 12), 5, reason: window);
+      final title = tester.getRect(_title);
+      expect(rect('camera-back').bottom, lessThanOrEqualTo(title.top));
+      expect(rect('camera-settings').center.dy, rect('camera-back').center.dy);
+      expect(rect('chip:all').top, greaterThanOrEqualTo(title.bottom));
+      await tester.tap(_cell(_shotOf(12)));
+      await pumpUntilFound(tester, viewer);
+      expect(find.byType(ShotPane), findsNothing, reason: window);
+      // The route has finished sliding in.
+      await pumpRounds(tester, 30);
+      await tester.binding.handlePopRoute();
+      await pumpUntil(
+        tester,
+        () => viewer.evaluate().isEmpty,
+        reason: 'viewer closed',
+      );
+    }
+
+    tester.view
+      ..physicalSize = const Size(2868, 1320)
+      ..devicePixelRatio = 3;
+    await expectAsBefore('a phone on its side');
+
+    tester.view
+      ..physicalSize = const Size(750, 830)
+      ..devicePixelRatio = 1
+      ..displayFeatures = [_fold(const Rect.fromLTWH(0, 405, 750, 20))];
+    await expectAsBefore('a fold across the window');
+
+    await app.dispose();
+  });
+
+  testWidgets('an unfolded foldable with its hinge upright has the '
+      "Library's two pages, three shots to a line either side of the hinge "
+      'under a top bar with Back and Settings, and a shot that is tapped '
+      'on the second page', (tester) async {
+    final app = await _libraryOf(tester, 12);
+    const hinge = Rect.fromLTWH(365, 0, 20, 830);
+    tester.view
+      ..physicalSize = const Size(750, 830)
+      ..devicePixelRatio = 1
+      ..displayFeatures = [_fold(hinge)];
+    addTearDown(tester.view.reset);
+    await pumpRounds(tester, 15);
+    expect(tester.takeException(), isNull);
+    final pane = find.byType(ShotPane);
+
+    expect(_firstLineCount(tester, 12), 6);
+    expect(tester.getRect(_cell(_shotOf(10))).right, closeTo(hinge.left, .5));
+    expect(tester.getRect(_cell(_shotOf(9))).left, closeTo(hinge.right, .5));
+    expect(
+      tester.getRect(find.byKey(const Key('camera-back'))).bottom,
+      lessThanOrEqualTo(tester.getRect(_title).top),
+    );
+
+    await tester.tap(_cell(_shotOf(12)));
+    await pumpUntilFound(tester, pane);
+    await pumpRounds(tester, 15);
+    expect(tester.takeException(), isNull);
+    expect(find.byType(ShotViewer), findsNothing);
+    expect(tester.getRect(pane).left, closeTo(hinge.right, .5));
+    expect(tester.getRect(pane).right, closeTo(750, .5));
+    expect(_firstLineCount(tester, 12), 3);
+    for (final cell in _cellRects(tester)) {
+      expect(cell.right, lessThanOrEqualTo(hinge.left + .5));
+    }
+
+    await tester.binding.handlePopRoute();
+    await pumpUntil(
+      tester,
+      () => pane.evaluate().isEmpty,
+      reason: 'the shot put away',
+    );
+    expect(find.byType(LibraryScreen), findsOne);
 
     await app.dispose();
   });
