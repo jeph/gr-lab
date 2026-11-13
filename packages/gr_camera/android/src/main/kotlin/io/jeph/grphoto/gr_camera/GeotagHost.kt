@@ -13,14 +13,18 @@ package io.jeph.grphoto.gr_camera
  */
 object GeotagHost {
     /**
-     * A run ended (released by the Dart side or stopped from the
+     * A run ended (released by the Dart side, also after Stop on the
      * notification): an engine nothing else needs can go. Called from a
      * posted task, never from inside a method-channel handler of that
      * engine. The host sets it before its engine can hold a run.
      */
     var runEnded: (() -> Unit)? = null
 
-    /** The Dart side holds a run: [GeotagService] runs or is starting. */
+    /**
+     * The Dart side holds a run: [GeotagService] runs or is starting, or
+     * was stopped from its notification and the Dart side has not released
+     * the run yet.
+     */
     val runHeld: Boolean
         get() = GeotagService.held
 }

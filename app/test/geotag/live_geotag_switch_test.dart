@@ -411,6 +411,7 @@ void main() {
     expect(_said(_whatItDoes), findsOneWidget);
 
     // Nothing runs any more.
+    await pumpUntil(tester, () => !location.runHeld, reason: 'the run let go');
     await pumpRounds(tester, 20);
     expect(location.runHeld, isFalse);
     expect(location.locating, isFalse);

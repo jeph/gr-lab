@@ -187,10 +187,10 @@ final class CameraGeotagging extends ChangeNotifier {
   StreamSubscription<LocationFix>? _updates;
   final _fixes = StreamController<LocationFix>.broadcast();
   final _storeLocationInfoWritten = StreamController<bool>.broadcast();
-  final _stops = StreamController<void>.broadcast();
 
   GeotagSettings? _settings;
   LocationRunNotice Function(GeotagStatus status)? _notice;
+  Future<void> Function()? _onStopped;
 
   /// What the phone lets the app do; null until it answered.
   LocationAccess? _access;
@@ -228,9 +228,13 @@ final class CameraGeotagging extends ChangeNotifier {
   bool _turnOffWanted = false;
 
   /// The user ended live geotagging from the platform's notice: it counts
-  /// as off from then on, until the app, told through [stoppedByUser],
-  /// has turned the setting off.
+  /// as off from then on, until the app, asked through the `onStopped` of
+  /// [configure], has turned the setting off.
   bool _stopped = false;
+
+  /// The app is saving that live geotagging is off after the user's Stop;
+  /// the run is kept meanwhile.
+  bool _stopBeingSaved = false;
 
   /// The phone refused the run because the app is not on screen. Asked
   /// again when the app is on screen (the access is reported then) or the
@@ -266,17 +270,19 @@ final class CameraGeotagging extends ChangeNotifier {
   /// (for the app's history).
   Stream<LocationFix> get fixes => _fixes.stream;
 
-  /// An event each time the user ends live geotagging from the platform's
-  /// notice (its Stop button). Nothing is located or written from then
-  /// on, and the app turns the camera's setting off, as its switch does:
-  /// live geotagging starts again only when the user turns it on.
-  Stream<void> get stoppedByUser => _stops.stream;
-
   /// Applies the app's settings; call at session start and on every
   /// change. [notice] gives the platform notice for a status
   /// ([GeotagStatus.sending], [GeotagStatus.waitingForLocation],
   /// [GeotagStatus.waitingForCamera], [GeotagStatus.offOnCamera]), in the
   /// user's language.
+  ///
+  /// [onStopped] is called when the user ends live geotagging from the
+  /// platform's notice (its Stop button): it turns the camera's setting
+  /// off, as the app's switch does, and completes once that is saved.
+  /// Nothing is located or written from the Stop on, and the run is kept
+  /// until [onStopped] has completed, because a phone may end the app with
+  /// the run (Android, once the app's window is closed). Live geotagging
+  /// starts again only when the user turns it on.
   ///
   /// A pending Store Location Info value is written as soon as the camera
   /// is on and linked. Turning [GeotagSettings.live] off without one turns
@@ -285,12 +291,14 @@ final class CameraGeotagging extends ChangeNotifier {
   void configure(
     GeotagSettings settings, {
     required LocationRunNotice Function(GeotagStatus status) notice,
+    required Future<void> Function() onStopped,
   }) {
     if (_closed) return;
     // What the app said last: a Stop on the notice is not its change.
     final wasLive = _settings?.live ?? false;
     _settings = settings;
     _notice = notice;
+    _onStopped = onStopped;
     _camera.event('geotag.configure', settings._toJson());
     final pending = settings.storeLocationInfoPending;
     if (pending == null) _writtenPending = null;
@@ -400,16 +408,27 @@ final class CameraGeotagging extends ChangeNotifier {
     _reconcile();
   }
 
-  /// The user pressed Stop on the platform's notice, which released the
-  /// run already.
+  /// The user pressed Stop on the platform's notice, which is gone; the
+  /// run is still held ([PhoneLocation.runStops]).
   void _onRunStopped() {
-    if (_closed || !_live) return;
-    _runAsked = null;
-    _runHeld = false;
+    final onStopped = _onStopped;
+    if (_closed || !_live || onStopped == null) return;
     _stopped = true;
+    _stopBeingSaved = true;
     _camera.event('geotag.stopped');
-    _stops.add(null);
     _reconcile();
+    unawaited(_saveStop(onStopped));
+  }
+
+  /// Has the app turn the setting off, then lets go of the run.
+  Future<void> _saveStop(Future<void> Function() onStopped) async {
+    try {
+      await onStopped();
+    } finally {
+      _stopBeingSaved = false;
+      _camera.event('geotag.stop.saved');
+      _reconcile();
+    }
   }
 
   /// Brings everything in line with the settings, the phone's access and
@@ -1015,6 +1034,10 @@ final class CameraGeotagging extends ChangeNotifier {
     final asked = _runAsked;
     if (wanted == null) {
       if (asked == null && !_runHeld) return;
+      // Releasing the run may end the app (Android, with its window
+      // closed): not before the app has saved what the user's Stop means,
+      // nor while the camera's setting is being written.
+      if (_stopBeingSaved || (_period?.settingBeingWritten ?? false)) return;
       _runAsked = null;
       _runHeld = false;
       _camera.event('geotag.run.release');
@@ -1080,7 +1103,6 @@ final class CameraGeotagging extends ChangeNotifier {
     }
     unawaited(_fixes.close());
     unawaited(_storeLocationInfoWritten.close());
-    unawaited(_stops.close());
   }
 }
 

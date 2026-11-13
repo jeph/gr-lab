@@ -209,7 +209,8 @@ void main() {
       expect(phone.runHeld, isTrue);
     });
 
-    test('Stop ends the run and is reported once', () async {
+    test('Stop takes the notice away and is reported once; the run stays '
+        'held until it is released', () async {
       var stops = 0;
       final sub = phone.runStops.listen((_) => stops++);
       phone.pressStop();
@@ -217,11 +218,21 @@ void main() {
       expect(stops, 0, reason: 'no run, no notice to press Stop on');
 
       await phone.holdRun(_notice, awake: true);
-      phone.pressStop();
+      var releasedHeld = true;
+      phone
+        ..onRunReleased = (() => releasedHeld = phone.runHeld)
+        ..pressStop()
+        ..pressStop();
       await _delivered();
       expect(stops, 1);
-      expect(phone.runHeld, isFalse);
+      expect(phone.runNotice, isNull);
+      expect(phone.runHeld, isTrue);
       expect(phone.runReleases, 0, reason: 'the app did not release it');
+
+      await phone.releaseRun();
+      expect(phone.runHeld, isFalse);
+      expect(phone.runReleases, 1);
+      expect(releasedHeld, isFalse);
       await sub.cancel();
     });
 

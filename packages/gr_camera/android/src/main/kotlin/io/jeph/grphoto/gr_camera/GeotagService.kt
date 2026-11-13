@@ -63,7 +63,11 @@ class GeotagService : Service() {
         /** A lock renewed less than this long ago is left alone. */
         private const val RENEW_AFTER_MS = 60 * 1000L
 
-        /** Called when the user pressed Stop; the run is released already. */
+        /**
+         * Called when the user pressed Stop. The notification is gone and
+         * the run is still held: the Dart side releases it once it has
+         * saved what Stop means.
+         */
         var onStopped: (() -> Unit)? = null
 
         private val main = Handler(Looper.getMainLooper())
@@ -253,10 +257,22 @@ class GeotagService : Service() {
         Failure("failed", "Android did not start the run: ${e.message}")
     }
 
+    /**
+     * Stop was pressed: the notification and the service go at once, and
+     * the run stays held until the Dart side releases it. Stop turns live
+     * geotagging off, which the Dart side has to save first, and the host
+     * may end the engine as soon as no run is held ([GeotagHost.runEnded]).
+     * With no Dart side to tell, the run ends here.
+     */
     private fun stoppedByUser() {
         log("stopped from the notification")
-        end()
-        onStopped?.invoke()
+        val tellDart = onStopped
+        if (tellDart == null) {
+            end()
+            return
+        }
+        stop()
+        tellDart()
     }
 
     private fun show(next: Notice) {

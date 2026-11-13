@@ -87,6 +87,10 @@ final class GeotagRig {
   /// How often [geotagging] notified its listeners.
   int notifications = 0;
 
+  /// How often a Stop on the notice was handed to the default handler of
+  /// [apply].
+  int stops = 0;
+
   /// Every position [CameraGeotagging.fixes] emitted.
   final fixes = <LocationFix>[];
 
@@ -129,22 +133,39 @@ final class GeotagRig {
     bool live = true,
     bool syncClock = true,
     bool? pending,
+    Future<void> Function()? onStopped,
   }) async {
-    geotagging.configure(
-      GeotagSettings(
-        live: live,
-        syncClock: syncClock,
-        storeLocationInfoPending: pending,
-      ),
-      notice: (status) => LocationRunNotice(
-        title: 'GR IV',
-        text: status.name,
-        stopLabel: 'Stop',
-        channel: 'Geotagging',
-      ),
+    apply(
+      live: live,
+      syncClock: syncClock,
+      pending: pending,
+      onStopped: onStopped,
     );
     await advance(const Duration(seconds: 1));
   }
+
+  /// [configure] without letting time pass, as the app does from inside a
+  /// callback. Without [onStopped] a Stop on the notice only counts in
+  /// [stops]: the setting stays as it is.
+  void apply({
+    bool live = true,
+    bool syncClock = true,
+    bool? pending,
+    Future<void> Function()? onStopped,
+  }) => geotagging.configure(
+    GeotagSettings(
+      live: live,
+      syncClock: syncClock,
+      storeLocationInfoPending: pending,
+    ),
+    notice: (status) => LocationRunNotice(
+      title: 'GR IV',
+      text: status.name,
+      stopLabel: 'Stop',
+      channel: 'Geotagging',
+    ),
+    onStopped: onStopped ?? () async => stops++,
+  );
 
   /// A position taken now, less [age], [north] metres north of the
   /// made-up place the tests are at.

@@ -43,6 +43,7 @@ final class FakePhoneLocation implements PhoneLocation {
   int _runReleases = 0;
   int _unrestrictedRequests = 0;
   bool _runHeld = false;
+  bool _runShown = false;
   bool _historyEnabled = false;
   bool _closed = false;
 
@@ -99,12 +100,13 @@ final class FakePhoneLocation implements PhoneLocation {
   /// While set, [holdRun] is refused for this reason.
   LocationRunRefusal? runRefusal;
 
-  /// A run is held: [holdRun] succeeded and neither [releaseRun] nor
-  /// [pressStop] ended it.
+  /// A run is held: [holdRun] succeeded and [releaseRun] has not ended it,
+  /// also after [pressStop].
   bool get runHeld => _runHeld;
 
-  /// The notice of the run held now; null when none is held.
-  LocationRunNotice? get runNotice => _runHeld ? _runHolds.last.notice : null;
+  /// The notice of the run held now; null when none is held, and once
+  /// [pressStop] took it away.
+  LocationRunNotice? get runNotice => _runShown ? _runHolds.last.notice : null;
 
   /// Whether the run held now keeps the processor on; null when none is
   /// held.
@@ -118,6 +120,10 @@ final class FakePhoneLocation implements PhoneLocation {
   /// How often [releaseRun] ended a held run.
   int get runReleases => _runReleases;
 
+  /// Called when [releaseRun] ends a held run, which is when a phone that
+  /// keeps the app only for the run may end the app.
+  void Function()? onRunReleased;
+
   /// Whether the phone leaves the app alone while it runs off screen
   /// ([backgroundUnrestricted]): true on a phone with nothing to allow.
   bool unrestricted = true;
@@ -129,11 +135,12 @@ final class FakePhoneLocation implements PhoneLocation {
   /// How often [requestBackgroundUnrestricted] was called.
   int get unrestrictedRequests => _unrestrictedRequests;
 
-  /// The user presses Stop on the run's notice: the run is released and
-  /// [runStops] emits. Nothing happens when no run is held.
+  /// The user presses Stop on the run's notice: the notice goes and
+  /// [runStops] emits; the run stays held until [releaseRun]. Nothing
+  /// happens when no notice is shown.
   void pressStop() {
-    if (!_runHeld) return;
-    _runHeld = false;
+    if (!_runShown) return;
+    _runShown = false;
     _runStops.add(null);
   }
 
@@ -230,6 +237,7 @@ final class FakePhoneLocation implements PhoneLocation {
       throw const LocationRunException(LocationRunRefusal.noAccess);
     }
     _runHeld = true;
+    _runShown = true;
     _runHolds.add((notice: notice, awake: awake));
   }
 
@@ -237,7 +245,9 @@ final class FakePhoneLocation implements PhoneLocation {
   Future<void> releaseRun() async {
     if (!_runHeld) return;
     _runHeld = false;
+    _runShown = false;
     _runReleases++;
+    onRunReleased?.call();
   }
 
   @override

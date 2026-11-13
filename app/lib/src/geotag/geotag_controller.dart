@@ -111,7 +111,6 @@ final class GeotagController extends ChangeNotifier {
   String? _sessionSerial;
   StreamSubscription<LocationFix>? _fixes;
   StreamSubscription<bool>? _written;
-  StreamSubscription<void>? _stops;
 
   /// What [_geotagging] was configured with last, so that it is told again
   /// only when something changed.
@@ -384,10 +383,8 @@ final class GeotagController extends ChangeNotifier {
     _geotagging?.removeListener(_onGeotagging);
     unawaited(_fixes?.cancel());
     unawaited(_written?.cancel());
-    unawaited(_stops?.cancel());
     _fixes = null;
     _written = null;
-    _stops = null;
     _configured = null;
     _session = session;
     _sessionSerial = session == null ? null : connection.camera?.serial;
@@ -398,7 +395,6 @@ final class GeotagController extends ChangeNotifier {
     _written = geotagging.storeLocationInfoWritten.listen(
       _onStoreLocationInfoWritten,
     );
-    _stops = geotagging.stoppedByUser.listen((_) => _onStoppedByUser());
     _configure();
   }
 
@@ -430,6 +426,9 @@ final class GeotagController extends ChangeNotifier {
       ),
       // Asked for each time the notice changes, so it follows a new name.
       notice: (status) => _notice(_camera(serial)?.name ?? camera.name, status),
+      // Stop on the phone's notice turns it off as the switch does, until
+      // the user turns it on again. Done once that is saved.
+      onStopped: () => turnLiveOff(serial),
     );
   }
 
@@ -454,15 +453,6 @@ final class GeotagController extends ChangeNotifier {
           AppLocalizations.supportedLocales,
         ),
   );
-
-  /// The user pressed Stop on the phone's notice: live geotagging is
-  /// turned off for the session's camera, as its switch does, until the
-  /// user turns it on again.
-  void _onStoppedByUser() {
-    final serial = _sessionSerial;
-    if (serial == null) return;
-    unawaited(turnLiveOff(serial));
-  }
 
   void _onStoreLocationInfoWritten(bool written) {
     final serial = _sessionSerial;
@@ -588,7 +578,6 @@ final class GeotagController extends ChangeNotifier {
     _geotagging?.removeListener(_onGeotagging);
     unawaited(_fixes?.cancel());
     unawaited(_written?.cancel());
-    unawaited(_stops?.cancel());
     for (final subscription in _phone) {
       unawaited(subscription.cancel());
     }

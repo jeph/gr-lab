@@ -77,15 +77,22 @@ void main() {
     expect(rig.phone.locating, isFalse);
   });
 
-  testWidgets('Stop on the notice ends it and tells the app: nothing is '
-      'located or written until the app has turned the setting off and the '
-      'user turns it on again', (tester) async {
+  testWidgets('Stop on the notice ends it and has the app turn the setting '
+      'off: nothing is located or written from then on, and the run is '
+      'kept until the app has saved that', (tester) async {
     final rig = await GeotagRig.start(tester);
-    await rig.configure();
+    final saved = Completer<void>();
+    var stops = 0;
+    // As the app does: the setting is off at once and saved after.
+    Future<void> onStopped() {
+      stops++;
+      rig.apply(live: false, pending: false, onStopped: onStopped);
+      return saved.future;
+    }
+
+    await rig.configure(onStopped: onStopped);
     await rig.emit(rig.fix());
     final holds = rig.phone.runHolds.length;
-    var stops = 0;
-    final stopped = rig.geotagging.stoppedByUser.listen((_) => stops++);
 
     rig.phone.pressStop();
     await rig.advance(const Duration(seconds: 1));
@@ -93,10 +100,8 @@ void main() {
     expect(rig.status, GeotagStatus.off);
     expect(rig.steps, contains('geotag.stopped'));
     expect(rig.phone.locating, isFalse);
+    expect(rig.camera.storeLocationInfo, isFalse);
 
-    // Settings that still say on, as the app had them before it heard of
-    // the Stop, start nothing.
-    await rig.configure(syncClock: false);
     rig.phone.currentFix = rig.fix(north: 100);
     await rig.emit(rig.fix(north: 100));
     await rig.advance(
@@ -105,19 +110,23 @@ void main() {
     );
     expect(rig.writes, hasLength(1));
     expect(rig.phone.currentRequests, 0);
-    // The platform released the run itself; it is not taken again.
-    expect(rig.phone.runHeld, isFalse);
+    // Still held while the app saves, and not asked for again.
+    expect(rig.phone.runHeld, isTrue);
     expect(rig.phone.runHolds, hasLength(holds));
     expect(rig.phone.runReleases, 0);
-    expect(rig.status, GeotagStatus.off);
 
-    // The app turns the setting off, which turns the camera's off too.
-    await rig.configure(live: false, pending: false);
-    expect(rig.camera.storeLocationInfo, isFalse);
-    expect(rig.status, GeotagStatus.off);
+    saved.complete();
+    await rig.advance(const Duration(seconds: 1));
     expect(rig.phone.runHeld, isFalse);
+    expect(rig.phone.runReleases, 1);
+    expect(
+      rig.steps,
+      containsAllInOrder(['geotag.stop.saved', 'geotag.run.release']),
+    );
+    expect(rig.status, GeotagStatus.off);
 
-    await rig.configure(pending: true);
+    // The user turns it on again in the app.
+    await rig.configure(pending: true, onStopped: onStopped);
     await rig.until(
       () => rig.status == GeotagStatus.waitingForLocation,
       reason: 'live geotagging to start again',
@@ -128,7 +137,46 @@ void main() {
     await rig.emit(rig.fix(north: 100));
     expect(rig.writes, hasLength(2));
     expect(stops, 1);
-    unawaited(stopped.cancel());
+    await rig.close();
+  });
+
+  testWidgets("after Stop the run is released only once the camera's Store "
+      'Location Info is written off, also when the app saved at '
+      'once', (tester) async {
+    final rig = await GeotagRig.start(tester);
+    Future<void> onStopped() async =>
+        rig.apply(live: false, pending: false, onStopped: onStopped);
+    await rig.configure(onStopped: onStopped);
+    bool? storingAtRelease;
+    rig.phone.onRunReleased = () =>
+        storingAtRelease = rig.camera.storeLocationInfo;
+
+    rig.phone.pressStop();
+    await rig.until(
+      () => storingAtRelease != null,
+      reason: 'the run to be released',
+    );
+    expect(storingAtRelease, isFalse);
+    await rig.close();
+  });
+
+  testWidgets('Stop while the app never turns the setting off still ends '
+      'it: settings that say on start nothing', (tester) async {
+    final rig = await GeotagRig.start(tester);
+    await rig.configure();
+    final holds = rig.phone.runHolds.length;
+
+    rig.phone.pressStop();
+    await rig.advance(const Duration(seconds: 1));
+    expect(rig.stops, 1);
+    expect(rig.phone.runHeld, isFalse);
+    expect(rig.phone.runReleases, 1);
+
+    await rig.configure(syncClock: false);
+    await rig.emit(rig.fix());
+    expect(rig.status, GeotagStatus.off);
+    expect(rig.phone.runHolds, hasLength(holds));
+    expect(rig.writes, isEmpty);
     await rig.close();
   });
 

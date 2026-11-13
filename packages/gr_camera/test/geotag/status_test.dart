@@ -184,6 +184,7 @@ void main() {
     geotagging.configure(
       const GeotagSettings(live: false, syncClock: true),
       notice: (status) => throw StateError('no notice is asked for'),
+      onStopped: () => throw StateError('no Stop is handed over'),
     );
     await tester.pump(const Duration(seconds: 1));
     expect(notified, 0);

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'dart:ui' show Locale;
 
 import 'package:clock/clock.dart';
@@ -262,6 +264,36 @@ void main() {
             location.runNotice?.text ==
             "Geotagging using this phone's location",
       );
+    });
+
+    test("Stop on the phone's notice is saved before the run is let go: a "
+        'phone that ends GR Photo with the run finds live geotagging off '
+        'when the app is next opened', () async {
+      final location = FakePhoneLocation();
+      final app = await _app(config: _storing, location: location, live: true);
+      await app.models.connection.connect();
+      await _until(() => location.runHeld);
+      // Off, so nothing is written to the camera before the run is let go.
+      app.camera.poweredOn = false;
+      await _until(
+        () => app.models.geotag.status == GeotagStatus.waitingForCamera,
+      );
+
+      final file = File('${app.models.services.dataDir.path}/cameras.json');
+      String? onDiskAtRelease;
+      location
+        ..onRunReleased = (() => onDiskAtRelease = file.readAsStringSync())
+        ..pressStop();
+      await _until(() => onDiskAtRelease != null);
+
+      final saved = jsonDecode(onDiskAtRelease!) as Map<String, Object?>;
+      final camera = SavedCamera.fromJson(
+        (saved['cameras']! as List<Object?>).single! as Map<String, Object?>,
+      );
+      expect(camera.liveGeotagging, isFalse);
+      // Still owed to the camera, for when it is next on and linked.
+      expect(camera.storeLocationInfoPending, isFalse);
+      expect(app.models.geotag.status, GeotagStatus.off);
     });
 
     test('without a session the status says what the phone lacks, and '

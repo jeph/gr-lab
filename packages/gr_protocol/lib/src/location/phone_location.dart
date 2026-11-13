@@ -275,8 +275,10 @@ abstract interface class PhoneLocation {
   /// Ends what [holdRun] started; nothing happens when no run is held.
   Future<void> releaseRun();
 
-  /// Emits when the user ended the run from the platform's notice (its Stop
-  /// button). The run is released already.
+  /// Emits when the user pressed Stop on the platform's notice. The notice
+  /// is gone, and the run stays held until [releaseRun]: a platform may end
+  /// the app with the run (Android, once the app's window is closed), so
+  /// what Stop means is saved before the run is released.
   Stream<void> get runStops;
 
   /// Whether the phone leaves the app alone while it runs off screen.
