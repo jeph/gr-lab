@@ -9,6 +9,7 @@ import 'package:grphoto/src/geotag/geotag_section.dart';
 import 'package:grphoto/src/library/format.dart';
 import 'package:grphoto/src/pairing/pairing_widgets.dart';
 import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/gr_dialog.dart';
 import 'package:grphoto/src/widgets/group.dart';
 
 /// One paired camera, from ⋯ on the Cameras screen (mock
@@ -199,22 +200,20 @@ class _ForgetRow extends StatelessWidget {
   Future<void> _forget(BuildContext context) async {
     final models = AppScope.of(context);
     final navigator = Navigator.of(context);
-    final c = GrColors.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.l10n.camerasDetailsForgetTitle(camera.name)),
-        content: Text(context.l10n.camerasDetailsForgetMessage),
+      builder: (context) => GrDialog(
+        title: context.l10n.camerasDetailsForgetTitle(camera.name),
+        message: context.l10n.camerasDetailsForgetMessage,
         actions: [
-          TextButton(
+          GrDialogAction(
+            label: context.l10n.camerasDetailsForgetCancel,
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(context.l10n.camerasDetailsForgetCancel),
           ),
-          TextButton(
+          GrDialogAction.destructive(
             key: const Key('camera-forget-confirm'),
-            style: TextButton.styleFrom(foregroundColor: c.danger),
+            label: context.l10n.camerasDetailsForgetConfirm,
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(context.l10n.camerasDetailsForgetConfirm),
           ),
         ],
       ),

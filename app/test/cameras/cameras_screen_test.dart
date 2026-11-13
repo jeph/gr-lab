@@ -16,6 +16,7 @@ import 'package:grphoto/src/looks/looks_screen.dart';
 import 'package:grphoto/src/pairing/pairing_flow.dart';
 import 'package:grphoto/src/sample_photos.dart';
 import 'package:grphoto/src/shoot/shoot_screen.dart';
+import 'package:grphoto/src/widgets/gr_dialog.dart';
 
 import '../support/test_app.dart';
 
@@ -1212,10 +1213,20 @@ void main() {
     await _tap(tester, const Key('camera-card-more'));
     await _tap(tester, const Key('camera-details-rename'));
     await pumpUntilFound(tester, find.byKey(const Key('camera-rename-field')));
+    // A name of nothing but spaces cannot be saved.
+    await tester.enterText(find.byKey(const Key('camera-rename-field')), '  ');
+    await tester.pump();
+    expect(
+      tester
+          .widget<GrDialogAction>(find.byKey(const Key('camera-rename-save')))
+          .onPressed,
+      isNull,
+    );
     await tester.enterText(
       find.byKey(const Key('camera-rename-field')),
       '  Street GR  ',
     );
+    await tester.pump();
     await _tap(tester, const Key('camera-rename-save'));
     await pumpUntil(
       tester,

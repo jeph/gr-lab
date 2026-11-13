@@ -16,6 +16,7 @@ import 'package:grphoto/src/library/shot.dart';
 import 'package:grphoto/src/library/shot_cell.dart';
 import 'package:grphoto/src/library/viewer.dart';
 import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/gr_dialog.dart';
 import 'package:grphoto/src/widgets/group.dart';
 
 /// The camera's photos (mocks `b-library-ios` / `b-library-android`): the
@@ -306,15 +307,15 @@ Future<void> showPermissionGuidance(BuildContext context) {
   final l10n = context.l10n;
   return showDialog<void>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text(l10n.libraryPhotoAccessTitle),
-      content: Text(
-        ios ? l10n.libraryPhotoAccessIos : l10n.libraryPhotoAccessAndroid,
-      ),
+    builder: (context) => GrDialog(
+      title: l10n.libraryPhotoAccessTitle,
+      message: ios
+          ? l10n.libraryPhotoAccessIos
+          : l10n.libraryPhotoAccessAndroid,
       actions: [
-        TextButton(
+        GrDialogAction.answer(
+          label: l10n.libraryOk,
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.libraryOk),
         ),
       ],
     ),

@@ -5,7 +5,7 @@ import 'package:grphoto/l10n/l10n.dart';
 
 import 'package:grphoto/src/debug/debug_log.dart';
 import 'package:grphoto/src/pairing/pairing_widgets.dart';
-import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/gr_dialog.dart';
 import 'package:grphoto/src/widgets/group.dart';
 
 /// The debug logging switch, export and clear, so a bug report can carry
@@ -81,23 +81,21 @@ class DebugLogGroup extends StatelessWidget {
 
   Future<void> _clear(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
-    final c = GrColors.of(context);
     final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.debugLogClearTitle),
-        content: Text(l10n.debugLogClearBody),
+      builder: (context) => GrDialog(
+        title: l10n.debugLogClearTitle,
+        message: l10n.debugLogClearBody,
         actions: [
-          TextButton(
+          GrDialogAction(
+            label: l10n.commonCancel,
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l10n.commonCancel),
           ),
-          TextButton(
+          GrDialogAction.destructive(
             key: const Key('debug-log-clear-confirm'),
-            style: TextButton.styleFrom(foregroundColor: c.danger),
+            label: l10n.debugLogClearConfirm,
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(l10n.debugLogClearConfirm),
           ),
         ],
       ),

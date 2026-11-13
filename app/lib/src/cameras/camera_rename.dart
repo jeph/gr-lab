@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:grphoto/l10n/l10n.dart';
 import 'package:grphoto/src/app_scope.dart';
 import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/widgets/gr_dialog.dart';
+import 'package:grphoto/src/widgets/gr_text_field.dart';
 
 /// Asks for a new display name for [camera] and saves it.
 Future<void> showRenameCameraDialog(
@@ -44,29 +46,29 @@ class _RenameDialogState extends State<_RenameDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: Text(context.l10n.connectionRenameTitle),
-    content: TextField(
-      key: const Key('camera-rename-field'),
-      controller: _text,
-      autofocus: true,
-      maxLength: 32,
-      textCapitalization: TextCapitalization.words,
-      onSubmitted: (_) => _save(),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: Text(context.l10n.connectionRenameCancel),
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _text,
+    builder: (context, _) => GrDialog(
+      title: context.l10n.connectionRenameTitle,
+      content: GrTextField(
+        key: const Key('camera-rename-field'),
+        controller: _text,
+        autofocus: true,
+        maxLength: 32,
+        textCapitalization: TextCapitalization.words,
+        onSubmitted: (_) => _save(),
       ),
-      ListenableBuilder(
-        listenable: _text,
-        builder: (context, _) => TextButton(
-          key: const Key('camera-rename-save'),
-          onPressed: _text.text.trim().isEmpty ? null : _save,
-          child: Text(context.l10n.connectionRenameSave),
+      actions: [
+        GrDialogAction(
+          label: context.l10n.connectionRenameCancel,
+          onPressed: () => Navigator.of(context).pop(),
         ),
-      ),
-    ],
+        GrDialogAction.answer(
+          key: const Key('camera-rename-save'),
+          label: context.l10n.connectionRenameSave,
+          onPressed: _text.text.trim().isEmpty ? null : _save,
+        ),
+      ],
+    ),
   );
 }

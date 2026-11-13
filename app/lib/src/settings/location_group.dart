@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:grphoto/l10n/l10n.dart';
 import 'package:grphoto/src/geotag/geotag_controller.dart';
-import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/gr_dialog.dart';
 import 'package:grphoto/src/widgets/group.dart';
 
 /// Settings' Location group: Delete location history, the one history of
@@ -17,23 +17,21 @@ class LocationGroup extends StatelessWidget {
 
   Future<void> _delete(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
-    final c = GrColors.of(context);
     final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.settingsDeleteHistoryTitle),
-        content: Text(l10n.settingsDeleteHistoryBody),
+      builder: (context) => GrDialog(
+        title: l10n.settingsDeleteHistoryTitle,
+        message: l10n.settingsDeleteHistoryBody,
         actions: [
-          TextButton(
+          GrDialogAction(
+            label: l10n.commonCancel,
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l10n.commonCancel),
           ),
-          TextButton(
+          GrDialogAction.destructive(
             key: const Key('location-history-delete-confirm'),
-            style: TextButton.styleFrom(foregroundColor: c.danger),
+            label: l10n.settingsDeleteHistoryConfirm,
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(l10n.settingsDeleteHistoryConfirm),
           ),
         ],
       ),

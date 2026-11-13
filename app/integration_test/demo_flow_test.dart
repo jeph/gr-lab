@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:grphoto/main.dart' as app;
 import 'package:grphoto/src/library/shot_cell.dart';
 import 'package:grphoto/src/platform/app_dirs.dart';
+import 'package:grphoto/src/widgets/gr_dialog.dart';
 import 'package:integration_test/integration_test.dart';
 
 /// The whole app on a device or simulator against the demo camera:
@@ -97,7 +98,7 @@ void main() {
       timeout: const Duration(seconds: 90),
       reason: 'both selected shots saved to the photo library',
     );
-    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(GrDialog), findsNothing);
   });
 }
 

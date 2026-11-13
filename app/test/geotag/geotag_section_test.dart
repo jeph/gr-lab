@@ -4,6 +4,7 @@ import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:grphoto/src/cameras/camera_details.dart';
 import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/widgets/gr_dialog.dart';
 import 'package:grphoto/src/widgets/group.dart';
 
 import '../support/test_app.dart';
@@ -108,7 +109,7 @@ void main() {
 
     await _tap(tester, _learnMore);
     await pumpUntilFound(tester, find.byKey(_explain));
-    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(GrDialog), findsNothing);
     Finder said(String text) => find.descendant(
       of: find.byKey(_explain),
       matching: find.textContaining(text),
@@ -205,7 +206,7 @@ void main() {
       reason: 'background geotagging on',
     );
     expect(find.byKey(_explain), findsNothing);
-    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(GrDialog), findsNothing);
     expect(location.whileInUseRequests, 1);
     expect(location.alwaysRequests, 1);
     expect(location.historyEnabled, isTrue);

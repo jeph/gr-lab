@@ -10,6 +10,8 @@ import 'package:grphoto/src/looks/look_spec.dart';
 import 'package:grphoto/src/looks/looks_model.dart';
 import 'package:grphoto/src/looks/looks_store.dart';
 import 'package:grphoto/src/theme/tokens.dart';
+import 'package:grphoto/src/widgets/gr_dialog.dart';
+import 'package:grphoto/src/widgets/gr_text_field.dart';
 
 /// The picture standing for a look: the photo it was saved from, turned
 /// upright by [orientation] ([SavedLook.photoOrientation]), or a swatch in
@@ -164,22 +166,20 @@ Future<bool> confirmAndLoad(
   final messenger = ScaffoldMessenger.of(context);
   final ok = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text(l10n.looksLoadConfirmTitle(name, number)),
-      content: Text(
-        current == null || current.name.isEmpty
-            ? l10n.looksLoadConfirmBody(number)
-            : l10n.looksLoadConfirmReplaces(number, current.name),
-      ),
+    builder: (context) => GrDialog(
+      title: l10n.looksLoadConfirmTitle(name, number),
+      message: current == null || current.name.isEmpty
+          ? l10n.looksLoadConfirmBody(number)
+          : l10n.looksLoadConfirmReplaces(number, current.name),
       actions: [
-        TextButton(
+        GrDialogAction(
+          label: l10n.commonCancel,
           onPressed: () => Navigator.pop(context, false),
-          child: Text(l10n.commonCancel),
         ),
-        TextButton(
+        GrDialogAction.answer(
           key: const Key('looks-load-confirm'),
+          label: l10n.looksLoadInto(number),
           onPressed: () => Navigator.pop(context, true),
-          child: Text(l10n.looksLoadInto(number)),
         ),
       ],
     ),
@@ -229,9 +229,9 @@ class _LookNameDialogState extends State<_LookNameDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return AlertDialog(
-      title: Text(l10n.looksNameTitle),
-      content: TextField(
+    return GrDialog(
+      title: l10n.looksNameTitle,
+      content: GrTextField(
         key: const Key('looks-name-field'),
         controller: _name,
         autofocus: true,
@@ -242,14 +242,14 @@ class _LookNameDialogState extends State<_LookNameDialog> {
         onSubmitted: (v) => Navigator.pop(context, v),
       ),
       actions: [
-        TextButton(
+        GrDialogAction(
+          label: l10n.commonCancel,
           onPressed: () => Navigator.pop(context),
-          child: Text(l10n.commonCancel),
         ),
-        TextButton(
+        GrDialogAction.answer(
           key: const Key('looks-name-ok'),
+          label: l10n.looksNameSave,
           onPressed: () => Navigator.pop(context, _name.text),
-          child: Text(l10n.looksNameSave),
         ),
       ],
     );
@@ -264,21 +264,19 @@ Future<void> showLookConflict(BuildContext context, LookConflict conflict) {
   final exists = conflict.kind == LookConflictKind.nameAndSettings;
   return showDialog<void>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => GrDialog(
       key: Key('looks-conflict:${conflict.kind.name}'),
-      title: Text(
-        exists ? l10n.looksConflictExistsTitle : l10n.looksConflictTitle,
-      ),
-      content: Text(switch (conflict.kind) {
+      title: exists ? l10n.looksConflictExistsTitle : l10n.looksConflictTitle,
+      message: switch (conflict.kind) {
         LookConflictKind.nameAndSettings => l10n.looksConflictExistsBody(other),
         LookConflictKind.settings => l10n.looksConflictSettingsBody(other),
         LookConflictKind.name => l10n.looksConflictNameBody(other),
-      }),
+      },
       actions: [
-        TextButton(
+        GrDialogAction.answer(
           key: const Key('looks-conflict-ok'),
+          label: l10n.looksConflictOk,
           onPressed: () => Navigator.pop(context),
-          child: Text(l10n.looksConflictOk),
         ),
       ],
     ),
@@ -288,21 +286,20 @@ Future<void> showLookConflict(BuildContext context, LookConflict conflict) {
 /// Asks before deleting [saved] from the library.
 Future<bool> confirmDelete(BuildContext context, SavedLook saved) async {
   final l10n = context.l10n;
-  final c = GrColors.of(context);
   final ok = await showDialog<bool>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: Text(l10n.looksDeleteTitle(saved.name)),
-      content: Text(l10n.looksDeleteBody),
+    builder: (context) => GrDialog(
+      title: l10n.looksDeleteTitle(saved.name),
+      message: l10n.looksDeleteBody,
       actions: [
-        TextButton(
+        GrDialogAction(
+          label: l10n.commonCancel,
           onPressed: () => Navigator.pop(context, false),
-          child: Text(l10n.commonCancel),
         ),
-        TextButton(
+        GrDialogAction.destructive(
           key: const Key('looks-delete-confirm'),
+          label: l10n.looksDelete,
           onPressed: () => Navigator.pop(context, true),
-          child: Text(l10n.looksDelete, style: TextStyle(color: c.danger)),
         ),
       ],
     ),
