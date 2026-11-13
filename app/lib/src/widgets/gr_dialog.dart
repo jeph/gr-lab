@@ -20,7 +20,8 @@ const _labelStyle = TextStyle(
 /// the screen: the raised surface with a hairline edge, [title] and
 /// [message] above [content], then [actions] as pill buttons of equal
 /// width (direction A of `design/mockups/dialogs.html` in the local
-/// research workspace, `../gr`).
+/// research workspace, `../gr`). Where the screen is too short for it all,
+/// what is above the buttons scrolls and the buttons stay in reach.
 ///
 /// The last action is the answer and sits at the trailing edge. Where the
 /// labels do not fit side by side, the buttons stack with the answer on
@@ -36,8 +37,7 @@ class GrDialog extends StatelessWidget {
 
   final String title;
 
-  /// What [title] asks or says, at more length; it scrolls where the
-  /// screen is too short for it.
+  /// What [title] asks or says, at more length.
   final String? message;
 
   /// A control between the text and the buttons, such as a `GrTextField`.
@@ -72,50 +72,59 @@ class GrDialog extends StatelessWidget {
               ),
             ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Semantics(
-                  namesRoute: true,
-                  header: true,
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -.2,
-                      height: 1.25,
-                    ),
-                  ),
-                ),
-                if (message != null)
-                  Flexible(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        message,
-                        style: TextStyle(
-                          fontSize: 14.5,
-                          height: 1.5,
-                          color: c.t2,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Everything above the buttons scrolls where the screen is
+              // too short for it: a long message, or a field above the
+              // keyboard of a phone on its side. The padding is inside, so
+              // the halo of a focused field is not cut off at the edges.
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Semantics(
+                        namesRoute: true,
+                        header: true,
+                        child: Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -.2,
+                            height: 1.25,
+                          ),
                         ),
                       ),
-                    ),
+                      if (message != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(
+                            message,
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              height: 1.5,
+                              color: c.t2,
+                            ),
+                          ),
+                        ),
+                      if (content != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: content,
+                        ),
+                    ],
                   ),
-                if (content != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: content,
-                  ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 20),
-                  child: _Actions(actions),
                 ),
-              ],
-            ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                child: _Actions(actions),
+              ),
+            ],
           ),
         ),
       ),

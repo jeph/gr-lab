@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/gr_dialog.dart';
+import 'package:grphoto/src/widgets/gr_text_field.dart';
 
 const _no = Key('no');
 const _yes = Key('yes');
@@ -95,5 +96,62 @@ void main() {
     expect(scroll.position.maxScrollExtent, greaterThan(0));
     expect(tester.getRect(find.byKey(_yes)).bottom, lessThan(screen.height));
     expect(tester.getRect(find.text('Title')).top, greaterThan(0));
+  });
+
+  testWidgets('a text dialog above the keyboard of a phone on its side '
+      'keeps the field being typed in and the buttons in reach', (
+    tester,
+  ) async {
+    // 193 pt are left above the keyboard, less than the card's own height.
+    tester.view.physicalSize = const Size(812, 393);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 200);
+    addTearDown(tester.view.reset);
+    final name = TextEditingController(text: 'Faded Film');
+    addTearDown(name.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: grTheme(GrColors.dark),
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showDialog<void>(
+              context: context,
+              builder: (context) => GrDialog(
+                title: 'Name the look',
+                content: GrTextField(
+                  controller: name,
+                  autofocus: true,
+                  maxLength: 32,
+                ),
+                actions: [
+                  GrDialogAction(key: _no, label: 'Cancel', onPressed: () {}),
+                  GrDialogAction.answer(
+                    key: _yes,
+                    label: 'Save',
+                    onPressed: () {},
+                  ),
+                ],
+              ),
+            ),
+            child: const Text('ask'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('ask'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    const aboveKeyboard = 393 - 200;
+    final save = tester.getRect(find.byKey(_yes));
+    expect(save.bottom, lessThan(aboveKeyboard));
+    expect(find.byKey(_yes).hitTestable(), findsOneWidget);
+    // The field has scrolled into what is left above the buttons.
+    final shown = tester.getRect(find.byType(SingleChildScrollView));
+    final field = tester.getRect(find.byType(GrTextField));
+    expect(shown.top, greaterThan(0));
+    expect(field.top, greaterThanOrEqualTo(shown.top));
+    expect(field.bottom, lessThanOrEqualTo(shown.bottom));
+    expect(shown.bottom, lessThanOrEqualTo(save.top));
   });
 }
