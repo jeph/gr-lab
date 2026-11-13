@@ -176,6 +176,8 @@
   "downloadStateQueued": "В очереди",
   "downloadStateRunning": "Загрузка",
   "geotagClockSection": "Часы",
+  "geotagAllowBackground": "Разрешить в фоне",
+  "geotagBackgroundRestricted": "Этот телефон может приостанавливать GR Photo при выключенном экране. Тогда геотеги снова запустятся только после включения экрана.",
   "geotagLiveSubtitle": "Добавляет геотеги в фото на камере, пока она подключена к GR Photo",
   "geotagNeedAlways": "Доступ к геопозиции должен быть разрешен всегда",
   "geotagNoticeChannel": "Геотеги",

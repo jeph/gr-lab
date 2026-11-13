@@ -176,6 +176,8 @@
   "downloadStateQueued": "อยู่ในคิว",
   "downloadStateRunning": "กำลังดาวน์โหลด",
   "geotagClockSection": "นาฬิกา",
+  "geotagAllowBackground": "อนุญาตในเบื้องหลัง",
+  "geotagBackgroundRestricted": "โทรศัพท์เครื่องนี้อาจหยุด GR Photo ชั่วคราวขณะปิดหน้าจอ การติดแท็กตำแหน่งจะเริ่มอีกครั้งเมื่อเปิดหน้าจอเท่านั้น",
   "geotagLiveSubtitle": "ติดแท็กตำแหน่งให้ภาพในกล้องขณะที่กล้องเชื่อมต่อกับ GR Photo",
   "geotagNeedAlways": "ต้องอนุญาตตำแหน่งตลอดเวลา",
   "geotagNoticeChannel": "ติดแท็กตำแหน่ง",

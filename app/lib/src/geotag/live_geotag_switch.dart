@@ -23,6 +23,9 @@ import 'package:grphoto/src/widgets/group.dart';
 /// Location Info back on, resume after Stop on the phone's notice, or open
 /// the page of the phone's settings that allows what is missing. A refusal
 /// when turning it on leaves the switch off and says what is needed there.
+/// With nothing else held up, a phone that may stop GR Photo while its
+/// screen is off is named, with a button that asks the user to allow it in
+/// the background.
 class LiveGeotagSwitch extends StatefulWidget {
   const new({required this.camera, super.key});
 
@@ -79,16 +82,24 @@ class _LiveGeotagSwitchState extends State<LiveGeotagSwitch> {
           ? refusal.need
           : null;
       final missing = live ? GeotagController.needOf(status) : refused;
-      final problem = refused != null
+      final held = refused != null
           ? geotagNeedText(l10n, refused)
           : live
           ? geotagProblemText(l10n, status)
           : null;
+      final restricted = live && held == null && _geotag.backgroundRestricted;
+      final problem = restricted ? l10n.geotagBackgroundRestricted : held;
       final action = missing != null
           ? _Action(
               key: const Key('camera-card-geotag-settings'),
               label: l10n.geotagOpenSettings,
               onPressed: () => unawaited(_geotag.openSettings(missing)),
+            )
+          : restricted
+          ? _Action(
+              key: const Key('camera-card-geotag-background'),
+              label: l10n.geotagAllowBackground,
+              onPressed: () => unawaited(_geotag.allowBackground()),
             )
           : switch (status) {
               GeotagStatus.offOnCamera => _Action(

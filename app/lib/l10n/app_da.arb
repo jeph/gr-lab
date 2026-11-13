@@ -176,6 +176,8 @@
   "downloadStateQueued": "I kø",
   "downloadStateRunning": "Downloader",
   "geotagClockSection": "Ur",
+  "geotagAllowBackground": "Tillad i baggrunden",
+  "geotagBackgroundRestricted": "Denne telefon kan sætte GR Photo på pause, mens skærmen er slukket. Geotagging starter så først igen, når skærmen tændes.",
   "geotagLiveSubtitle": "Geotagger billeder på kameraet, mens det er forbundet med GR Photo",
   "geotagNeedAlways": "Lokalitet skal altid være tilladt",
   "geotagNoticeChannel": "Geotagging",

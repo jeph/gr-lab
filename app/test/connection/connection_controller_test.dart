@@ -10,6 +10,7 @@ import 'package:gr_protocol/gr_protocol.dart'
         BleAdvertisement,
         BleConnection,
         BleDisconnect,
+        BleScanRate,
         BleServiceInfo,
         BleTransport,
         WifiJoinDeclined,
@@ -1088,8 +1089,10 @@ final class _GatedTransport implements BleTransport {
   }
 
   @override
-  Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) =>
-      _camera.scan(serviceUuids: serviceUuids);
+  Stream<BleAdvertisement> scan({
+    List<String> serviceUuids = const [],
+    BleScanRate? rate,
+  }) => _camera.scan(serviceUuids: serviceUuids, rate: rate);
 
   @override
   Future<BleConnection> connect(

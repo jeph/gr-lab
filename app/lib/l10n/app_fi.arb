@@ -176,6 +176,8 @@
   "downloadStateQueued": "Jonossa",
   "downloadStateRunning": "Ladataan",
   "geotagClockSection": "Kello",
+  "geotagAllowBackground": "Salli taustalla",
+  "geotagBackgroundRestricted": "Tämä puhelin voi keskeyttää GR Photon, kun näyttö on pois päältä. Paikkamerkintä käynnistyy silloin uudelleen vasta, kun näyttö kytketään päälle.",
   "geotagLiveSubtitle": "Lisää paikkamerkinnän kameran kuviin, kun kamera on yhdistetty GR Photoon",
   "geotagNeedAlways": "Sijainnin käyttö on sallittava aina",
   "geotagNoticeChannel": "Paikkamerkintä",

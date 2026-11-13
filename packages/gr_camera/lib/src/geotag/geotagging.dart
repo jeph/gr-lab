@@ -61,6 +61,14 @@ const _clockSettle = Duration(seconds: 2);
 /// a camera that is not on before it is released \[design\].
 const _cameraWait = Duration(minutes: 60);
 
+/// How long the phone stays located after a camera it was located for
+/// turned off or dropped the link \[design\]: a camera switched off between
+/// two pictures is on again within minutes, and then gets a position with
+/// its first link instead of seconds later. It also keeps the app running
+/// meanwhile on phones that stop one that neither holds a link nor locates
+/// the phone (research/protocol/geotagging.md §6.5).
+const _standby = Duration(minutes: 5);
+
 /// How long after a failed read of the camera's Store Location Info it is
 /// read again \[design\].
 const _settingRetry = Duration(seconds: 10);
@@ -161,9 +169,11 @@ final class GeotagSettings {
 /// before it is written, a written one is never sent again, and with no
 /// position good enough nothing is written and the camera's runs out.
 ///
-/// The phone is located only while the camera is on, linked and has the
-/// setting on; nothing is ever written to a camera that is off. Every
-/// decision is traced on [TraceChannel.session] (`geotag.…`, `clock.…`).
+/// The phone is located while the camera is on, linked and has the setting
+/// on, and for [_standby] after such a camera turned off, so a position is
+/// at hand when it is switched on again soon; nothing is ever written to a
+/// camera that is off. Every decision is traced on [TraceChannel.session]
+/// (`geotag.…`, `clock.…`).
 final class CameraGeotagging extends ChangeNotifier {
   new _(this._session, this._camera, this._body) {
     _events = _session.events.listen(_onSessionEvent);
@@ -194,8 +204,23 @@ final class CameraGeotagging extends ChangeNotifier {
   /// The camera being on and linked now; null while it is not.
   _OnPeriod? _period;
 
-  /// The period the phone is being located for.
+  /// The period the phone's positions are written for.
   _OnPeriod? _locatingFor;
+
+  /// Why the phone is being located: `camera` for [_locatingFor], `standby`
+  /// for a camera that turned off not long ago; null while it is not.
+  String? _locatingWhy;
+
+  /// The newest position taken for a camera that is off (`standby`): the
+  /// first one written when it is on again, if it is still good enough.
+  /// Never one a camera was written before: no position is sent twice.
+  LocationFix? _standbyFix;
+
+  /// Until when the phone stays located for a camera that turned off
+  /// ([_standby]), and the timer that ends it. The time counts, not the
+  /// timer: a timer stands still while the phone sleeps.
+  DateTime? _standbyUntil;
+  Timer? _standbyTimer;
 
   /// The pending Store Location Info value that was written and reported;
   /// it is not written again while the app still passes it.
@@ -464,6 +489,7 @@ final class CameraGeotagging extends ChangeNotifier {
     if (cameraOff) _offSinceStop = true;
     final period = _period;
     if (period != null && (cameraOff || !identical(period.ble, ble))) {
+      if (identical(_locatingFor, period)) _startStandby();
       period.end();
       _period = null;
       _camera.event('geotag.cameraAway', {
@@ -715,36 +741,81 @@ final class CameraGeotagging extends ChangeNotifier {
 
   // ------------------------------------------------------------ positions
 
-  /// Locates the phone exactly while the camera is on, linked and has
-  /// Store Location Info on, and live geotagging runs.
+  /// Locates the phone while the camera is on, linked and has Store
+  /// Location Info on, and for [_standby] after such a camera turned off
+  /// or dropped the link, as long as live geotagging runs.
   void _syncLocating() {
     final period = _period;
-    final locate =
-        period != null &&
-        _active &&
-        !_stopped &&
-        !_needsApp &&
-        (period.storeLocationInfo ?? false);
-    if (!locate) {
-      if (_locatingFor == null) return;
-      _locatingFor?.stopLocating();
-      _locatingFor = null;
+    final allowed = _active && !_stopped && !_needsApp;
+    final forCamera =
+        allowed && period != null && (period.storeLocationInfo ?? false)
+        ? period
+        : null;
+    // A camera that is on again has not said yet whether its setting is
+    // still on: the phone stays located until it has.
+    final standby =
+        allowed &&
+        forCamera == null &&
+        (period == null || period.storeLocationInfo == null) &&
+        _standingBy;
+    if (!standby) _endStandby();
+    final before = _locatingFor;
+    if (!identical(before, forCamera)) {
+      before?.stopLocating();
+      _locatingFor = forCamera;
+    }
+    final why = forCamera != null
+        ? 'camera'
+        : standby
+        ? 'standby'
+        : null;
+    if (why != _locatingWhy) {
+      _locatingWhy = why;
+      _camera.event('geotag.locating', {'on': why != null, 'for': ?why});
+    }
+    if (why == null) {
       unawaited(_updates?.cancel());
       _updates = null;
-      _camera.event('geotag.locating', {'on': false});
+      _standbyFix = null;
       return;
     }
-    if (identical(_locatingFor, period)) return;
-    _locatingFor = period;
-    _armKeepAlive(period);
-    _camera.event('geotag.locating', {'on': true});
     _updates ??= _camera.location.updates.listen(_onFix);
+    if (forCamera == null || identical(before, forCamera)) return;
+    _armKeepAlive(forCamera);
+    final taken = _standbyFix;
+    _standbyFix = null;
+    if (taken != null) _consider(forCamera, taken);
+  }
+
+  /// The phone is still located for a camera that turned off.
+  bool get _standingBy {
+    final until = _standbyUntil;
+    return until != null && clock.now().isBefore(until);
+  }
+
+  void _startStandby() {
+    _standbyTimer?.cancel();
+    _standbyUntil = clock.now().add(_standby);
+    _standbyTimer = Timer(_standby, _reconcile);
+  }
+
+  void _endStandby() {
+    _standbyTimer?.cancel();
+    _standbyTimer = null;
+    _standbyUntil = null;
   }
 
   void _onFix(LocationFix fix) {
-    final period = _locatingFor;
-    if (_closed || period == null) return;
+    if (_closed) return;
     _fixes.add(fix);
+    final period = _locatingFor;
+    if (period == null) {
+      _standbyFix = fix;
+      // Located for a camera that is off: over when its time is, also
+      // when the timer has not fired because the phone slept.
+      if (!_standingBy) _reconcile();
+      return;
+    }
     // A newer position replaces one that waited for its turn.
     period.deferred?.cancel();
     _consider(period, fix);
@@ -1016,6 +1087,7 @@ final class CameraGeotagging extends ChangeNotifier {
     _period = null;
     _locatingFor = null;
     _cameraWaitTimer?.cancel();
+    _standbyTimer?.cancel();
     unawaited(_events.cancel());
     unawaited(_accessChanges?.cancel());
     unawaited(_runStops?.cancel());

@@ -176,6 +176,8 @@
   "downloadStateQueued": "In coda",
   "downloadStateRunning": "Download in corso",
   "geotagClockSection": "Orologio",
+  "geotagAllowBackground": "Consenti in background",
+  "geotagBackgroundRestricted": "Questo telefono può sospendere GR Photo a schermo spento. Il geotagging si riavvia solo quando lo schermo si accende.",
   "geotagLiveSubtitle": "Aggiunge il geotag alle foto sulla fotocamera mentre è connessa a GR Photo",
   "geotagNeedAlways": "L'accesso alla posizione deve essere consentito sempre",
   "geotagNoticeChannel": "Geotagging",

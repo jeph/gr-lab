@@ -10,6 +10,7 @@ import 'package:gr_protocol/gr_protocol.dart'
         BleAdapterState,
         BleAdvertisement,
         BleConnection,
+        BleScanRate,
         BleTransport,
         WifiNetworkControl;
 import 'package:grphoto/l10n/l10n.dart';
@@ -337,7 +338,10 @@ final class CountingTransport implements BleTransport {
   Future<BleAdapterState> adapterState() => _inner.adapterState();
 
   @override
-  Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) {
+  Stream<BleAdvertisement> scan({
+    List<String> serviceUuids = const [],
+    BleScanRate? rate,
+  }) {
     scans++;
     StreamSubscription<BleAdvertisement>? sub;
     late final StreamController<BleAdvertisement> controller;
@@ -345,7 +349,7 @@ final class CountingTransport implements BleTransport {
       onListen: () {
         scanning++;
         sub = _inner
-            .scan(serviceUuids: serviceUuids)
+            .scan(serviceUuids: serviceUuids, rate: rate)
             .listen(
               controller.add,
               onError: controller.addError,

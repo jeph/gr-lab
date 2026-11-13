@@ -176,6 +176,8 @@
   "downloadStateQueued": "Sorban áll",
   "downloadStateRunning": "Letöltés folyamatban",
   "geotagClockSection": "Óra",
+  "geotagAllowBackground": "Engedélyezés a háttérben",
+  "geotagBackgroundRestricted": "Ez a telefon kikapcsolt képernyőnél szüneteltetheti a GR Photo működését. A geocímkézés ilyenkor csak a képernyő bekapcsolásakor indul újra.",
   "geotagLiveSubtitle": "Geocímkével látja el a kamerán a fotókat, amíg a kamera a GR Photo alkalmazáshoz csatlakozik",
   "geotagNeedAlways": "A helyhozzáférést mindig engedélyezni kell",
   "geotagNoticeChannel": "Geocímkézés",

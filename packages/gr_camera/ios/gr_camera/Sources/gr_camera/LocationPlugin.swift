@@ -6,7 +6,9 @@ import Flutter
 /// iOS shows no notice of GR Photo's own while a run is held, so `holdRun`
 /// uses none of its arguments (the notice texts, Android's notification
 /// channel name, `awake`: iOS has no wake lock, and an app that is located
-/// keeps running), and `runStopped` is never sent. `openSettings` opens GR
+/// keeps running), and `runStopped` is never sent. iOS has no setting that
+/// exempts an app from being suspended, so `backgroundUnrestricted` and its
+/// request answer that nothing is left to allow. `openSettings` opens GR
 /// Photo's page of the Settings app for either page, because iOS lets no app
 /// open its Location Services switch.
 final class LocationPlugin {
@@ -61,6 +63,8 @@ final class LocationPlugin {
     case "releaseRun":
       locator.releaseRun()
       result(nil)
+    case "backgroundUnrestricted", "requestBackgroundUnrestricted":
+      result(true)
     case "setHistory":
       guard let enabled = args?["enabled"] as? Bool else {
         result(FlutterError(code: "invalid", message: "setHistory needs enabled", details: nil))

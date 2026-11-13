@@ -35,6 +35,9 @@ final class BondedCamera implements BleTransport {
   /// Links whose discovery fails as if the camera dropped them (waking).
   int dropLinks;
   int scans = 0;
+
+  /// The rate every scan asked for; null where it left it to the transport.
+  final scanRates = <BleScanRate?>[];
   final ops = <String>[];
 
   /// While set, a connect waits for it before the link opens.
@@ -86,8 +89,12 @@ final class BondedCamera implements BleTransport {
   Future<BleAdapterState> adapterState() async => BleAdapterState.poweredOn;
 
   @override
-  Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) {
+  Stream<BleAdvertisement> scan({
+    List<String> serviceUuids = const [],
+    BleScanRate? rate,
+  }) {
     scans++;
+    scanRates.add(rate);
     return advertising?.stream ?? const Stream.empty();
   }
 
@@ -2117,14 +2124,18 @@ void main() {
       },
     );
 
-    GrSession parkSession(BondedCamera camera) => GrSession(
+    GrSession parkSession(
+      BondedCamera camera, {
+      Duration fullRate = const Duration(minutes: 5),
+    }) => GrSession(
       transport: camera,
       wifi: FailingWifi(),
-      options: const GrSessionOptions(
-        bleReconnectDelays: [Duration.zero],
-        bleLostAfter: Duration(milliseconds: 300),
+      options: GrSessionOptions(
+        bleReconnectDelays: const [Duration.zero],
+        bleLostAfter: const Duration(milliseconds: 300),
         powerOffGuard: Duration.zero,
-        wakeSettle: Duration(milliseconds: 50),
+        wakeSettle: const Duration(milliseconds: 50),
+        parkWatchFullRate: fullRate,
       ),
     );
 
@@ -2214,29 +2225,81 @@ void main() {
       await s.close();
     });
 
-    test('that was seen on but cannot be linked stays let go of, and is '
-        'tried again at its next advertisement', () async {
-      final (camera, s) = await parked();
-      final failed = next(s, 'ble.seenOnFailed');
-      camera
-        // Every link of the attempt drops during discovery.
-        ..dropLinks = 3
-        ..advertising!.add(advertisement(on));
-      await failed;
-      await pumpEventQueue();
-      expect(s.parked, isTrue);
-      expect(s.ble, isNull);
-      expect(camera.advertising!.hasListener, isTrue);
-      expect(camera.dropLinks, 0);
+    test('is listened for all the time at first, and less once it has '
+        'been off for a while, in a scan that starts before the first one '
+        'ends', () async {
+      var unheard = 0;
+      final camera = BondedCamera(operationMode: 2)
+        ..advertising = StreamController<BleAdvertisement>.broadcast(
+          onCancel: () => unheard++,
+        )
+        ..cameraPower = StreamController<Uint8List>.broadcast();
+      final s = parkSession(
+        camera,
+        fullRate: const Duration(milliseconds: 100),
+      );
+      await s.connectBluetooth(deviceId: 'cam');
+      final parked = next(s, 'ble.parked');
+      camera.dropAll();
+      await parked;
+      expect(camera.scanRates, [BleScanRate.full]);
 
+      await next(s, 'ble.parkWatch');
+      expect(camera.scanRates, [BleScanRate.full, BleScanRate.balanced]);
+      expect(unheard, 0, reason: 'no moment without a scan');
+      expect(camera.advertising!.hasListener, isTrue);
+
+      // Switched on, linked, and off again: listened for all the time anew.
       final ready = next(s, 'ble.ready');
       camera
         ..operationMode = 1
         ..advertising!.add(advertisement(on));
       await ready;
-      expect(s.parked, isFalse);
+      expect(camera.advertising!.hasListener, isFalse);
+      // The link drops, and the next one finds the camera off.
+      final off = next(s, 'ble.cameraOff');
+      camera
+        ..operationMode = 2
+        ..dropAll();
+      await off;
+      final again = next(s, 'ble.parked');
+      camera.dropAll();
+      await again;
+      expect(camera.scanRates.last, BleScanRate.full);
       await s.close();
+      expect(camera.advertising!.hasListener, isFalse);
     });
+
+    test(
+      'that was seen on but cannot be linked stays let go of, and is '
+      'tried again at its next advertisement, read from a new scan',
+      () async {
+        final (camera, s) = await parked();
+        final scans = camera.scans;
+        final failed = next(s, 'ble.seenOnFailed');
+        camera
+          // Every link of the attempt drops during discovery.
+          ..dropLinks = 3
+          ..advertising!.add(advertisement(on));
+        await failed;
+        await pumpEventQueue();
+        expect(s.parked, isTrue);
+        expect(s.ble, isNull);
+        expect(camera.advertising!.hasListener, isTrue);
+        expect(camera.dropLinks, 0);
+        // iOS reports a camera once per scan to an app that is not on screen.
+        expect(camera.scans, scans + 1);
+        expect(camera.scanRates.last, BleScanRate.full);
+
+        final ready = next(s, 'ble.ready');
+        camera
+          ..operationMode = 1
+          ..advertising!.add(advertisement(on));
+        await ready;
+        expect(s.parked, isFalse);
+        await s.close();
+      },
+    );
 
     test('is linked by a wake while let go of, which ends the scan and '
         'takes no sighting meanwhile', () async {

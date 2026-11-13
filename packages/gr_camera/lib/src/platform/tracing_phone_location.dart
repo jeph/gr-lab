@@ -97,6 +97,20 @@ final class TracingPhoneLocation implements PhoneLocation {
   Future<void> releaseRun() => _traced('releaseRun', _inner.releaseRun);
 
   @override
+  Future<bool> backgroundUnrestricted() => _traced(
+    'backgroundUnrestricted',
+    _inner.backgroundUnrestricted,
+    result: (unrestricted) => {'unrestricted': unrestricted},
+  );
+
+  @override
+  Future<bool> requestBackgroundUnrestricted() => _traced(
+    'requestBackgroundUnrestricted',
+    _inner.requestBackgroundUnrestricted,
+    result: (unrestricted) => {'unrestricted': unrestricted},
+  );
+
+  @override
   Future<void> setHistory({required bool enabled}) => _traced(
     'setHistory',
     () => _inner.setHistory(enabled: enabled),

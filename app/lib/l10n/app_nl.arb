@@ -176,6 +176,8 @@
   "downloadStateQueued": "In wachtrij",
   "downloadStateRunning": "Downloaden",
   "geotagClockSection": "Klok",
+  "geotagAllowBackground": "Toestaan op de achtergrond",
+  "geotagBackgroundRestricted": "Deze telefoon kan GR Photo pauzeren terwijl het scherm uit staat. Geotagging start dan pas weer wanneer het scherm aangaat.",
   "geotagLiveSubtitle": "Geotagt foto's op de camera zolang die met GR Photo is verbonden",
   "geotagNeedAlways": "Locatie moet altijd toegestaan zijn",
   "geotagNoticeChannel": "Geotagging",

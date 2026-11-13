@@ -5,7 +5,8 @@ import 'package:gr_protocol/gr_protocol.dart';
 /// A simulated phone's location service, scripted by a test: it has the
 /// access the test gives it, reports the positions the test emits and
 /// records what was asked of it (the run held for live geotagging and its
-/// notices, settings pages opened, permission requests).
+/// notices, settings pages opened, permission requests, the exemption from
+/// the phone's background restrictions).
 final class FakePhoneLocation implements PhoneLocation {
   /// A phone whose location may be used as [access] says; by default the
   /// user allowed precise location while the app is in use.
@@ -40,6 +41,7 @@ final class FakePhoneLocation implements PhoneLocation {
   int _alwaysRequests = 0;
   int _currentRequests = 0;
   int _runReleases = 0;
+  int _unrestrictedRequests = 0;
   bool _runHeld = false;
   bool _historyEnabled = false;
   bool _closed = false;
@@ -115,6 +117,17 @@ final class FakePhoneLocation implements PhoneLocation {
 
   /// How often [releaseRun] ended a held run.
   int get runReleases => _runReleases;
+
+  /// Whether the phone leaves the app alone while it runs off screen
+  /// ([backgroundUnrestricted]): true on a phone with nothing to allow.
+  bool unrestricted = true;
+
+  /// What [requestBackgroundUnrestricted] leaves [unrestricted] at: the
+  /// user's answer. Null leaves it as it is.
+  bool? unrestrictedAnswer;
+
+  /// How often [requestBackgroundUnrestricted] was called.
+  int get unrestrictedRequests => _unrestrictedRequests;
 
   /// The user presses Stop on the run's notice: the run is released and
   /// [runStops] emits. Nothing happens when no run is held.
@@ -229,6 +242,15 @@ final class FakePhoneLocation implements PhoneLocation {
 
   @override
   Stream<void> get runStops => _runStops.stream;
+
+  @override
+  Future<bool> backgroundUnrestricted() async => unrestricted;
+
+  @override
+  Future<bool> requestBackgroundUnrestricted() async {
+    _unrestrictedRequests++;
+    return unrestricted = unrestrictedAnswer ?? unrestricted;
+  }
 
   @override
   Future<void> setHistory({required bool enabled}) async {

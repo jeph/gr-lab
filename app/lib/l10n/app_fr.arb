@@ -176,6 +176,8 @@
   "downloadStateQueued": "En attente",
   "downloadStateRunning": "Téléchargement",
   "geotagClockSection": "Horloge",
+  "geotagAllowBackground": "Autoriser en arrière-plan",
+  "geotagBackgroundRestricted": "Ce téléphone peut suspendre GR Photo quand l'écran est éteint. La géolocalisation ne redémarre alors que lorsque l'écran s'allume.",
   "geotagLiveSubtitle": "Géolocalise les photos sur l'appareil photo tant qu'il est connecté à GR Photo",
   "geotagNeedAlways": "L'accès à la position doit être toujours autorisé",
   "geotagNoticeChannel": "Géolocalisation",

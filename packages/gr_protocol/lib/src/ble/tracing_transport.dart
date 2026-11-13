@@ -35,16 +35,20 @@ final class TracingBleTransport implements BleTransport {
   }
 
   @override
-  Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) {
+  Stream<BleAdvertisement> scan({
+    List<String> serviceUuids = const [],
+    BleScanRate? rate,
+  }) {
     StreamSubscription<BleAdvertisement>? upstream;
     late final StreamController<BleAdvertisement> controller;
     controller = StreamController<BleAdvertisement>(
       onListen: () {
         _emit(TraceDirection.outbound, 'scan.start', {
           'serviceUuids': serviceUuids,
+          'rate': ?rate?.name,
         });
         upstream = _inner
-            .scan(serviceUuids: serviceUuids)
+            .scan(serviceUuids: serviceUuids, rate: rate)
             .listen(
               (ad) {
                 _emit(

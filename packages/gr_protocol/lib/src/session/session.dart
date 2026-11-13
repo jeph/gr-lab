@@ -155,6 +155,7 @@ final class GrSessionOptions {
     ],
     this.maxBleReconnectAttempts = 10,
     this.bleLostAfter = const Duration(seconds: 40),
+    this.parkWatchFullRate = const Duration(minutes: 5),
   });
 
   /// How long to scan for the camera's advertisement.
@@ -236,6 +237,14 @@ final class GrSessionOptions {
   /// GR IV that was switched off links again ~15 s after the drop (GR IV
   /// HDF, 2026-11-08).
   final Duration bleLostAfter;
+
+  /// How long the scan for a camera the session let go of ([GrSession.parked])
+  /// listens all the time ([BleScanRate.full]) before it drops to
+  /// [BleScanRate.balanced]. Design choice: a camera switched off between
+  /// two pictures is switched on again within minutes, and is to be linked
+  /// as soon as it advertises; a scan that lasts longer is one for a camera
+  /// put away, which a second more does not matter for.
+  final Duration parkWatchFullRate;
 }
 
 /// GR WORLD's `connectToWifi` identity check (http-api.md §4.1,
@@ -355,8 +364,11 @@ final class GrSession {
   /// The session let go of a camera that is off ([parked]).
   bool _parked = false;
 
-  /// The scan a parked session reads the camera's advertisements from.
+  /// The scan a parked session reads the camera's advertisements from, how
+  /// much of the time it listens, and the end of its time at full rate.
   StreamSubscription<BleAdvertisement>? _parkWatch;
+  BleScanRate _parkWatchRate = BleScanRate.full;
+  Timer? _parkWatchSlows;
 
   /// The camera no longer holds this phone's keys (`ble.needsPairing`):
   /// nothing links it again by itself.
@@ -1484,12 +1496,28 @@ final class GrSession {
 
   /// Lets go of a camera that is off and starts reading its
   /// advertisements for the one that says it is on ([parked]).
+  /// The scan listens all the time at first, for a camera that is switched
+  /// on again soon, and less after [GrSessionOptions.parkWatchFullRate].
   void _park() {
     if (_parked) return;
     _parked = true;
     _emit('ble.parked');
+    _watchParked(BleScanRate.full);
+    _parkWatchSlows = Timer(options.parkWatchFullRate, () {
+      if (_parked && !_closing) _watchParked(BleScanRate.balanced);
+    });
+  }
+
+  /// Starts the scan a [parked] session reads the camera's advertisements
+  /// from, in place of the one running. The new one is asked for before
+  /// the old one is cancelled, so the transport goes from one to the other
+  /// without a stop in between.
+  void _watchParked(BleScanRate rate) {
+    final before = _parkWatch;
+    _parkWatchRate = rate;
+    _emit('ble.parkWatch', {'rate': rate.name});
     _parkWatch = transport
-        .scan(serviceUuids: [GrBleServices.cameraInformation.uuid])
+        .scan(serviceUuids: [GrBleServices.cameraInformation.uuid], rate: rate)
         .listen(
           (ad) {
             final seen = GrAdvertisement(ad);
@@ -1504,6 +1532,7 @@ final class GrSession {
           // running) only a wake links the camera.
           onError: (Object e) => _emit('ble.parkWatchFailed', {'error': '$e'}),
         );
+    unawaited(before?.cancel());
   }
 
   /// Whether [ad] is this session's camera: its device id, or without one
@@ -1519,6 +1548,8 @@ final class GrSession {
   void _unpark() {
     if (!_parked) return;
     _parked = false;
+    _parkWatchSlows?.cancel();
+    _parkWatchSlows = null;
     unawaited(_parkWatch?.cancel());
     _parkWatch = null;
   }
@@ -1546,7 +1577,11 @@ final class GrSession {
   /// Links a [parked] camera that advertised being on. A link that cannot
   /// be made leaves the session parked, reading advertisements again
   /// after the first [GrSessionOptions.bleReconnectDelays] pause: the
-  /// camera was switched off again, or went out of reach.
+  /// camera was switched off again, or went out of reach. They are read
+  /// from a new scan: iOS reports a camera once per scan to an app that is
+  /// not on screen (Apple, "Core Bluetooth Background Processing for iOS
+  /// Apps"), so the old one would stay silent when the camera advertises
+  /// again.
   Future<void> _relinkParked() async {
     try {
       await _connectBle(initial: false);
@@ -1563,6 +1598,9 @@ final class GrSession {
         _closeSignal.future,
         Future<void>.delayed(_delay(options.bleReconnectDelays, 0)),
       );
+      if (_parked && !_closing && _wakeRunning == null) {
+        _watchParked(_parkWatchRate);
+      }
     }
   }
 
@@ -2199,13 +2237,16 @@ final class _ScanUntilClosed implements BleTransport {
   Future<BleAdapterState> adapterState() => _inner.adapterState();
 
   @override
-  Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) {
+  Stream<BleAdvertisement> scan({
+    List<String> serviceUuids = const [],
+    BleScanRate? rate,
+  }) {
     StreamSubscription<BleAdvertisement>? scan;
     late final StreamController<BleAdvertisement> out;
     out = StreamController<BleAdvertisement>(
       onListen: () {
         scan = _inner
-            .scan(serviceUuids: serviceUuids)
+            .scan(serviceUuids: serviceUuids, rate: rate)
             .listen(out.add, onError: out.addError, onDone: out.close);
         unawaited(
           _stop.then((_) {

@@ -176,6 +176,8 @@
   "downloadStateQueued": "Σε αναμονή",
   "downloadStateRunning": "Λήψη",
   "geotagClockSection": "Ρολόι",
+  "geotagAllowBackground": "Να επιτρέπεται στο παρασκήνιο",
+  "geotagBackgroundRestricted": "Αυτό το τηλέφωνο μπορεί να θέσει το GR Photo σε παύση όσο η οθόνη είναι σβηστή. Η γεωσήμανση ξεκινά τότε ξανά μόνο όταν ανάψει η οθόνη.",
   "geotagLiveSubtitle": "Προσθέτει γεωσήμανση στις φωτογραφίες της κάμερας όσο είναι συνδεδεμένη με το GR Photo",
   "geotagNeedAlways": "Η τοποθεσία πρέπει να επιτρέπεται πάντα",
   "geotagNoticeChannel": "Γεωσήμανση",

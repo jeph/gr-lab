@@ -176,6 +176,8 @@
   "downloadStateQueued": "Ve frontě",
   "downloadStateRunning": "Stahování",
   "geotagClockSection": "Hodiny",
+  "geotagAllowBackground": "Povolit na pozadí",
+  "geotagBackgroundRestricted": "Tento telefon může GR Photo při vypnuté obrazovce pozastavit. Geotagování se pak znovu spustí až po zapnutí obrazovky.",
   "geotagLiveSubtitle": "Přidává polohu k fotkám ve fotoaparátu, dokud je připojený k aplikaci GR Photo",
   "geotagNeedAlways": "Přístup k poloze musí být povolen vždy",
   "geotagNoticeChannel": "Geotagování",

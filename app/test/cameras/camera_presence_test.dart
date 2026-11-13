@@ -4,7 +4,12 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart'
-    show BleAdvertisement, BleTransport, WifiNetworkControl, grRicohCompanyId;
+    show
+        BleAdvertisement,
+        BleScanRate,
+        BleTransport,
+        WifiNetworkControl,
+        grRicohCompanyId;
 import 'package:grphoto/src/cameras/camera_presence.dart';
 import 'package:grphoto/src/data/cameras.dart';
 
@@ -14,8 +19,10 @@ final class _ScanTransport implements BleTransport {
   final ads = StreamController<BleAdvertisement>.broadcast();
 
   @override
-  Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) =>
-      ads.stream;
+  Stream<BleAdvertisement> scan({
+    List<String> serviceUuids = const [],
+    BleScanRate? rate,
+  }) => ads.stream;
 
   @override
   dynamic noSuchMethod(Invocation invocation) =>

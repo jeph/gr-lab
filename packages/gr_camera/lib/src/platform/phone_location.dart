@@ -8,8 +8,11 @@ import 'package:gr_protocol/gr_protocol.dart';
 ///
 /// Android locates the phone with its `LocationManager` and keeps a run
 /// going with a foreground service of the location type; iOS uses Core
-/// Location. Both record the history natively, so it goes on with no
-/// Flutter engine running, and hand it over through [takeHistory].
+/// Location. Only Android has a battery optimisation to be exempted from
+/// ([backgroundUnrestricted]); iOS always answers that nothing restricts
+/// the app, because it has no such setting. Both record the history
+/// natively, so it goes on with no Flutter engine running, and hand it over
+/// through [takeHistory].
 ///
 /// Every line the native code logs and the native errors this class turns
 /// into an inert answer go to [TraceChannel.location]. Calls, their
@@ -113,6 +116,16 @@ final class PlatformPhoneLocation implements PhoneLocation {
 
   @override
   Future<void> releaseRun() => _invoke('releaseRun');
+
+  // Without an answer (a native error, or no native code) there is nothing
+  // the user could allow.
+  @override
+  Future<bool> backgroundUnrestricted() async =>
+      await _invoke('backgroundUnrestricted') != false;
+
+  @override
+  Future<bool> requestBackgroundUnrestricted() async =>
+      await _invoke('requestBackgroundUnrestricted') != false;
 
   @override
   Future<void> setHistory({required bool enabled}) =>

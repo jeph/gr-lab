@@ -13,8 +13,10 @@ final class _FakeTransport implements BleTransport {
   Future<BleAdapterState> adapterState() async => _camera.adapterState;
 
   @override
-  Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) =>
-      _camera._scan(serviceUuids);
+  Stream<BleAdvertisement> scan({
+    List<String> serviceUuids = const [],
+    BleScanRate? rate,
+  }) => _camera._scan(serviceUuids);
 
   @override
   Future<BleConnection> connect(String deviceId, {required Duration timeout}) =>

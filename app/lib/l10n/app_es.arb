@@ -176,6 +176,8 @@
   "downloadStateQueued": "En cola",
   "downloadStateRunning": "Descargando",
   "geotagClockSection": "Reloj",
+  "geotagAllowBackground": "Permitir en segundo plano",
+  "geotagBackgroundRestricted": "Este teléfono puede pausar GR Photo con la pantalla apagada. El geoetiquetado se inicia de nuevo solo cuando se enciende la pantalla.",
   "geotagLiveSubtitle": "Geoetiqueta las fotos en la cámara mientras está conectada a GR Photo",
   "geotagNeedAlways": "La ubicación tiene que estar permitida siempre",
   "geotagNoticeChannel": "Geoetiquetado",

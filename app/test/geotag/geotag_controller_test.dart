@@ -289,7 +289,8 @@ void main() {
       app.camera.dropBluetooth();
       await _until(() => connection.parked);
       expect(geotag.status, GeotagStatus.waitingForCamera);
-      expect(location.locating, isFalse);
+      // Still located, for a camera switched on again soon.
+      expect(location.locating, isTrue);
 
       app.camera.poweredOn = true;
       await _until(() => connection.bleLinked && !connection.cameraOff);

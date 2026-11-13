@@ -39,8 +39,10 @@ final class PairingCamera implements BleTransport {
   Future<BleAdapterState> adapterState() async => BleAdapterState.poweredOn;
 
   @override
-  Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) =>
-      Stream.fromIterable(adverts);
+  Stream<BleAdvertisement> scan({
+    List<String> serviceUuids = const [],
+    BleScanRate? rate,
+  }) => Stream.fromIterable(adverts);
 
   @override
   Future<BleConnection> connect(

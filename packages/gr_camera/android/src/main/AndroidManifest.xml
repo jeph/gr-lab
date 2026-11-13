@@ -27,6 +27,13 @@
     <!-- GeotagService keeps the processor on while a camera is on, so
          positions are written with the screen off. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Android's question whether GR Photo may be left out of battery
+         optimisation (LocationChannel): some makers' builds freeze an app
+         with the screen off even while GeotagService runs, and then a
+         camera that is switched on is not noticed until the phone is
+         unlocked. Asked only when the user allows it under live
+         geotagging. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- After a restart of the phone the history's location request is
          filed again (BootReceiver). -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />

@@ -226,4 +226,35 @@ Still **[unknown]**, for [hardware session F](../hardware-validation.md#2-captur
 1. Whether a GR IV notifies Camera Power `01` after the Operation Mode write on a link that holds. GR WORLD subscribes to it and drives its UI from it (§4) but never waits for it. Without the notification the watch runs its full 8 s, as before.
 2. Whether a link held in bleStartup survives the Operation Mode write, and when it drops if it does not.
 3. What a connect inside the 6 s after Camera Power `00` does. The rest is observed (GR IV HDF, fw 1.20, 2026-11-11, [hardware results](../hardware-validation.md#4-results-log)): the link drops 1.1 s after the write with "Remote User Terminated Connection", the first link after the 6 s wait drops before discovery as in §3, and the next one holds, until the camera drops it about 8 s later when nothing is written on it.
-4. With the camera's own power button, and with auto power-off: whether Camera Power `00` is notified before the link drops, and whether the link that returns reads Operation Mode `02` ([hardware session H](../hardware-validation.md#2-capture-sessions-phone-apps)).
+4. With auto power-off: whether Camera Power `00` is notified before the link drops, and whether the link that returns reads Operation Mode `02` ([hardware session H](../hardware-validation.md#2-capture-sessions-phone-apps)). With the camera's own power button it is notified, about 0.6 s before the camera drops the link (GR IV HDF, fw 1.20, 2026-11-12, an Android phone, Bluetooth only; [hardware results](../hardware-validation.md#4-results-log)); with the Wi-Fi in use it is still to be seen.
+
+### 8.1 Watching for a camera that is off
+
+A session that let go of a camera (`ble.parked`) finds it again from its advertisement, so how soon the camera is linked after its power button is how soon the phone hears that advertisement, plus the connect. What decides that on each platform:
+
+**Android [found in code]** (AOSP `ScanManager.java`, `android16-release`, read 2026-11-12). The scan mode an app asks for sets how much of the time the controller listens (window / interval): low latency 100 ms / 100 ms, balanced 183 ms / 730 ms, low power 140 ms / 1400 ms. With the screen off:
+
+- A scan with no filter is suspended until the screen is on again (`requiresScreenOn`: neither filtered nor opportunistic). The parked session's scan is filtered on the Camera Information service, so it goes on.
+- An app that Android counts as in the foreground, which includes one with a foreground service (`FOREGROUND_IMPORTANCE_CUTOFF = IMPORTANCE_FOREGROUND_SERVICE`), keeps low latency, has balanced left at 183 ms / 730 ms and has low power cut to 512 ms / 10240 ms (`updateScanModeScreenOff`). Any other app gets 512 ms / 10240 ms whatever it asked for.
+- No scan of a foreground app is ended for running long: the 30-minute downgrade to an opportunistic scan (`scan_timeout_millis`) is not applied to a filtered scan.
+
+So a low-power watch with the screen off hears a camera up to about 10 s after it starts advertising, and that is the mode the watch used until 2026-11-12.
+
+**iOS [found in documentation]** (Apple, "Core Bluetooth Background Processing for iOS Apps"). The app cannot choose a scan rate. Under the `bluetooth-central` background mode a scan with a service filter goes on with the app off screen, at longer intervals, and reports each peripheral once per scan (`CBCentralManagerScanOptionAllowDuplicatesKey` is ignored). How long a GR IV advertises before a locked iPhone reports it is **[unknown]**.
+
+**Observed** (GR IV HDF, fw 1.20, 2026-11-12, an Android phone whose maker's build of Android freezes apps that are off screen, GR Photo `dev` build with live geotagging on for the camera, switched off and on at its power button; [hardware results](../hardware-validation.md#4-results-log)):
+
+- With the screen on, the camera was linked 2.1 s after the first advertisement that showed it on (connect 1.7–1.9 s, then discovery and the Operation Mode read). In the one power cycle where both were heard, its first on-state advertisement came about 7 s after its last off-state one, which bounds how long it takes to start advertising after its power button.
+- With the screen off, the camera was not linked until the screen came on. The phone's app freezer froze GR Photo 11 s after the camera turned off, foreground service or not. Android's Bluetooth service went on scanning (active for 66 s of the 67 s the scan lasted) and matched the camera 77 times; all 77 results reached GR Photo within 4 ms of the screen coming on, and the camera was linked 2.3 s later.
+- The freezer's own log gave the reasons it left GR Photo alone before that: a Bluetooth link was up, and the phone was being located. Both end when the camera turns off.
+- With GR Photo left out of battery optimisation in the phone's settings, the camera was linked with the screen off (reported by the user; no trace).
+- An on-state advertisement is not proof that the camera is on: nine links opened on one found the camera in Operation Mode `02`. A second install of GR Photo was linking the same camera that day, and a link wakes the camera's host for about 8 s (above), so its advertisement may show on while its lens is shut. The session lets go of such a camera again, as before.
+
+**What the session and the transport do [design]** (since 2026-11-12):
+
+- The parked session's scan asks for a rate (`BleScanRate`): `full` (Android low latency) for the first 5 minutes after it let go, for a camera switched off between two pictures and on again, then `balanced` (183 ms / 730 ms, the same with the screen off) for as long as the session lasts. `ble.parkWatch` traces each. The transport runs one platform scan for every listener, at the rate of the listener that asks for most. Low power is no longer used for the watch: its 10 s with the screen off is most of the wait.
+- The scan at the new rate is asked for before the old one is cancelled, so the platform scan changes in one restart with no gap. `universal_ble` holds back a sixth scan start within 30 s (Android refuses it), so restarts are kept few. The Cameras screen's own scan still changes the platform scan when it starts and stops; several within 30 s can delay the watch **[known gap]**.
+- A link that cannot be made after an on-state advertisement leaves the session parked on a new scan, started after the first reconnect pause: on iOS the old one would not report the camera again.
+- On an Android phone that restricts the app in the background, GR Photo asks to be left out of battery optimisation when live geotagging is turned on ([geotagging §6.5](geotagging.md#65-a-phone-that-stops-the-app-with-the-screen-off)).
+
+Still **[unknown]**: the time to link from a locked iPhone; whether iOS ends the suspended app often enough for the watch to need Core Bluetooth state restoration, which GR Photo does not use (an app iOS ended watches again only once it is opened); how much battery the 5 minutes at full rate cost.

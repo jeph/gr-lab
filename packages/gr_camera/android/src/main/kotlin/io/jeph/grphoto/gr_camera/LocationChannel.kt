@@ -17,6 +17,7 @@ import android.os.Build
 import android.os.CancellationSignal
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
 import io.flutter.plugin.common.BinaryMessenger
@@ -36,6 +37,10 @@ import java.io.IOException
  *   together.
  * - The run that keeps the app going with its screen off while live
  *   geotagging runs or waits (`holdRun`, `releaseRun`): [GeotagService].
+ *   Some makers' Android builds freeze an app with the screen off even
+ *   while it holds a foreground service, until the user exempts it from
+ *   battery optimisation: `backgroundUnrestricted` reads that exemption and
+ *   `requestBackgroundUnrestricted` shows Android's question about it.
  * - The location history recorded with the app closed (`setHistory`,
  *   `takeHistory`): [HistoryRecorder] and [HistoryStore].
  *
@@ -75,6 +80,13 @@ class LocationChannel(private val context: Context, messenger: BinaryMessenger) 
 
     /** The calls waiting for the answer to each permission prompt. */
     private val prompts = mutableMapOf<Int, MutableList<MethodChannel.Result>>()
+
+    /**
+     * The calls waiting for the user to answer Android's question about
+     * battery optimisation, which reports no result: they are answered
+     * when the app is back on screen.
+     */
+    private val exemptionAsks = mutableListOf<MethodChannel.Result>()
     private var askedToNotify = false
 
     /** The activity is resumed; [GrCameraPlugin] reports changes. */
@@ -107,6 +119,7 @@ class LocationChannel(private val context: Context, messenger: BinaryMessenger) 
         activity = next
         if (next != null) return
         resumed = false
+        answerExemptionAsks()
         // A prompt cannot be answered any more.
         val waiting = prompts.values.flatten()
         prompts.clear()
@@ -122,6 +135,7 @@ class LocationChannel(private val context: Context, messenger: BinaryMessenger) 
      */
     fun onResume() {
         resumed = true
+        answerExemptionAsks()
         accessChanged()
         GeotagService.refresh()
         askToNotify()
@@ -169,6 +183,8 @@ class LocationChannel(private val context: Context, messenger: BinaryMessenger) 
                 GeotagService.release()
                 result.success(null)
             }
+            "backgroundUnrestricted" -> result.success(backgroundUnrestricted())
+            "requestBackgroundUnrestricted" -> requestBackgroundUnrestricted(result)
             "setHistory" -> setHistory(call, result)
             "takeHistory" -> takeHistory(result)
             "setLogging" -> {
@@ -389,6 +405,52 @@ class LocationChannel(private val context: Context, messenger: BinaryMessenger) 
             for (signal in signals) signal.cancel()
             result.success(location?.toFix())
         }
+    }
+
+    /**
+     * Android leaves the app out of battery optimisation. Without a power
+     * service there is nothing the user could allow.
+     */
+    private fun backgroundUnrestricted(): Boolean =
+        context.getSystemService(PowerManager::class.java)
+            ?.isIgnoringBatteryOptimizations(context.packageName) ?: true
+
+    /**
+     * Shows Android's question whether the app may be left out of battery
+     * optimisation; [result] gets the state once the app is back on screen.
+     * With no activity to show it over, or nothing left to allow, it gets
+     * the state as it is.
+     */
+    private fun requestBackgroundUnrestricted(result: MethodChannel.Result) {
+        val over = activity
+        if (over == null || backgroundUnrestricted()) {
+            result.success(backgroundUnrestricted())
+            return
+        }
+        exemptionAsks += result
+        // The question is up already; its answer is for this call too.
+        if (exemptionAsks.size > 1) return
+        log("asking to be left out of battery optimisation")
+        try {
+            over.startActivity(
+                Intent(
+                    Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Uri.fromParts("package", context.packageName, null),
+                ),
+            )
+        } catch (e: ActivityNotFoundException) {
+            log("the phone has no question about battery optimisation: ${e.message}")
+            answerExemptionAsks()
+        }
+    }
+
+    private fun answerExemptionAsks() {
+        if (exemptionAsks.isEmpty()) return
+        val unrestricted = backgroundUnrestricted()
+        log("left out of battery optimisation: $unrestricted")
+        val waiting = exemptionAsks.toList()
+        exemptionAsks.clear()
+        for (result in waiting) result.success(unrestricted)
     }
 
     private fun holdRun(call: MethodCall, result: MethodChannel.Result) {

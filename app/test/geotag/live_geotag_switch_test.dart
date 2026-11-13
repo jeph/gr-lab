@@ -34,12 +34,14 @@ const _settings = Key('camera-card-geotag-settings');
 const _store = Key('camera-card-geotag-store');
 const _resume = Key('camera-card-geotag-resume');
 const _problem = Key('camera-card-geotag-problem');
+const _background = Key('camera-card-geotag-background');
 
 const _whatItDoes =
     "Geotags photos on the camera while it's connected to GR Photo";
 const _notAllowed = "GR Photo isn't allowed to use this phone's location";
 const _phoneLocationOff = 'Location is turned off on this phone';
 const _offOnCamera = 'Store Location Info is off on the camera';
+const _pausedByPhone = 'This phone can pause GR Photo while its screen is off';
 
 /// A made-up position the phone takes now.
 LocationFix _fix() => LocationFix(
@@ -260,6 +262,83 @@ void main() {
     location.setAccess(FakePhoneLocation.whileInUse);
     await _untilNoProblem(tester);
     expect(find.byKey(_settings), findsNothing);
+    expect(_switchOf(tester).value, isFalse);
+
+    await app.dispose();
+  });
+
+  testWidgets('on a phone that may stop GR Photo with the screen off, '
+      'turning it on asks to be allowed in the background; refused, it is '
+      'on all the same and the card says so with a button that asks again', (
+    tester,
+  ) async {
+    final location = FakePhoneLocation()..unrestricted = false;
+    final app = await _start(tester, config: _storing, location: location);
+    expect(find.byKey(_background), findsNothing);
+    expect(location.unrestrictedRequests, 0);
+
+    await _tap(tester, _switch);
+    await pumpUntilFound(tester, _said(_pausedByPhone));
+    await pumpUntil(
+      tester,
+      () => location.unrestrictedRequests == 1,
+      reason: 'the phone to be asked',
+    );
+    expect(app.models.cameras.current!.liveGeotagging, isTrue);
+    expect(_switchOf(tester).value, isTrue);
+    expect(
+      find.descendant(
+        of: find.byKey(_background),
+        matching: find.text('Allow in the background'),
+      ),
+      findsOneWidget,
+    );
+    await _untilStatus(tester, app, GeotagStatus.waitingForLocation);
+
+    // What holds geotagging up comes first.
+    location.setAccess(_denied);
+    await pumpUntilFound(tester, _said(_notAllowed));
+    expect(_said(_pausedByPhone), findsNothing);
+    expect(find.byKey(_background), findsNothing);
+    location.setAccess(FakePhoneLocation.whileInUse);
+    await pumpUntilFound(tester, _said(_pausedByPhone));
+
+    location.unrestrictedAnswer = true;
+    await _tap(tester, _background);
+    await _untilNoProblem(tester);
+    expect(location.unrestrictedRequests, 2);
+    expect(find.byKey(_background), findsNothing);
+
+    await app.dispose();
+  });
+
+  testWidgets("allowed in the background from the phone's settings, the "
+      'card no longer says the phone may stop GR Photo; off, it never does', (
+    tester,
+  ) async {
+    final location = FakePhoneLocation()..unrestricted = false;
+    final app = await _start(
+      tester,
+      config: _storing,
+      location: location,
+      live: true,
+    );
+    await pumpUntilFound(tester, _said(_pausedByPhone));
+    // Nothing asks by itself.
+    expect(location.unrestrictedRequests, 0);
+
+    // The user allows it in the phone's settings and comes back.
+    location
+      ..unrestricted = true
+      ..setAccess(FakePhoneLocation.whileInUse);
+    await _untilNoProblem(tester);
+
+    location
+      ..unrestricted = false
+      ..setAccess(FakePhoneLocation.whileInUse);
+    await pumpUntilFound(tester, _said(_pausedByPhone));
+    await _tap(tester, _switch);
+    await _untilNoProblem(tester);
     expect(_switchOf(tester).value, isFalse);
 
     await app.dispose();

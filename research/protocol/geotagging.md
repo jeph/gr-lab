@@ -140,13 +140,13 @@ Observed 2026-11-12 in files a GR IV and a GR IV HDF (firmware 1.20) had saved w
 - A refused write means the setting is off or the camera could not take it; it is not a lost link.
 - After the link drops, or the phone stops writing, the camera tags with the last position for up to 600 s more. Only turning Store Location Info off clears it sooner.
 
-GR Photo's geotagging (2026-11-12) is built on these. None of it has run against a camera or on an iPhone; the simulated camera treats a location and its clock as §1 says the firmware does, and the tests run against that.
+GR Photo's geotagging (2026-11-12) is built on these. On a camera only its linking and first write have been watched (§6.5), and none of it has run on an iPhone; the simulated camera treats a location and its clock as §1 says the firmware does, and the tests run against that.
 
 ### 6.1 Live geotagging: what is written, and when
 
 All **[design]**, to be tuned on hardware (test 11):
 
-- **Only to a camera that is on.** The phone is located only while the camera is linked, on (Operation Mode other than `02`) and has GEO Tag `01`. Nothing is written to a camera in its off state, which could not record it and drops the link within seconds ([firmware bonding §6.1](firmware-bonding.md#61-the-radio-runs-a-different-firmware-image-in-each-power-state)).
+- **Only to a camera that is on.** The phone is located while the camera is linked, on (Operation Mode other than `02`) and has GEO Tag `01`, and for 5 minutes after such a camera turned off or dropped the link (§6.5). Nothing is written to a camera in its off state, which could not record it and drops the link within seconds ([firmware bonding §6.1](firmware-bonding.md#61-the-radio-runs-a-different-firmware-image-in-each-power-state)).
 - **The setting.** Turning live geotagging on for a camera writes GEO Tag `01`; turning it off writes `00`, which clears the location the camera holds (§1.3). A change made while the camera is off or away is written at the next link that finds it on. GEO Tag is read at every such link and its notifications are followed: a user who turns Store Location Info off in the camera's menu is not overruled, and the phone is no longer located.
 - **Which positions.** A position is written only when it is at most 60 s old and accurate to 100 m, the first one after power-on included, because the camera cannot tell an old position from a new one.
 - **How often.** The first usable position is written at once. After that one is written when the phone moved more than 5 m from the last one written, or more than the new position's own accuracy when that is larger (a fixed 5 m would fire on GPS noise), with at least 5 s between writes. A phone that does not move has a new position taken and written every 180 s, well inside the 600 s; a stored position is never sent again.
@@ -185,9 +185,21 @@ Once the camera is linked and on, locating the phone with the app off screen nee
 - **Writing.** The file's bytes stay where they are: a new GPS directory is appended to the TIFF data (in a JPEG, the EXIF segment) and only the four bytes of the pointer to it change, which a camera file already has in IFD0 (tag `0x8825`, §5). It holds `GPSVersionID` 2.3.0.0, latitude, longitude, altitude when known, the UTC time and date the phone took the position (so the file shows how old its position is) and `GPSMapDatum` WGS-84. A file that already has a latitude, a movie, and a file that cannot be parsed are left as they are. A file given a location no longer matches the copy on the memory card.
 - **Checked on camera files** (observed 2026-11-12, on copies of two DNGs and two JPEGs from a GR IV, firmware 1.20, on a Mac): in each DNG four bytes changed inside the original length and 227 were appended; in each JPEG the EXIF segment grew by 226 bytes and everything after it was the same bytes further on. `exiftool -validate` reported the same as for the untouched files and read every tag written, the embedded preview was byte-identical, and macOS's ImageIO read the location and still decoded the raw image. Photos apps on a phone and Lightroom are still to try (test 15).
 
+### 6.5 A phone that stops the app with the screen off
+
+Observed 2026-11-12 (GR IV HDF, fw 1.20, an Android phone whose maker's build of Android freezes apps that are off screen; [GR WORLD power-on §8.1](power-on-grworld.md#81-watching-for-a-camera-that-is-off)): with the screen off the phone froze GR Photo seconds after the camera turned off, so the camera was not linked when it was switched on again until the screen came on. The freezer left GR Photo alone while a Bluetooth link was up and while the phone was being located, and, as the user reported, once GR Photo was left out of battery optimisation. In the same logs the first position was written 1.5–3.4 s after the link came up, nearly all of it the wait for a new position.
+
+GR WORLD probably does not meet this **[inferred]**, never tested: it goes on locating the phone and holds a wake lock for as long as its service runs (§2.1), and its manifest asks for `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` ([ble.md, Android plugin](ble.md#android-plugin--os-settings-flutter_blue_plus-jadx-p326m6c4069hjava)).
+
+What GR Photo does about it, all **[design]**:
+
+- **Standby.** After a camera it was located for turned off or dropped the link, the phone stays located for 5 minutes, with no wake lock. A camera switched on again in that time has the newest of those positions considered at once, by the rules of §6.1 (at most 60 s old, accurate to 100 m), instead of waiting for a new one; a position already written to the camera is not kept for this. The standby ends early when live geotagging is turned off, stopped from the notice, or the session ends. On the phone above it also keeps the freezer away for those 5 minutes.
+- **The exemption (Android).** Turning live geotagging on asks Android whether GR Photo may be left out of battery optimisation (`ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`), once the location is allowed. Live geotagging is on whatever the answer. While the app is not exempt, the camera's card says that the phone may pause GR Photo with the screen off, with a button that asks again. The state is read at start and whenever the app comes back on screen. Google Play allows this request only for listed kinds of app; GR Photo's Android build is released outside it.
+- **iOS** has no such setting and always answers that nothing restricts the app. It suspends an app that neither locates the phone nor holds a link, and wakes it for a filtered scan result under the `bluetooth-central` background mode; the standby keeps it from being suspended for its 5 minutes. None of this has run on an iPhone.
+
 ## 7. Hardware tests
 
-None run yet.
+Run so far: part of test 8 and test 10 on Android (2026-11-12, §6.5). The rest is open.
 
 1. Write one record, then shoot at +1, +9 and +11 minutes: read the GPS tags of each file and watch the positioning icon. Confirms the 600 s and shows the tags the camera writes.
 2. Write a record with GEO Tag off, and one with an out-of-range latitude: the ATT error for each.
@@ -198,7 +210,7 @@ None run yet.
 7. A record written while the camera is in its off state (Bluetooth only): accepted, refused, or does the link drop first?
 8. How long after power-on a phone in a pocket has linked and written its first record, on Android and iOS.
 9. GR III and IIIx: all of the above, and whether a clock change clears the location.
-10. Switch the camera on with GR Photo in the background (opened before, not swiped away), phone locked, on Android and on iOS: whether the session's scan sees the camera and geotagging starts, and how long that takes (§6.3). With GR Photo closed nothing starts, by design since 2026-11-12.
+10. Switch the camera on with GR Photo in the background (opened before, not swiped away), phone locked, on Android and on iOS: whether the session's scan sees the camera and geotagging starts, and how long that takes (§6.3). With GR Photo closed nothing starts, by design since 2026-11-12. Android, on a phone that freezes apps: not until the screen is on unless GR Photo is left out of battery optimisation (§6.5). Still to run: the same with the 5-minute standby and the faster watch, on a Pixel, and on iOS.
 11. GR Photo's thresholds (§6.1) on a walk and indoors: how many writes an hour, how far the recorded position is from where each picture was taken, and how often pictures go untagged.
 12. Date Time read and write on a GR IV and a GR III: the offset GR Photo measures just after its own write, and whether a write that changes nothing still clears the location.
 13. Switch the camera on at its power button while a link to it is still up (inside the 8 s after a connect to the off camera): is Camera Power `01` notified, or does the link drop?

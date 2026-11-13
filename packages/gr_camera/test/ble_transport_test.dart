@@ -199,6 +199,35 @@ void main() {
     expect(await platform.isScanning(), isFalse);
   });
 
+  test('a watch says how much of the time the platform listens, and one '
+      'started in its place changes that in a single restart', () async {
+    final fast = transport
+        .scan(serviceUuids: [_service], rate: BleScanRate.full)
+        .listen((_) {});
+    await pumpEventQueue();
+    expect(platform.filters.single, [canonicalUuid(_service)]);
+    expect(platform.modes.single, AndroidScanMode.lowLatency);
+
+    final steady = transport
+        .scan(serviceUuids: [_service], rate: BleScanRate.balanced)
+        .listen((_) {});
+    unawaited(fast.cancel());
+    await pumpEventQueue();
+    expect(platform.calls, ['start', 'stop', 'stopped', 'start']);
+    expect(platform.filters.last, [canonicalUuid(_service)]);
+    expect(platform.modes.last, AndroidScanMode.balanced);
+
+    // Next to a watch at low power, the platform listens for the one that
+    // asks for more.
+    final slow = transport.scan(serviceUuids: [_service]).listen((_) {});
+    await pumpEventQueue();
+    expect(platform.starts, 2);
+    await steady.cancel();
+    await pumpEventQueue();
+    expect(platform.modes.last, AndroidScanMode.lowPower);
+    await slow.cancel();
+  });
+
   test('a scan the platform refuses to start ends with its error, and the '
       'next one starts', () async {
     platform.startError = StateError('Bluetooth is off');

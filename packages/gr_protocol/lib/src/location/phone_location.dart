@@ -279,6 +279,17 @@ abstract interface class PhoneLocation {
   /// button). The run is released already.
   Stream<void> get runStops;
 
+  /// Whether the phone leaves the app alone while it runs off screen.
+  /// False where the phone may still stop the app's work with the screen
+  /// off, a held run or not, until the user exempts the app (Android's
+  /// battery optimisation); true where there is nothing to allow (iOS).
+  Future<bool> backgroundUnrestricted();
+
+  /// Asks the user for that exemption, where the phone has one to give and
+  /// the app is on screen. Answers [backgroundUnrestricted] as it is
+  /// afterwards.
+  Future<bool> requestBackgroundUnrestricted();
+
   /// Turns the platform's own recording of the phone's position on or off.
   /// It goes on with the app closed and after the phone restarts, and
   /// needs [LocationPermission.always]; without that it records nothing

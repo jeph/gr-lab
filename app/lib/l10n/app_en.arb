@@ -965,6 +965,14 @@
   "@downloadStateRunning": {
     "description": "Status of a download in the queue while it runs."
   },
+  "geotagAllowBackground": "Allow in the background",
+  "@geotagAllowBackground": {
+    "description": "Button under geotagBackgroundRestricted on the camera's card (Android only): shows the phone's own question whether GR Photo may run in the background without battery restrictions. Keep it short."
+  },
+  "geotagBackgroundRestricted": "This phone can pause GR Photo while its screen is off. Geotagging then starts again only when the screen comes on.",
+  "@geotagBackgroundRestricted": {
+    "description": "Shown under the Live geotagging switch on the camera's card, below its description, on an Android phone whose battery saving may stop GR Photo while the screen is off: a camera switched on then gets no location until the phone's screen is on again. The geotagAllowBackground button follows."
+  },
   "geotagLiveSubtitle": "Geotags photos on the camera while it's connected to GR Photo",
   "@geotagLiveSubtitle": {
     "description": "Line under the Live geotagging switch on the camera's card, the same whether it is on or off: what the setting does. Keep it short, without a full stop."

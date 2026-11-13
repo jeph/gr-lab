@@ -159,14 +159,17 @@ final class _CancellableTransport implements BleTransport {
   Future<BleAdapterState> adapterState() => _inner.adapterState();
 
   @override
-  Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) {
+  Stream<BleAdvertisement> scan({
+    List<String> serviceUuids = const [],
+    BleScanRate? rate,
+  }) {
     if (cancelled) return Stream.error(_cancelledError);
     StreamSubscription<BleAdvertisement>? upstream;
     late final StreamController<BleAdvertisement> controller;
     controller = StreamController<BleAdvertisement>(
       onListen: () {
         upstream = _inner
-            .scan(serviceUuids: serviceUuids)
+            .scan(serviceUuids: serviceUuids, rate: rate)
             .listen(
               (ad) {
                 final only = onlyDeviceId;

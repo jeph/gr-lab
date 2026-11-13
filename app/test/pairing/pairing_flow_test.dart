@@ -6,7 +6,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart'
-    show BleAdvertisement, BleConnection, BleTransport, grRicohCompanyId;
+    show
+        BleAdvertisement,
+        BleConnection,
+        BleScanRate,
+        BleTransport,
+        grRicohCompanyId;
 import 'package:grphoto/src/connection/connection_controller.dart';
 import 'package:grphoto/src/library/library_screen.dart';
 import 'package:grphoto/src/pairing/pairing_flow.dart';
@@ -79,7 +84,10 @@ final class _TwoCamerasWithoutSerials implements BleTransport {
   Future<BleAdapterState> adapterState() => _first.adapterState();
 
   @override
-  Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) {
+  Stream<BleAdvertisement> scan({
+    List<String> serviceUuids = const [],
+    BleScanRate? rate,
+  }) {
     final subs = <StreamSubscription<BleAdvertisement>>[];
     late final StreamController<BleAdvertisement> out;
     out = StreamController<BleAdvertisement>(
@@ -87,7 +95,7 @@ final class _TwoCamerasWithoutSerials implements BleTransport {
         for (final t in [_first, _second]) {
           subs.add(
             t
-                .scan(serviceUuids: serviceUuids)
+                .scan(serviceUuids: serviceUuids, rate: rate)
                 .map(_withoutSerial)
                 .listen(out.add, onError: out.addError),
           );

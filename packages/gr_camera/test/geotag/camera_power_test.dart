@@ -1,3 +1,4 @@
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
@@ -117,8 +118,9 @@ void main() {
     await rig.close();
   });
 
-  testWidgets('a camera that turns off is no longer written to, and the '
-      'phone no longer located', (tester) async {
+  testWidgets('a camera that turns off is no longer written to; the phone '
+      'stays located for five minutes in case it is switched on again, '
+      'and no longer after that', (tester) async {
     final rig = await GeotagRig.start(tester);
     await rig.configure();
     await rig.emit(rig.fix());
@@ -130,13 +132,32 @@ void main() {
       () => rig.status == GeotagStatus.waitingForCamera,
       reason: 'the camera to be seen off',
     );
-    expect(rig.phone.locating, isFalse);
+    final offAt = clock.now();
+    expect(rig.phone.locating, isTrue);
     expect(rig.steps, contains('geotag.cameraAway'));
+    expect(rig.decisions('geotag.locating').last, {
+      'on': true,
+      'for': 'standby',
+    });
+    // Waiting, so the processor is not kept on.
+    expect(rig.phone.runAwake, isFalse);
 
     rig.phone.currentFix = rig.fix(north: 200);
     await rig.emit(rig.fix(north: 100));
+    expect(rig.fixes, hasLength(2));
+    await rig.advanceTo(
+      offAt.add(const Duration(minutes: 4, seconds: 50)),
+      step: const Duration(seconds: 1),
+    );
+    expect(rig.phone.locating, isTrue);
+    await rig.advanceTo(
+      offAt.add(const Duration(minutes: 5, seconds: 10)),
+      step: const Duration(seconds: 1),
+    );
+    expect(rig.phone.locating, isFalse);
+    expect(rig.decisions('geotag.locating').last, {'on': false});
     await rig.advance(
-      const Duration(minutes: 10),
+      const Duration(minutes: 5),
       step: const Duration(seconds: 1),
     );
     expect(rig.writes, hasLength(1));
@@ -214,6 +235,95 @@ void main() {
     await rig.close();
   });
 
+  testWidgets('switched on again within the five minutes, the camera gets '
+      'the position taken while it was off with its first link', (
+    tester,
+  ) async {
+    final rig = await GeotagRig.start(tester);
+    await rig.configure();
+    await rig.emit(rig.fix());
+
+    rig.camera.poweredOn = false;
+    await rig.until(
+      () => rig.status == GeotagStatus.waitingForCamera,
+      reason: 'the camera to be seen off',
+    );
+    await rig.advance(const Duration(seconds: 20));
+    final taken = rig.fix(north: 100);
+    await rig.emit(taken);
+    expect(rig.writes, hasLength(1));
+
+    rig.camera.poweredOn = true;
+    await rig.until(
+      () => rig.status == GeotagStatus.sending,
+      reason: 'the position taken meanwhile to be written',
+    );
+    expect(rig.writes, hasLength(2));
+    expect(rig.writes.last.latitude, closeTo(taken.latitude, 1e-6));
+    expect(rig.decisions('geotag.written').last, {'reason': 'first'});
+    expect(rig.phone.locating, isTrue);
+    expect(rig.decisions('geotag.locating').last, {
+      'on': true,
+      'for': 'camera',
+    });
+    // The phone was located all along: asked for once.
+    expect(
+      rig.decisions('geotag.locating').where((d) => d['on'] == false),
+      isEmpty,
+    );
+
+    // Off again: the position the camera was written is not kept for its
+    // next time on, and one taken long before that is too old to write.
+    rig.camera.poweredOn = false;
+    await rig.until(
+      () => rig.status == GeotagStatus.waitingForCamera,
+      reason: 'the camera to be seen off again',
+    );
+    rig.camera.poweredOn = true;
+    await rig.until(
+      () => rig.status == GeotagStatus.waitingForLocation,
+      reason: 'live geotagging to start again',
+    );
+    await rig.advance(const Duration(seconds: 1));
+    expect(rig.writes, hasLength(2));
+
+    rig.camera.poweredOn = false;
+    await rig.until(
+      () => rig.status == GeotagStatus.waitingForCamera,
+      reason: 'the camera to be seen off a third time',
+    );
+    await rig.emit(rig.fix(north: 300));
+    await rig.advance(const Duration(minutes: 2));
+    rig.camera.poweredOn = true;
+    await rig.until(
+      () => rig.status == GeotagStatus.waitingForLocation,
+      reason: 'live geotagging to start a third time',
+    );
+    await rig.advance(const Duration(seconds: 1));
+    expect(rig.writes, hasLength(2));
+    expect(rig.skips.last, 'age');
+    await rig.close();
+  });
+
+  testWidgets('the phone is no longer located for a camera that is off once '
+      'live geotagging is stopped from the notice', (tester) async {
+    final rig = await GeotagRig.start(tester);
+    await rig.configure();
+    await rig.emit(rig.fix());
+    rig.camera.poweredOn = false;
+    await rig.until(
+      () => rig.status == GeotagStatus.waitingForCamera,
+      reason: 'the camera to be seen off',
+    );
+    expect(rig.phone.locating, isTrue);
+
+    rig.phone.pressStop();
+    await rig.advance(const Duration(seconds: 1));
+    expect(rig.status, GeotagStatus.stopped);
+    expect(rig.phone.locating, isFalse);
+    await rig.close();
+  });
+
   testWidgets('a link that drops and comes back starts over: the setting is '
       'read, the clock checked and the next position written as the '
       'first', (tester) async {
@@ -227,7 +337,8 @@ void main() {
       () => rig.status == GeotagStatus.waitingForCamera,
       reason: 'the link to be seen down',
     );
-    expect(rig.phone.locating, isFalse);
+    // Still located, for the link that is being made again.
+    expect(rig.phone.locating, isTrue);
     await rig.until(
       () => rig.status == GeotagStatus.waitingForLocation,
       reason: 'the link to come back',

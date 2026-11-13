@@ -15,8 +15,10 @@ final class _Transport implements BleTransport {
   Future<BleAdapterState> adapterState() async => BleAdapterState.poweredOn;
 
   @override
-  Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) =>
-      ads.stream;
+  Stream<BleAdvertisement> scan({
+    List<String> serviceUuids = const [],
+    BleScanRate? rate,
+  }) => ads.stream;
 
   @override
   Future<BleConnection> connect(

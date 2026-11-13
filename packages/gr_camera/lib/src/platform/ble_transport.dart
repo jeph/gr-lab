@@ -60,9 +60,18 @@ final class UniversalBleTransport implements BleTransport {
   /// that reads the advertisements of a camera it let go of scans for as
   /// long as it lasts, next to the Cameras screen's scan or a pairing
   /// run's. Each listener gets the advertisements its [serviceUuids] ask
-  /// for; the platform filters only while every listener has a filter.
+  /// for; the platform filters only while every listener has a filter, and
+  /// listens as much of the time as the listener that asks for most.
+  ///
+  /// Without a [rate], a search (no filter: a screen shows the results, or
+  /// a connection looks for its camera) listens all the time, because
+  /// Android's low-power mode misses cameras, and a filtered scan is a
+  /// watch at low power.
   @override
-  Stream<BleAdvertisement> scan({List<String> serviceUuids = const []}) {
+  Stream<BleAdvertisement> scan({
+    List<String> serviceUuids = const [],
+    BleScanRate? rate,
+  }) {
     late final _Scanner scanner;
     final controller = StreamController<BleAdvertisement>(
       onListen: () {
@@ -77,7 +86,7 @@ final class UniversalBleTransport implements BleTransport {
     );
     scanner = _Scanner(controller, {
       for (final uuid in serviceUuids) _canonicalOrSelf(uuid),
-    });
+    }, rate ?? (serviceUuids.isEmpty ? BleScanRate.full : BleScanRate.low));
     return controller.stream;
   }
 
@@ -106,14 +115,14 @@ final class UniversalBleTransport implements BleTransport {
                 : ScanFilter(withServices: need.services.toList()),
             platformConfig: PlatformConfig(
               android: AndroidOptions(
-                // Android's low-power mode listens ~0.5 s every 5 s and
-                // misses cameras, so a search (no filter: a screen shows
-                // the results, or a connection looks for its camera) scans
-                // at full rate. A filtered scan is a watch that may last
-                // for hours, and that is what low power is for.
-                scanMode: need.services.isEmpty
-                    ? AndroidScanMode.lowLatency
-                    : AndroidScanMode.lowPower,
+                // How much each mode listens, and what Android makes of
+                // it with the screen off:
+                // research/protocol/power-on-grworld.md §8.1.
+                scanMode: switch (need.rate) {
+                  BleScanRate.full => AndroidScanMode.lowLatency,
+                  BleScanRate.balanced => AndroidScanMode.balanced,
+                  BleScanRate.low => AndroidScanMode.lowPower,
+                },
               ),
             ),
           ),
@@ -213,12 +222,15 @@ final class UniversalBleTransport implements BleTransport {
 
 /// One listener of [UniversalBleTransport.scan].
 final class _Scanner {
-  new(this.controller, this.services);
+  new(this.controller, this.services, this.rate);
 
   final StreamController<BleAdvertisement> controller;
 
   /// The services it asked for, canonical; empty for every advertisement.
   final Set<String> services;
+
+  /// How much of the time it wants the scan to listen.
+  final BleScanRate rate;
 
   bool wants(BleAdvertisement advertisement) =>
       services.isEmpty || advertisement.serviceUuids.any(services.contains);
@@ -227,28 +239,37 @@ final class _Scanner {
 /// What the platform scan has to deliver for a set of listeners.
 @immutable
 final class _ScanNeed {
-  const new(this.services);
+  const new(this.services, this.rate);
 
   /// Null without listeners. One listener without a filter makes the whole
   /// scan unfiltered; otherwise the platform filters to every service
-  /// asked for.
+  /// asked for. It listens as much as the listener that asks for most.
   static _ScanNeed? of(List<_Scanner> scanners) {
     if (scanners.isEmpty) return null;
-    if (scanners.any((s) => s.services.isEmpty)) return const _ScanNeed({});
-    return _ScanNeed({for (final s in scanners) ...s.services});
+    final rate = scanners
+        .map((s) => s.rate)
+        .reduce((a, b) => a.index < b.index ? a : b);
+    final services = scanners.any((s) => s.services.isEmpty)
+        ? const <String>{}
+        : {for (final s in scanners) ...s.services};
+    return _ScanNeed(services, rate);
   }
 
   /// The services the platform filters to; empty for no filter.
   final Set<String> services;
 
+  /// How much of the time the platform scan listens.
+  final BleScanRate rate;
+
   @override
   bool operator ==(Object other) =>
       other is _ScanNeed &&
+      other.rate == rate &&
       other.services.length == services.length &&
       other.services.containsAll(services);
 
   @override
-  int get hashCode => Object.hashAllUnordered(services);
+  int get hashCode => Object.hash(rate, Object.hashAllUnordered(services));
 }
 
 /// One owner's use of a [_UniversalBleLink], handed out by

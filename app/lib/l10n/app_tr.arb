@@ -176,6 +176,8 @@
   "downloadStateQueued": "Sırada",
   "downloadStateRunning": "İndiriliyor",
   "geotagClockSection": "Saat",
+  "geotagAllowBackground": "Arka planda izin ver",
+  "geotagBackgroundRestricted": "Bu telefon, ekran kapalıyken GR Photo'yu duraklatabilir. Konum etiketleme o zaman ancak ekran açıldığında yeniden başlar.",
   "geotagLiveSubtitle": "Kamera GR Photo’ya bağlıyken kameradaki fotoğraflara konum etiketi ekler",
   "geotagNeedAlways": "Konuma her zaman izin verilmesi gerekir",
   "geotagNoticeChannel": "Konum etiketleme",

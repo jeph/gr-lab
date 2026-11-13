@@ -99,6 +99,10 @@ final class GeotagController extends ChangeNotifier {
   final List<StreamSubscription<void>> _phone = [];
   LocationAccess _access = LocationAccess.none;
 
+  /// The phone leaves GR Photo alone while it runs off screen, as it
+  /// answered last ([PhoneLocation.backgroundUnrestricted]).
+  bool _unrestricted = true;
+
   CameraSession? _session;
   CameraGeotagging? _geotagging;
 
@@ -185,6 +189,13 @@ final class GeotagController extends ChangeNotifier {
     _ => null,
   };
 
+  /// The phone may stop GR Photo while the screen is off, a camera with
+  /// live geotagging on or not: a camera switched on then is linked only
+  /// once the screen is on again (observed on an Android phone whose maker
+  /// freezes apps, research/protocol/geotagging.md §6.5). [allowBackground]
+  /// asks the user to exempt GR Photo. Never true on iOS.
+  bool get backgroundRestricted => !_unrestricted;
+
   /// Location is allowed at all times, which recording the location
   /// history takes.
   bool get locationAlways => _access.permission == LocationPermission.always;
@@ -206,12 +217,22 @@ final class GeotagController extends ChangeNotifier {
   /// on: the camera's Store Location Info is turned on as soon as the
   /// camera is on and linked. Otherwise it stays off, and the result says
   /// what the phone lacks.
+  ///
+  /// A phone that may stop GR Photo with the screen off
+  /// ([backgroundRestricted]) then asks whether it may leave it alone; live
+  /// geotagging is on whatever the answer.
   Future<GeotagNeed?> turnLiveOn(String serial) async {
     final need = _liveNeed(await _ask(_location.requestWhileInUse));
     if (need != null) return need;
     await _saved(cameras.setLiveGeotagging(serial, on: true));
+    await allowBackground();
     return null;
   }
+
+  /// Asks the user to let GR Photo run with the screen off, where the phone
+  /// may stop it ([backgroundRestricted]).
+  Future<void> allowBackground() =>
+      _readUnrestricted(_location.requestBackgroundUnrestricted);
 
   /// Turns live geotagging off for [serial]'s camera. Its Store Location
   /// Info is turned off as soon as the camera is on and linked, which
@@ -309,6 +330,7 @@ final class GeotagController extends ChangeNotifier {
   /// cameras' settings. Called once, when the app's other models exist.
   Future<void> start() async {
     _access = await _guard('reading the access', _location.access, _access);
+    await _readUnrestricted(_location.backgroundUnrestricted);
     // The cameras file decides, also after a restore that kept only one
     // of the two.
     await _setHistory(again: true);
@@ -345,6 +367,8 @@ final class GeotagController extends ChangeNotifier {
         access.permission == LocationPermission.always && !locationAlways;
     _access = access;
     notifyListeners();
+    // Back from the phone's settings, where this is allowed too.
+    unawaited(_readUnrestricted(_location.backgroundUnrestricted));
     if (!regained || !_backgroundWanted) return;
     unawaited(_setHistory(again: true));
     unawaited(drainHistory());
@@ -485,6 +509,18 @@ final class GeotagController extends ChangeNotifier {
     _access = access;
     notifyListeners();
     return access;
+  }
+
+  /// Keeps what the phone answers [read] with.
+  Future<void> _readUnrestricted(Future<bool> Function() read) async {
+    final unrestricted = await _guard(
+      'reading the background restriction',
+      read,
+      _unrestricted,
+    );
+    if (_disposed || unrestricted == _unrestricted) return;
+    _unrestricted = unrestricted;
+    notifyListeners();
   }
 
   /// [call]'s result, or [fallback] when the platform fails it (also a

@@ -11,7 +11,12 @@ abstract interface class BleTransport {
 
   /// Scans while the returned stream has a listener; cancelling stops the scan.
   /// Every advertisement and scan response is delivered (duplicates included).
-  Stream<BleAdvertisement> scan({List<String> serviceUuids = const []});
+  /// [rate] says how much of the time the scan listens, on a platform that
+  /// leaves it to the app; null leaves it to the transport.
+  Stream<BleAdvertisement> scan({
+    List<String> serviceUuids = const [],
+    BleScanRate? rate,
+  });
 
   /// Opens a GATT connection. Bonding is left to the platform, which pairs
   /// when the camera first requires an encrypted attribute.
@@ -19,6 +24,22 @@ abstract interface class BleTransport {
 
   /// Releases the transport; open connections are disconnected.
   Future<void> close();
+}
+
+/// How much of the time a scan listens for advertisements. Android lets
+/// the app choose; iOS decides by itself, and scans less for an app that is
+/// not on screen whatever is asked.
+enum BleScanRate {
+  /// All the time: a camera is heard as soon as it advertises.
+  full,
+
+  /// About a quarter of the time: a camera is heard within a few seconds
+  /// with the screen on, and within a second with it off.
+  balanced,
+
+  /// A small part of the time, for a scan that may run for hours: with the
+  /// screen off a camera may advertise for 10 s before it is heard.
+  low,
 }
 
 /// An open GATT link to one peripheral. Reads and writes use canonical
