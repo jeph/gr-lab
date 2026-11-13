@@ -1,0 +1,34 @@
+{
+  "overview": {
+    "title": "Din GR, i telefonen",
+    "subtitle": "Bläddra bland och spara dina bilder, fota på avstånd och skapa egna stilar.",
+    "ipad": { "title": "Din GR, på din iPad" }
+  },
+  "library": {
+    "title": "Hela kortet, utan väntan",
+    "subtitle": "Bilderna dyker upp lika snabbt som du hinner scrolla."
+  },
+  "viewer": {
+    "title": "Varje bild i helskärm",
+    "subtitle": "Granska bilderna ordentligt och spara dem sedan som JPEG eller RAW."
+  },
+  "live-view": {
+    "title": "Se det din GR ser",
+    "subtitle": "Komponera, fokusera och fota från telefonen.",
+    "ipad": { "subtitle": "Komponera, fokusera och fota från din iPad." }
+  },
+  "looks": {
+    "title": "Byt stil med ett par tryck",
+    "subtitle": "Spara alla stilar i telefonen och lägg in dem direkt i C1, C2 eller C3.",
+    "ipad": { "subtitle": "Spara alla stilar på din iPad och lägg in dem direkt i C1, C2 eller C3." }
+  },
+  "look-editor": {
+    "title": "Sluta gissa med Bildkontroll",
+    "subtitle": "Se vad en stil gör med din egen bild innan du fotar med den."
+  },
+  "geotagging": {
+    "title": "Minns var du tog bilden",
+    "subtitle": "Telefonen skickar sin plats till din GR medan du fotar.",
+    "ipad": { "subtitle": "Din iPad skickar sin plats till din GR medan du fotar." }
+  }
+}

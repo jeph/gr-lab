@@ -1,0 +1,34 @@
+{
+  "overview": {
+    "title": "Votre GR sur votre téléphone",
+    "subtitle": "Voyez et enregistrez vos photos, déclenchez à distance, créez vos styles.",
+    "ipad": { "title": "Votre GR sur votre iPad" }
+  },
+  "library": {
+    "title": "Toute la carte, sans attendre",
+    "subtitle": "Les photos s'affichent aussi vite que vous faites défiler."
+  },
+  "viewer": {
+    "title": "Chaque photo en plein écran",
+    "subtitle": "Regardez vos photos de près, puis enregistrez-les en JPEG ou en RAW."
+  },
+  "live-view": {
+    "title": "Voyez ce que voit votre GR",
+    "subtitle": "Cadrez, faites la mise au point et déclenchez depuis votre téléphone.",
+    "ipad": { "subtitle": "Cadrez, faites la mise au point et déclenchez depuis votre iPad." }
+  },
+  "looks": {
+    "title": "Changez de style en deux gestes",
+    "subtitle": "Gardez tous vos styles sur le téléphone et chargez-les dans C1, C2 ou C3.",
+    "ipad": { "subtitle": "Gardez tous vos styles sur l'iPad et chargez-les dans C1, C2 ou C3." }
+  },
+  "look-editor": {
+    "title": "Le Contrôle de l'image, en clair",
+    "subtitle": "Voyez l'effet d'un style sur votre propre photo avant de l'utiliser."
+  },
+  "geotagging": {
+    "title": "Gardez le lieu de chaque photo",
+    "subtitle": "Votre téléphone transmet sa position au GR pendant que vous photographiez.",
+    "ipad": { "subtitle": "Votre iPad transmet sa position au GR pendant que vous photographiez." }
+  }
+}

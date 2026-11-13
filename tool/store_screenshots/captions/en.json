@@ -2,7 +2,7 @@
   "overview": {
     "title": "Your GR, on your phone",
     "subtitle": "Browse and save your photos, shoot remotely and build your own looks.",
-    "chips": ["Library", "Live view", "Looks", "Geotagging"]
+    "ipad": { "title": "Your GR, on your iPad" }
   },
   "library": {
     "title": "Your whole card, without the wait",
@@ -14,11 +14,13 @@
   },
   "live-view": {
     "title": "See what your GR sees",
-    "subtitle": "Frame, focus and shoot from your phone."
+    "subtitle": "Frame, focus and shoot from your phone.",
+    "ipad": { "subtitle": "Frame, focus and shoot from your iPad." }
   },
   "looks": {
     "title": "Swap looks in a couple of taps",
-    "subtitle": "Keep every look on your phone and load it straight into C1, C2 or C3."
+    "subtitle": "Keep every look on your phone and load it straight into C1, C2 or C3.",
+    "ipad": { "subtitle": "Keep every look on your iPad and load it straight into C1, C2 or C3." }
   },
   "look-editor": {
     "title": "Stop guessing with Image Control",
@@ -26,6 +28,7 @@
   },
   "geotagging": {
     "title": "Remember where you took it",
-    "subtitle": "Your phone gives the GR its location while you shoot."
+    "subtitle": "Your phone gives the GR its location while you shoot.",
+    "ipad": { "subtitle": "Your iPad gives the GR its location while you shoot." }
   }
 }

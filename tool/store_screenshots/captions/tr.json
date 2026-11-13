@@ -1,0 +1,34 @@
+{
+  "overview": {
+    "title": "GR’niz telefonunuzda",
+    "subtitle": "Fotoğraflara göz atıp kaydedin, uzaktan çekin, kendi stillerinizi yaratın.",
+    "ipad": { "title": "GR’niz iPad’inizde" }
+  },
+  "library": {
+    "title": "Tüm kart, hiç beklemeden",
+    "subtitle": "Fotoğraflar, siz kaydırdıkça anında görünür."
+  },
+  "viewer": {
+    "title": "Her kare tam ekranda",
+    "subtitle": "Fotoğraflarınızı rahatça inceleyin, sonra JPEG veya RAW olarak kaydedin."
+  },
+  "live-view": {
+    "title": "GR’nizin gördüğünü görün",
+    "subtitle": "Telefonunuzdan kadrajlayın, odaklayın ve çekin.",
+    "ipad": { "subtitle": "iPad’inizden kadrajlayın, odaklayın ve çekin." }
+  },
+  "looks": {
+    "title": "Birkaç dokunuşla stil değiştirin",
+    "subtitle": "Tüm stilleriniz telefonunuzda dursun; doğrudan C1, C2 veya C3’e yükleyin.",
+    "ipad": { "subtitle": "Tüm stilleriniz iPad’inizde dursun; doğrudan C1, C2 veya C3’e yükleyin." }
+  },
+  "look-editor": {
+    "title": "Görüntü Kontrolü tahmin işi değil",
+    "subtitle": "Bir stilin kendi fotoğrafınızı nasıl değiştirdiğini çekmeden önce görün."
+  },
+  "geotagging": {
+    "title": "Çektiğiniz yeri unutmayın",
+    "subtitle": "Siz çekerken telefonunuz GR’ye konumunu iletir.",
+    "ipad": { "subtitle": "Siz çekerken iPad’iniz GR’ye konumunu iletir." }
+  }
+}

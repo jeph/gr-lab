@@ -1,34 +1,44 @@
 #!/usr/bin/env bash
-# Takes the raw screens of the App Store screenshots on an iOS simulator,
-# in the dark theme, against a simulated camera whose card and looks look
-# used (app/integration_test/store_screens_test.dart). compose.py turns
-# them into the captioned screenshots.
+# Takes the raw screens of the App Store screenshots on two iOS simulators,
+# an iPhone and an iPad, in the dark theme and in each language asked for,
+# against a simulated camera whose card and looks look used
+# (app/integration_test/store_screens_test.dart). compose.py turns them
+# into the captioned screenshots.
 #
-#   tool/store_screenshots/run.sh <name> <simulator udid>
+#   tool/store_screenshots/run.sh <iphone udid> <ipad udid> [locale ...]
 #
-# <name> names the output folder, build/store-screenshots/raw/<name>
-# (`iphone` and `ipad` are what compose.py reads). List simulators with
+# A locale is one of the app's (app/l10n.yaml); without any, the screens are
+# taken in English. They go to build/store-screenshots/raw/<device>/<locale>,
+# <device> being `iphone` or `ipad`. List simulators with
 # `xcrun simctl list devices available`; the App Store takes 1320 x 2868
 # (iPhone 17 Pro Max) and 2064 x 2752 (iPad Pro 13-inch).
+#
+# The app is built once, with the walk as its entry point, and each
+# simulator is restarted in each language and runs it: GR Photo follows the
+# phone's language, and so do the status bar and the Lock Screen.
 #
 # The photos on the card are listed in photos.json: Unsplash photos under
 # the Unsplash License, fetched on the first run and kept out of the
 # repository.
 set -euo pipefail
 
-if [[ $# -ne 2 ]]; then
-  echo "usage: $0 <name> <simulator udid>" >&2
+if [[ $# -lt 2 ]]; then
+  echo "usage: $0 <iphone udid> <ipad udid> [locale ...]" >&2
   exit 64
 fi
-name="$1"
-udid="$2"
+iphone="$1"
+ipad="$2"
+shift 2
+locales=("$@")
+[[ ${#locales[@]} -gt 0 ]] || locales=(en)
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "$here/../.." && pwd)"
 work="$root/build/store-screenshots"
 media="$work/media"
-shots="$work/raw/$name"
 bundle=io.jeph.grphoto.dev
+# How long a walk may take before the run gives up on it.
+walk_seconds=420
 
 # Each scene in the three sizes a camera serves, and as a live view frame:
 # the app drops frames over 1 MiB, which the views are. An upright photo is
@@ -55,12 +65,53 @@ fetch_media() {
   jq '[.[] | {scene, portrait}]' "$here/photos.json" >"$media/scenes.json"
 }
 
-# Takes a screenshot for each <name>.request the test writes. cmd-lock
-# locks the simulator, takes the Lock Screen and ends the run. The first
-# Live Activity of an app comes with iOS asking whether to allow them, which
-# a tap on Allow answers; where that is depends on the device.
+# The language and region iOS is set to for a locale of the app.
+ios_language() {
+  case "$1" in
+  en) echo "en-US en_US" ;;
+  pt) echo "pt-PT pt_PT" ;;
+  da) echo "da-DK da_DK" ;;
+  sv) echo "sv-SE sv_SE" ;;
+  cs) echo "cs-CZ cs_CZ" ;;
+  el) echo "el-GR el_GR" ;;
+  ko) echo "ko-KR ko_KR" ;;
+  ja) echo "ja-JP ja_JP" ;;
+  zh) echo "zh-Hans-CN zh_CN" ;;
+  zh_Hant) echo "zh-Hant-TW zh_TW" ;;
+  fr | de | es | it | nl | fi | pl | hu | tr | ru | th)
+    echo "$1-$(tr '[:lower:]' '[:upper:]' <<<"$1") $1_$(tr '[:lower:]' '[:upper:]' <<<"$1")"
+    ;;
+  *)
+    echo "$1 is not a locale of the app" >&2
+    return 1
+    ;;
+  esac
+}
+
+# Sets the language of a simulator that is shut down.
+set_language() {
+  local udid="$1" language region
+  read -r language region <<<"$(ios_language "$2")"
+  local preferences="$HOME/Library/Developer/CoreSimulator/Devices/$udid/data/Library/Preferences/.GlobalPreferences.plist"
+  plutil -replace AppleLanguages -json "[\"$language\"]" "$preferences"
+  plutil -replace AppleLocale -string "$region" "$preferences"
+  # The Lock Screen shows the status bar's time only with a 24-hour clock or
+  # in English: with the 12-hour clock of Greek, Korean and Taiwan it shows
+  # the real time (iOS 26.5).
+  if [[ "$2" == en ]]; then
+    plutil -remove AppleICUForce24HourTime "$preferences" 2>/dev/null || true
+  else
+    plutil -replace AppleICUForce24HourTime -bool true "$preferences"
+  fi
+}
+
+# Takes a screenshot for each <name>.request the walk writes into a folder.
+# `failure` is the walk giving up, and cmd-lock its end: it locks the
+# simulator and takes the Lock Screen. The first Live Activity of an app
+# comes with iOS asking whether to allow them, which a tap on Allow
+# answers; where that is depends on the device.
 watch_requests() {
-  local request
+  local udid="$1" shots="$2" allow="$3" request
   while true; do
     for request in "$shots"/*.request; do
       [[ -e "$request" ]] || continue
@@ -77,6 +128,11 @@ watch_requests() {
         touch "$shots/done"
         return
         ;;
+      failure)
+        xcrun simctl io "$udid" screenshot "$shots/failure.png" >/dev/null 2>&1
+        touch "$shots/failed"
+        return
+        ;;
       *)
         xcrun simctl io "$udid" screenshot "${request%.request}.png" >/dev/null 2>&1
         ;;
@@ -87,65 +143,94 @@ watch_requests() {
   done
 }
 
-fetch_media
-mkdir -p "$shots"
-rm -f "$shots"/*
-xcrun -sdk iphonesimulator clang -target arm64-apple-ios17.0-simulator \
-  "$here/sim_hid.c" -o "$work/sim_hid" -framework CoreFoundation
-if xcrun simctl list devices | grep -F "$udid" | grep -q iPad; then
-  allow="0.62 0.90"
-else
-  allow="0.72 0.82"
-fi
+# Walks the app on one simulator in one language.
+take() {
+  local device="$1" udid="$2" allow="$3" locale="$4"
+  local shots="$work/raw/$device/$locale" waited=0 watcher app data
+  mkdir -p "$shots"
+  rm -f "$shots"/*
 
-# A simulator left running may still show what an earlier run left on it,
-# such as a permission prompt nothing answered.
-xcrun simctl shutdown "$udid" 2>/dev/null || true
-xcrun simctl boot "$udid"
-xcrun simctl bootstatus "$udid" >/dev/null
-# The date as well as the time: a time alone puts the Lock Screen on
-# 1 January. simctl takes an ISO date only with milliseconds and a colon in
-# the time zone.
-zone="$(date +%z)"
-xcrun simctl status_bar "$udid" override \
-  --time "$(date +%Y-%m-%d)T09:41:00.000${zone:0:3}:${zone:3}" \
-  --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 \
-  --dataNetwork wifi --operatorName ""
-xcrun simctl ui "$udid" appearance dark
-# Praça do Comércio, Lisbon: where the newest photos of the card are from.
-xcrun simctl location "$udid" set 38.7075,-9.1364
-# A fresh install, so iOS asks whether to allow Live Activities on every
-# run and the tap on Allow always has its button. iOS would also ask for the
-# location over the screens, where no test can answer, and only an installed
-# app can be allowed it: the test's own install comes too late.
-xcrun simctl uninstall "$udid" "$bundle" 2>/dev/null || true
-(cd "$root/app" && flutter build ios --simulator --debug --flavor dev)
-xcrun simctl install "$udid" "$root/app/build/ios/iphonesimulator/Runner.app"
-xcrun simctl privacy "$udid" grant location-always "$bundle"
+  # Restarted, for the language and because a simulator left running may
+  # still show what an earlier walk left on it, such as a permission prompt
+  # nothing answered.
+  xcrun simctl shutdown "$udid" 2>/dev/null || true
+  set_language "$udid" "$locale"
+  xcrun simctl boot "$udid"
+  xcrun simctl bootstatus "$udid" >/dev/null
+  # The date as well as the time: a time alone puts the Lock Screen on
+  # 1 January. simctl takes an ISO date only with milliseconds and a colon
+  # in the time zone, and the simulator (iOS 26.5) keeps its day and month
+  # only in English: in the other languages the Lock Screen shows 1 January
+  # whatever the date.
+  local zone
+  zone="$(date +%z)"
+  xcrun simctl status_bar "$udid" override \
+    --time "$(date +%Y-%m-%d)T09:41:00.000${zone:0:3}:${zone:3}" \
+    --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4 \
+    --dataNetwork wifi --operatorName ""
+  xcrun simctl ui "$udid" appearance dark
+  # Praça do Comércio, Lisbon: where the newest photos of the card are from.
+  xcrun simctl location "$udid" set 38.7075,-9.1364
+  # A fresh install, so iOS asks whether to allow Live Activities on every
+  # walk and the tap on Allow always has its button. iOS would also ask for
+  # the location over the screens, where nothing can answer.
+  xcrun simctl uninstall "$udid" "$bundle" 2>/dev/null || true
+  xcrun simctl install "$udid" "$root/app/build/ios/iphonesimulator/Runner.app"
+  xcrun simctl privacy "$udid" grant location-always "$bundle"
+  # Where the walk finds its folders: an app started on a simulator gets
+  # nothing from the host's environment.
+  data="$(xcrun simctl get_app_container "$udid" "$bundle" data)/Library/Application Support"
+  mkdir -p "$data"
+  jq -n --arg shots "$shots" --arg media "$media" '{$shots, $media}' \
+    >"$data/store-screenshots.json"
 
-watch_requests &
-watcher=$!
-cd "$root/app"
-flutter test integration_test/store_screens_test.dart --flavor dev \
-  --dart-define=SHOT_DIR="$shots" --dart-define=SHOT_MEDIA="$media" \
-  -d "$udid" >"$shots/flutter.log" 2>&1 &
-flutter=$!
-finish() {
-  kill "$watcher" "$flutter" 2>/dev/null || true
+  watch_requests "$udid" "$shots" "$allow" &
+  watcher=$!
+  xcrun simctl launch --console "$udid" "$bundle" >"$shots/app.log" 2>&1 &
+  app=$!
+  # The locked app no longer runs the walk, so it ends with the Lock Screen
+  # rather than with the app.
+  until [[ -e "$shots/done" || -e "$shots/failed" || $waited -ge $walk_seconds ]]; do
+    sleep 1
+    waited=$((waited + 1))
+  done
+  kill "$watcher" "$app" 2>/dev/null || true
   xcrun simctl status_bar "$udid" clear
   xcrun simctl shutdown "$udid"
-  rm -f "$shots"/*.request "$shots/done"
-}
-trap finish EXIT
-
-# The locked app no longer runs the test, so the run ends here rather than
-# with the test.
-until [[ -e "$shots/done" ]]; do
-  if ! kill -0 "$flutter" 2>/dev/null; then
-    echo "the run ended before its last screen; see $shots/flutter.log" >&2
-    tail -30 "$shots/flutter.log" >&2
-    exit 1
+  rm -f "$shots"/*.request
+  if [[ ! -e "$shots/done" ]]; then
+    echo "$device $locale: the walk ended before its last screen; see $shots/app.log" >&2
+    return 1
   fi
-  sleep 1
+  rm -f "$shots/done"
+  echo "$device $locale"
+}
+
+# Every language on one simulator, which is left in English.
+take_all() {
+  local device="$1" udid="$2" allow="$3" locale failed=0
+  for locale in "${locales[@]}"; do
+    take "$device" "$udid" "$allow" "$locale" || failed=1
+  done
+  set_language "$udid" en
+  return $failed
+}
+
+for locale in "${locales[@]}"; do
+  ios_language "$locale" >/dev/null
 done
-ls "$shots"
+fetch_media
+xcrun -sdk iphonesimulator clang -target arm64-apple-ios17.0-simulator \
+  "$here/sim_hid.c" -o "$work/sim_hid" -framework CoreFoundation
+(cd "$root/app" && flutter build ios --simulator --debug --flavor dev \
+  --target integration_test/store_screens_test.dart)
+
+take_all iphone "$iphone" "0.72 0.82" &
+on_iphone=$!
+take_all ipad "$ipad" "0.62 0.90" &
+on_ipad=$!
+trap 'kill "$on_iphone" "$on_ipad" 2>/dev/null || true' INT TERM
+status=0
+wait "$on_iphone" || status=1
+wait "$on_ipad" || status=1
+exit $status

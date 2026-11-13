@@ -1,0 +1,34 @@
+{
+  "overview": {
+    "title": "你的 GR，就在手机上",
+    "subtitle": "浏览并保存照片，遥控拍摄，还能打造自己的风格。",
+    "ipad": { "title": "你的 GR，就在 iPad 上" }
+  },
+  "library": {
+    "title": "整张存储卡，无需等待",
+    "subtitle": "滑得多快，照片就出现得多快。"
+  },
+  "viewer": {
+    "title": "每张照片，全屏细看",
+    "subtitle": "仔细查看照片，再存为 JPEG 或 RAW。"
+  },
+  "live-view": {
+    "title": "GR 所见，即你所见",
+    "subtitle": "在手机上构图、对焦、拍摄。",
+    "ipad": { "subtitle": "在 iPad 上构图、对焦、拍摄。" }
+  },
+  "looks": {
+    "title": "轻点几下，切换风格",
+    "subtitle": "所有风格都存在手机里，可直接载入 C1、C2 或 C3。",
+    "ipad": { "subtitle": "所有风格都存在 iPad 里，可直接载入 C1、C2 或 C3。" }
+  },
+  "look-editor": {
+    "title": "影像控制，不用再猜",
+    "subtitle": "拍摄之前，先看看风格用在自己照片上的效果。"
+  },
+  "geotagging": {
+    "title": "拍在哪里，照片都记得",
+    "subtitle": "拍摄时，手机会把位置信息传给 GR。",
+    "ipad": { "subtitle": "拍摄时，iPad 会把位置信息传给 GR。" }
+  }
+}

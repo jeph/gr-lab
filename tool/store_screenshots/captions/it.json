@@ -1,0 +1,34 @@
+{
+  "overview": {
+    "title": "La tua GR, sul tuo telefono",
+    "subtitle": "Sfoglia e salva le tue foto, scatta a distanza e crea i tuoi stili.",
+    "ipad": { "title": "La tua GR, sul tuo iPad" }
+  },
+  "library": {
+    "title": "Tutta la scheda, senza attese",
+    "subtitle": "Le foto compaiono alla velocità con cui scorri."
+  },
+  "viewer": {
+    "title": "Ogni scatto, a tutto schermo",
+    "subtitle": "Controlla bene le tue foto, poi salvale in JPEG o RAW."
+  },
+  "live-view": {
+    "title": "Guarda ciò che vede la tua GR",
+    "subtitle": "Inquadra, metti a fuoco e scatta dal telefono.",
+    "ipad": { "subtitle": "Inquadra, metti a fuoco e scatta dall'iPad." }
+  },
+  "looks": {
+    "title": "Cambia stile in due tocchi",
+    "subtitle": "Tieni tutti gli stili sul telefono e caricali direttamente in C1, C2 o C3.",
+    "ipad": { "subtitle": "Tieni tutti gli stili sull'iPad e caricali direttamente in C1, C2 o C3." }
+  },
+  "look-editor": {
+    "title": "Controllo immagine senza sorprese",
+    "subtitle": "Guarda l'effetto di uno stile sulla tua foto prima di usarlo per scattare."
+  },
+  "geotagging": {
+    "title": "Ricorda dove l'hai scattata",
+    "subtitle": "Il telefono passa la posizione alla GR mentre scatti.",
+    "ipad": { "subtitle": "L'iPad passa la posizione alla GR mentre scatti." }
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "overview": {
+    "title": "Dit GR på din telefon",
+    "subtitle": "Se og gem dine billeder, fotografer på afstand, og lav dine egne looks.",
+    "ipad": { "title": "Dit GR på din iPad" }
+  },
+  "library": {
+    "title": "Hele dit kort uden ventetid",
+    "subtitle": "Billederne dukker op, lige så hurtigt som du kan scrolle."
+  },
+  "viewer": {
+    "title": "Hvert billede i fuld skærm",
+    "subtitle": "Se dine billeder ordentligt igennem, og gem dem som JPEG eller RAW."
+  },
+  "live-view": {
+    "title": "Se, hvad dit GR ser",
+    "subtitle": "Komponer, fokuser og tag billedet fra din telefon.",
+    "ipad": { "subtitle": "Komponer, fokuser og tag billedet fra din iPad." }
+  },
+  "looks": {
+    "title": "Skift look med et par tryk",
+    "subtitle": "Gem alle dine looks på telefonen, og indlæs dem direkte i C1, C2 eller C3.",
+    "ipad": { "subtitle": "Gem alle dine looks på din iPad, og indlæs dem direkte i C1, C2 eller C3." }
+  },
+  "look-editor": {
+    "title": "Billedkontrol uden gætværk",
+    "subtitle": "Se, hvad et look gør ved dit eget billede, før du fotograferer med det."
+  },
+  "geotagging": {
+    "title": "Husk, hvor du tog billedet",
+    "subtitle": "Din telefon sender sin lokalitet til dit GR, mens du fotograferer.",
+    "ipad": { "subtitle": "Din iPad sender sin lokalitet til dit GR, mens du fotograferer." }
+  }
+}

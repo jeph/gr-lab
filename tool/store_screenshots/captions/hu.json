@@ -1,0 +1,42 @@
+{
+  "overview": {
+    "title": "A GR a telefonján",
+    "subtitle": "Böngéssze és mentse fotóit, fotózzon távolról, alkosson saját stílusokat.",
+    "ipad": {
+      "title": "A GR az iPadjén"
+    }
+  },
+  "library": {
+    "title": "Az egész kártya, várakozás nélkül",
+    "subtitle": "A fotók olyan gyorsan jelennek meg, ahogy görget."
+  },
+  "viewer": {
+    "title": "Minden fotó teljes képernyőn",
+    "subtitle": "Nézze meg alaposan a fotóit, majd mentse őket JPEG vagy RAW formátumban."
+  },
+  "live-view": {
+    "title": "Lássa, amit a GR lát",
+    "subtitle": "Komponáljon, élesítsen és fotózzon a telefonjáról.",
+    "ipad": {
+      "subtitle": "Komponáljon, élesítsen és fotózzon az iPadjéről."
+    }
+  },
+  "looks": {
+    "title": "Stílusváltás pár koppintással",
+    "subtitle": "Tartsa stílusait a telefonján, és töltse be őket a C1, C2 vagy C3 helyre.",
+    "ipad": {
+      "subtitle": "Tartsa stílusait az iPadjén, és töltse be őket a C1, C2 vagy C3 helyre."
+    }
+  },
+  "look-editor": {
+    "title": "Képvezérlés találgatás nélkül",
+    "subtitle": "Nézze meg, mit tesz egy stílus a saját fotójával, mielőtt fotózna vele."
+  },
+  "geotagging": {
+    "title": "Mindig tudja, hol készült a fotó",
+    "subtitle": "Fotózás közben a telefonja adja meg a GR-nek a helyzetét.",
+    "ipad": {
+      "subtitle": "Fotózás közben az iPadje adja meg a GR-nek a helyzetét."
+    }
+  }
+}

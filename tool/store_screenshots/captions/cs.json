@@ -1,0 +1,42 @@
+{
+  "overview": {
+    "title": "Váš GR v telefonu",
+    "subtitle": "Prohlížejte a ukládejte fotky, foťte na dálku a tvořte si vlastní vzhledy.",
+    "ipad": {
+      "title": "Váš GR v iPadu"
+    }
+  },
+  "library": {
+    "title": "Celá karta bez čekání",
+    "subtitle": "Fotky se načítají stejně rychle, jak jimi listujete."
+  },
+  "viewer": {
+    "title": "Každá fotka přes celou obrazovku",
+    "subtitle": "Fotky si pořádně prohlédněte a uložte je jako JPEG nebo RAW."
+  },
+  "live-view": {
+    "title": "Vidíte to, co váš GR",
+    "subtitle": "Komponujte, ostřete a foťte přímo z telefonu.",
+    "ipad": {
+      "subtitle": "Komponujte, ostřete a foťte přímo z iPadu."
+    }
+  },
+  "looks": {
+    "title": "Změňte vzhled na pár klepnutí",
+    "subtitle": "Mějte všechny vzhledy v telefonu a načtěte je rovnou do C1, C2 nebo C3.",
+    "ipad": {
+      "subtitle": "Mějte všechny vzhledy v iPadu a načtěte je rovnou do C1, C2 nebo C3."
+    }
+  },
+  "look-editor": {
+    "title": "Ovládání obrazu bez hádání",
+    "subtitle": "Zjistěte, co vzhled udělá s vaší fotkou, ještě než s ním začnete fotit."
+  },
+  "geotagging": {
+    "title": "Vždy víte, kde fotka vznikla",
+    "subtitle": "Telefon při focení předává vašemu GR svou polohu.",
+    "ipad": {
+      "subtitle": "iPad při focení předává vašemu GR svou polohu."
+    }
+  }
+}

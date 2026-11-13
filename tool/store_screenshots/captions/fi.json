@@ -1,0 +1,42 @@
+{
+  "overview": {
+    "title": "GR-kamerasi puhelimessasi",
+    "subtitle": "Selaa ja tallenna kuvia, kuvaa etänä ja luo omia tyylejä.",
+    "ipad": {
+      "title": "GR-kamerasi iPadissasi"
+    }
+  },
+  "library": {
+    "title": "Koko kortti ilman odottelua",
+    "subtitle": "Kuvat tulevat näkyviin sitä mukaa kuin selaat."
+  },
+  "viewer": {
+    "title": "Jokainen kuva koko näytöllä",
+    "subtitle": "Katso kuvat kunnolla ja tallenna ne JPEG- tai RAW-muodossa."
+  },
+  "live-view": {
+    "title": "Näe, mitä GR näkee",
+    "subtitle": "Rajaa, tarkenna ja kuvaa puhelimellasi.",
+    "ipad": {
+      "subtitle": "Rajaa, tarkenna ja kuvaa iPadillasi."
+    }
+  },
+  "looks": {
+    "title": "Vaihda tyyliä hetkessä",
+    "subtitle": "Pidä tyylisi puhelimessa ja siirrä ne suoraan paikkaan C1, C2 tai C3.",
+    "ipad": {
+      "subtitle": "Pidä tyylisi iPadissa ja siirrä ne suoraan paikkaan C1, C2 tai C3."
+    }
+  },
+  "look-editor": {
+    "title": "Kuvansäätö ilman arvailua",
+    "subtitle": "Katso, miltä tyyli näyttää omassa kuvassasi, ennen kuin kuvaat sillä."
+  },
+  "geotagging": {
+    "title": "Muista, missä kuva otettiin",
+    "subtitle": "Puhelimesi välittää sijainnin GR:lle kuvatessasi.",
+    "ipad": {
+      "subtitle": "iPadisi välittää sijainnin GR:lle kuvatessasi."
+    }
+  }
+}

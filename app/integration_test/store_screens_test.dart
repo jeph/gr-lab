@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart' show GrBleCatalog, GrImageSize;
+import 'package:grphoto/l10n/l10n.dart';
 import 'package:grphoto/src/app.dart';
 import 'package:grphoto/src/app_scope.dart';
 import 'package:grphoto/src/library/shot_cell.dart';
@@ -18,11 +19,23 @@ import 'package:integration_test/integration_test.dart';
 
 /// Where the host waits for screenshot requests: a simulator app reads and
 /// writes the Mac's own file system.
-const _shotDir = String.fromEnvironment('SHOT_DIR');
+late final String _shotDir;
 
 /// The photos of the simulated card, which `tool/store_screenshots/run.sh`
 /// downloads: `scenes.json` and `sNN_{thumb,view,full,live}.jpg`.
-const _mediaDir = String.fromEnvironment('SHOT_MEDIA');
+late final String _mediaDir;
+
+/// Reads [_shotDir] and [_mediaDir] from `store-screenshots.json`, which the
+/// host puts into the app's data folder before it starts the app: an app
+/// started on a simulator gets no arguments or environment from the host.
+Future<void> _readFolders() async {
+  final dirs = await appDirectories();
+  final folders = jsonDecode(
+    File('${dirs.data.path}/store-screenshots.json').readAsStringSync(),
+  ) as Map<String, dynamic>;
+  _shotDir = folders['shots'] as String;
+  _mediaDir = folders['media'] as String;
+}
 
 typedef _P = LookParameter;
 
@@ -263,6 +276,7 @@ void main() {
       LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
 
   testWidgets('store screens', (tester) async {
+    await _readFolders();
     try {
       await _walk(tester);
     } on Object {
@@ -298,7 +312,8 @@ Future<void> _walk(WidgetTester tester) async {
     tester,
     () =>
         pillState.evaluate().isNotEmpty &&
-        tester.widget<Text>(pillState).data == 'Wi-Fi',
+        tester.widget<Text>(pillState).data ==
+            tester.element(pillState).l10n.connectionPillWifi,
     seconds: 60,
     reason: 'the Wi-Fi link',
   );
@@ -366,7 +381,8 @@ Future<void> _walk(WidgetTester tester) async {
   final featured = models.looks.looks.firstWhere((l) => l.name == _featured);
   await _tapKey(tester, 'look-menu:${featured.id}');
   await _snap(tester, 'looks-menu', settle: 2);
-  final loadInto = find.text('Load into C2').hitTestable();
+  final l10n = tester.element(find.byKey(const Key('looks-slot-1'))).l10n;
+  final loadInto = find.text(l10n.looksLoadInto(2)).hitTestable();
   await _pumpUntil(
     tester,
     () => loadInto.evaluate().isNotEmpty,
@@ -386,7 +402,7 @@ Future<void> _walk(WidgetTester tester) async {
   await tester.tap(
     find.descendant(
       of: find.byKey(const Key('look-groups')),
-      matching: find.text('Colour'),
+      matching: find.text(l10n.looksGroupColour),
     ),
   );
   await _snap(tester, 'look-editor-colour');

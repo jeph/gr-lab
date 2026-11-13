@@ -1,0 +1,34 @@
+{
+  "overview": {
+    "title": "나의 GR, 휴대전화에서",
+    "subtitle": "사진 보기와 저장, 리모트 촬영, 나만의 룩 만들기까지.",
+    "ipad": { "title": "나의 GR, iPad에서" }
+  },
+  "library": {
+    "title": "카드 전체를, 기다림 없이",
+    "subtitle": "스크롤하는 속도 그대로 사진이 바로바로 나타납니다."
+  },
+  "viewer": {
+    "title": "한 장 한 장, 전체 화면으로",
+    "subtitle": "사진을 꼼꼼히 확인한 다음 JPEG나 RAW로 저장하세요."
+  },
+  "live-view": {
+    "title": "GR이 보는 장면 그대로",
+    "subtitle": "휴대전화에서 구도를 잡고 초점을 맞춰 촬영하세요.",
+    "ipad": { "subtitle": "iPad에서 구도를 잡고 초점을 맞춰 촬영하세요." }
+  },
+  "looks": {
+    "title": "탭 몇 번으로 룩 바꾸기",
+    "subtitle": "모든 룩을 휴대전화에 보관하고 C1, C2, C3에 바로 등록하세요.",
+    "ipad": { "subtitle": "모든 룩을 iPad에 보관하고 C1, C2, C3에 바로 등록하세요." }
+  },
+  "look-editor": {
+    "title": "화상 컨트롤, 짐작은 이제 그만",
+    "subtitle": "촬영하기 전에 룩이 내 사진을 어떻게 바꾸는지 미리 확인하세요."
+  },
+  "geotagging": {
+    "title": "어디서 찍었는지 기억하세요",
+    "subtitle": "촬영하는 동안 휴대전화가 GR에 위치를 전달합니다.",
+    "ipad": { "subtitle": "촬영하는 동안 iPad가 GR에 위치를 전달합니다." }
+  }
+}

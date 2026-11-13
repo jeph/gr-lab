@@ -1,0 +1,34 @@
+{
+  "overview": {
+    "title": "Die GR auf dem Smartphone",
+    "subtitle": "Fotos ansehen und sichern, aus der Ferne auslösen, eigene Looks erstellen.",
+    "ipad": { "title": "Die GR auf dem iPad" }
+  },
+  "library": {
+    "title": "Die ganze Karte, ohne Warten",
+    "subtitle": "Die Fotos sind so schnell da, wie der Finger scrollt."
+  },
+  "viewer": {
+    "title": "Jede Aufnahme im Vollbild",
+    "subtitle": "Fotos in Ruhe prüfen und dann als JPEG oder RAW sichern."
+  },
+  "live-view": {
+    "title": "Sehen, was die GR sieht",
+    "subtitle": "Bildausschnitt wählen, fokussieren und auslösen – direkt am Smartphone.",
+    "ipad": { "subtitle": "Bildausschnitt wählen, fokussieren und auslösen – direkt am iPad." }
+  },
+  "looks": {
+    "title": "Looks wechseln im Handumdrehen",
+    "subtitle": "Alle Looks auf dem Smartphone sammeln und direkt in C1, C2 oder C3 laden.",
+    "ipad": { "subtitle": "Alle Looks auf dem iPad sammeln und direkt in C1, C2 oder C3 laden." }
+  },
+  "look-editor": {
+    "title": "Bildsteuerung ohne Rätselraten",
+    "subtitle": "Vor der Aufnahme sehen, wie ein Look auf dem eigenen Foto wirkt."
+  },
+  "geotagging": {
+    "title": "Wissen, wo es entstanden ist",
+    "subtitle": "Das Smartphone gibt der GR beim Fotografieren den Standort mit.",
+    "ipad": { "subtitle": "Das iPad gibt der GR beim Fotografieren den Standort mit." }
+  }
+}

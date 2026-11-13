@@ -1,0 +1,34 @@
+{
+  "overview": {
+    "title": "Je GR, op je telefoon",
+    "subtitle": "Bekijk en bewaar je foto's, fotografeer op afstand en maak je eigen looks.",
+    "ipad": { "title": "Je GR, op je iPad" }
+  },
+  "library": {
+    "title": "Je hele kaart, zonder wachten",
+    "subtitle": "Foto's verschijnen zo snel als je kunt scrollen."
+  },
+  "viewer": {
+    "title": "Elke foto, schermvullend",
+    "subtitle": "Bekijk je foto's goed en sla ze dan op als JPEG of RAW."
+  },
+  "live-view": {
+    "title": "Zie wat je GR ziet",
+    "subtitle": "Kadreer, stel scherp en maak de foto vanaf je telefoon.",
+    "ipad": { "subtitle": "Kadreer, stel scherp en maak de foto vanaf je iPad." }
+  },
+  "looks": {
+    "title": "Andere look in een paar tikken",
+    "subtitle": "Bewaar al je looks op je telefoon en laad ze direct in C1, C2 of C3.",
+    "ipad": { "subtitle": "Bewaar al je looks op je iPad en laad ze direct in C1, C2 of C3." }
+  },
+  "look-editor": {
+    "title": "Beeldregeling zonder gokwerk",
+    "subtitle": "Zie wat een look met je eigen foto doet voordat je ermee fotografeert."
+  },
+  "geotagging": {
+    "title": "Onthoud waar je elke foto maakte",
+    "subtitle": "Je telefoon geeft zijn locatie door aan de GR terwijl je fotografeert.",
+    "ipad": { "subtitle": "Je iPad geeft zijn locatie door aan de GR terwijl je fotografeert." }
+  }
+}

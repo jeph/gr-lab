@@ -1,0 +1,34 @@
+{
+  "overview": {
+    "title": "A sua GR, no telemóvel",
+    "subtitle": "Veja e guarde as suas fotos, fotografe à distância e crie os seus estilos.",
+    "ipad": { "title": "A sua GR, no iPad" }
+  },
+  "library": {
+    "title": "O cartão inteiro, sem esperas",
+    "subtitle": "As fotos aparecem tão depressa quanto consegue deslizar."
+  },
+  "viewer": {
+    "title": "Cada foto, em ecrã inteiro",
+    "subtitle": "Veja as fotos ao pormenor e guarde-as em JPEG ou RAW."
+  },
+  "live-view": {
+    "title": "Veja o que a sua GR vê",
+    "subtitle": "Enquadre, foque e dispare a partir do telemóvel.",
+    "ipad": { "subtitle": "Enquadre, foque e dispare a partir do iPad." }
+  },
+  "looks": {
+    "title": "Mude de estilo em dois toques",
+    "subtitle": "Guarde os estilos no telemóvel e carregue-os diretamente em C1, C2 ou C3.",
+    "ipad": { "subtitle": "Guarde os estilos no iPad e carregue-os diretamente em C1, C2 ou C3." }
+  },
+  "look-editor": {
+    "title": "Veja o Controlo de Imagem em ação",
+    "subtitle": "Saiba o que um estilo faz a uma foto sua antes de fotografar com ele."
+  },
+  "geotagging": {
+    "title": "Recorde onde tirou cada foto",
+    "subtitle": "O telemóvel passa a localização à GR enquanto fotografa.",
+    "ipad": { "subtitle": "O iPad passa a localização à GR enquanto fotografa." }
+  }
+}

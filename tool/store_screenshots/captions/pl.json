@@ -1,0 +1,42 @@
+{
+  "overview": {
+    "title": "Twój GR w telefonie",
+    "subtitle": "Przeglądaj i zapisuj zdjęcia, fotografuj zdalnie i twórz własne style.",
+    "ipad": {
+      "title": "Twój GR na iPadzie"
+    }
+  },
+  "library": {
+    "title": "Cała karta bez czekania",
+    "subtitle": "Zdjęcia pojawiają się tak szybko, jak przewijasz."
+  },
+  "viewer": {
+    "title": "Każde zdjęcie na pełnym ekranie",
+    "subtitle": "Obejrzyj zdjęcia dokładnie, a potem zapisz je jako JPEG lub RAW."
+  },
+  "live-view": {
+    "title": "Zobacz to, co widzi Twój GR",
+    "subtitle": "Kadruj, ustawiaj ostrość i rób zdjęcia z telefonu.",
+    "ipad": {
+      "subtitle": "Kadruj, ustawiaj ostrość i rób zdjęcia z iPada."
+    }
+  },
+  "looks": {
+    "title": "Zmień styl paroma dotknięciami",
+    "subtitle": "Trzymaj wszystkie style w telefonie i wczytuj je prosto do C1, C2 lub C3.",
+    "ipad": {
+      "subtitle": "Trzymaj wszystkie style na iPadzie i wczytuj je prosto do C1, C2 lub C3."
+    }
+  },
+  "look-editor": {
+    "title": "Sterowanie obrazem bez zgadywania",
+    "subtitle": "Sprawdź, jak styl zmienia Twoje zdjęcie, zanim zaczniesz nim fotografować."
+  },
+  "geotagging": {
+    "title": "Zapamiętaj, gdzie powstało zdjęcie",
+    "subtitle": "Podczas zdjęć telefon przekazuje aparatowi GR swoją lokalizację.",
+    "ipad": {
+      "subtitle": "Podczas zdjęć iPad przekazuje aparatowi GR swoją lokalizację."
+    }
+  }
+}
