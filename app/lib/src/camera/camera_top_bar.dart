@@ -94,24 +94,22 @@ class CameraTopBar extends StatelessWidget {
 /// ([SliverScrollAwayHeader]). It leaves as the page scrolls down and
 /// comes back over the page as soon as it scrolls up \[design\]: Cameras,
 /// the link and Settings stay a short scroll away in a long Library.
+///
+/// The bar has no background \[design\]: its buttons float over the page,
+/// which shows, and takes taps, between and around them.
 class SliverCameraTopBar extends StatelessWidget {
   const new({super.key});
 
-  /// Under the bar, between its buttons and the page it lies over.
+  /// Under the bar, between its buttons and the start of the page.
   static const _bottomGap = 6.0;
 
   @override
-  Widget build(BuildContext context) => SliverScrollAwayHeader(
-    // Opaque, and through the status bar where the page scrolls under it:
-    // the page must not show through the bar that lies over it.
-    child: ColoredBox(
-      color: GrColors.of(context).bg,
-      child: const SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: EdgeInsets.only(bottom: _bottomGap),
-          child: CameraTopBar(),
-        ),
+  Widget build(BuildContext context) => const SliverScrollAwayHeader(
+    child: SafeArea(
+      bottom: false,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: _bottomGap),
+        child: CameraTopBar(),
       ),
     ),
   );

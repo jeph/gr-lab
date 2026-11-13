@@ -198,16 +198,20 @@ class _RemoteView extends StatelessWidget {
   /// self-timer and the drive in one half of the window and the shutter in
   /// the other, each centred in its half. A phone on its side leaves the
   /// halves about 225 of height, so the self-timer's label goes on the
-  /// line of its choices. Scrolls under the bar when the taller half does
-  /// not fit.
-  Widget _beside(BuildContext context) => Column(
-    children: [
-      CameraTopBar(middle: _modeSwitch()),
-      Expanded(
-        child: LayoutBuilder(
-          builder: (context, halves) => SingleChildScrollView(
+  /// line of its choices. When the taller half does not fit, the halves
+  /// scroll behind the bar, which stays where it is: it has no background,
+  /// so they show between its buttons \[design\].
+  Widget _beside(BuildContext context) => CustomScrollView(
+    slivers: [
+      PinnedHeaderSliver(child: CameraTopBar(middle: _modeSwitch())),
+      SliverLayoutBuilder(
+        builder: (context, sliver) {
+          // What the bar leaves of the window.
+          final height =
+              sliver.viewportMainAxisExtent - sliver.precedingScrollExtent;
+          return SliverToBoxAdapter(
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: halves.maxHeight),
+              constraints: BoxConstraints(minHeight: height),
               child: Row(
                 children: [
                   Expanded(
@@ -222,16 +226,13 @@ class _RemoteView extends StatelessWidget {
                     ),
                   ),
                   Expanded(
-                    child: _shutter(
-                      context,
-                      room: halves.maxHeight - _shutterRestHeight,
-                    ),
+                    child: _shutter(context, room: height - _shutterRestHeight),
                   ),
                 ],
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     ],
   );

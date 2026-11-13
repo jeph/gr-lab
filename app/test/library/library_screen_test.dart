@@ -8,6 +8,7 @@ import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:grphoto/src/camera/camera_top_bar.dart';
 import 'package:grphoto/src/library/library_screen.dart';
 import 'package:grphoto/src/library/shot.dart' show Shot;
+import 'package:grphoto/src/library/shot_cell.dart';
 import 'package:grphoto/src/library/viewer.dart';
 import 'package:grphoto/src/services.dart';
 import 'package:grphoto/src/widgets/group.dart';
@@ -977,6 +978,13 @@ void main() {
     // Only the bar came back: the page is still where it was scrolled to.
     expect(scrolled.pixels, greaterThan(300));
     expect(title.hitTestable(), findsNothing);
+    // The bar has no background: the photos it came back over show
+    // between its buttons, and take a tap there.
+    final betweenButtons = Offset(
+      (rect('camera-pill').right + rect('camera-settings').left) / 2,
+      rect('camera-back').center.dy,
+    );
+    expect(tapReaches(tester, betweenButtons, find.byType(ShotCell)), isTrue);
 
     await scroll(-60);
     expectBar(shown: false);

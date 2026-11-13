@@ -330,6 +330,18 @@ Future<void> tapWhenReady(WidgetTester tester, Finder finder) async {
   await tester.pump();
 }
 
+/// Whether a tap at [point] reaches a widget [finder] matches: the widget
+/// is there, nothing in front of it takes the tap and nothing cuts it off.
+bool tapReaches(WidgetTester tester, Offset point, Finder finder) {
+  final found = {for (final element in finder.evaluate()) element.renderObject};
+  return tester.hitTestOnBinding(point).path.any((entry) {
+    for (HitTestTarget? o = entry.target; o is RenderObject; o = o.parent) {
+      if (found.contains(o)) return true;
+    }
+    return false;
+  });
+}
+
 /// Pumps [rounds] of [pumpUntil]'s real/fake time steps.
 Future<void> pumpRounds(WidgetTester tester, int rounds) async {
   for (var i = 0; i < rounds; i++) {

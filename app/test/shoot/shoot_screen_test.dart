@@ -333,6 +333,54 @@ void main() {
     await app.dispose();
   });
 
+  testWidgets('on its side in a window too short for Remote, it scrolls '
+      'behind the top bar, whose buttons stay over it', (tester) async {
+    final app = await _inShoot(tester);
+    await _untilReady(tester);
+    tester.view
+      ..physicalSize = const Size(844, 200)
+      ..devicePixelRatio = 1;
+    final remote = find.byKey(const Key('shoot-remote'));
+    // Its route is still sliding in.
+    await pumpUntil(
+      tester,
+      () => tester.getRect(remote) == const Rect.fromLTRB(0, 0, 844, 200),
+      reason: 'Shoot in the window on its side',
+    );
+    const bar = ['camera-back', 'camera-pill', 'shoot-mode', 'camera-settings'];
+    Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
+    final shutter = find.byKey(const Key('shoot-shutter'));
+    final page = tester
+        .state<ScrollableState>(
+          find.descendant(of: remote, matching: find.byType(Scrollable)),
+        )
+        .position;
+    final barAtRest = [for (final key in bar) rect(key)];
+    // In the bar's row, between two of its buttons, over where the shutter
+    // scrolls to.
+    final inBar = Offset(
+      tester.getCenter(shutter).dx,
+      rect('camera-back').center.dy,
+    );
+    expect(
+      inBar.dx,
+      inExclusiveRange(rect('shoot-mode').right, rect('camera-settings').left),
+    );
+    expect(tapReaches(tester, inBar, shutter), isFalse);
+
+    // Far enough to take the top of the shutter past there.
+    final toBar = tester.getRect(shutter).top - inBar.dy + 10;
+    expect(page.maxScrollExtent, greaterThan(toBar));
+    page.jumpTo(toBar);
+    await tester.pump();
+    expect([for (final key in bar) rect(key)], barAtRest);
+    for (final key in bar) {
+      expect(find.byKey(Key(key)).hitTestable(), findsOne, reason: key);
+    }
+    expect(tapReaches(tester, inBar, shutter), isTrue);
+    await app.dispose();
+  });
+
   group('live view', () {
     Future<TestApp> inLiveView(
       WidgetTester tester, {
