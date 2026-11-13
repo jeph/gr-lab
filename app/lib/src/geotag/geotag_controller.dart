@@ -316,6 +316,19 @@ final class GeotagController extends ChangeNotifier {
     return await history.nearest(taken.toUtc());
   }
 
+  /// Turns live geotagging off for the camera whose Stop was pressed on a
+  /// notice that had outlived the app ([PhoneLocation.takeRunStop]), as a
+  /// Stop pressed while it runs does.
+  Future<void> _applyRunStop() async {
+    final serial = await _guard<String?>(
+      'taking a Stop',
+      _location.takeRunStop,
+      null,
+    );
+    if (serial == null || !(_camera(serial)?.liveGeotagging ?? false)) return;
+    await turnLiveOff(serial);
+  }
+
   /// Opens the page of the phone's settings where [need] is allowed.
   Future<void> openSettings(GeotagNeed need) async {
     await _guard<void>(
@@ -333,7 +346,8 @@ final class GeotagController extends ChangeNotifier {
     settings.addListener(_onSettings);
     _phone
       ..add(_location.accessChanges.listen(_onAccess))
-      ..add(_location.historyPending.listen((_) => unawaited(drainHistory())));
+      ..add(_location.historyPending.listen((_) => unawaited(drainHistory())))
+      ..add(_location.runStopPending.listen((_) => unawaited(_applyRunStop())));
   }
 
   /// Reads where the phone stands and puts its recording in line with the
@@ -345,6 +359,8 @@ final class GeotagController extends ChangeNotifier {
     // of the two.
     await _setHistory(again: true);
     unawaited(drainHistory());
+    // Before a session can hold a run for the camera that was stopped.
+    await _applyRunStop();
     _onConnection();
   }
 
@@ -438,7 +454,8 @@ final class GeotagController extends ChangeNotifier {
         storeLocationInfoPending: camera.storeLocationInfoPending,
       ),
       // Asked for each time the notice changes, so it follows a new name.
-      notice: (status) => _notice(_camera(serial)?.name ?? camera.name, status),
+      notice: (status) =>
+          _notice(serial, _camera(serial)?.name ?? camera.name, status),
       // Stop on the phone's notice turns it off as the switch does, until
       // the user turns it on again. Done once that is saved.
       onStopped: () => turnLiveOff(serial),
@@ -447,9 +464,14 @@ final class GeotagController extends ChangeNotifier {
 
   /// What the phone shows while live geotagging runs with GR Photo not on
   /// screen, in the app's language.
-  LocationRunNotice _notice(String cameraName, GeotagStatus status) {
+  LocationRunNotice _notice(
+    String serial,
+    String cameraName,
+    GeotagStatus status,
+  ) {
     final l10n = _l10n;
     return LocationRunNotice(
+      run: serial,
       title: l10n.geotagNoticeTitle(cameraName),
       text: geotagStatusText(l10n, status),
       stopLabel: l10n.geotagNoticeStop,

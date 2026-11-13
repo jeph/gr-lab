@@ -186,6 +186,9 @@ class LocationChannel(private val context: Context, messenger: BinaryMessenger) 
             "backgroundUnrestricted" -> result.success(backgroundUnrestricted())
             "requestBackgroundUnrestricted" -> requestBackgroundUnrestricted(result)
             "setHistory" -> setHistory(call, result)
+            // The notification goes when the app's process ends, so no Stop
+            // is ever pressed on one that outlived its run.
+            "takeRunStop" -> result.success(null)
             "takeHistory" -> takeHistory(result)
             "setLogging" -> {
                 val enabled = call.argument<Boolean>("enabled") ?: false

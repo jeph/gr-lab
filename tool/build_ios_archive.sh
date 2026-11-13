@@ -24,6 +24,9 @@ flutter build ipa --flavor prod --release --no-codesign "$@"
 
 # The export copies the app's entitlements from the archive's signature, so
 # an unsigned archive would lose the Wi-Fi entitlements and the app could
-# not join the camera's network. An ad hoc signature carries them.
-codesign --force --sign - --entitlements ios/Runner/Runner.entitlements \
-  build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+# not join the camera's network. An ad hoc signature carries them. The
+# LiveActivity extension inside the app has no entitlements; it is signed
+# first, as nested code is, so that the app's signature seals signed code.
+app=build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+codesign --force --sign - "$app/PlugIns/LiveActivity.appex"
+codesign --force --sign - --entitlements ios/Runner/Runner.entitlements "$app"

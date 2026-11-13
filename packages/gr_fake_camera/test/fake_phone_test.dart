@@ -12,6 +12,7 @@ LocationFix _fix([double latitude = 35]) => LocationFix(
 );
 
 const _notice = LocationRunNotice(
+  run: '1234567',
   title: 'GR IV',
   text: 'Sending location',
   stopLabel: 'Stop',
@@ -159,6 +160,7 @@ void main() {
       expect(phone.runAwake, isFalse);
 
       const next = LocationRunNotice(
+        run: '1234567',
         title: 'GR IV',
         text: 'Waiting for the camera',
         stopLabel: 'Stop',
@@ -233,6 +235,20 @@ void main() {
       expect(phone.runHeld, isFalse);
       expect(phone.runReleases, 1);
       expect(releasedHeld, isFalse);
+      await sub.cancel();
+    });
+
+    test('a Stop pressed on a notice that outlived the app is announced and '
+        'handed over once', () async {
+      var pending = 0;
+      final sub = phone.runStopPending.listen((_) => pending++);
+      expect(await phone.takeRunStop(), isNull);
+
+      phone.pressLeftoverStop('1234567');
+      await _delivered();
+      expect(pending, 1);
+      expect(await phone.takeRunStop(), '1234567');
+      expect(await phone.takeRunStop(), isNull);
       await sub.cancel();
     });
 

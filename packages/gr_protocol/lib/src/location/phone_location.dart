@@ -159,14 +159,20 @@ enum LocationSettingsPage {
 /// What the platform shows while a [PhoneLocation.holdRun] is held; the
 /// texts are the app's, already in the user's language.
 final class LocationRunNotice {
-  /// A notice titled [title] with [text] under it and a [stopLabel] button,
-  /// in the notification category named [channel].
+  /// A notice of the run [run], titled [title] with [text] under it and a
+  /// [stopLabel] button, in the notification category named [channel].
   const new({
+    required this.run,
     required this.title,
     required this.text,
     required this.stopLabel,
     required this.channel,
   });
+
+  /// Names the run to the app, which chooses it (the camera's serial
+  /// number); never shown. A Stop pressed on the notice while the app was
+  /// not running comes back with it ([PhoneLocation.takeRunStop]).
+  final String run;
 
   /// First line, e.g. the camera the location goes to.
   final String title;
@@ -181,8 +187,9 @@ final class LocationRunNotice {
   /// notification settings (Android's notification channel).
   final String channel;
 
-  /// `title`, `text`, `stopLabel` and `channel`.
+  /// `run`, `title`, `text`, `stopLabel` and `channel`.
   Map<String, Object?> toJson() => {
+    'run': run,
     'title': title,
     'text': text,
     'stopLabel': stopLabel,
@@ -266,10 +273,11 @@ abstract interface class PhoneLocation {
 
   /// Keeps the app running off screen for live geotagging, showing
   /// [notice] where the platform shows one (Android's foreground service
-  /// notification), or replaces the notice of a run already held. With
-  /// [awake] the processor is kept on with the screen off (a camera is on
-  /// and being written to); without it the run only waits. Throws
-  /// [LocationRunException].
+  /// notification; a Live Activity on iOS 17 and later, which iOS starts
+  /// only while the app is on screen), or replaces the notice of a run
+  /// already held. With [awake] the processor is kept on with the screen
+  /// off (a camera is on and being written to); without it the run only
+  /// waits. Throws [LocationRunException].
   Future<void> holdRun(LocationRunNotice notice, {required bool awake});
 
   /// Ends what [holdRun] started; nothing happens when no run is held.
@@ -280,6 +288,17 @@ abstract interface class PhoneLocation {
   /// the app with the run (Android, once the app's window is closed), so
   /// what Stop means is saved before the run is released.
   Stream<void> get runStops;
+
+  /// The [LocationRunNotice.run] of a notice whose Stop was pressed while
+  /// the app held no such run, and forgets it; null when there is none.
+  /// Only a notice that outlives the app has one: a Live Activity stays up
+  /// when iOS ends the app while it is suspended, and its Stop then starts
+  /// the app in the background. Android's notification goes with the app.
+  Future<String?> takeRunStop();
+
+  /// Emits when [takeRunStop] has something to hand over while the app
+  /// runs.
+  Stream<void> get runStopPending;
 
   /// Whether the phone leaves the app alone while it runs off screen.
   /// False where the phone may still stop the app's work with the screen

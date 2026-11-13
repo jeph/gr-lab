@@ -12,14 +12,15 @@ import UIKit
 /// - Live positions for a camera that is on: standard location updates
 ///   (`startUpdates`, `current`), sent to Dart as they arrive.
 /// - The run (`holdRun`): background location updates are allowed, so
-///   updates that run go on with the app off screen. iOS shows no notice of
-///   GR Photo's own, only its location indicator. With While Using
-///   permission a `CLBackgroundActivitySession` (iOS 17 and later) is held
-///   too, so locating can start again from the background during the run;
-///   iOS shows its blue indicator for as long as that session lasts, also
-///   while nothing is located. With Always permission no session is needed,
-///   and none is held, so the indicator shows only while the phone is
-///   located.
+///   updates that run go on with the app off screen. Besides iOS's own
+///   location indicator the app's presenter shows the run's notice
+///   ([GrCameraRun.noticePresenter], a Live Activity), whose Stop button
+///   reaches Dart as `runStopped`. With While Using permission a
+///   `CLBackgroundActivitySession` (iOS 17 and later) is held too, so
+///   locating can start again from the background during the run; iOS shows
+///   its blue indicator for as long as that session lasts, also while
+///   nothing is located. With Always permission no session is needed, and
+///   none is held, so the indicator shows only while the phone is located.
 /// - The history (`setHistory`): significant location changes and visits,
 ///   which iOS delivers to a closed app that has Always permission. They go
 ///   to [LocationHistoryStore] until Dart takes them, and are never logged.
@@ -90,6 +91,9 @@ final class PhoneLocator: NSObject, CLLocationManagerDelegate {
   private static let state = StateFile(name: "location")
   private static let historyKey = "history"
 
+  /// The run whose Stop was pressed on a notice that outlived it.
+  private static let runStopKey = "runStop"
+
   /// Time of the newest position stored from a location update: iOS hands
   /// its last known position over again whenever monitoring starts.
   private static let lastFixKey = "historyLastFixMs"
@@ -140,6 +144,13 @@ final class PhoneLocator: NSObject, CLLocationManagerDelegate {
   private var updatesRunning = false
 
   private var runHeld = false
+
+  /// The notice of the held run.
+  private var runNotice: GrCameraRunNotice?
+
+  /// Stop was pressed on the held run's notice, which took the notice away
+  /// while the run stays held.
+  private var runStopPressed = false
 
   /// A `CLBackgroundActivitySession` on iOS 17 and later.
   private var backgroundSession: AnyObject?
@@ -276,6 +287,8 @@ final class PhoneLocator: NSObject, CLLocationManagerDelegate {
     }
     // Updates asked for off screen may not have started.
     applyUpdates()
+    // Nor may the notice of a run held there have been shown.
+    if let runNotice, !runStopPressed { GrCameraRun.noticePresenter?.show(runNotice) }
     sendAccess()
   }
 
@@ -393,14 +406,18 @@ final class PhoneLocator: NSObject, CLLocationManagerDelegate {
 
   // MARK: Run
 
-  /// Lets location updates go on with the app off screen.
-  func holdRun(_ completion: @escaping (RunRefusal?) -> Void) {
+  /// Lets location updates go on with the app off screen, showing
+  /// `notice`, or replaces the notice of the run already held.
+  func holdRun(_ notice: GrCameraRunNotice, _ completion: @escaping (RunRefusal?) -> Void) {
     access { [self] access in
       if let refusal = holdRun(with: access) {
         releaseRun()
         completion(refusal)
         return
       }
+      runNotice = notice
+      runStopPressed = false
+      GrCameraRun.noticePresenter?.show(notice)
       completion(nil)
     }
   }
@@ -435,10 +452,51 @@ final class PhoneLocator: NSObject, CLLocationManagerDelegate {
   func releaseRun() {
     guard runHeld || backgroundSession != nil else { return }
     runHeld = false
+    removeRunNotice()
     endBackgroundSession()
     manager.allowsBackgroundLocationUpdates = false
     manager.showsBackgroundLocationIndicator = false
     log("run released")
+  }
+
+  /// Stop was pressed on a notice of the run `run`.
+  ///
+  /// For the run held now the notice goes at once, and the run stays held
+  /// until Dart releases it: Stop turns live geotagging off, which Dart has
+  /// to save first, as on Android. With no Dart side to tell, the run ends
+  /// here.
+  ///
+  /// Any other notice outlived its run: iOS ended GR Photo while it was
+  /// suspended, and started it again for this Stop. The Stop is kept, across
+  /// launches too, until Dart takes it (`takeRunStop`) and turns live
+  /// geotagging off for that run's camera.
+  func runStoppedByUser(_ run: String) {
+    guard runHeld, let runNotice, runNotice.run == run else {
+      log("run: Stop pressed on a notice that outlived its run")
+      remember(run, for: Self.runStopKey)
+      dart.send("runStopPending")
+      return
+    }
+    guard !runStopPressed else { return }
+    log("run: stopped from its notice")
+    runStopPressed = true
+    GrCameraRun.noticePresenter?.remove()
+    if !dart.send("runStopped") { releaseRun() }
+  }
+
+  /// Hands over the run whose Stop was pressed on a notice that outlived
+  /// it, and forgets it; nil when there is none.
+  func takeRunStop() -> String? {
+    guard let run = Self.state.string(Self.runStopKey) else { return nil }
+    remember(nil, for: Self.runStopKey)
+    return run
+  }
+
+  private func removeRunNotice() {
+    guard runNotice != nil else { return }
+    runNotice = nil
+    runStopPressed = false
+    GrCameraRun.noticePresenter?.remove()
   }
 
   private func beginBackgroundSession() {
@@ -550,7 +608,7 @@ final class PhoneLocator: NSObject, CLLocationManagerDelegate {
     dart.send("historyPending")
   }
 
-  private func remember(_ value: Any, for key: String) {
+  private func remember(_ value: Any?, for key: String) {
     do {
       try Self.state.set(value, for: key)
     } catch {

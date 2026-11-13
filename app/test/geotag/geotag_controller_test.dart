@@ -224,6 +224,7 @@ void main() {
             location.runNotice?.text ==
             "Geotagging using this phone's location",
       );
+      expect(location.runNotice!.run, _serial);
       expect(location.runNotice!.title, 'Geotagging: GR IV');
       expect(location.runNotice!.stopLabel, 'Stop');
       expect(location.runNotice!.channel, 'Geotagging');
@@ -294,6 +295,43 @@ void main() {
       // Still owed to the camera, for when it is next on and linked.
       expect(camera.storeLocationInfoPending, isFalse);
       expect(app.models.geotag.status, GeotagStatus.off);
+    });
+
+    test('a Stop pressed on a notice that outlived GR Photo turns live '
+        'geotagging off when the app next starts, before a run is held for '
+        'the camera', () async {
+      final location = FakePhoneLocation()..pressLeftoverStop(_serial);
+      final app = await _app(config: _storing, location: location, live: true);
+
+      final saved = await _onDisk(app);
+      expect(saved.liveGeotagging, isFalse);
+      // Owed to the camera, as when the switch is turned off.
+      expect(saved.storeLocationInfoPending, isFalse);
+      expect(await location.takeRunStop(), isNull);
+
+      await app.models.connection.connect();
+      await _until(() => !app.camera.storeLocationInfo);
+      await _settle();
+      expect(location.runHolds, isEmpty);
+      expect(app.models.geotag.status, GeotagStatus.off);
+    });
+
+    test('such a Stop pressed while GR Photo runs is applied at once, and '
+        'one for a camera that is not paired changes nothing', () async {
+      final location = FakePhoneLocation();
+      final app = await _app(config: _storing, location: location, live: true);
+      await app.models.connection.connect();
+      await _until(() => location.runHeld);
+
+      location.pressLeftoverStop('7654321');
+      await _settle();
+      expect(_saved(app).liveGeotagging, isTrue);
+      expect(location.runHeld, isTrue);
+
+      location.pressLeftoverStop(_serial);
+      await _until(() => !location.runHeld);
+      expect((await _onDisk(app)).liveGeotagging, isFalse);
+      await _until(() => !app.camera.storeLocationInfo);
     });
 
     test('without a session the status says what the phone lacks, and '

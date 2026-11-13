@@ -67,6 +67,10 @@ final class StateFile {
     values[key] as? Bool ?? false
   }
 
+  func string(_ key: String) -> String? {
+    values[key] as? String
+  }
+
   func int64(_ key: String) -> Int64? {
     (values[key] as? NSNumber)?.int64Value
   }

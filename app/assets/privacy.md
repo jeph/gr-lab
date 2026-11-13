@@ -86,7 +86,7 @@ On iOS, GR Photo asks for:
 - Photos, to save the photos and videos you download to the GR Photo album. iOS lets an app keep an album only with full access to your library, so that is what GR Photo asks for. It uses the access only to add what you download and to find the album named GR Photo; it does not look at, change or delete your other photos and videos. If you allow limited access or Add Photos Only instead, GR Photo still saves what you download, outside the album.
 - Joining the camera's Wi-Fi network, which iOS asks you to approve. GR Photo also reads the name of the Wi-Fi network your phone is on, only to check that it has joined the camera.
 
-On iOS 26 and later, iOS shows a running download on the Lock Screen and in the Dynamic Island while you use another app. That needs no permission.
+On iOS, GR Photo shows two things on the Lock Screen and in the Dynamic Island while you use another app: that live geotagging is running, with the camera's name and a Stop button (iOS 17 and later), and a running download (iOS 26 and later). Neither needs a permission. You can turn Live Activities off for GR Photo in the Settings app; downloads and geotagging run either way.
 
 GR Photo does not use your phone's camera, microphone or contacts, and it uses your location only for geotagging and for the map of where a photo was taken, as described under Your location and The map. It shows notifications only on Android, and only for running downloads and for live geotagging.
 

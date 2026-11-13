@@ -13,6 +13,9 @@ import gr_camera
     // Flutter engine, for a location event of the history. Native code
     // stores it by itself.
     GrCameraBackground.applicationDidFinishLaunching()
+    if #available(iOS 17.0, *) {
+      GeotagLiveActivity.install()
+    }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 

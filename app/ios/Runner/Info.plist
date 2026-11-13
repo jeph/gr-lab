@@ -49,6 +49,8 @@
 	<string>GR Photo saves the photos and videos you download from your camera to your library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>GR Photo saves the photos and videos you download from your camera to a GR Photo album in your library, which takes full access. It doesn't look at your other photos and videos.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>PHPhotoLibraryPreventAutomaticLimitedAccessAlert</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

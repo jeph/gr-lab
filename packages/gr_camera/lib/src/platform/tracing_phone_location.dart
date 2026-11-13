@@ -26,6 +26,11 @@ final class TracingPhoneLocation implements PhoneLocation {
       listening: 'updates',
     );
     _runStops = _relayed(() => _inner.runStops, 'runStopped', (_) => const {});
+    _runStopPending = _relayed(
+      () => _inner.runStopPending,
+      'runStopPending',
+      (_) => const {},
+    );
     _historyPending = _relayed(
       () => _inner.historyPending,
       'historyPending',
@@ -38,6 +43,7 @@ final class TracingPhoneLocation implements PhoneLocation {
   late final StreamController<LocationAccess> _accessChanges;
   late final StreamController<LocationFix> _updates;
   late final StreamController<void> _runStops;
+  late final StreamController<void> _runStopPending;
   late final StreamController<void> _historyPending;
 
   @override
@@ -48,6 +54,9 @@ final class TracingPhoneLocation implements PhoneLocation {
 
   @override
   Stream<void> get runStops => _runStops.stream;
+
+  @override
+  Stream<void> get runStopPending => _runStopPending.stream;
 
   @override
   Stream<void> get historyPending => _historyPending.stream;
@@ -95,6 +104,10 @@ final class TracingPhoneLocation implements PhoneLocation {
 
   @override
   Future<void> releaseRun() => _traced('releaseRun', _inner.releaseRun);
+
+  @override
+  Future<String?> takeRunStop() =>
+      _traced('takeRunStop', _inner.takeRunStop, result: (run) => {'run': run});
 
   @override
   Future<bool> backgroundUnrestricted() => _traced(

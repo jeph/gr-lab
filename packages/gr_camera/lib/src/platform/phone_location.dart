@@ -7,8 +7,11 @@ import 'package:gr_protocol/gr_protocol.dart';
 /// served by this package's native code.
 ///
 /// Android locates the phone with its `LocationManager` and keeps a run
-/// going with a foreground service of the location type; iOS uses Core
-/// Location. Only Android has a battery optimisation to be exempted from
+/// going with a foreground service of the location type, whose notification
+/// is the run's notice; iOS uses Core Location, and the app shows the notice
+/// as a Live Activity. Only a Live Activity can outlive the app, so only iOS
+/// ever has a Stop to hand over later ([takeRunStop]). Only Android has a
+/// battery optimisation to be exempted from
 /// ([backgroundUnrestricted]); iOS always answers that nothing restricts
 /// the app, because it has no such setting. Both record the history
 /// natively, so it goes on with no Flutter engine running, and hand it over
@@ -46,6 +49,8 @@ final class PlatformPhoneLocation implements PhoneLocation {
           _accessChanges.add(_access(call.arguments));
         case 'runStopped':
           _runStops.add(null);
+        case 'runStopPending':
+          _runStopPending.add(null);
         case 'historyPending':
           _historyPending.add(null);
         case 'log':
@@ -59,6 +64,7 @@ final class PlatformPhoneLocation implements PhoneLocation {
   late final StreamController<LocationFix> _updates;
   final _accessChanges = StreamController<LocationAccess>.broadcast();
   final _runStops = StreamController<void>.broadcast();
+  final _runStopPending = StreamController<void>.broadcast();
   final _historyPending = StreamController<void>.broadcast();
 
   @override
@@ -69,6 +75,9 @@ final class PlatformPhoneLocation implements PhoneLocation {
 
   @override
   Stream<void> get runStops => _runStops.stream;
+
+  @override
+  Stream<void> get runStopPending => _runStopPending.stream;
 
   @override
   Stream<void> get historyPending => _historyPending.stream;
@@ -116,6 +125,12 @@ final class PlatformPhoneLocation implements PhoneLocation {
 
   @override
   Future<void> releaseRun() => _invoke('releaseRun');
+
+  @override
+  Future<String?> takeRunStop() async {
+    final reply = await _invoke('takeRunStop');
+    return reply is String ? reply : null;
+  }
 
   // Without an answer (a native error, or no native code) there is nothing
   // the user could allow.

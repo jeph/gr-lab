@@ -159,6 +159,7 @@ final class GeotagRig {
       storeLocationInfoPending: pending,
     ),
     notice: (status) => LocationRunNotice(
+      run: '1234567',
       title: 'GR IV',
       text: status.name,
       stopLabel: 'Stop',

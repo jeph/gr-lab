@@ -1230,6 +1230,7 @@ final class _RunRequest {
   /// The phone would show and do the same for [other].
   bool sameAs(_RunRequest other) =>
       awake == other.awake &&
+      notice.run == other.notice.run &&
       notice.title == other.notice.title &&
       notice.text == other.notice.text &&
       notice.stopLabel == other.notice.stopLabel &&

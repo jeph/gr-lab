@@ -9,8 +9,8 @@ name: Release
 #                  the build runs, such as Gradle plugins or pub packages, can reach a key
 #   android-sign   signs the APK with the release key from the `release` environment, which only main can deploy to
 #   ios-build      builds the iOS archive, with read-only repository access and no secrets
-#   ios-sign       signs the archive for the App Store with the distribution certificate from the `testflight`
-#                  environment, which only main can deploy to
+#   ios-sign       signs the archive for the App Store with the distribution certificate and the provisioning
+#                  profiles from the `testflight` environment, which only main can deploy to
 #   publish        creates the GitHub release with the APK, the only job allowed to write to the repository. It waits
 #                  for both signed apps, so a version is not released for one platform alone
 #   testflight     uploads the signed iOS app to App Store Connect with the API key from the `testflight` environment.
@@ -25,10 +25,12 @@ name: Release
 #
 # The `testflight` environment holds:
 #   secrets    IOS_DISTRIBUTION_CERTIFICATE_P12_BASE64, IOS_DISTRIBUTION_CERTIFICATE_PASSWORD,
-#              IOS_PROVISIONING_PROFILE_BASE64, APP_STORE_CONNECT_API_KEY_P8, APP_STORE_CONNECT_API_KEY_ID,
-#              APP_STORE_CONNECT_API_ISSUER_ID
-# The certificate and the provisioning profile expire a year after they are made; the profile names the certificate,
-# so a new certificate needs a new profile.
+#              IOS_PROVISIONING_PROFILE_BASE64, IOS_LIVE_ACTIVITY_PROVISIONING_PROFILE_BASE64,
+#              APP_STORE_CONNECT_API_KEY_P8, APP_STORE_CONNECT_API_KEY_ID, APP_STORE_CONNECT_API_ISSUER_ID
+# The two provisioning profiles are the app's (io.jeph.grphoto) and that of its LiveActivity extension
+# (io.jeph.grphoto.LiveActivity), which draws the app's Live Activities and has an App ID of its own. The certificate
+# and the profiles expire a year after they are made; a profile names the certificate, so a new certificate needs
+# new profiles.
 
 on:
   push:
@@ -265,6 +267,15 @@ jobs:
           test "$(lipo -archs "$app/Frameworks/App.framework/App")" = arm64
           test ! -e "$app/Frameworks/App.framework/flutter_assets/kernel_blob.bin"
           test -d "$archive/dSYMs/Runner.app.dSYM"
+          # The extension that draws the app's Live Activities: App Store Connect refuses one whose identifier
+          # does not begin with the app's or whose version differs from the app's.
+          extension() {
+            /usr/libexec/PlistBuddy -c "Print :$1" "$app/PlugIns/LiveActivity.appex/Info.plist"
+          }
+          test "$(extension CFBundleIdentifier)" = io.jeph.grphoto.LiveActivity
+          test "$(extension CFBundleShortVersionString)" = "$VERSION_NAME"
+          test "$(extension CFBundleVersion)" = "$VERSION_CODE"
+          test "$(lipo -archs "$app/PlugIns/LiveActivity.appex/LiveActivity")" = arm64
 
       # A tar file keeps the modes of the archive's files, which an artifact's own packing loses.
       - name: Pack archive
@@ -308,6 +319,7 @@ jobs:
           IOS_DISTRIBUTION_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_P12_BASE64 }}
           IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
           IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_LIVE_ACTIVITY_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_LIVE_ACTIVITY_PROVISIONING_PROFILE_BASE64 }}
         run: |
           tar -xf built/Runner.xcarchive.tar -C built
           tool/sign_ios_archive.sh built/Runner.xcarchive app/ios/Runner/Runner.entitlements exported

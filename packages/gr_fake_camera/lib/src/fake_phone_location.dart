@@ -30,6 +30,8 @@ final class FakePhoneLocation implements PhoneLocation {
   final _accessChanges = StreamController<LocationAccess>.broadcast();
   final _updates = StreamController<LocationFix>.broadcast();
   final _runStops = StreamController<void>.broadcast();
+  final _runStopPending = StreamController<void>.broadcast();
+  String? _runStop;
   final _historyPending = StreamController<void>.broadcast();
   final _settingsOpened = <LocationSettingsPage>[];
   final _runHolds = <({LocationRunNotice notice, bool awake})>[];
@@ -144,6 +146,14 @@ final class FakePhoneLocation implements PhoneLocation {
     _runStops.add(null);
   }
 
+  /// The user presses Stop on a notice of the run [run] that outlived the
+  /// app, or that the phone still shows after the run was released:
+  /// [takeRunStop] hands [run] over and [runStopPending] emits.
+  void pressLeftoverStop(String run) {
+    _runStop = run;
+    _runStopPending.add(null);
+  }
+
   /// The platform's own recording is on ([setHistory]).
   bool get historyEnabled => _historyEnabled;
 
@@ -171,6 +181,7 @@ final class FakePhoneLocation implements PhoneLocation {
       _accessChanges.close(),
       _updates.close(),
       _runStops.close(),
+      _runStopPending.close(),
       _historyPending.close(),
     ]);
   }
@@ -252,6 +263,16 @@ final class FakePhoneLocation implements PhoneLocation {
 
   @override
   Stream<void> get runStops => _runStops.stream;
+
+  @override
+  Future<String?> takeRunStop() async {
+    final run = _runStop;
+    _runStop = null;
+    return run;
+  }
+
+  @override
+  Stream<void> get runStopPending => _runStopPending.stream;
 
   @override
   Future<bool> backgroundUnrestricted() async => unrestricted;

@@ -39,6 +39,12 @@ final class InertPhoneLocation implements PhoneLocation {
   Stream<void> get runStops => const Stream.empty();
 
   @override
+  Future<String?> takeRunStop() async => null;
+
+  @override
+  Stream<void> get runStopPending => const Stream.empty();
+
+  @override
   Future<bool> backgroundUnrestricted() async => true;
 
   @override
