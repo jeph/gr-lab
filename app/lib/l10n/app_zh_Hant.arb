@@ -178,7 +178,7 @@
   "downloadStateRunning": "下載中",
   "geotagClockSection": "時鐘",
   "geotagAllowBackground": "允許在背景執行",
-  "geotagAlwaysBody": "背景地理標記會在 GR Photo 關閉時繼續記錄這支手機的位置，以便為你下載的照片加入地理標記。接下來會打開手機的設定，請在其中選擇「{choice}」。",
+  "geotagAlwaysBody": "背景地理標記需要在 GR Photo 關閉時記錄這支手機的位置。若要開啟此功能，請在手機的位置設定中選擇「{choice}」。你的位置記錄只會用於為照片加入地理標記，絕不會分享。",
   "geotagAlwaysNotNow": "稍後再說",
   "geotagAlwaysTitle": "要一律允許存取位置嗎？",
   "geotagBackgroundRestricted": "這支手機可能會在螢幕關閉時暫停 GR Photo。地理標記要等螢幕亮起後才會重新開始。",

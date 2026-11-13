@@ -178,7 +178,7 @@
   "downloadStateRunning": "正在下载",
   "geotagClockSection": "时钟",
   "geotagAllowBackground": "允许后台运行",
-  "geotagAlwaysBody": "后台地理标记会在 GR Photo 关闭时继续记录这部手机的位置，以便为你下载的照片添加地理标记。接下来会打开手机的设置，请在其中选择“{choice}”。",
+  "geotagAlwaysBody": "后台地理标记需要在 GR Photo 关闭时记录这部手机的位置。要开启此功能，请在手机的位置信息设置中选择“{choice}”。你的位置记录只用于为照片添加地理标记，绝不会共享。",
   "geotagAlwaysNotNow": "以后再说",
   "geotagAlwaysTitle": "要始终允许使用位置信息吗？",
   "geotagBackgroundRestricted": "这部手机可能会在屏幕关闭时暂停 GR Photo。地理标记要等屏幕点亮后才会重新开始。",

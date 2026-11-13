@@ -178,7 +178,7 @@
   "downloadStateRunning": "İndiriliyor",
   "geotagClockSection": "Saat",
   "geotagAllowBackground": "Arka planda izin ver",
-  "geotagAlwaysBody": "Arka planda konum etiketleme, indirdiğiniz fotoğraflara konum etiketi eklemek için bu telefonun konumunu GR Photo kapalıyken de kaydeder. Buna izin vermek için birazdan açılacak telefon ayarlarında şu seçeneği belirleyin: “{choice}”.",
+  "geotagAlwaysBody": "Arka planda konum etiketlemenin, GR Photo kapalıyken bu telefonun konumunu kaydetmesi gerekir. Açmak için telefonunuzun konum ayarlarında şu seçeneği belirleyin: “{choice}”. Konum geçmişiniz yalnızca fotoğraflara konum etiketi eklemek için kullanılır ve asla paylaşılmaz.",
   "geotagAlwaysNotNow": "Şimdi değil",
   "geotagAlwaysTitle": "Konuma her zaman izin verilsin mi?",
   "geotagBackgroundRestricted": "Bu telefon, ekran kapalıyken GR Photo'yu duraklatabilir. Konum etiketleme o zaman ancak ekran açıldığında yeniden başlar.",

@@ -178,7 +178,7 @@
   "downloadStateRunning": "ダウンロード中",
   "geotagClockSection": "時計",
   "geotagAllowBackground": "バックグラウンドで許可",
-  "geotagAlwaysBody": "バックグラウンドジオタグは、ダウンロードする写真にジオタグを付けるため、GR Photoを閉じている間もこのスマートフォンの位置情報を記録します。このあと開くスマートフォンの設定で「{choice}」を選択してください。",
+  "geotagAlwaysBody": "バックグラウンドジオタグは、GR Photoを閉じている間にこのスマートフォンの位置情報を記録する必要があります。オンにするには、スマートフォンの位置情報の設定で「{choice}」を選択してください。位置情報の履歴は写真へのジオタグ付けにのみ使用され、共有されることはありません。",
   "geotagAlwaysNotNow": "今はしない",
   "geotagAlwaysTitle": "位置情報を常に許可しますか？",
   "geotagBackgroundRestricted": "このスマートフォンは、画面がオフの間にGR Photoを一時停止することがあります。その場合、ジオタグは画面をオンにするまで再開しません。",

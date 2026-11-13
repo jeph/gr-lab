@@ -178,7 +178,7 @@
   "downloadStateRunning": "Stahování",
   "geotagClockSection": "Hodiny",
   "geotagAllowBackground": "Povolit na pozadí",
-  "geotagAlwaysBody": "Geotagování na pozadí zaznamenává polohu tohoto telefonu, i když je GR Photo zavřené, aby mohlo ke staženým fotkám přidat polohu. Aby to bylo možné, vyberte v nastavení telefonu, které se teď otevře, možnost „{choice}“.",
+  "geotagAlwaysBody": "Geotagování na pozadí potřebuje zaznamenávat polohu tohoto telefonu, když je GR Photo zavřené. Chcete-li ho zapnout, vyberte v nastavení polohy v telefonu možnost „{choice}“. Vaše historie polohy se používá jen k přidávání polohy k fotkám a nikdy se nesdílí.",
   "geotagAlwaysNotNow": "Teď ne",
   "geotagAlwaysTitle": "Povolit přístup k poloze vždy?",
   "geotagBackgroundRestricted": "Tento telefon může GR Photo při vypnuté obrazovce pozastavit. Geotagování se pak znovu spustí až po zapnutí obrazovky.",

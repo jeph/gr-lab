@@ -178,7 +178,7 @@
   "downloadStateRunning": "A transferir",
   "geotagClockSection": "Relógio",
   "geotagAllowBackground": "Permitir em segundo plano",
-  "geotagAlwaysBody": "A georreferenciação em segundo plano regista a localização deste telemóvel mesmo com o GR Photo fechado, para georreferenciar as fotos que transfere. Para o permitir, escolha «{choice}» nas definições do telemóvel, que se abrem a seguir.",
+  "geotagAlwaysBody": "A georreferenciação em segundo plano precisa de registar a localização deste telemóvel quando o GR Photo está fechado. Para a ativar, escolha «{choice}» nas definições de localização do telemóvel. O seu histórico de localização só é usado para georreferenciar fotos e nunca é partilhado.",
   "geotagAlwaysNotNow": "Agora não",
   "geotagAlwaysTitle": "Permitir sempre a localização?",
   "geotagBackgroundRestricted": "Este telemóvel pode pausar o GR Photo com o ecrã desligado. A georreferenciação só volta a iniciar quando o ecrã é ligado.",

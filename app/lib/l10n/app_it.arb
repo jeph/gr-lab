@@ -178,7 +178,7 @@
   "downloadStateRunning": "Download in corso",
   "geotagClockSection": "Orologio",
   "geotagAllowBackground": "Consenti in background",
-  "geotagAlwaysBody": "Il geotagging in background registra la posizione di questo telefono anche quando GR Photo è chiusa, per aggiungere il geotag alle foto che scarichi. Per consentirlo, scegli “{choice}” nelle impostazioni del telefono, che si aprono subito dopo.",
+  "geotagAlwaysBody": "Il geotagging in background deve registrare la posizione di questo telefono quando GR Photo è chiusa. Per attivarlo, scegli “{choice}” nelle impostazioni della posizione del telefono. La cronologia delle posizioni viene usata solo per il geotagging delle foto e non viene mai condivisa.",
   "geotagAlwaysNotNow": "Non ora",
   "geotagAlwaysTitle": "Consentire sempre l'accesso alla posizione?",
   "geotagBackgroundRestricted": "Questo telefono può sospendere GR Photo a schermo spento. Il geotagging si riavvia solo quando lo schermo si accende.",

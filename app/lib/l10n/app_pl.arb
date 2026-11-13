@@ -178,7 +178,7 @@
   "downloadStateRunning": "Pobieranie",
   "geotagClockSection": "Zegar",
   "geotagAllowBackground": "Zezwól w tle",
-  "geotagAlwaysBody": "Geotagowanie w tle zapisuje lokalizację tego telefonu także wtedy, gdy GR Photo jest zamknięte, aby geotagować pobierane zdjęcia. Aby na to zezwolić, wybierz opcję „{choice}” w ustawieniach telefonu, które otworzą się za chwilę.",
+  "geotagAlwaysBody": "Geotagowanie w tle musi zapisywać lokalizację tego telefonu, gdy GR Photo jest zamknięte. Aby je włączyć, wybierz opcję „{choice}” w ustawieniach lokalizacji telefonu. Twoja historia lokalizacji służy wyłącznie do geotagowania zdjęć i nigdy nie jest udostępniana.",
   "geotagAlwaysNotNow": "Nie teraz",
   "geotagAlwaysTitle": "Zawsze zezwalać na dostęp do lokalizacji?",
   "geotagBackgroundRestricted": "Ten telefon może wstrzymać GR Photo, gdy ekran jest wyłączony. Geotagowanie uruchomi się wtedy ponownie dopiero po włączeniu ekranu.",

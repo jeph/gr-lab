@@ -293,10 +293,10 @@ void main() {
     expect(
       _in(
         _explainSettings,
-        "Background geotagging records this phone's location even when GR "
-        'Photo is closed, to geotag the photos you download. To allow '
-        'that, choose "Allow all the time" in your phone\'s settings, '
-        'which open next.',
+        "Background geotagging needs to record this phone's location when GR "
+        'Photo is closed. To turn it on, choose "Allow all the time" in '
+        "your phone's location settings. Your location history is only "
+        'ever used for geotagging photos and never shared.',
       ),
       findsOne,
     );

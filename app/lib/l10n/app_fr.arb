@@ -178,7 +178,7 @@
   "downloadStateRunning": "Téléchargement",
   "geotagClockSection": "Horloge",
   "geotagAllowBackground": "Autoriser en arrière-plan",
-  "geotagAlwaysBody": "La géolocalisation en arrière-plan enregistre la position de ce téléphone même quand GR Photo est fermé, afin de géolocaliser les photos que vous téléchargez. Pour l'autoriser, choisissez « {choice} » dans les réglages de votre téléphone, qui vont s'ouvrir.",
+  "geotagAlwaysBody": "La géolocalisation en arrière-plan doit enregistrer la position de ce téléphone quand GR Photo est fermé. Pour l'activer, choisissez « {choice} » dans les réglages de position de votre téléphone. Votre historique des positions sert uniquement à géolocaliser les photos et n'est jamais partagé.",
   "geotagAlwaysNotNow": "Plus tard",
   "geotagAlwaysTitle": "Toujours autoriser l'accès à la position ?",
   "geotagBackgroundRestricted": "Ce téléphone peut suspendre GR Photo quand l'écran est éteint. La géolocalisation ne redémarre alors que lorsque l'écran s'allume.",

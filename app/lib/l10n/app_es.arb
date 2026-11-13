@@ -178,7 +178,7 @@
   "downloadStateRunning": "Descargando",
   "geotagClockSection": "Reloj",
   "geotagAllowBackground": "Permitir en segundo plano",
-  "geotagAlwaysBody": "El geoetiquetado en segundo plano registra la ubicación de este teléfono incluso con GR Photo cerrada, para geoetiquetar las fotos que descargas. Para permitirlo, elige «{choice}» en los ajustes del teléfono, que se abrirán a continuación.",
+  "geotagAlwaysBody": "El geoetiquetado en segundo plano necesita registrar la ubicación de este teléfono cuando GR Photo está cerrada. Para activarlo, elige «{choice}» en los ajustes de ubicación del teléfono. Tu historial de ubicaciones solo se usa para geoetiquetar fotos y nunca se comparte.",
   "geotagAlwaysNotNow": "Ahora no",
   "geotagAlwaysTitle": "¿Permitir siempre la ubicación?",
   "geotagBackgroundRestricted": "Este teléfono puede pausar GR Photo con la pantalla apagada. El geoetiquetado se inicia de nuevo solo cuando se enciende la pantalla.",

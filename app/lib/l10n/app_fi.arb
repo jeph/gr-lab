@@ -178,7 +178,7 @@
   "downloadStateRunning": "Ladataan",
   "geotagClockSection": "Kello",
   "geotagAllowBackground": "Salli taustalla",
-  "geotagAlwaysBody": "Taustapaikkamerkintä tallentaa tämän puhelimen sijainnin myös silloin, kun GR Photo on suljettu, jotta lataamiisi kuviin voidaan lisätä paikkamerkintä. Valitse sitä varten ”{choice}” puhelimen asetuksista, jotka avautuvat seuraavaksi.",
+  "geotagAlwaysBody": "Taustapaikkamerkinnän on tallennettava tämän puhelimen sijainti, kun GR Photo on suljettu. Ota se käyttöön valitsemalla puhelimen sijaintiasetuksista ”{choice}”. Sijaintihistoriaasi käytetään vain kuvien paikkamerkintään, eikä sitä koskaan jaeta.",
   "geotagAlwaysNotNow": "Ei nyt",
   "geotagAlwaysTitle": "Sallitaanko sijainnin käyttö aina?",
   "geotagBackgroundRestricted": "Tämä puhelin voi keskeyttää GR Photon, kun näyttö on pois päältä. Paikkamerkintä käynnistyy silloin uudelleen vasta, kun näyttö kytketään päälle.",

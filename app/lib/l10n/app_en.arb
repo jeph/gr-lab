@@ -973,9 +973,9 @@
   "@geotagAllowBackground": {
     "description": "Button under geotagBackgroundRestricted on the camera's card (Android only): shows the phone's own question whether GR Photo may run in the background without battery restrictions. Keep it short."
   },
-  "geotagAlwaysBody": "Background geotagging records this phone's location even when GR Photo is closed, to geotag the photos you download. To allow that, choose \"{choice}\" in your phone's settings, which open next.",
+  "geotagAlwaysBody": "Background geotagging needs to record this phone's location when GR Photo is closed. To turn it on, choose \"{choice}\" in your phone's location settings. Your location history is only ever used for geotagging photos and never shared.",
   "@geotagAlwaysBody": {
-    "description": "Body of the dialog titled geotagAlwaysTitle: why background geotagging needs location all the time, and which choice to make in the phone's settings, which open when the user presses the geotagOpenSettings button. Build the sentence so that the choice needs no case ending.",
+    "description": "Body of the dialog titled geotagAlwaysTitle, three sentences: that background geotagging needs the phone's location while GR Photo is closed; which choice turns it on in the phone's location settings, which the geotagOpenSettings button opens; and that the location history is used for nothing but geotagging photos and is not shared. Build the second sentence so that the choice needs no case ending.",
     "placeholders": {
       "choice": {
         "type": "String",

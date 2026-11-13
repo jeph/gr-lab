@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:grphoto/l10n/l10n.dart';
 import 'package:grphoto/src/widgets/gr_dialog.dart';
 
-/// Says why background geotagging needs location all the time and which
-/// choice allows it, before Android opens GR Photo's location settings for
-/// it: that page says nothing about why it opened. Pops true for Open
-/// settings and false for Not now.
+/// Says why background geotagging needs location all the time, which
+/// choice allows it and what the location history is used for, before
+/// Android opens GR Photo's location settings for it: that page says
+/// nothing about why it opened. Pops true for Open settings and false for
+/// Not now.
 ///
 /// Android only. iOS asks in an alert of its own over the app, which shows
 /// GR Photo's reason, so it names no [choice] and this is never shown
