@@ -2679,9 +2679,9 @@
   "@settingsAutoDisconnectSubtitle": {
     "description": "Settings: explanation under Auto-disconnect."
   },
-  "settingsBackgroundExplain90Days": "Photos downloaded more than {days} days after they were taken get no location from background geotagging.",
-  "@settingsBackgroundExplain90Days": {
-    "description": "Paragraph of the screen that explains geotagging: the limit of the location history.",
+  "settingsBackgroundExplainHistory": "When you turn background geotagging on, your phone asks you to allow access to your location all the time. Location history is only ever stored locally on this phone and you can delete it in Settings at any time. The past {days} days of location data are stored on your phone. Photos downloaded more than {days} days after they were taken get no location from background geotagging.",
+  "@settingsBackgroundExplainHistory": {
+    "description": "Second and last paragraph of the screen that explains background geotagging: turning the Background geotagging switch on brings up the phone's permission prompt or settings page, the location history stays on the phone and can be deleted, and how far back it goes. Name the permission choice as the phone's settings do (Android: Allow all the time; iOS: Always).",
     "placeholders": {
       "days": {
         "type": "int",
@@ -2690,13 +2690,9 @@
       }
     }
   },
-  "settingsBackgroundExplainAsk": "When you turn background geotagging on, your phone asks you to allow location all the time.",
-  "@settingsBackgroundExplainAsk": {
-    "description": "Last paragraph of the screen that explains geotagging: turning the Background geotagging switch on brings up the phone's permission prompt or settings page. Name the choice as the phone's settings do (Android: Allow all the time; iOS: Always)."
-  },
-  "settingsBackgroundExplainBackground": "Background geotagging is the hands-free way. This phone keeps a history of where it has been for {days} days, also while GR Photo is closed. When you download a photo, GR Photo adds the place recorded closest to the time it was taken. It is less accurate: the phone records a place only now and then, so it can be some way from where you stood.",
-  "@settingsBackgroundExplainBackground": {
-    "description": "Paragraph of the screen that explains geotagging: what background geotagging is and its trade-off.",
+  "settingsBackgroundExplainHow": "Background geotagging keeps a history of this phone's location for {days} days, even when GR Photo is closed and inactive. When you download a photo, GR Photo adds the phone's location data to the photo when the photo was taken. Unlike live geotagging, you don't have to keep GR Photo active for background geotagging to work. However, location data provided by background geotagging is slightly less accurate than live geotagging.",
+  "@settingsBackgroundExplainHow": {
+    "description": "First paragraph of the screen that explains background geotagging: what it does (a downloaded photo gets the place the phone was at when the photo was taken) and how it compares with live geotagging.",
     "placeholders": {
       "days": {
         "type": "int",
@@ -2704,26 +2700,10 @@
         "description": "How many days the location history is kept: always 90."
       }
     }
-  },
-  "settingsBackgroundExplainLive": "Live geotagging is the accurate way. While a camera is on, this phone sends it its location over Bluetooth, and the camera saves it in each photo. It needs the camera connected over Bluetooth and switched on, and is turned on for each camera.",
-  "@settingsBackgroundExplainLive": {
-    "description": "Paragraph of the screen that explains geotagging: what live geotagging is and what it needs."
-  },
-  "settingsBackgroundExplainLiveWins": "You can have both on. A photo that already has a location from the camera keeps it.",
-  "@settingsBackgroundExplainLiveWins": {
-    "description": "Paragraph of the screen that explains geotagging: live and background geotagging can both be on, and background geotagging never changes a location the camera saved in a photo. Two short, plain sentences."
-  },
-  "settingsBackgroundExplainPrivate": "The history stays on this phone, and you can delete it in Settings at any time.",
-  "@settingsBackgroundExplainPrivate": {
-    "description": "Paragraph of the screen that explains geotagging: where the location history is kept."
-  },
-  "settingsBackgroundExplainTitle": "Two ways to add locations",
-  "@settingsBackgroundExplainTitle": {
-    "description": "Heading of the screen that Learn more under the Background geotagging switch opens. It explains live and background geotagging."
   },
   "settingsBackgroundGeotagging": "Background geotagging",
   "@settingsBackgroundGeotagging": {
-    "description": "Title of the switch in a camera's details that has the phone keep a history of where it has been, from which GR Photo adds a location to the photos downloaded from that camera."
+    "description": "Title of the switch in a camera's details that has the phone keep a history of where it has been, from which GR Photo adds a location to the photos downloaded from that camera. Also the heading of the screen that Learn more under the switch opens."
   },
   "settingsBackgroundGeotaggingPaused": "Paused",
   "@settingsBackgroundGeotaggingPaused": {
@@ -2735,7 +2715,7 @@
   },
   "settingsBackgroundLearnMore": "Learn more",
   "@settingsBackgroundLearnMore": {
-    "description": "Row under the Background geotagging switch in the camera's details that opens the screen explaining live and background geotagging. Keep it short."
+    "description": "Row under the Background geotagging switch in the camera's details that opens the screen explaining background geotagging. Keep it short."
   },
   "settingsCamera": "Camera",
   "@settingsCamera": {

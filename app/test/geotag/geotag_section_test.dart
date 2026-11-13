@@ -96,7 +96,7 @@ SavedCamera _saved(TestApp app, [String serial = _serial]) =>
     app.models.cameras.cameras.singleWhere((c) => c.serial == serial);
 
 void main() {
-  testWidgets('Learn more opens a screen that explains the two ways of '
+  testWidgets('Learn more opens a screen that explains background '
       'geotagging, and Back returns to the details with nothing asked of '
       'the phone', (tester) async {
     final location = FakePhoneLocation(access: _denied);
@@ -113,21 +113,23 @@ void main() {
       of: find.byKey(_explain),
       matching: find.textContaining(text),
     );
-    expect(said('Two ways to add locations'), findsOneWidget);
-    expect(said('Live geotagging is the accurate way'), findsOneWidget);
-    expect(said('connected over Bluetooth and switched on'), findsOneWidget);
-    expect(said('Background geotagging is the hands-free way'), findsOneWidget);
-    expect(said('history of where it has been for 90 days'), findsOneWidget);
-    expect(said('It is less accurate'), findsOneWidget);
     expect(
-      said(
-        'You can have both on. A photo that already has a location from '
-        'the camera keeps it.',
+      find.descendant(
+        of: find.byKey(_explain),
+        matching: find.text('Background geotagging'),
       ),
       findsOneWidget,
     );
+    expect(
+      said("keeps a history of this phone's location for 90 days"),
+      findsOneWidget,
+    );
+    expect(said('Unlike live geotagging'), findsOneWidget);
+    expect(said('slightly less accurate'), findsOneWidget);
+    expect(said('allow access to your location all the time'), findsOneWidget);
+    expect(said('only ever stored locally on this phone'), findsOneWidget);
+    expect(said('past 90 days of location data'), findsOneWidget);
     expect(said('more than 90 days after they were taken'), findsOneWidget);
-    expect(said('allow location all the time'), findsOneWidget);
 
     // Once the screen has slid in.
     await tapWhenReady(tester, find.byType(BackButton).last);

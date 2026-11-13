@@ -19,8 +19,8 @@ import 'package:grphoto/src/widgets/group.dart';
 ///   keeps it from recording (a refusal when it was turned on, or a
 ///   permission taken away since, which leaves it on and paused) with a
 ///   button to the phone's settings.
-/// - Learn more: the two ways of geotagging and what each costs, on a
-///   screen of its own ([GeotaggingExplainedScreen]).
+/// - Learn more: what background geotagging does and keeps, on a screen
+///   of its own ([GeotaggingExplainedScreen]).
 ///
 /// Clock: Sync camera clock, on unless the user turns it off, and held on
 /// while background geotagging is on ([SavedCamera.keepsClock]). Each
