@@ -38,6 +38,12 @@ final class BondedCamera implements BleTransport {
 
   /// The rate every scan asked for; null where it left it to the transport.
   final scanRates = <BleScanRate?>[];
+
+  /// For every scan listened to, how many earlier ones had not ended yet:
+  /// a transport that shares one platform scan starts it anew only for a
+  /// scan that follows the end of the others.
+  final scanOverlaps = <int>[];
+  int _scansOpen = 0;
   final ops = <String>[];
 
   /// While set, a connect waits for it before the link opens.
@@ -95,7 +101,21 @@ final class BondedCamera implements BleTransport {
   }) {
     scans++;
     scanRates.add(rate);
-    return advertising?.stream ?? const Stream.empty();
+    final source = advertising;
+    if (source == null) return const Stream.empty();
+    StreamSubscription<BleAdvertisement>? upstream;
+    late final StreamController<BleAdvertisement> scan;
+    scan = StreamController<BleAdvertisement>(
+      onListen: () {
+        scanOverlaps.add(_scansOpen++);
+        upstream = source.stream.listen(scan.add, onError: scan.addError);
+      },
+      onCancel: () async {
+        await upstream?.cancel();
+        _scansOpen--;
+      },
+    );
+    return scan.stream;
   }
 
   @override
@@ -2287,8 +2307,11 @@ void main() {
         expect(s.ble, isNull);
         expect(camera.advertising!.hasListener, isTrue);
         expect(camera.dropLinks, 0);
-        // iOS reports a camera once per scan to an app that is not on screen.
+        // iOS reports a camera once per scan to an app that is not on
+        // screen, and a platform scan only starts anew once the scan
+        // before it has ended.
         expect(camera.scans, scans + 1);
+        expect(camera.scanOverlaps.last, 0);
         expect(camera.scanRates.last, BleScanRate.full);
 
         final ready = next(s, 'ble.ready');

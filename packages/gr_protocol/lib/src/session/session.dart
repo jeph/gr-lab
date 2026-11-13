@@ -1578,10 +1578,10 @@ final class GrSession {
   /// be made leaves the session parked, reading advertisements again
   /// after the first [GrSessionOptions.bleReconnectDelays] pause: the
   /// camera was switched off again, or went out of reach. They are read
-  /// from a new scan: iOS reports a camera once per scan to an app that is
-  /// not on screen (Apple, "Core Bluetooth Background Processing for iOS
-  /// Apps"), so the old one would stay silent when the camera advertises
-  /// again.
+  /// from a new scan, started once the old one has ended: iOS reports a
+  /// camera once per scan to an app that is not on screen (Apple, "Core
+  /// Bluetooth Background Processing for iOS Apps"), so the old one would
+  /// stay silent when the camera advertises again.
   Future<void> _relinkParked() async {
     try {
       await _connectBle(initial: false);
@@ -1598,7 +1598,18 @@ final class GrSession {
         _closeSignal.future,
         Future<void>.delayed(_delay(options.bleReconnectDelays, 0)),
       );
-      if (_parked && !_closing && _wakeRunning == null) {
+      if (!_parked || _closing || _wakeRunning != null) return;
+      // The old scan is ended, and that waited for, before the new one is
+      // asked for: a transport that runs one platform scan for all its
+      // listeners leaves it running when one is replaced by another that
+      // asks for the same, and it is the platform's scan that has to
+      // start anew.
+      final ended = _parkWatch;
+      _parkWatch = null;
+      await ended?.cancel();
+      // Unless the session went on meanwhile, or the scan was started at
+      // another rate.
+      if (_parked && !_closing && _parkWatch == null) {
         _watchParked(_parkWatchRate);
       }
     }

@@ -228,6 +228,27 @@ void main() {
     await slow.cancel();
   });
 
+  test('a watch replaced by one that asks for the same leaves the platform '
+      'scan running; one started after the first has ended starts it anew, '
+      'as a platform that reports a camera once per scan needs', () async {
+    Stream<BleAdvertisement> watch() =>
+        transport.scan(serviceUuids: [_service], rate: BleScanRate.full);
+    final first = watch().listen((_) {});
+    await pumpEventQueue();
+    expect(platform.calls, ['start']);
+
+    final second = watch().listen((_) {});
+    unawaited(first.cancel());
+    await pumpEventQueue();
+    expect(platform.calls, ['start']);
+
+    await second.cancel();
+    final third = watch().listen((_) {});
+    await pumpEventQueue();
+    expect(platform.calls, ['start', 'stop', 'stopped', 'start']);
+    await third.cancel();
+  });
+
   test('a scan the platform refuses to start ends with its error, and the '
       'next one starts', () async {
     platform.startError = StateError('Bluetooth is off');
