@@ -70,6 +70,11 @@ final class FakePhoneLocation implements PhoneLocation {
   /// it is.
   LocationAccess? alwaysAnswer;
 
+  /// What [alwaysSettingsChoice] answers: the choice named on the settings
+  /// page a phone opens for [requestAlways] (Android). Null for a phone
+  /// that asks over the app (iOS).
+  String? alwaysChoice;
+
   /// How often [requestWhileInUse] was called.
   int get whileInUseRequests => _whileInUseRequests;
 
@@ -213,6 +218,9 @@ final class FakePhoneLocation implements PhoneLocation {
     if (!_closed) _accessChanges.add(_access);
     return _access;
   }
+
+  @override
+  Future<String?> alwaysSettingsChoice() async => alwaysChoice;
 
   @override
   Future<void> openSettings(LocationSettingsPage page) async {

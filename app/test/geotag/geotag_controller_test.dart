@@ -46,6 +46,11 @@ const _phoneOff = LocationAccess(
   serviceOn: false,
 );
 
+/// For a phone that asks for location at all times over the app: it names
+/// no choice in its settings, so there is nothing to explain.
+Future<bool> _unasked(String choice) async =>
+    fail('asked to explain the settings choice "$choice"');
+
 /// The GR IV paired second, which is not around.
 const _other = GrPairedCamera(
   deviceId: '00:00:5E:00:53:01',
@@ -435,7 +440,10 @@ void main() {
       await _settle();
       expect(app.camera.clockWrites, isEmpty);
 
-      expect(await geotag.turnBackgroundOn(_serial), isNull);
+      expect(
+        await geotag.turnBackgroundOn(_serial, explainSettings: _unasked),
+        isNull,
+      );
       expect(_saved(app).syncClock, isFalse);
       expect(_saved(app).keepsClock, isTrue);
       await _until(() => app.camera.clockWrites.isNotEmpty);
@@ -460,7 +468,10 @@ void main() {
       expect(_saved(app).backgroundGeotagging, isFalse);
       expect(location.historyEnabled, isFalse);
 
-      expect(await geotag.turnBackgroundOn(_serial), isNull);
+      expect(
+        await geotag.turnBackgroundOn(_serial, explainSettings: _unasked),
+        isNull,
+      );
       expect(location.whileInUseRequests, 1);
       expect(location.alwaysRequests, 1);
       expect((await _onDisk(app)).backgroundGeotagging, isTrue);
@@ -481,7 +492,10 @@ void main() {
       final app = await _app(location: location);
       final geotag = app.models.geotag;
 
-      expect(await geotag.turnBackgroundOn(_serial), GeotagNeed.permission);
+      expect(
+        await geotag.turnBackgroundOn(_serial, explainSettings: _unasked),
+        GeotagNeed.permission,
+      );
       expect(location.whileInUseRequests, 1);
       expect(location.alwaysRequests, 0);
       expect(_saved(app).backgroundGeotagging, isFalse);
@@ -493,7 +507,10 @@ void main() {
       final app = await _app(location: location);
 
       expect(
-        await app.models.geotag.turnBackgroundOn(_serial),
+        await app.models.geotag.turnBackgroundOn(
+          _serial,
+          explainSettings: _unasked,
+        ),
         GeotagNeed.always,
       );
       expect(location.alwaysRequests, 1);
@@ -501,12 +518,77 @@ void main() {
       expect(location.historyEnabled, isFalse);
     });
 
+    test('a phone that opens its settings for location at all times: the '
+        'user is told which choice to make there first', () async {
+      final location = FakePhoneLocation()
+        ..alwaysChoice = 'Allow all the time'
+        ..alwaysAnswer = FakePhoneLocation.always;
+      final app = await _app(location: location);
+      final explained = <String>[];
+
+      expect(
+        await app.models.geotag.turnBackgroundOn(
+          _serial,
+          explainSettings: (choice) async {
+            // Before the settings open.
+            expect(location.alwaysRequests, 0);
+            explained.add(choice);
+            return true;
+          },
+        ),
+        isNull,
+      );
+      expect(explained, ['Allow all the time']);
+      expect(location.alwaysRequests, 1);
+      expect(_saved(app).backgroundGeotagging, isTrue);
+      expect(location.historyEnabled, isTrue);
+    });
+
+    test('the user does not want the settings opened: they stay closed '
+        'and it stays off', () async {
+      final location = FakePhoneLocation()
+        ..alwaysChoice = 'Allow all the time'
+        ..alwaysAnswer = FakePhoneLocation.always;
+      final app = await _app(location: location);
+
+      expect(
+        await app.models.geotag.turnBackgroundOn(
+          _serial,
+          explainSettings: (_) async => false,
+        ),
+        isNull,
+      );
+      expect(location.alwaysRequests, 0);
+      expect(_saved(app).backgroundGeotagging, isFalse);
+      expect(location.historyEnabled, isFalse);
+    });
+
+    test('location allowed at all times already: the settings are neither '
+        'explained nor opened', () async {
+      final location = FakePhoneLocation(access: FakePhoneLocation.always)
+        ..alwaysChoice = 'Allow all the time';
+      final app = await _app(location: location);
+
+      expect(
+        await app.models.geotag.turnBackgroundOn(
+          _serial,
+          explainSettings: _unasked,
+        ),
+        isNull,
+      );
+      expect(location.alwaysRequests, 0);
+      expect(_saved(app).backgroundGeotagging, isTrue);
+    });
+
     test('a permission reduced later leaves it on and paused, and it '
         'resumes by itself when the permission is back', () async {
       final location = FakePhoneLocation(access: FakePhoneLocation.always);
       final app = await _app(location: location);
       final geotag = app.models.geotag;
-      expect(await geotag.turnBackgroundOn(_serial), isNull);
+      expect(
+        await geotag.turnBackgroundOn(_serial, explainSettings: _unasked),
+        isNull,
+      );
       expect(location.alwaysRequests, 0);
 
       for (final (access, need) in [
@@ -553,7 +635,10 @@ void main() {
       await _addOther(app);
       const other = '1111111';
 
-      expect(await geotag.turnBackgroundOn(other), isNull);
+      expect(
+        await geotag.turnBackgroundOn(other, explainSettings: _unasked),
+        isNull,
+      );
       expect(location.historyEnabled, isTrue);
       expect(_saved(app, other).backgroundGeotagging, isTrue);
       expect(_saved(app).backgroundGeotagging, isFalse);
@@ -568,7 +653,10 @@ void main() {
       location.setAccess(FakePhoneLocation.always);
       await _until(() => geotag.backgroundPausedBy(_saved(app, other)) == null);
 
-      expect(await geotag.turnBackgroundOn(_serial), isNull);
+      expect(
+        await geotag.turnBackgroundOn(_serial, explainSettings: _unasked),
+        isNull,
+      );
       await geotag.turnBackgroundOff(other);
       // The first camera still has it on.
       expect(location.historyEnabled, isTrue);
@@ -583,7 +671,10 @@ void main() {
       final app = await _app(location: location);
       final geotag = app.models.geotag;
       await _addOther(app);
-      expect(await geotag.turnBackgroundOn('1111111'), isNull);
+      expect(
+        await geotag.turnBackgroundOn('1111111', explainSettings: _unasked),
+        isNull,
+      );
       expect(location.historyEnabled, isTrue);
 
       await app.models.cameras.remove('1111111');
@@ -595,7 +686,10 @@ void main() {
       final location = FakePhoneLocation(access: FakePhoneLocation.always);
       final app = await _app(location: location);
       final geotag = app.models.geotag;
-      expect(await geotag.turnBackgroundOn(_serial), isNull);
+      expect(
+        await geotag.turnBackgroundOn(_serial, explainSettings: _unasked),
+        isNull,
+      );
       expect(await geotag.history.isEmpty, isTrue);
 
       location.recordHistory(_fix(latitude: 35.5, longitude: 139.5));
@@ -628,7 +722,10 @@ void main() {
       await _settle();
       expect(await geotag.history.isEmpty, isTrue);
 
-      expect(await geotag.turnBackgroundOn(_serial), isNull);
+      expect(
+        await geotag.turnBackgroundOn(_serial, explainSettings: _unasked),
+        isNull,
+      );
       await _until(() async {
         location.emitFix(_fix(latitude: 35.5, longitude: 139.5));
         return !await geotag.history.isEmpty;
@@ -651,7 +748,10 @@ void main() {
       final geotag = app.models.geotag;
       await app.models.connection.connect();
       await _until(() => location.locating);
-      expect(await geotag.turnBackgroundOn(_serial), isNull);
+      expect(
+        await geotag.turnBackgroundOn(_serial, explainSettings: _unasked),
+        isNull,
+      );
 
       final start = clock.now().toUtc().subtract(const Duration(seconds: 40));
       DateTime at(int seconds) => start.add(Duration(seconds: seconds));

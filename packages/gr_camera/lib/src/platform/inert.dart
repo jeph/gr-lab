@@ -19,6 +19,9 @@ final class InertPhoneLocation implements PhoneLocation {
   Future<LocationAccess> requestAlways() async => LocationAccess.none;
 
   @override
+  Future<String?> alwaysSettingsChoice() async => null;
+
+  @override
   Future<void> openSettings(LocationSettingsPage page) async {}
 
   @override

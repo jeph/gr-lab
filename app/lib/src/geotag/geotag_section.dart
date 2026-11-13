@@ -6,6 +6,7 @@ import 'package:grphoto/l10n/l10n.dart';
 import 'package:grphoto/src/app_scope.dart';
 import 'package:grphoto/src/connection/connect_failure_view.dart';
 import 'package:grphoto/src/data/cameras.dart';
+import 'package:grphoto/src/geotag/always_location_dialog.dart';
 import 'package:grphoto/src/geotag/geotag_controller.dart';
 import 'package:grphoto/src/geotag/geotag_need.dart';
 import 'package:grphoto/src/geotag/geotag_text.dart';
@@ -18,7 +19,8 @@ import 'package:grphoto/src/widgets/group.dart';
 /// - Background geotagging: the switch for this camera, and under it what
 ///   keeps it from recording (a refusal when it was turned on, or a
 ///   permission taken away since, which leaves it on and paused) with a
-///   button to the phone's settings.
+///   button to the phone's settings. Where turning it on opens the phone's
+///   settings (Android), [AlwaysLocationDialog] says why first.
 /// - Learn more: what background geotagging does and keeps, on a screen
 ///   of its own ([GeotaggingExplainedScreen]).
 ///
@@ -60,7 +62,11 @@ class _GeotagSectionState extends State<GeotagSection> {
       _asking = true;
       _refused = null;
     });
-    final need = await _geotag.turnBackgroundOn(_serial);
+    final need = await _geotag.turnBackgroundOn(
+      _serial,
+      explainSettings: (choice) async =>
+          mounted && await AlwaysLocationDialog.show(context, choice),
+    );
     if (!mounted) return;
     setState(() {
       _asking = false;

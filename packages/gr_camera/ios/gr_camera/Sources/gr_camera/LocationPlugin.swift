@@ -46,6 +46,10 @@ final class LocationPlugin {
       locator.requestWhileInUse { result($0.map) }
     case "requestAlways":
       locator.requestAlways { result($0.map) }
+    case "alwaysSettingsChoice":
+      // iOS asks for Always in an alert over the app, which shows the
+      // app's own reason: there is no settings page to name a choice of.
+      result(nil)
     case "openSettings":
       locator.openSettings()
       result(nil)

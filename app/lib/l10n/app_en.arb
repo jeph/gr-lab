@@ -973,6 +973,24 @@
   "@geotagAllowBackground": {
     "description": "Button under geotagBackgroundRestricted on the camera's card (Android only): shows the phone's own question whether GR Photo may run in the background without battery restrictions. Keep it short."
   },
+  "geotagAlwaysBody": "Background geotagging records this phone's location even when GR Photo is closed, to geotag the photos you download. To allow that, choose \"{choice}\" in your phone's settings, which open next.",
+  "@geotagAlwaysBody": {
+    "description": "Body of the dialog titled geotagAlwaysTitle: why background geotagging needs location all the time, and which choice to make in the phone's settings, which open when the user presses the geotagOpenSettings button. Build the sentence so that the choice needs no case ending.",
+    "placeholders": {
+      "choice": {
+        "type": "String",
+        "description": "The choice that allows location all the time, as Android words it on its settings page in the phone's language, for example Allow all the time."
+      }
+    }
+  },
+  "geotagAlwaysNotNow": "Not now",
+  "@geotagAlwaysNotNow": {
+    "description": "Button of the dialog titled geotagAlwaysTitle that closes it without opening the phone's settings; background geotagging stays off."
+  },
+  "geotagAlwaysTitle": "Allow location all the time?",
+  "@geotagAlwaysTitle": {
+    "description": "Title of the dialog shown on Android when the user turns Background geotagging on, before Android opens GR Photo's location settings, where location has to be allowed all the time. Android only: iOS asks in an alert of its own. A question."
+  },
   "geotagBackgroundRestricted": "This phone can pause GR Photo while its screen is off. Geotagging then starts again only when the screen comes on.",
   "@geotagBackgroundRestricted": {
     "description": "Shown under the Live geotagging switch on the camera's card, below its description, on an Android phone whose battery saving may stop GR Photo while the screen is off: a camera switched on then gets no location until the phone's screen is on again. The geotagAllowBackground button follows."
@@ -1005,7 +1023,7 @@
   },
   "geotagOpenSettings": "Open settings",
   "@geotagOpenSettings": {
-    "description": "Button that opens the page of the phone's settings where location can be allowed for GR Photo, or turned on for the phone: on the camera's card and in the camera's details. Keep it short."
+    "description": "Button that opens the page of the phone's settings where location can be allowed for GR Photo, or turned on for the phone: on the camera's card, in the camera's details, and as the answer of the dialog titled geotagAlwaysTitle. Keep it short."
   },
   "geotagSection": "Location",
   "@geotagSection": {

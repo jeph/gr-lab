@@ -10,7 +10,9 @@ import 'package:gr_protocol/gr_protocol.dart';
 /// going with a foreground service of the location type, whose notification
 /// is the run's notice; iOS uses Core Location, and the app shows the notice
 /// as a Live Activity. Only a Live Activity can outlive the app, so only iOS
-/// ever has a Stop to hand over later ([takeRunStop]). Only Android has a
+/// ever has a Stop to hand over later ([takeRunStop]). Only Android sends
+/// the user to a settings page for location at all times
+/// ([alwaysSettingsChoice]); iOS asks over the app. Only Android has a
 /// battery optimisation to be exempted from
 /// ([backgroundUnrestricted]); iOS always answers that nothing restricts
 /// the app, because it has no such setting. Both record the history
@@ -92,6 +94,12 @@ final class PlatformPhoneLocation implements PhoneLocation {
   @override
   Future<LocationAccess> requestAlways() async =>
       _access(await _invoke('requestAlways'));
+
+  @override
+  Future<String?> alwaysSettingsChoice() async {
+    final reply = await _invoke('alwaysSettingsChoice');
+    return reply is String ? reply : null;
+  }
 
   @override
   Future<void> openSettings(LocationSettingsPage page) =>

@@ -263,10 +263,28 @@ final class GeotagController extends ChangeNotifier {
   /// phone's location while GR Photo is in use, which the phone wants
   /// granted first, then for location at all times. Only that turns it on;
   /// otherwise it stays off and the result says what the phone lacks.
-  Future<GeotagNeed?> turnBackgroundOn(String serial) async {
+  ///
+  /// A phone that opens its settings for location at all times names the
+  /// choice to make there ([PhoneLocation.alwaysSettingsChoice]), and
+  /// [explainSettings] tells the user why they open and which choice that
+  /// is. When it answers false the settings stay closed, background
+  /// geotagging stays off and the result is null: the user knows what is
+  /// missing.
+  Future<GeotagNeed?> turnBackgroundOn(
+    String serial, {
+    required Future<bool> Function(String choice) explainSettings,
+  }) async {
     final need = _liveNeed(await _ask(_location.requestWhileInUse));
     if (need != null) return need;
-    if (!locationAlways) await _ask(_location.requestAlways);
+    if (!locationAlways) {
+      final choice = await _guard(
+        'reading the settings choice',
+        _location.alwaysSettingsChoice,
+        null,
+      );
+      if (choice != null && !await explainSettings(choice)) return null;
+      await _ask(_location.requestAlways);
+    }
     if (!locationAlways) return GeotagNeed.always;
     await _saved(cameras.setBackgroundGeotagging(serial, on: true));
     await _setHistory();

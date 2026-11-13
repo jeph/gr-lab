@@ -80,6 +80,13 @@ final class TracingPhoneLocation implements PhoneLocation {
   );
 
   @override
+  Future<String?> alwaysSettingsChoice() => _traced(
+    'alwaysSettingsChoice',
+    _inner.alwaysSettingsChoice,
+    result: (choice) => {'choice': choice},
+  );
+
+  @override
   Future<void> openSettings(LocationSettingsPage page) => _traced(
     'openSettings',
     () => _inner.openSettings(page),

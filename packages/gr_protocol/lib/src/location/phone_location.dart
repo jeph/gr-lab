@@ -254,10 +254,20 @@ abstract interface class PhoneLocation {
 
   /// Asks the user for location at all times. Call it only once
   /// [LocationPermission.whileInUse] is held: both platforms refuse it
-  /// before. Android shows the app's location settings page for it; iOS
-  /// shows a prompt once and nothing after that. Returns the access when
-  /// the user is back in the app.
+  /// before. Android shows the app's location settings page for it
+  /// ([alwaysSettingsChoice]), or the app's own settings page once the
+  /// user left that one twice without allowing and Android stopped
+  /// showing it; iOS shows a prompt once and nothing after that. Returns
+  /// the access when the user is back in the app.
   Future<LocationAccess> requestAlways();
+
+  /// The choice that allows location at all times on the settings page
+  /// [requestAlways] opens, as the phone words it there ("Allow all the
+  /// time" on an Android set to English); null where [requestAlways] asks
+  /// with a prompt over the app (iOS). The settings page says nothing
+  /// about why it opened, so an app that gets a choice here tells the user
+  /// why and names the choice before it calls [requestAlways].
+  Future<String?> alwaysSettingsChoice();
 
   /// Opens [page] of the phone's settings.
   Future<void> openSettings(LocationSettingsPage page);

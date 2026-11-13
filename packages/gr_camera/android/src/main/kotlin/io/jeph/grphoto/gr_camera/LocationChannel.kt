@@ -87,6 +87,22 @@ class LocationChannel(private val context: Context, messenger: BinaryMessenger) 
      * when the app is back on screen.
      */
     private val exemptionAsks = mutableListOf<MethodChannel.Result>()
+
+    /**
+     * Whether Android wanted a reason shown for location at all times
+     * before `requestAlways` last asked for it ([alwaysPageWithheld]).
+     */
+    private var alwaysRationaleBefore = false
+
+    /**
+     * The `requestAlways` calls waiting for the user to come back from the
+     * app's page of the phone's settings, opened because Android no longer
+     * shows its own page for location at all times. They are answered when
+     * the app is back on screen after [leftForSettings]: the answer to the
+     * request can arrive just before a resume that is not that return.
+     */
+    private val settingsReturns = mutableListOf<MethodChannel.Result>()
+    private var leftForSettings = false
     private var askedToNotify = false
 
     /** The activity is resumed; [GrCameraPlugin] reports changes. */
@@ -121,8 +137,10 @@ class LocationChannel(private val context: Context, messenger: BinaryMessenger) 
         resumed = false
         answerExemptionAsks()
         // A prompt cannot be answered any more.
-        val waiting = prompts.values.flatten()
+        val waiting = prompts.values.flatten() + settingsReturns
         prompts.clear()
+        settingsReturns.clear()
+        leftForSettings = false
         if (waiting.isEmpty()) return
         val access = LocationAccess.toMap(context)
         for (result in waiting) result.success(access)
@@ -136,13 +154,20 @@ class LocationChannel(private val context: Context, messenger: BinaryMessenger) 
     fun onResume() {
         resumed = true
         answerExemptionAsks()
-        accessChanged()
+        val access = accessChanged()
+        if (leftForSettings) {
+            leftForSettings = false
+            val waiting = settingsReturns.toList()
+            settingsReturns.clear()
+            for (result in waiting) result.success(access)
+        }
         GeotagService.refresh()
         askToNotify()
     }
 
     fun onPause() {
         resumed = false
+        if (settingsReturns.isNotEmpty()) leftForSettings = true
     }
 
     fun dispose() {
@@ -165,6 +190,10 @@ class LocationChannel(private val context: Context, messenger: BinaryMessenger) 
             "access" -> result.success(LocationAccess.toMap(context))
             "requestWhileInUse" -> requestWhileInUse(result)
             "requestAlways" -> requestAlways(result)
+            // The words of "Allow all the time" on the settings page that
+            // requestAlways opens, in the phone's language.
+            "alwaysSettingsChoice" ->
+                result.success(context.packageManager.backgroundPermissionOptionLabel.toString())
             "openSettings" -> openSettings(call, result)
             "startUpdates" -> {
                 updatesWanted = true
@@ -225,7 +254,26 @@ class LocationChannel(private val context: Context, messenger: BinaryMessenger) 
         }
         // Android shows the app's location settings page for this one, and
         // answers when the user comes back.
+        alwaysRationaleBefore =
+            over.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
         prompt(over, ALWAYS_REQUEST, arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), result)
+    }
+
+    /**
+     * Android answered the request for location at all times without
+     * showing its settings page. It shows the page for two requests, and
+     * nothing once the user came back from it twice without allowing
+     * (research/protocol/geotagging.md §6.4). It says so only through
+     * whether it wants a reason shown: not before the first request, after
+     * one refusal it does, after the second it no longer does. So a request
+     * refused with no reason wanted before or after it showed no page.
+     */
+    private fun alwaysPageWithheld(): Boolean {
+        val over = activity ?: return false
+        return !alwaysRationaleBefore &&
+            LocationAccess.whileInUse(context) &&
+            !LocationAccess.always(context) &&
+            !over.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
     }
 
     /**
@@ -251,6 +299,14 @@ class LocationChannel(private val context: Context, messenger: BinaryMessenger) 
         // The granted state is read back rather than taken from the
         // answer, which is empty when Android dropped the request.
         val waiting = prompts.remove(requestCode) ?: return false
+        // The user was told the settings open, so they do: the app's own
+        // page, which leads to the permission.
+        if (requestCode == ALWAYS_REQUEST && alwaysPageWithheld() && open(appSettings())) {
+            log("Android showed no page for location at all times: opened the app's settings")
+            settingsReturns += waiting
+            leftForSettings = false
+            return true
+        }
         val access = accessChanged()
         for (result in waiting) result.success(access)
         // The question about notifications waited for this one.
@@ -274,23 +330,32 @@ class LocationChannel(private val context: Context, messenger: BinaryMessenger) 
 
     private fun openSettings(call: MethodCall, result: MethodChannel.Result) {
         val page = when (call.argument<String>("page")) {
-            "app" -> Intent(
-                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.fromParts("package", context.packageName, null),
-            )
+            "app" -> appSettings()
             "phone" -> Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
             else -> {
                 result.error("failed", "openSettings needs page: app or phone", null)
                 return
             }
         }
-        try {
-            val over = activity
-            if (over != null) over.startActivity(page) else context.startActivity(page.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        if (open(page)) {
             result.success(null)
-        } catch (e: ActivityNotFoundException) {
-            result.error("failed", "the phone has no such settings page: ${e.message}", null)
+        } else {
+            result.error("failed", "the phone has no such settings page", null)
         }
+    }
+
+    /** The app's page of the phone's settings, which leads to its permissions. */
+    private fun appSettings() =
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+
+    /** Shows [page] of the phone's settings; false when the phone has none such. */
+    private fun open(page: Intent): Boolean = try {
+        val over = activity
+        if (over != null) over.startActivity(page) else context.startActivity(page.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
+    } catch (e: ActivityNotFoundException) {
+        log("no settings page for ${page.action}: ${e.message}")
+        false
     }
 
     /** The providers precise positions come from; see the class comment. */

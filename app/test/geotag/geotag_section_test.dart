@@ -26,6 +26,9 @@ const _need = Key('camera-details-background-need');
 const _openSettings = Key('camera-details-background-settings');
 const _learnMore = Key('camera-details-geotag-learn-more');
 const _explain = Key('background-geotag-explain');
+const _explainSettings = Key('always-location');
+const _notNow = Key('always-location-later');
+const _toSettings = Key('always-location-settings');
 const _clockRow = Key('camera-details-clock');
 const _clockSwitch = Key('camera-details-clock-switch');
 
@@ -271,6 +274,64 @@ void main() {
     expect(_switchOf(tester, _clockSwitch).value, isFalse);
     expect(_switchOf(tester, _clockSwitch).onChanged, isNotNull);
     expect(_in(_clockRow, _clockSubtitle), findsOneWidget);
+
+    await app.dispose();
+  });
+
+  testWidgets('on a phone that opens its settings for location all the '
+      'time, a dialog first says why and names the choice to make there; '
+      'Not now leaves the settings closed and the switch off', (tester) async {
+    final location = FakePhoneLocation(access: _denied)
+      ..whileInUseAnswer = FakePhoneLocation.whileInUse
+      ..alwaysChoice = 'Allow all the time'
+      ..alwaysAnswer = FakePhoneLocation.always;
+    final app = await _start(tester, location: location);
+
+    await _tap(tester, _switch);
+    await pumpUntilFound(tester, find.byKey(_explainSettings));
+    expect(_in(_explainSettings, 'Allow location all the time?'), findsOne);
+    expect(
+      _in(
+        _explainSettings,
+        "Background geotagging records this phone's location even when GR "
+        'Photo is closed, to geotag the photos you download. To allow '
+        'that, choose "Allow all the time" in your phone\'s settings, '
+        'which open next.',
+      ),
+      findsOne,
+    );
+    expect(_in(_notNow, 'Not now'), findsOne);
+    expect(_in(_toSettings, 'Open settings'), findsOne);
+    // The phone asked about location while in use; its settings wait for
+    // the answer.
+    expect(location.whileInUseRequests, 1);
+    expect(location.alwaysRequests, 0);
+
+    await _tap(tester, _notNow);
+    await pumpUntil(
+      tester,
+      () => _switchOf(tester, _switch).onChanged != null,
+      reason: 'the switch enabled again',
+    );
+    expect(find.byKey(_explainSettings), findsNothing);
+    expect(location.alwaysRequests, 0);
+    expect(_saved(app).backgroundGeotagging, isFalse);
+    expect(_switchOf(tester, _switch).value, isFalse);
+    // The user chose to leave it: nothing is said to be missing.
+    expect(find.byKey(_need), findsNothing);
+
+    // Asked again the next time, and Open settings goes on.
+    await _tap(tester, _switch);
+    await pumpUntilFound(tester, find.byKey(_explainSettings));
+    await _tap(tester, _toSettings);
+    await pumpUntil(
+      tester,
+      () => _saved(app).backgroundGeotagging,
+      reason: 'background geotagging on',
+    );
+    expect(find.byKey(_explainSettings), findsNothing);
+    expect(location.alwaysRequests, 1);
+    expect(location.historyEnabled, isTrue);
 
     await app.dispose();
   });

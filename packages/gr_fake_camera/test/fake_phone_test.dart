@@ -75,6 +75,13 @@ void main() {
       await sub.cancel();
     });
 
+    test('names the settings choice for location at all times only when '
+        'scripted to open its settings for it', () async {
+      expect(await phone.alwaysSettingsChoice(), isNull);
+      phone.alwaysChoice = 'Allow all the time';
+      expect(await phone.alwaysSettingsChoice(), 'Allow all the time');
+    });
+
     test('records the settings pages opened', () async {
       await phone.openSettings(LocationSettingsPage.phone);
       await phone.openSettings(LocationSettingsPage.app);
