@@ -47,6 +47,7 @@ flutter:
     - assets/fonts/JetBrainsMono-OFL.txt
     - assets/map/style.json
     - assets/map/map-credits.txt
+    - assets/map/android-libraries.txt
     - assets/photo-credits.txt
     - assets/privacy.md
   shaders:
