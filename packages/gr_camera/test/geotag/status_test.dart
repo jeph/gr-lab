@@ -181,12 +181,10 @@ void main() {
     final closedAt = rig.steps.length;
     expect(rig.steps.sublist(steps), ['geotag.run.release']);
 
-    geotagging
-      ..configure(
-        const GeotagSettings(live: false, syncClock: true),
-        notice: (status) => throw StateError('no notice is asked for'),
-      )
-      ..resume();
+    geotagging.configure(
+      const GeotagSettings(live: false, syncClock: true),
+      notice: (status) => throw StateError('no notice is asked for'),
+    );
     await tester.pump(const Duration(seconds: 1));
     expect(notified, 0);
     expect(rig.steps, hasLength(closedAt));

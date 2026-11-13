@@ -987,7 +987,7 @@
   },
   "geotagNoticeStop": "Stop",
   "@geotagNoticeStop": {
-    "description": "Button of Android's geotagging notification that stops live geotagging until the camera is next switched on. Keep it short."
+    "description": "Button of Android's geotagging notification that turns live geotagging off for the camera, as the switch on the camera's card does: it stays off until the user turns it on again in GR Photo. Keep it short."
   },
   "geotagNoticeTitle": "Geotagging: {cameraName}",
   "@geotagNoticeTitle": {
@@ -1002,10 +1002,6 @@
   "geotagOpenSettings": "Open settings",
   "@geotagOpenSettings": {
     "description": "Button that opens the page of the phone's settings where location can be allowed for GR Photo, or turned on for the phone: on the camera's card and in the camera's details. Keep it short."
-  },
-  "geotagResume": "Resume",
-  "@geotagResume": {
-    "description": "Button under the Live geotagging switch on the camera's card, shown with geotagStatusStopped: starts geotagging again after the user stopped it from the notification."
   },
   "geotagSection": "Location",
   "@geotagSection": {
@@ -1034,10 +1030,6 @@
   "geotagStatusSending": "Geotagging using this phone's location",
   "@geotagStatusSending": {
     "description": "Geotagging is running: the camera gets this phone's location, or will as soon as the phone has a position good enough to send. The text of Android's notification while geotagging runs with GR Photo not on screen."
-  },
-  "geotagStatusStopped": "Stopped. It starts again the next time the camera is switched on.",
-  "@geotagStatusStopped": {
-    "description": "The user pressed Stop on Android's geotagging notification. Shown under the Live geotagging switch on the camera's card, below its description. A Resume button follows."
   },
   "geotagStatusUnsupported": "This camera can't be sent a location",
   "@geotagStatusUnsupported": {

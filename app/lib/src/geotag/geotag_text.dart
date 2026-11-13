@@ -11,7 +11,6 @@ String geotagStatusText(AppLocalizations l10n, GeotagStatus status) =>
       GeotagStatus.permissionDenied => l10n.geotagStatusPermissionDenied,
       GeotagStatus.preciseNeeded => l10n.geotagStatusPreciseNeeded,
       GeotagStatus.locationOff => l10n.geotagStatusLocationOff,
-      GeotagStatus.stopped => l10n.geotagStatusStopped,
       GeotagStatus.needsApp => l10n.geotagStatusNeedsApp,
       GeotagStatus.waitingForCamera => l10n.geotagStatusWaitingForCamera,
       GeotagStatus.offOnCamera => l10n.geotagStatusOffOnCamera,
@@ -30,7 +29,6 @@ String? geotagProblemText(AppLocalizations l10n, GeotagStatus status) =>
       GeotagStatus.permissionDenied ||
       GeotagStatus.preciseNeeded ||
       GeotagStatus.locationOff ||
-      GeotagStatus.stopped ||
       GeotagStatus.needsApp ||
       GeotagStatus.offOnCamera => geotagStatusText(l10n, status),
       GeotagStatus.off ||

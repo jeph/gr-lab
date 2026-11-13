@@ -32,7 +32,6 @@ const _card = Key('camera-card-geotag');
 const _switch = Key('camera-card-geotag-switch');
 const _settings = Key('camera-card-geotag-settings');
 const _store = Key('camera-card-geotag-store');
-const _resume = Key('camera-card-geotag-resume');
 const _problem = Key('camera-card-geotag-problem');
 const _background = Key('camera-card-geotag-background');
 
@@ -382,8 +381,10 @@ void main() {
     await app.dispose();
   });
 
-  testWidgets("after Stop on the phone's notice the line says so and "
-      'offers Resume', (tester) async {
+  testWidgets("Stop on the phone's notice turns live geotagging off as the "
+      "switch does: the switch is off, the camera's Store Location Info is "
+      'turned off, and it starts again only when the user turns it '
+      'on', (tester) async {
     final location = FakePhoneLocation();
     final app = await _start(
       tester,
@@ -392,21 +393,33 @@ void main() {
       live: true,
     );
     await pumpUntil(tester, () => location.runHeld, reason: 'the run');
-    expect(find.byKey(_resume), findsNothing);
-
-    location.pressStop();
-    await pumpUntilFound(tester, _said('Stopped.'));
-    expect(
-      find.descendant(of: find.byKey(_resume), matching: find.text('Resume')),
-      findsOneWidget,
-    );
     expect(_switchOf(tester).value, isTrue);
 
-    await _tap(tester, _resume);
+    location.pressStop();
+    await pumpUntil(
+      tester,
+      () => !_switchOf(tester).value,
+      reason: 'the switch off',
+    );
+    expect(app.models.cameras.current!.liveGeotagging, isFalse);
+    await pumpUntil(
+      tester,
+      () => !app.camera.storeLocationInfo,
+      reason: 'Store Location Info off on the camera',
+    );
+    expect(find.byKey(_problem), findsNothing);
+    expect(_said(_whatItDoes), findsOneWidget);
+
+    // Nothing runs any more.
+    await pumpRounds(tester, 20);
+    expect(location.runHeld, isFalse);
+    expect(location.locating, isFalse);
+    expect(app.models.geotag.status, GeotagStatus.off);
+
+    await _tap(tester, _switch);
     await _untilStatus(tester, app, GeotagStatus.waitingForLocation);
-    await _untilNoProblem(tester);
-    expect(find.byKey(_resume), findsNothing);
     await pumpUntil(tester, () => location.runHeld, reason: 'the run again');
+    expect(app.camera.storeLocationInfo, isTrue);
 
     await app.dispose();
   });

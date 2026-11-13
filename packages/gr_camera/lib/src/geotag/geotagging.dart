@@ -90,10 +90,6 @@ enum GeotagStatus {
   /// Location is off for the whole phone.
   locationOff,
 
-  /// The user ended it from the notification; [CameraGeotagging.resume] or
-  /// the camera's next power-on restarts it.
-  stopped,
-
   /// The camera came on while the app was not on screen and the phone
   /// would not let the run start from there.
   needsApp,
@@ -191,6 +187,7 @@ final class CameraGeotagging extends ChangeNotifier {
   StreamSubscription<LocationFix>? _updates;
   final _fixes = StreamController<LocationFix>.broadcast();
   final _storeLocationInfoWritten = StreamController<bool>.broadcast();
+  final _stops = StreamController<void>.broadcast();
 
   GeotagSettings? _settings;
   LocationRunNotice Function(GeotagStatus status)? _notice;
@@ -230,11 +227,10 @@ final class CameraGeotagging extends ChangeNotifier {
   /// Location Info is turned off when the camera is next on and linked.
   bool _turnOffWanted = false;
 
-  /// The user ended live geotagging from the platform's notice.
+  /// The user ended live geotagging from the platform's notice: it counts
+  /// as off from then on, until the app, told through [stoppedByUser],
+  /// has turned the setting off.
   bool _stopped = false;
-
-  /// The session saw the camera off, or gave it up, since [_stopped].
-  bool _offSinceStop = false;
 
   /// The phone refused the run because the app is not on screen. Asked
   /// again when the app is on screen (the access is reported then) or the
@@ -270,6 +266,12 @@ final class CameraGeotagging extends ChangeNotifier {
   /// (for the app's history).
   Stream<LocationFix> get fixes => _fixes.stream;
 
+  /// An event each time the user ends live geotagging from the platform's
+  /// notice (its Stop button). Nothing is located or written from then
+  /// on, and the app turns the camera's setting off, as its switch does:
+  /// live geotagging starts again only when the user turns it on.
+  Stream<void> get stoppedByUser => _stops.stream;
+
   /// Applies the app's settings; call at session start and on every
   /// change. [notice] gives the platform notice for a status
   /// ([GeotagStatus.sending], [GeotagStatus.waitingForLocation],
@@ -285,7 +287,8 @@ final class CameraGeotagging extends ChangeNotifier {
     required LocationRunNotice Function(GeotagStatus status) notice,
   }) {
     if (_closed) return;
-    final wasLive = _live;
+    // What the app said last: a Stop on the notice is not its change.
+    final wasLive = _settings?.live ?? false;
     _settings = settings;
     _notice = notice;
     _camera.event('geotag.configure', settings._toJson());
@@ -322,17 +325,6 @@ final class CameraGeotagging extends ChangeNotifier {
     await _setStoreLocationInfo(period, on: true, why: 'user');
   }
 
-  /// Starts again after [GeotagStatus.stopped].
-  void resume() {
-    if (_closed) return;
-    _camera.event('geotag.resume');
-    _stopped = false;
-    _needsApp = false;
-    _runUnavailable = false;
-    _waitedOut = false;
-    _reconcile();
-  }
-
   // ---------------------------------------------------------------- state
 
   static const _notOn = BleException(
@@ -345,7 +337,9 @@ final class CameraGeotagging extends ChangeNotifier {
     GrBleCatalog.geoTag,
   ];
 
-  bool get _live => _settings?.live ?? false;
+  /// Live geotagging is on: the app's setting, unless the user has ended
+  /// it from the notice since.
+  bool get _live => !_stopped && (_settings?.live ?? false);
 
   bool get _clockWanted => _settings?.syncClock ?? false;
 
@@ -387,13 +381,7 @@ final class CameraGeotagging extends ChangeNotifier {
     return _turnOffWanted ? false : null;
   }
 
-  void _onSessionEvent(GrSessionEvent event) {
-    // The session stopped linking a camera that is off or gone.
-    if (event.kind == 'ble.gaveUp' || event.kind == 'ble.parked') {
-      _offSinceStop = true;
-    }
-    _reconcile();
-  }
+  void _onSessionEvent(GrSessionEvent _) => _reconcile();
 
   Future<void> _readAccess() async {
     final access = await _camera.location.access();
@@ -419,8 +407,8 @@ final class CameraGeotagging extends ChangeNotifier {
     _runAsked = null;
     _runHeld = false;
     _stopped = true;
-    _offSinceStop = false;
     _camera.event('geotag.stopped');
+    _stops.add(null);
     _reconcile();
   }
 
@@ -456,7 +444,6 @@ final class CameraGeotagging extends ChangeNotifier {
     }
     if (!access.serviceOn) return GeotagStatus.locationOff;
     if (!access.precise) return GeotagStatus.preciseNeeded;
-    if (_stopped) return GeotagStatus.stopped;
     // A camera that is off is waited for, with or without the run.
     if (_needsApp && _period != null) return GeotagStatus.needsApp;
     return _runningStatus();
@@ -486,7 +473,6 @@ final class CameraGeotagging extends ChangeNotifier {
     final ble = _session.ble;
     // A camera the session is turning off counts as off from the write.
     final cameraOff = _session.cameraOff || _session.turningOff;
-    if (cameraOff) _offSinceStop = true;
     final period = _period;
     if (period != null && (cameraOff || !identical(period.ble, ble))) {
       if (identical(_locatingFor, period)) _startStandby();
@@ -503,12 +489,6 @@ final class CameraGeotagging extends ChangeNotifier {
     _needsApp = false;
     _runUnavailable = false;
     _camera.event('geotag.cameraOn');
-    if (_stopped && _offSinceStop) {
-      // Switched on after being off: the user's Stop was for the last
-      // time it was on.
-      _stopped = false;
-      _camera.event('geotag.resume', {'reason': 'cameraOn'});
-    }
   }
 
   /// Asks of the camera what the settings want for [period], in this
@@ -746,7 +726,7 @@ final class CameraGeotagging extends ChangeNotifier {
   /// or dropped the link, as long as live geotagging runs.
   void _syncLocating() {
     final period = _period;
-    final allowed = _active && !_stopped && !_needsApp;
+    final allowed = _active && !_needsApp;
     final forCamera =
         allowed && period != null && (period.storeLocationInfo ?? false)
         ? period
@@ -1010,7 +990,7 @@ final class CameraGeotagging extends ChangeNotifier {
   /// Starts the wait for a camera that is not on while a run is wanted,
   /// and releases the run when it lasts [_cameraWait].
   void _syncCameraWait() {
-    final waiting = _active && !_stopped && !_waitedOut && _period == null;
+    final waiting = _active && !_waitedOut && _period == null;
     if (!waiting) {
       _cameraWaitTimer?.cancel();
       _cameraWaitTimer = null;
@@ -1029,7 +1009,7 @@ final class CameraGeotagging extends ChangeNotifier {
   /// releases it otherwise.
   void _syncRun() {
     final notice = _notice;
-    final wanted = notice == null || !_active || _stopped || _waitedOut
+    final wanted = notice == null || !_active || _waitedOut
         ? null
         : _RunRequest(notice(_runningStatus()), awake: _period != null);
     final asked = _runAsked;
@@ -1100,6 +1080,7 @@ final class CameraGeotagging extends ChangeNotifier {
     }
     unawaited(_fixes.close());
     unawaited(_storeLocationInfoWritten.close());
+    unawaited(_stops.close());
   }
 }
 

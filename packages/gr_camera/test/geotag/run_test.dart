@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
@@ -75,19 +77,26 @@ void main() {
     expect(rig.phone.locating, isFalse);
   });
 
-  testWidgets('Stop on the notice ends it: nothing is located or written '
-      'until it is resumed', (tester) async {
+  testWidgets('Stop on the notice ends it and tells the app: nothing is '
+      'located or written until the app has turned the setting off and the '
+      'user turns it on again', (tester) async {
     final rig = await GeotagRig.start(tester);
     await rig.configure();
     await rig.emit(rig.fix());
     final holds = rig.phone.runHolds.length;
+    var stops = 0;
+    final stopped = rig.geotagging.stoppedByUser.listen((_) => stops++);
 
     rig.phone.pressStop();
     await rig.advance(const Duration(seconds: 1));
-    expect(rig.status, GeotagStatus.stopped);
+    expect(stops, 1);
+    expect(rig.status, GeotagStatus.off);
     expect(rig.steps, contains('geotag.stopped'));
     expect(rig.phone.locating, isFalse);
 
+    // Settings that still say on, as the app had them before it heard of
+    // the Stop, start nothing.
+    await rig.configure(syncClock: false);
     rig.phone.currentFix = rig.fix(north: 100);
     await rig.emit(rig.fix(north: 100));
     await rig.advance(
@@ -100,52 +109,54 @@ void main() {
     expect(rig.phone.runHeld, isFalse);
     expect(rig.phone.runHolds, hasLength(holds));
     expect(rig.phone.runReleases, 0);
-    expect(rig.status, GeotagStatus.stopped);
+    expect(rig.status, GeotagStatus.off);
 
-    rig.geotagging.resume();
-    await rig.advance(const Duration(seconds: 1));
-    expect(rig.status, GeotagStatus.sending);
-    expect(rig.phone.runHeld, isTrue);
-    expect(rig.phone.locating, isTrue);
-    await rig.emit(rig.fix(north: 100));
-    expect(rig.writes, hasLength(2));
-    await rig.close();
-  });
-
-  testWidgets('stopped ends when the camera is next switched on after being '
-      'off, not when its link merely comes back', (tester) async {
-    final rig = await GeotagRig.start(tester);
-    await rig.configure();
-    rig.phone.pressStop();
-    await rig.advance(const Duration(seconds: 1));
-    expect(rig.status, GeotagStatus.stopped);
-
-    rig.camera.dropBluetooth();
-    await rig.until(() => rig.links == 2, reason: 'the link to come back');
-    await rig.advance(const Duration(seconds: 1));
-    expect(rig.status, GeotagStatus.stopped);
+    // The app turns the setting off, which turns the camera's off too.
+    await rig.configure(live: false, pending: false);
+    expect(rig.camera.storeLocationInfo, isFalse);
+    expect(rig.status, GeotagStatus.off);
     expect(rig.phone.runHeld, isFalse);
-    expect(rig.phone.locating, isFalse);
 
-    rig.camera.poweredOn = false;
-    await rig.until(() => rig.session.cameraOff, reason: 'the camera off');
-    await rig.advance(const Duration(seconds: 5));
-    expect(rig.status, GeotagStatus.stopped);
-
-    rig.camera.poweredOn = true;
+    await rig.configure(pending: true);
     await rig.until(
       () => rig.status == GeotagStatus.waitingForLocation,
       reason: 'live geotagging to start again',
     );
-    // The setting is read before the phone is located.
-    await rig.advance(const Duration(seconds: 1));
-    expect(rig.decisions('geotag.resume'), [
-      {'reason': 'cameraOn'},
-    ]);
     expect(rig.phone.runHeld, isTrue);
+    await rig.advance(const Duration(seconds: 1));
     expect(rig.phone.locating, isTrue);
+    await rig.emit(rig.fix(north: 100));
+    expect(rig.writes, hasLength(2));
+    expect(stops, 1);
+    unawaited(stopped.cancel());
+    await rig.close();
+  });
+
+  testWidgets('after Stop it stays off when the link comes back and when '
+      'the camera is switched off and on again', (tester) async {
+    final rig = await GeotagRig.start(tester);
+    await rig.configure();
+    rig.phone.pressStop();
+    await rig.advance(const Duration(seconds: 1));
+    expect(rig.status, GeotagStatus.off);
+
+    rig.camera.dropBluetooth();
+    await rig.until(() => rig.links == 2, reason: 'the link to come back');
+    await rig.advance(const Duration(seconds: 1));
+    expect(rig.status, GeotagStatus.off);
+
+    rig.camera.poweredOn = false;
+    await rig.until(() => rig.session.cameraOff, reason: 'the camera off');
+    await rig.advance(const Duration(seconds: 5));
+    rig.camera.poweredOn = true;
+    await rig.until(() => !rig.session.cameraOff, reason: 'the camera on');
+    await rig.advance(const Duration(seconds: 5));
+
+    expect(rig.status, GeotagStatus.off);
+    expect(rig.phone.runHeld, isFalse);
+    expect(rig.phone.locating, isFalse);
     await rig.emit(rig.fix());
-    expect(rig.writes, hasLength(1));
+    expect(rig.writes, isEmpty);
     await rig.close();
   });
 

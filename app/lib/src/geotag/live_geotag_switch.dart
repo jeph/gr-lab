@@ -20,8 +20,8 @@ import 'package:grphoto/src/widgets/group.dart';
 /// The line under the title says what the switch does, on or off: the
 /// switch says which. What holds live geotagging up, where the user can
 /// help, is said under the row with a button: turn the camera's Store
-/// Location Info back on, resume after Stop on the phone's notice, or open
-/// the page of the phone's settings that allows what is missing. A refusal
+/// Location Info back on, or open the page of the phone's settings that
+/// allows what is missing. A refusal
 /// when turning it on leaves the switch off and says what is needed there.
 /// With nothing else held up, a phone that may stop GR Photo while its
 /// screen is off is named, with a button that asks the user to allow it in
@@ -101,19 +101,13 @@ class _LiveGeotagSwitchState extends State<LiveGeotagSwitch> {
               label: l10n.geotagAllowBackground,
               onPressed: () => unawaited(_geotag.allowBackground()),
             )
-          : switch (status) {
-              GeotagStatus.offOnCamera => _Action(
-                key: const Key('camera-card-geotag-store'),
-                label: l10n.geotagTurnOnStoreLocationInfo,
-                onPressed: () => unawaited(_geotag.turnOnStoreLocationInfo()),
-              ),
-              GeotagStatus.stopped => _Action(
-                key: const Key('camera-card-geotag-resume'),
-                label: l10n.geotagResume,
-                onPressed: _geotag.resume,
-              ),
-              _ => null,
-            };
+          : status == GeotagStatus.offOnCamera
+          ? _Action(
+              key: const Key('camera-card-geotag-store'),
+              label: l10n.geotagTurnOnStoreLocationInfo,
+              onPressed: () => unawaited(_geotag.turnOnStoreLocationInfo()),
+            )
+          : null;
       final shape = RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(GrRadii.md),
         side: BorderSide(color: c.line),

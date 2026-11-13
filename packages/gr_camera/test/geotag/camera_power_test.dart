@@ -319,7 +319,7 @@ void main() {
 
     rig.phone.pressStop();
     await rig.advance(const Duration(seconds: 1));
-    expect(rig.status, GeotagStatus.stopped);
+    expect(rig.status, GeotagStatus.off);
     expect(rig.phone.locating, isFalse);
     await rig.close();
   });

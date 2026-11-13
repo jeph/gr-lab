@@ -20,8 +20,9 @@ import 'package:grphoto/src/services.dart';
 /// **Live geotagging**, per camera (`SavedCamera.liveGeotagging`): the
 /// camera layer sends the phone's location to a camera that is on
 /// ([CameraGeotagging]), from when GR Photo is opened and has linked the
-/// camera. This controller gives each session its settings and saves that
-/// the camera took the Store Location Info value it was owed. Nothing
+/// camera. This controller gives each session its settings, saves that
+/// the camera took the Store Location Info value it was owed, and turns
+/// the setting off when the user presses Stop on the phone's notice. Nothing
 /// starts GR Photo for a camera that is switched on while the app is not
 /// running \[design\]: that was tried and did not start it
 /// (research/protocol/geotagging.md §6.3).
@@ -110,6 +111,7 @@ final class GeotagController extends ChangeNotifier {
   String? _sessionSerial;
   StreamSubscription<LocationFix>? _fixes;
   StreamSubscription<bool>? _written;
+  StreamSubscription<void>? _stops;
 
   /// What [_geotagging] was configured with last, so that it is told again
   /// only when something changed.
@@ -258,10 +260,6 @@ final class GeotagController extends ChangeNotifier {
     );
   }
 
-  /// Starts live geotagging again after the user stopped it from the
-  /// phone's notice ([GeotagStatus.stopped]).
-  void resume() => _geotagging?.resume();
-
   /// Turns background geotagging on for [serial]'s camera: asks for the
   /// phone's location while GR Photo is in use, which the phone wants
   /// granted first, then for location at all times. Only that turns it on;
@@ -386,8 +384,10 @@ final class GeotagController extends ChangeNotifier {
     _geotagging?.removeListener(_onGeotagging);
     unawaited(_fixes?.cancel());
     unawaited(_written?.cancel());
+    unawaited(_stops?.cancel());
     _fixes = null;
     _written = null;
+    _stops = null;
     _configured = null;
     _session = session;
     _sessionSerial = session == null ? null : connection.camera?.serial;
@@ -398,6 +398,7 @@ final class GeotagController extends ChangeNotifier {
     _written = geotagging.storeLocationInfoWritten.listen(
       _onStoreLocationInfoWritten,
     );
+    _stops = geotagging.stoppedByUser.listen((_) => _onStoppedByUser());
     _configure();
   }
 
@@ -453,6 +454,15 @@ final class GeotagController extends ChangeNotifier {
           AppLocalizations.supportedLocales,
         ),
   );
+
+  /// The user pressed Stop on the phone's notice: live geotagging is
+  /// turned off for the session's camera, as its switch does, until the
+  /// user turns it on again.
+  void _onStoppedByUser() {
+    final serial = _sessionSerial;
+    if (serial == null) return;
+    unawaited(turnLiveOff(serial));
+  }
 
   void _onStoreLocationInfoWritten(bool written) {
     final serial = _sessionSerial;
@@ -578,6 +588,7 @@ final class GeotagController extends ChangeNotifier {
     _geotagging?.removeListener(_onGeotagging);
     unawaited(_fixes?.cancel());
     unawaited(_written?.cancel());
+    unawaited(_stops?.cancel());
     for (final subscription in _phone) {
       unawaited(subscription.cancel());
     }
