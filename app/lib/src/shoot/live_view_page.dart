@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:grphoto/l10n/l10n.dart';
 import 'package:grphoto/src/app_scope.dart';
+import 'package:grphoto/src/camera/camera_top_bar.dart';
 import 'package:grphoto/src/connection/camera_pill.dart';
 import 'package:grphoto/src/connection/connect_failure_view.dart';
 import 'package:grphoto/src/connection/connect_steps.dart';
@@ -191,8 +192,10 @@ class _LiveLayoutState extends State<_LiveLayout> {
     if (picked != null) await _model.setTimer(picked);
   }
 
-  /// From this width the controls above and below the picture take a row
-  /// each instead of a stack \[design\].
+  /// From this width the controls below the picture take a row instead of
+  /// a stack, and those above it two rows instead of three where the top
+  /// bar has room for Remote / Live view ([ShootModeSwitch.inTopBar])
+  /// \[design\].
   static const _wideWidth = 600.0;
 
   /// Each rail beside the picture in [_rails] takes the room the picture
@@ -228,11 +231,6 @@ class _LiveLayoutState extends State<_LiveLayout> {
   /// joining the camera's Wi-Fi a place \[design\].
   static const _minRoomBetweenBars = 48.0;
 
-  /// The padding of the row the controls start with, and its height at
-  /// the default text size: its padding and its 36 pt buttons.
-  static const _topRowPadding = EdgeInsets.fromLTRB(18, 6, 18, 0);
-  static const double _topRowHeight = 6 + 36;
-
   /// The shutter in a [VerticalBar] fits the bar's width with a margin on
   /// either side \[design\].
   static const _barShutterSize = 64.0;
@@ -240,11 +238,6 @@ class _LiveLayoutState extends State<_LiveLayout> {
   /// Under the last shot at the foot of a [VerticalBar], at least: as far
   /// as the dock stands from it on the other pages \[design\].
   static const _barFoot = 16.0;
-
-  /// Each page of a window that folds down its middle holds one part of
-  /// the rows of [_barsBesideBar] where it is at least this wide
-  /// \[design\].
-  static const _minFoldPageWidth = 280.0;
 
   /// Between the camera at the top of [_table] and the picture.
   static const _tableTopGap = 8.0;
@@ -313,7 +306,9 @@ class _LiveLayoutState extends State<_LiveLayout> {
     final fold = WindowFold.table(context);
     if (fold == null) return null;
     final uprightHeight = fold.top - insets.top;
-    if (uprightHeight < _topRowHeight + _minTablePictureHeight) return null;
+    if (uprightHeight < CameraTopBar.height + _minTablePictureHeight) {
+      return null;
+    }
     final flatHeight = window.height - insets.bottom - fold.bottom;
     final text = MediaQuery.textScalerOf(context);
     return flatHeight >= _tableControlsHeight(text, wide: wide) ? fold : null;
@@ -347,13 +342,10 @@ class _LiveLayoutState extends State<_LiveLayout> {
           children: [
             SafeArea(
               // On a table the camera goes beside the system's status, not
-              // under it ([_tableTop]).
-              top: tableFold == null,
-              minimum: EdgeInsets.only(
-                left: side,
-                right: side,
-                top: bar == null ? 0 : StatusBandBar.cornerMargin,
-              ),
+              // under it ([_tableTop]), and so does the top bar in a status
+              // band ([_top]).
+              top: tableFold == null && StatusBand.of(context) == null,
+              minimum: EdgeInsets.only(left: side, right: side),
               child: LayoutBuilder(
                 builder: (context, box) {
                   final size = box.biggest;
@@ -388,7 +380,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
     final readoutsWidth = _readoutsWidth(size, inRow: wide);
     return _barsAround(
       picture: _streaming ? picture : null,
-      top: _top(wide: wide),
+      top: _top(switchInBar: ShootModeSwitch.inTopBar(context)),
       bottom: ToastFloor(
         child: wide
             ? _bottomRow(dialKey, readoutsWidth: readoutsWidth, hint: hint)
@@ -447,34 +439,25 @@ class _LiveLayoutState extends State<_LiveLayout> {
   /// The controls in a wide window with a [VerticalBar], which is the rail
   /// at its end ([_barRail]): a row above the picture and a row below it,
   /// and the picture as large as fits between them, with nothing over it
-  /// \[design\]. Each row is in two parts, one on each page of a display
-  /// that folds down the middle of the window ([WindowFold.book]): the
-  /// camera and Remote / Live view above, the readouts and the chips
-  /// below. Only the picture crosses the fold \[design\]: one cut in two
-  /// is worse than one with a crease in it. The dial opens beside the
-  /// readouts, in the chips' place \[design\]: it keeps off the picture
-  /// too, and moves nothing.
+  /// \[design\]. Each row is in two parts ([shootPages]), one on each page
+  /// of a display that folds down the middle of the window: the camera and
+  /// Remote / Live view above, the readouts and the chips below. Only the
+  /// picture crosses the fold \[design\]: one cut in two is worse than one
+  /// with a crease in it. The dial opens beside the readouts, in the chips'
+  /// place \[design\]: it keeps off the picture too, and moves nothing.
   Widget _barsBesideBar(Size size, String? dialKey) {
-    final fold = WindowFold.book(context, leastPage: _minFoldPageWidth);
-    final firstPage = fold?.first ?? size.width / 2;
-    final foldGap = fold?.gap ?? 0;
+    final pages = shootPages(context, size.width);
+    final firstPage = pages.first;
+    final foldGap = pages.gap;
     final readoutsWidth = math.min(_maxReadoutsWidth, firstPage - 2 * 16);
     return _barsAround(
       // Not across a fold that is half-open, where they would not read.
       stepsWidth: foldGap > 0 ? firstPage : null,
       top: Padding(
-        padding: const EdgeInsets.only(top: 6, bottom: 12),
-        child: _inTwoParts(
-          firstWidth: firstPage,
-          gap: foldGap,
-          first: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 18),
-            child: CameraPill(),
-          ),
-          second: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _modeSwitch(),
-          ),
+        padding: const EdgeInsets.only(bottom: 12),
+        child: StatusBandBar(
+          barHeight: CameraTopBar.height,
+          child: CameraTopBar(middle: _modeSwitch(), pages: pages),
         ),
       ),
       bottom: ToastFloor(
@@ -640,7 +623,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
         mainAxisSize: MainAxisSize.min,
         children: [
           StatusBandBar(
-            barHeight: _topRowHeight + _tableTopGap,
+            barHeight: CameraTopBar.height + _tableTopGap,
             child: Padding(
               padding: EdgeInsets.fromLTRB(18, 6, 18, _tableTopGap),
               child: Row(children: [Flexible(child: CameraPill())]),
@@ -835,66 +818,32 @@ class _LiveLayoutState extends State<_LiveLayout> {
 
   /// The camera, Remote / Live view and the chips, with × and the
   /// exposure mode where the window has no [VerticalBar] for them:
-  /// stacked in three rows, or when [wide] in two.
-  Widget _top({required bool wide}) {
-    final close = _buttonsInBar ? null : _close();
-    final exposure = _buttonsInBar ? null : _exposureMode();
-    final remoteOrLiveView = _modeSwitch();
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Padding(
-          padding: _topRowPadding,
-          child: Row(
-            children: wide
-                ? [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          if (close != null) ...[
-                            close,
-                            const SizedBox(width: 8),
-                          ],
-                          const Flexible(child: CameraPill()),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: remoteOrLiveView,
-                    ),
-                    Expanded(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [?exposure],
-                      ),
-                    ),
-                  ]
-                : [
-                    if (close != null) ...[close, const SizedBox(width: 8)],
-                    const Expanded(
-                      child: Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: CameraPill(),
-                      ),
-                    ),
-                    ?exposure,
-                  ],
-          ),
+  /// stacked in three rows, or with Remote / Live view in the top bar
+  /// ([switchInBar]) in two. The top bar is Remote's ([CameraTopBar]),
+  /// with × and the exposure mode for Back and Settings.
+  Widget _top({required bool switchInBar}) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      StatusBandBar(
+        barHeight: CameraTopBar.height,
+        child: CameraTopBar(
+          leading: _close(),
+          trailing: _exposureMode(),
+          middle: switchInBar ? _modeSwitch() : null,
         ),
-        if (!wide) ...[
-          const SizedBox(height: 14),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: remoteOrLiveView,
-          ),
-        ],
-        const SizedBox(height: 12),
-        _chipsRow(),
-        const SizedBox(height: 12),
+      ),
+      if (!switchInBar) ...[
+        const SizedBox(height: 14),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: _modeSwitch(),
+        ),
       ],
-    );
-  }
+      const SizedBox(height: 12),
+      _chipsRow(),
+      const SizedBox(height: 12),
+    ],
+  );
 
   /// The drive, the self-timer, the metering and the Image Control.
   List<Widget> _chips() {

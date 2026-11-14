@@ -8,15 +8,48 @@ import 'package:grphoto/src/shoot/shoot_format.dart';
 import 'package:grphoto/src/shoot/shoot_model.dart';
 import 'package:grphoto/src/theme/tokens.dart';
 import 'package:grphoto/src/widgets/pressable.dart';
+import 'package:grphoto/src/widgets/window_layout.dart';
 import 'package:intl/intl.dart';
 
 /// Remote / Live view, at the top of Shoot in both modes (mock `.modeseg`).
 /// Shrinks to fit a narrow window or large text rather than overflowing.
+///
+/// Both modes put it in the same place ([inTopBar], [shootPages]), so
+/// switching between them leaves it where it is.
 class ShootModeSwitch extends StatelessWidget {
   const new({required this.mode, required this.onChanged, super.key});
 
   final ShootMode mode;
   final ValueChanged<ShootMode> onChanged;
+
+  /// From this width of the top bar the switch stands in it \[design\].
+  static const _inBarWidth = 600.0;
+
+  /// Whether the switch stands in Shoot's top bar, between the camera and
+  /// the buttons at the bar's ends, rather than in a row under it: where
+  /// the bar is at least [_inBarWidth] wide. That is what the window's
+  /// insets leave of it, as far in from one side as from the other (a
+  /// phone on its side has its camera cutout at one), or beside the
+  /// status in a [StatusBand]. [context] is one whose insets are the
+  /// window's.
+  static bool inTopBar(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final insets = MediaQuery.paddingOf(context);
+    final band = StatusBand.of(context);
+    final double barWidth;
+    if (band != null) {
+      barWidth =
+          width -
+          math.max(insets.left, band.left) -
+          math.max(insets.right, band.right);
+    } else if (VerticalBar.of(context) != null) {
+      // The vertical bar is the page's own, not a cutout.
+      barWidth = width - insets.horizontal;
+    } else {
+      barWidth = width - 2 * math.max(insets.left, insets.right);
+    }
+    return barWidth >= _inBarWidth;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +113,16 @@ class ShootModeSwitch extends StatelessWidget {
     );
   }
 }
+
+/// The two parts of Shoot's rows in a wide window with a [VerticalBar],
+/// [width] wide: the pages either side of its fold where each is at least
+/// 280 wide ([WindowFold.book]), or else its two halves \[design\]. In the
+/// top bar of both modes the camera is in the first part and Remote /
+/// Live view starts the second. [context] is one whose insets are the
+/// window's.
+BookFold shootPages(BuildContext context, double width) =>
+    WindowFold.book(context, leastPage: 280) ??
+    BookFold(first: width / 2, gap: 0, second: width / 2);
 
 /// A row of equal choices (mock `.segc`).
 class ShootSegmented<T> extends StatelessWidget {

@@ -14,12 +14,30 @@ import 'package:grphoto/src/widgets/window_layout.dart';
 /// [VerticalBar] it is the camera pill alone: Back and Settings stand in
 /// the bar ([CameraBarColumn]).
 class CameraTopBar extends StatelessWidget {
-  const new({super.key, this.middle});
+  const new({
+    super.key,
+    this.middle,
+    this.pages,
+    this.leading = const CameraBackButton(),
+    this.trailing = const SettingsButton(),
+  });
 
   /// Centred in the bar, for a page in a window too short to give it a row
   /// of its own. It gets the width that [_minSideWidth] leaves and has to
   /// fit that, by scaling down for example.
   final Widget? middle;
+
+  /// The parts of a wide window with a [VerticalBar], which has the bar's
+  /// buttons: the camera pill goes in the first and [middle] from the
+  /// start of the second instead of in the middle, so that neither crosses
+  /// a fold. Without [middle] it is ignored.
+  final BookFold? pages;
+
+  /// At the bar's ends, where the window has no [VerticalBar] for them:
+  /// Back and Settings on most pages; live view has × and the exposure
+  /// mode there.
+  final Widget? leading;
+  final Widget? trailing;
 
   /// The room either side of [middle] keeps: the back button and a camera
   /// pill cut down to its icon, the start of the name and the link's state
@@ -30,46 +48,42 @@ class CameraTopBar extends StatelessWidget {
   /// 36 pt buttons.
   static const double height = 6 + 36;
 
+  static const _padding = EdgeInsets.fromLTRB(18, 6, 18, 0);
+
   @override
   Widget build(BuildContext context) {
     final ownButtons = VerticalBar.of(context) == null;
-    const padding = EdgeInsets.fromLTRB(18, 6, 18, 0);
+    final leading = ownButtons ? this.leading : null;
+    final trailing = ownButtons ? this.trailing : null;
     final middle = this.middle;
     if (middle == null) {
       return Padding(
-        padding: padding,
+        padding: _padding,
         child: Row(
           children: [
-            if (ownButtons) ...[
-              const CameraBackButton(),
-              const SizedBox(width: 8),
-            ],
+            if (leading != null) ...[leading, const SizedBox(width: 8)],
             const Expanded(
               child: Align(
                 alignment: AlignmentDirectional.centerStart,
                 child: CameraPill(),
               ),
             ),
-            if (ownButtons) ...[
-              const SizedBox(width: 8),
-              const SettingsButton(),
-            ],
+            if (trailing != null) ...[const SizedBox(width: 8), trailing],
           ],
         ),
       );
     }
+    final pages = this.pages;
+    if (pages != null) return _inPages(middle, pages);
     return Padding(
-      padding: padding,
+      padding: _padding,
       child: LayoutBuilder(
         builder: (context, bar) => Row(
           children: [
             Expanded(
               child: Row(
                 children: [
-                  if (ownButtons) ...[
-                    const CameraBackButton(),
-                    const SizedBox(width: 8),
-                  ],
+                  if (leading != null) ...[leading, const SizedBox(width: 8)],
                   const Flexible(child: CameraPill()),
                 ],
               ),
@@ -85,18 +99,50 @@ class CameraTopBar extends StatelessWidget {
               ),
             ),
             Expanded(
-              child: ownButtons
-                  ? const Align(
+              child: trailing == null
+                  ? const SizedBox.shrink()
+                  : Align(
                       alignment: AlignmentDirectional.centerEnd,
-                      child: SettingsButton(),
-                    )
-                  : const SizedBox.shrink(),
+                      child: trailing,
+                    ),
             ),
           ],
         ),
       ),
     );
   }
+
+  /// The camera pill in the first of [pages], and [middle] from the start
+  /// of what the gap after it leaves.
+  Widget _inPages(Widget middle, BookFold pages) => Padding(
+    padding: EdgeInsets.only(top: _padding.top),
+    child: Row(
+      children: [
+        SizedBox(
+          width: pages.first,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: _padding.left),
+            child: const Align(
+              alignment: AlignmentDirectional.centerStart,
+              heightFactor: 1,
+              child: CameraPill(),
+            ),
+          ),
+        ),
+        SizedBox(width: pages.gap),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              heightFactor: 1,
+              child: middle,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 /// A page of the camera with Back and Settings, and then [more], down the

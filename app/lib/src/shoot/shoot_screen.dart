@@ -121,7 +121,8 @@ class _ShootScreenState extends State<ShootScreen> {
 /// stacked ([_stack]), or in a window too short for that and wide enough
 /// (a phone on its side) the shutter goes beside the rest ([_beside]).
 /// In a window with a [VerticalBar], Back and Settings stand in that
-/// ([CameraBarColumn]).
+/// ([CameraBarColumn]). Remote / Live view is where live view has it
+/// ([ShootModeSwitch.inTopBar]), so switching moves it nowhere.
 class _RemoteView extends StatelessWidget {
   const new({required this.model});
 
@@ -135,6 +136,10 @@ class _RemoteView extends StatelessWidget {
   /// Height of [_stack] without its shutter, about \[design\].
   static const _stackRestHeight = 400.0;
 
+  /// Height of the row Remote / Live view takes in [_stack] where it is
+  /// not in the top bar, the space above it included.
+  static const double _switchRowHeight = 14 + 40;
+
   /// Height of the shutter's margins and the line under it, about
   /// \[design\].
   static const _shutterRestHeight = 72.0;
@@ -145,40 +150,66 @@ class _RemoteView extends StatelessWidget {
   static const _besideWidth = 600.0;
 
   @override
-  Widget build(BuildContext context) => CameraBarColumn(
-    child: Scaffold(
-      key: const Key('shoot-remote'),
-      body: SafeArea(
-        // A status band is not kept clear: the top bar goes in it, beside
-        // the status ([_topBar]).
-        top: StatusBand.of(context) == null,
-        child: LayoutBuilder(
-          builder: (context, box) {
-            // The stack would have to shrink the shutter, then scroll.
-            final short = box.maxHeight < _stackRestHeight + _maxShutterSize;
-            final wide =
-                box.maxWidth >=
-                MediaQuery.textScalerOf(context).scale(_besideWidth);
-            return short && wide
-                ? _beside(context)
-                : _stack(context, box.maxHeight);
-          },
+  Widget build(BuildContext context) {
+    // On the window's insets, as live view decides them.
+    final switchInBar = ShootModeSwitch.inTopBar(context);
+    final hasBar = VerticalBar.of(context) != null;
+    BookFold? pagesOf(double width) =>
+        hasBar ? shootPages(context, width) : null;
+    return CameraBarColumn(
+      child: Scaffold(
+        key: const Key('shoot-remote'),
+        body: SafeArea(
+          // A status band is not kept clear: the top bar goes in it, beside
+          // the status ([_topBar]).
+          top: StatusBand.of(context) == null,
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final restHeight = switchInBar
+                  ? _stackRestHeight - _switchRowHeight
+                  : _stackRestHeight;
+              // The stack would have to shrink the shutter, then scroll.
+              final short = box.maxHeight < restHeight + _maxShutterSize;
+              final wide =
+                  box.maxWidth >=
+                  MediaQuery.textScalerOf(context).scale(_besideWidth);
+              final pages = pagesOf(box.maxWidth);
+              return short && wide
+                  ? _beside(context, pages: pages)
+                  : _stack(
+                      context,
+                      box.maxHeight,
+                      restHeight: restHeight,
+                      switchInBar: switchInBar,
+                      pages: pages,
+                    );
+            },
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 
   /// The top bar, with [middle] in it, clear of the system's status: in
   /// the window's status band where it has one, and under the rounded
-  /// corners of a window with a [VerticalBar].
-  Widget _topBar({Widget? middle}) => StatusBandBar(
+  /// corners of a window with a [VerticalBar], whose [pages] it is split
+  /// in.
+  Widget _topBar({Widget? middle, BookFold? pages}) => StatusBandBar(
     barHeight: CameraTopBar.height,
-    child: CameraTopBar(middle: middle),
+    child: CameraTopBar(middle: middle, pages: pages),
   );
 
   /// Everything in one column, which scrolls in a window of [height] too
-  /// short for it even with the smallest shutter.
-  Widget _stack(BuildContext context, double height) => SingleChildScrollView(
+  /// short for it even with the smallest shutter. Remote / Live view is
+  /// in the top bar, split in [pages], where [switchInBar], else in a row
+  /// under it. The shutter gets what [restHeight] leaves.
+  Widget _stack(
+    BuildContext context,
+    double height, {
+    required double restHeight,
+    required bool switchInBar,
+    required BookFold? pages,
+  }) => SingleChildScrollView(
     child: ConstrainedBox(
       constraints: BoxConstraints(minHeight: height),
       child: Column(
@@ -187,17 +218,19 @@ class _RemoteView extends StatelessWidget {
         children: [
           Column(
             children: [
-              _topBar(),
-              const SizedBox(height: 14),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _modeSwitch(),
-              ),
+              _topBar(middle: switchInBar ? _modeSwitch() : null, pages: pages),
+              if (!switchInBar) ...[
+                const SizedBox(height: 14),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _modeSwitch(),
+                ),
+              ],
               const SizedBox(height: 20),
               _stats(context),
             ],
           ),
-          _shutter(context, room: height - _stackRestHeight),
+          _shutter(context, room: height - restHeight),
           Column(
             children: [
               _selfTimer(context, labelInline: false),
@@ -209,48 +242,54 @@ class _RemoteView extends StatelessWidget {
     ),
   );
 
-  /// Remote / Live view in the top bar, and under it the readouts, the
-  /// self-timer and the drive in one half of the window and the shutter in
-  /// the other, each centred in its half. A phone on its side leaves the
-  /// halves about 225 of height, so the self-timer's label goes on the
-  /// line of its choices. When the taller half does not fit, the halves
-  /// scroll behind the bar, which stays where it is: it has no background,
-  /// so they show between its buttons \[design\].
-  Widget _beside(BuildContext context) => CustomScrollView(
-    slivers: [
-      PinnedHeaderSliver(child: _topBar(middle: _modeSwitch())),
-      SliverLayoutBuilder(
-        builder: (context, sliver) {
-          // What the bar leaves of the window.
-          final height =
-              sliver.viewportMainAxisExtent - sliver.precedingScrollExtent;
-          return SliverToBoxAdapter(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: height),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _stats(context),
-                        const SizedBox(height: 12),
-                        _selfTimer(context, labelInline: true),
-                        _drive(context, bottomMargin: 0),
-                      ],
-                    ),
+  /// Remote / Live view in the top bar, split in [pages], and under it the
+  /// readouts, the self-timer and the drive in one half of the window and
+  /// the shutter in the other, each centred in its half. A phone on its
+  /// side leaves the halves about 225 of height, so the self-timer's label
+  /// goes on the line of its choices. When the taller half does not fit,
+  /// the halves scroll behind the bar, which stays where it is: it has no
+  /// background, so they show between its buttons \[design\].
+  Widget _beside(BuildContext context, {required BookFold? pages}) =>
+      CustomScrollView(
+        slivers: [
+          PinnedHeaderSliver(
+            child: _topBar(middle: _modeSwitch(), pages: pages),
+          ),
+          SliverLayoutBuilder(
+            builder: (context, sliver) {
+              // What the bar leaves of the window.
+              final height =
+                  sliver.viewportMainAxisExtent - sliver.precedingScrollExtent;
+              return SliverToBoxAdapter(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: height),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _stats(context),
+                            const SizedBox(height: 12),
+                            _selfTimer(context, labelInline: true),
+                            _drive(context, bottomMargin: 0),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: _shutter(
+                          context,
+                          room: height - _shutterRestHeight,
+                        ),
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: _shutter(context, room: height - _shutterRestHeight),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    ],
-  );
+                ),
+              );
+            },
+          ),
+        ],
+      );
 
   Widget _modeSwitch() =>
       ShootModeSwitch(mode: model.mode, onChanged: (m) => model.mode = m);

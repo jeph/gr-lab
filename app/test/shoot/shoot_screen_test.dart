@@ -13,6 +13,7 @@ import 'package:grphoto/src/library/image_orientation.dart';
 import 'package:grphoto/src/library/library_screen.dart';
 import 'package:grphoto/src/library/shot_cell.dart';
 import 'package:grphoto/src/library/viewer.dart';
+import 'package:grphoto/src/platform/window_pose.dart';
 import 'package:grphoto/src/shoot/live_view_controller.dart';
 import 'package:grphoto/src/shoot/shoot_screen.dart';
 import 'package:grphoto/src/shoot/shoot_widgets.dart';
@@ -1111,9 +1112,8 @@ void main() {
     testWidgets('on an iPhone Duo half-open on a table, the picture fills '
         'the half that stands up, under the camera beside the status, and '
         'every control is in the half that lies flat, the open dial too; '
-        'flat again, the controls are above and below the picture', (
-      tester,
-    ) async {
+        'flat again, the controls are above and below the picture, × and '
+        'the camera in the band beside the status', (tester) async {
       final app = await inLiveView(tester);
       setDuoWindow(tester, app.windowPose, DuoWindow.tabletop);
       await pumpUntilFound(tester, find.byKey(const Key('live-exposure')));
@@ -1179,7 +1179,8 @@ void main() {
       expect(tester.takeException(), isNull);
       final flat = rect('live-turned-0');
       expect(flat.width, closeTo(669, .5));
-      expect(rect('live-close').top, greaterThanOrEqualTo(band.bottom));
+      expect(band.expandToInclude(rect('live-close')), band);
+      expect(band.expandToInclude(rect('camera-pill')), band);
       expect(rect('live-close').bottom, lessThanOrEqualTo(flat.top));
       expect(rect('shoot-shutter').top, greaterThanOrEqualTo(flat.bottom));
       await app.dispose();
@@ -1227,6 +1228,71 @@ void main() {
           reason: reason,
         );
         expect(app.camera.liveViewStreams, 1, reason: reason);
+      }
+      await app.dispose();
+    });
+
+    testWidgets('Remote / Live view stays where it is when it switches '
+        'between them: on a phone, a foldable closed and open, a tablet, '
+        'and an iPhone Duo closed, open, half-open like a book and upright', (
+      tester,
+    ) async {
+      final app = await _inShoot(tester);
+      await _untilReady(tester);
+      final modeSwitch = find.byKey(const Key('shoot-mode'));
+      Future<void> settle() async {
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+      }
+
+      Future<void> expectStill(String window) async {
+        await settle();
+        expect(tester.takeException(), isNull, reason: window);
+        final inRemote = tester.getRect(modeSwitch);
+        await tester.tap(find.byKey(const Key('shoot-mode-liveView')));
+        await pumpUntilFound(tester, find.byKey(const Key('live-picture')));
+        await settle();
+        expect(tester.takeException(), isNull, reason: window);
+        expect(tester.getRect(modeSwitch), inRemote, reason: window);
+        await tester.tap(find.byKey(const Key('shoot-mode-remote')));
+        await pumpUntilFound(tester, find.byKey(const Key('shoot-remote')));
+      }
+
+      for (final window in [
+        DuoWindow.closed,
+        DuoWindow.open,
+        DuoWindow.book,
+        DuoWindow.upright,
+      ]) {
+        setDuoWindow(tester, app.windowPose, window);
+        await expectStill(window.name);
+      }
+
+      app.windowPose.value = WindowPose.none;
+      for (final (window, fold) in [
+        // A phone.
+        (const Size(393, 852), null),
+        // A foldable's cover screen.
+        (const Size(344, 882), null),
+        // A foldable open, held upright and turned, its fold flat and
+        // half-open like a book.
+        (const Size(707, 823), _fold(const Rect.fromLTWH(0, 411.5, 707, 0))),
+        (
+          const Size(823, 707),
+          _fold(const Rect.fromLTWH(411.5, 0, 0, 707), halfOpen: true),
+        ),
+        // A tablet.
+        (const Size(800, 1280), null),
+      ]) {
+        const insets = FakeViewPadding(top: 24, bottom: 24);
+        tester.view
+          ..physicalSize = window
+          ..devicePixelRatio = 1
+          ..padding = insets
+          ..viewPadding = insets
+          ..displayFeatures = [?fold];
+        await expectStill('$window');
       }
       await app.dispose();
     });
