@@ -1269,17 +1269,23 @@ void main() {
 
   testWidgets('on an open iPhone Duo a tap on a shot shows it on the second '
       'page and leaves the Library on the first as it was; another shot '
-      'tapped or swiped to shows instead, a tap on the photo opens the '
-      'viewer, and the shot the viewer ended on shows after it; Back ends '
-      'choosing shots, then leaves', (tester) async {
+      'tapped or swiped to shows instead; a tap on the photo does nothing, '
+      'Full screen gives it the whole window with Exit full screen, Info '
+      'and Download in the bar, and Exit full screen and Back take the shot '
+      'swiped to there back to the second page; Back ends choosing shots, '
+      'then leaves', (tester) async {
     final app = await _libraryOf(tester, 40);
     await _toDuo(tester, app, DuoWindow.open);
     final page = _pageScroll(tester);
     final pane = find.byType(ShotPane);
     final viewer = find.byType(ShotViewer);
     Finder inPane(Finder finder) => find.descendant(of: pane, matching: finder);
-    Finder inViewer(Finder finder) =>
-        find.descendant(of: viewer, matching: finder);
+    final pages = inPane(find.byType(PageView));
+    // The shot's name over it once it has the whole window.
+    Finder named(int n) => find.descendant(
+      of: find.byType(AppBar),
+      matching: find.text(_nameOf(n)),
+    );
     Finder markOf(int n) =>
         find.descendant(of: _cell(_shotOf(n)), matching: _shownMark);
     // Where the display folds, and where the bar's strip starts.
@@ -1366,27 +1372,73 @@ void main() {
     expect(_shownMark, findsOne);
     expect(markOf(37), findsOne);
 
-    await tester.tap(inPane(find.byType(PageView)));
-    await pumpUntilFound(tester, inViewer(find.text(_nameOf(37))));
-    // The route has finished sliding in.
+    // A tap on the photo does nothing there: a tap on a movie is for
+    // playback, so Full screen is the way to the whole window for both.
+    final besideGrid = tester.getRect(pages);
+    final pagesState = tester.state(pages);
+    await tester.tap(pages);
     await pumpRounds(tester, 30);
-    await tester.fling(
-      inViewer(find.byType(PageView)),
-      const Offset(-600, 0),
-      1000,
-    );
-    await pumpUntilFound(tester, inViewer(find.text(_nameOf(36))));
+    expect(viewer, findsNothing);
+    expect(tester.getRect(pages), besideGrid);
+    expect(named(37), findsNothing);
+
+    await tester.tap(inPane(find.byKey(const Key('pane-full-screen'))));
+    await pumpRounds(tester, 40);
+    expect(tester.takeException(), isNull);
+    expect(viewer, findsNothing);
+    // The same pages, which keep a zoomed photo zoomed and a movie
+    // playing, now beside the bar's strip, which has the viewer's buttons
+    // with Exit full screen in the place of Back.
+    expect(tester.state(pages), same(pagesState));
+    expect(tester.getRect(pages), const Rect.fromLTRB(0, 0, strip, 669));
+    expect(named(37), findsOne);
+    const bar = Rect.fromLTRB(strip, 124, 951, 669);
+    for (final key in [
+      'viewer-exit-full-screen',
+      'viewer-info',
+      'viewer-download',
+    ]) {
+      final button = find.byKey(ValueKey(key));
+      expect(button.hitTestable(), findsOne, reason: key);
+      expect(bar.expandToInclude(tester.getRect(button)), bar, reason: key);
+    }
+    for (final key in ['camera-back', 'camera-settings', 'viewer-back']) {
+      expect(find.byKey(Key(key)).hitTestable(), findsNothing, reason: key);
+    }
+    // Nor does a screen reader reach the grid or the tab bar under it.
+    final semantics = tester.ensureSemantics();
+    await tester.pump();
+    expect(find.semantics.byLabel(RegExp(_nameOf(39))), findsNothing);
+    expect(find.semantics.byLabel('Exit full screen'), findsOne);
+    expect(find.semantics.byLabel('Shoot'), findsNothing);
+
+    await tester.fling(pages, const Offset(-600, 0), 1000);
+    await pumpUntilFound(tester, named(36));
     await pumpRounds(tester, 30);
-    await tester.binding.handlePopRoute();
-    await pumpUntil(
-      tester,
-      () => viewer.evaluate().isEmpty,
-      reason: 'viewer closed',
-    );
-    await pumpUntilFound(tester, inPane(find.text(_nameOf(36))));
-    await pumpRounds(tester, 15);
+    await tester.tap(find.byKey(const Key('viewer-exit-full-screen')));
+    await pumpRounds(tester, 40);
+    expect(tester.takeException(), isNull);
+    expect(tester.state(pages), same(pagesState));
+    expect(tester.getRect(pages), besideGrid);
+    expect(inPane(find.text(_nameOf(36))), findsWidgets);
     expect(_shownMark, findsOne);
     expect(markOf(36), findsOne);
+    expect(find.byKey(const Key('camera-back')).hitTestable(), findsOne);
+    expect(find.semantics.byLabel(RegExp(_nameOf(39))), findsOne);
+    expect(find.semantics.byLabel('Shoot'), findsOne);
+    semantics.dispose();
+
+    // The system's Back takes it back too, and leaves the Library only
+    // after that.
+    await tester.tap(inPane(find.byKey(const Key('pane-full-screen'))));
+    await pumpRounds(tester, 40);
+    expect(tester.getRect(pages), const Rect.fromLTRB(0, 0, strip, 669));
+    await tester.binding.handlePopRoute();
+    await pumpRounds(tester, 40);
+    expect(tester.takeException(), isNull);
+    expect(find.byType(LibraryScreen), findsOne);
+    expect(tester.getRect(pages), besideGrid);
+    expect(find.byKey(const Key('viewer-exit-full-screen')), findsNothing);
 
     await tester.longPress(_cell(_shotOf(39)));
     await tester.pump();
@@ -1451,6 +1503,90 @@ void main() {
     expect(_pageScroll(tester), same(page));
     expect(find.byType(ShotViewer), findsNothing);
 
+    await app.dispose();
+  });
+
+  testWidgets('closing an iPhone Duo while the shot beside the Library has '
+      'the whole window keeps it there, laid out for the closed phone; '
+      'Exit full screen then leaves it for the grid', (tester) async {
+    final app = await _libraryOf(tester, 40);
+    await _toDuo(tester, app, DuoWindow.open);
+    final pane = find.byType(ShotPane);
+    final pages = find.descendant(of: pane, matching: find.byType(PageView));
+    await tester.tap(_cell(_shotOf(40)));
+    await pumpUntilFound(tester, pages);
+    await pumpRounds(tester, 15);
+    final pagesState = tester.state(pages);
+    await tester.tap(find.byKey(const Key('pane-full-screen')));
+    await pumpRounds(tester, 40);
+
+    await _toDuo(tester, app, DuoWindow.closed);
+    expect(tester.state(pages), same(pagesState));
+    // Beside the closed phone's bar.
+    expect(tester.getRect(pages), const Rect.fromLTRB(0, 0, 382, 678));
+    final exit = find.byKey(const Key('viewer-exit-full-screen'));
+    expect(exit.hitTestable(), findsOne);
+
+    await tester.tap(exit);
+    await pumpRounds(tester, 30);
+    expect(tester.takeException(), isNull);
+    expect(pane, findsNothing);
+    expect(_shownMark, findsNothing);
+    expect(_cell(_shotOf(40)).hitTestable(), findsOne);
+    expect(find.byKey(const Key('camera-back')).hitTestable(), findsOne);
+
+    await app.dispose();
+  });
+
+  testWidgets('a movie beside the Library on an open iPhone Duo takes the '
+      'whole window through Full screen with its playback as it was', (
+    tester,
+  ) async {
+    final app = (await tester.runAsync(
+      () => createTestApp(
+        config: FakeCameraConfig(
+          bonded: true,
+          photos: [
+            FakePhoto(
+              '100RICOH',
+              'R0000001.MOV',
+              DateTime(2026, 11, 5, 8),
+              videoLength: const Duration(seconds: 5),
+            ),
+          ],
+        ),
+        saveCamera: true,
+      ),
+    ))!;
+    await app.pumpApp(tester);
+    await _openLibrary(tester);
+    await _toDuo(tester, app, DuoWindow.open);
+    final pane = find.byType(ShotPane);
+    final pages = find.descendant(of: pane, matching: find.byType(PageView));
+    final play = find.byKey(const ValueKey('viewer-play'));
+    final waiting = find.descendant(
+      of: pages,
+      matching: find.byType(CircularProgressIndicator),
+    );
+    // Play waits for the camera to confirm the movie.
+    final gate = app.camera.infoGate = Completer<void>();
+    await tapWhenReady(tester, _cell('sd1|100RICOH/R0000001.MOV'));
+    await tapWhenReady(tester, find.descendant(of: pane, matching: play));
+    expect(waiting, findsOne);
+
+    await tester.tap(find.byKey(const Key('pane-full-screen')));
+    await pumpRounds(tester, 40);
+    expect(tester.takeException(), isNull);
+    expect(tester.getRect(pages), const Rect.fromLTRB(0, 0, 867, 669));
+    expect(waiting, findsOne);
+    expect(play, findsNothing);
+    expect(
+      find.byKey(const Key('viewer-exit-full-screen')).hitTestable(),
+      findsOne,
+    );
+
+    gate.complete();
+    app.camera.infoGate = null;
     await app.dispose();
   });
 

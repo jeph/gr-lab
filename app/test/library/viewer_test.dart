@@ -19,7 +19,12 @@ import 'package:image/image.dart' as img;
 import '../support/duo_window.dart';
 import '../support/test_app.dart';
 
-final Finder _viewer = find.byType(ShotViewer);
+/// The viewer, or the shot beside the Library on two pages at a fold,
+/// which takes the whole window there, laid out as the viewer is.
+final Finder _viewer = find.byWidgetPredicate(
+  (w) => w is ShotViewer || w is ShotPane,
+  description: 'the viewer or the shot beside the Library',
+);
 
 Finder _inViewer(Finder finder) =>
     find.descendant(of: _viewer, matching: finder);
@@ -97,8 +102,8 @@ Future<TestApp> _openViewer(
 
 /// Opens the Library of a camera holding `R0000001.JPG` to `R0000003.JPG`
 /// on an iPhone Duo in [window], and the viewer on the last of them. Open
-/// and held wide, the Library shows the shot beside its grid first, where
-/// a tap on the photo opens the viewer.
+/// and held wide, the Library shows the shot beside its grid instead, and
+/// Full screen there gives it the whole window.
 Future<TestApp> _openViewerOnDuo(WidgetTester tester, DuoWindow window) async {
   final app = (await tester.runAsync(
     () => createTestApp(
@@ -119,18 +124,16 @@ Future<TestApp> _openViewerOnDuo(WidgetTester tester, DuoWindow window) async {
     tester,
     find.byKey(const ValueKey('sd1|100RICOH/R0000003')),
   );
-  final beside = find.descendant(
-    of: find.byType(ShotPane),
-    matching: find.byType(PageView),
-  );
+  final route = find.byType(ShotViewer);
+  final fullScreen = find.byKey(const Key('pane-full-screen'));
   await pumpUntil(
     tester,
-    () => _viewer.evaluate().isNotEmpty || beside.evaluate().isNotEmpty,
+    () => route.evaluate().isNotEmpty || fullScreen.evaluate().isNotEmpty,
     reason: 'the shot in the viewer or beside the Library',
   );
-  if (_viewer.evaluate().isEmpty) await tapWhenReady(tester, beside);
-  await pumpUntilFound(tester, _viewer);
-  // The route has finished sliding in.
+  if (route.evaluate().isEmpty) await tapWhenReady(tester, fullScreen);
+  // The route has finished sliding in, or the shot has grown to the whole
+  // window.
   await pumpRounds(tester, 30);
   expect(tester.takeException(), isNull, reason: window.name);
   return app;
@@ -1231,12 +1234,17 @@ void main() {
     final pages = _inViewer(find.byType(PageView));
     final header = _inViewer(find.byType(AppBar));
     final details = _inViewer(find.byType(GroupBox));
-    const buttons = ['viewer-back', 'viewer-info', 'viewer-download'];
     Finder button(String key) => find.byKey(ValueKey(key));
 
-    // Back, Info and Download stand in [strip], the window's bar under
-    // the status, one under the other, and the header has none of them.
-    void expectButtonsInBar(WidgetTester tester, Rect strip) {
+    // Back, or Exit full screen where it is the way back ([leave]), Info
+    // and Download stand in [strip], the window's bar under the status,
+    // one under the other, and the header has none of them.
+    void expectButtonsInBar(
+      WidgetTester tester,
+      Rect strip, {
+      String leave = 'viewer-back',
+    }) {
+      final buttons = [leave, 'viewer-info', 'viewer-download'];
       for (final key in buttons) {
         expect(button(key).hitTestable(), findsOne, reason: key);
         final rect = tester.getRect(button(key));
@@ -1299,10 +1307,11 @@ void main() {
     });
 
     for (final window in [DuoWindow.open, DuoWindow.book]) {
-      testWidgets('held wide (${window.name}), the viewer opens with the '
-          'photo across the window beside the bar; Info shows the details '
-          'as the second page, with the photo on the first, and a tap on '
-          'the photo puts them away', (tester) async {
+      testWidgets('held wide (${window.name}), Full screen gives the shot '
+          'beside the Library the photo across the window beside the bar, '
+          'with Exit full screen, Info and Download there; Info shows the '
+          'details as the second page, with the photo on the first, and a '
+          'tap on the photo puts them away', (tester) async {
         final app = await _openViewerOnDuo(tester, window);
         // The bar's strip, under the status at its top, and the pages
         // either side of the fold: one line when flat.
@@ -1312,7 +1321,7 @@ void main() {
         final secondPageStart = window.pose.halfOpen
             ? fold.right
             : fold.center.dx;
-        expectButtonsInBar(tester, strip);
+        expectButtonsInBar(tester, strip, leave: 'viewer-exit-full-screen');
         expect(details, findsNothing);
         expect(tester.getRect(pages), const Rect.fromLTRB(0, 0, 867, 669));
 
@@ -1329,7 +1338,7 @@ void main() {
         expect(beside.left, greaterThanOrEqualTo(secondPageStart));
         expect(beside.right, lessThanOrEqualTo(strip.left));
         expect(beside.top, greaterThanOrEqualTo(headerBottom));
-        expectButtonsInBar(tester, strip);
+        expectButtonsInBar(tester, strip, leave: 'viewer-exit-full-screen');
 
         await tester.tap(pages);
         await pumpRounds(tester, 30);

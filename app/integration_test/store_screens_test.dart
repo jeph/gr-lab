@@ -343,8 +343,8 @@ Future<void> _walk(WidgetTester tester) async {
 
   // The viewer on a photo that fills the window, an upright one unless the
   // window is two pages wide, then with its details. On two pages the
-  // photo first shows beside the grid, and a tap on it there opens the
-  // viewer.
+  // photo first shows beside the grid, and Full screen there gives it the
+  // whole window.
   final viewed = twoPages
       ? scenes.where((s) => !s.portrait).elementAt(3).number
       : scenes.firstWhere((s) => s.portrait).number;
@@ -352,14 +352,7 @@ Future<void> _walk(WidgetTester tester) async {
   if (twoPages) {
     await _waitKey(tester, 'shot-pane-scroll');
     await _snap(tester, 'library-shot', settle: 10);
-    await tester.tap(
-      find
-          .descendant(
-            of: find.byKey(const Key('shot-pane-scroll')),
-            matching: find.byType(AspectRatio),
-          )
-          .first,
-    );
+    await _tapKey(tester, 'pane-full-screen');
   }
   await _waitKey(tester, 'viewer-info');
   await _snap(tester, 'viewer', settle: 8);
@@ -471,10 +464,16 @@ Finder _cell(int scene, int scenes) {
 }
 
 /// Goes back from the page on top. A window with a vertical bar has the
-/// page's own button there instead of a [BackButton].
+/// page's own button there instead of a [BackButton]; a shot beside the
+/// Library that has the whole window has Exit full screen.
 Future<void> _back(WidgetTester tester) async {
   final inBar = [
-    for (final key in ['viewer-back', 'look-editor-back', 'camera-back'])
+    for (final key in [
+      'viewer-back',
+      'viewer-exit-full-screen',
+      'look-editor-back',
+      'camera-back',
+    ])
       find.byKey(Key(key)).hitTestable(),
   ].where((button) => button.evaluate().isNotEmpty);
   await tester.tap(inBar.isEmpty ? find.byType(BackButton).last : inBar.first);

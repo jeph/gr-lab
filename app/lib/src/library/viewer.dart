@@ -62,28 +62,24 @@ import 'package:video_player/video_player.dart';
 /// room below it for them. On the open one, two pages at its fold
 /// ([pagesAtFold]), the details are the second page, beside the shot on
 /// the first, instead of below it \[design\]; an Android foldable keeps
-/// them below the shot.
+/// them below the shot. There the Library opens no viewer: the shot beside
+/// its grid ([ShotPane]) takes the whole window instead, laid out as the
+/// viewer is.
 class ShotViewer extends StatefulWidget {
-  const new({
-    required this.shots,
-    required this.initialIndex,
-    super.key,
-    this.onShown,
-  });
+  const new({required this.shots, required this.initialIndex, super.key});
 
   final List<Shot> shots;
   final int initialIndex;
-
-  /// Told the shot that shows whenever it is another: after a swipe, and
-  /// when the one shown left the listing.
-  final ValueChanged<Shot>? onShown;
 
   @override
   State<ShotViewer> createState() => _ShotViewerState();
 }
 
 class _ShotViewerState extends State<ShotViewer>
-    with TickerProviderStateMixin, _ShotPages<ShotViewer> {
+    with
+        TickerProviderStateMixin,
+        _ShotPages<ShotViewer>,
+        _ViewerChrome<ShotViewer> {
   late final LibraryContext _library = LibraryScope.of(context);
 
   /// The camera of [_shots]: the listing's camera when the viewer opened.
@@ -105,41 +101,12 @@ class _ShotViewerState extends State<ShotViewer>
   /// and ending); matching every shot again is for a new listing only.
   List<Shot>? _followed;
 
-  /// The shot's pages under the header's room. They keep their state
-  /// (zoom, playback) when a fold comes or goes and the details change
-  /// sides.
-  final GlobalKey _shotKey = GlobalKey();
-
   /// Whether the window the viewer opened in decided [_infoShown].
   bool _opened = false;
-
-  /// The shot's details show below it, so it lies between them and the
-  /// header instead of having the whole screen.
-  bool _infoShown = false;
-
-  /// The header shows, and the system's bars with it. Always with the
-  /// details ([_infoShown]), which are reached from it, and on a movie:
-  /// its page takes taps for playback, so a tap there could not bring the
-  /// header back.
-  bool _headerShown = true;
-
-  /// 0 with the details in place, 1 once the shot has the whole screen
-  /// (not [_infoShown]).
-  late final AnimationController _immersion;
-  late final CurvedAnimation _immersed;
-
-  /// 0 with the header away, 1 with it in place ([_headerShown]).
-  late final AnimationController _headerVisibility;
 
   /// Set once nothing is left to show: the route is on its way out and
   /// shows none of [_shots] any more.
   bool _closing = false;
-
-  /// The status bar's icons as the app's theme has them, to give back
-  /// when the viewer goes. The header has them white over a shot with the
-  /// whole screen, and they stay as the last screen to say had them: the
-  /// Library, which has no app bar, would not set them back.
-  late SystemUiOverlayStyle _appStatusBar;
 
   @override
   void initState() {
@@ -150,103 +117,26 @@ class _ShotViewerState extends State<ShotViewer>
       _listed.addAll(widget.shots.map((s) => s.key).where(keys.contains));
     }
     _library.model.addListener(_followListing);
-    _immersion = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 250),
-      value: 1,
-    );
-    _immersed = CurvedAnimation(
-      parent: _immersion,
-      curve: Curves.easeInOutCubic,
-    );
-    _headerVisibility = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 150),
-      value: 1,
-    );
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_opened) {
-      _opened = true;
-      // \[design\] The closed foldable iPhone: the details start in place.
-      if (VerticalBar.of(context) != null && pagesAtFold(context) == null) {
-        _infoShown = true;
-        _immersion.value = 0;
-      }
+    if (_opened) return;
+    _opened = true;
+    // \[design\] The closed foldable iPhone: the details start in place.
+    if (VerticalBar.of(context) != null && pagesAtFold(context) == null) {
+      _infoShown = true;
+      _immersion.value = 0;
     }
-    final brightness = Theme.of(context).brightness;
-    _appStatusBar = SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarBrightness: brightness,
-      statusBarIconBrightness: brightness == Brightness.dark
-          ? Brightness.light
-          : Brightness.dark,
-      systemStatusBarContrastEnforced: false,
-    );
   }
 
   @override
   void dispose() {
     _library.model.removeListener(_followListing);
-    _immersed.dispose();
-    _immersion.dispose();
-    _headerVisibility.dispose();
-    if (!_headerShown) _showSystemBars();
-    SystemChrome.setSystemUIOverlayStyle(_appStatusBar);
+    _giveBackSystemUi();
     super.dispose();
   }
-
-  /// A tap on a photo puts its details away; without them, the header
-  /// goes and comes with each tap.
-  void _onPhotoTap() {
-    if (_infoShown) {
-      _setInfoShown(false);
-    } else {
-      _setHeaderShown(!_headerShown);
-    }
-  }
-
-  void _setInfoShown(bool shown) {
-    if (shown == _infoShown) return;
-    setState(() => _infoShown = shown);
-    _animate(_immersion, forward: !shown);
-  }
-
-  /// Shows or hides the header and, with it, the status and navigation
-  /// bars: shown, they are as the rest of the app has them (Flutter's
-  /// default, edge to edge).
-  void _setHeaderShown(bool shown) {
-    if (shown == _headerShown) return;
-    setState(() => _headerShown = shown);
-    _animate(_headerVisibility, forward: shown);
-    if (shown) {
-      _showSystemBars();
-    } else {
-      unawaited(
-        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
-      );
-    }
-  }
-
-  /// Takes [controller] to its end ([forward]) or back to its start: over
-  /// a moment, or at once when the platform asks for less motion. Its
-  /// status says which of the two it reached, which `animateTo` would not:
-  /// that one ends completed at either.
-  void _animate(AnimationController controller, {required bool forward}) {
-    if (MediaQuery.disableAnimationsOf(context)) {
-      controller.value = forward ? 1 : 0;
-    } else if (forward) {
-      controller.forward();
-    } else {
-      controller.reverse();
-    }
-  }
-
-  void _showSystemBars() =>
-      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
 
   /// Takes each shot as [_serial]'s listing has it now and drops those it
   /// no longer has. A dropped shown shot gives way to the next one kept,
@@ -308,8 +198,162 @@ class _ShotViewerState extends State<ShotViewer>
   @override
   void _onShown(Shot shot) {
     if (shot.isVideo) _setHeaderShown(true);
-    widget.onShown?.call(shot);
   }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_closing) {
+      return Scaffold(appBar: AppBar(leading: const BackButton()));
+    }
+    final serial = _serial;
+    return _buildViewer(
+      context,
+      library: _library,
+      serial: serial,
+      shot: _shots[_index],
+      pages: serial == null
+          ? const SizedBox.shrink()
+          : _buildPages(
+              serial: serial,
+              immersed: _immersed,
+              headerVisibility: _headerVisibility,
+              onPhotoTap: _onPhotoTap,
+            ),
+    );
+  }
+}
+
+/// What the viewer and the Library's [ShotPane] with the whole window
+/// share: the shot with the whole window or beside its details
+/// ([_infoShown]), and the header over it, which a tap on a photo puts
+/// away and brings back with the system's bars.
+mixin _ViewerChrome<W extends StatefulWidget> on _ShotPages<W>, TickerProvider {
+  /// The shot's pages under the header's room. They keep their state
+  /// (zoom, playback) when a fold comes or goes and the details change
+  /// sides.
+  final GlobalKey _shotKey = GlobalKey();
+
+  /// The shot's details show below it, so it lies between them and the
+  /// header instead of having the whole screen.
+  bool _infoShown = false;
+
+  /// The header shows, and the system's bars with it. Always with the
+  /// details ([_infoShown]), which are reached from it, and on a movie:
+  /// its page takes taps for playback, so a tap there could not bring the
+  /// header back.
+  bool _headerShown = true;
+
+  /// 0 with the details in place, 1 once the shot has the whole screen
+  /// (not [_infoShown]).
+  late final AnimationController _immersion;
+  late final CurvedAnimation _immersed;
+
+  /// 0 with the header away, 1 with it in place ([_headerShown]).
+  late final AnimationController _headerVisibility;
+
+  /// The status bar's icons as the app's theme has them, to give back
+  /// when the shot leaves the whole screen. The header has them white
+  /// over a shot with the whole screen, and they stay as the last screen
+  /// to say had them: the Library, which has no app bar, would not set
+  /// them back.
+  late SystemUiOverlayStyle _appStatusBar;
+
+  @override
+  void initState() {
+    super.initState();
+    _immersion = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+      value: 1,
+    );
+    _immersed = CurvedAnimation(
+      parent: _immersion,
+      curve: Curves.easeInOutCubic,
+    );
+    _headerVisibility = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+      value: 1,
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final brightness = Theme.of(context).brightness;
+    _appStatusBar = SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarBrightness: brightness,
+      statusBarIconBrightness: brightness == Brightness.dark
+          ? Brightness.light
+          : Brightness.dark,
+      systemStatusBarContrastEnforced: false,
+    );
+  }
+
+  @override
+  void dispose() {
+    _immersed.dispose();
+    _immersion.dispose();
+    _headerVisibility.dispose();
+    super.dispose();
+  }
+
+  /// Gives the system's bars back as the rest of the app has them, once
+  /// the shot leaves the whole screen.
+  void _giveBackSystemUi() {
+    if (!_headerShown) _showSystemBars();
+    SystemChrome.setSystemUIOverlayStyle(_appStatusBar);
+  }
+
+  /// A tap on a photo puts its details away; without them, the header
+  /// goes and comes with each tap.
+  void _onPhotoTap() {
+    if (_infoShown) {
+      _setInfoShown(false);
+    } else {
+      _setHeaderShown(!_headerShown);
+    }
+  }
+
+  void _setInfoShown(bool shown) {
+    if (shown == _infoShown) return;
+    setState(() => _infoShown = shown);
+    _animate(_immersion, forward: !shown);
+  }
+
+  /// Shows or hides the header and, with it, the status and navigation
+  /// bars: shown, they are as the rest of the app has them (Flutter's
+  /// default, edge to edge).
+  void _setHeaderShown(bool shown) {
+    if (shown == _headerShown) return;
+    setState(() => _headerShown = shown);
+    _animate(_headerVisibility, forward: shown);
+    if (shown) {
+      _showSystemBars();
+    } else {
+      unawaited(
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky),
+      );
+    }
+  }
+
+  /// Takes [controller] to its end ([forward]) or back to its start: over
+  /// a moment, or at once when the platform asks for less motion. Its
+  /// status says which of the two it reached, which `animateTo` would not:
+  /// that one ends completed at either.
+  void _animate(AnimationController controller, {required bool forward}) {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      controller.value = forward ? 1 : 0;
+    } else if (forward) {
+      controller.forward();
+    } else {
+      controller.reverse();
+    }
+  }
+
+  void _showSystemBars() =>
+      unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
 
   /// [button] of the header where it stands in the window's vertical bar:
   /// it goes and comes with the header.
@@ -318,14 +362,19 @@ class _ShotViewerState extends State<ShotViewer>
     child: IgnorePointer(ignoring: !_headerShown, child: button),
   );
 
-  @override
-  Widget build(BuildContext context) {
-    if (_closing) {
-      return Scaffold(appBar: AppBar(leading: const BackButton()));
-    }
-    final library = _library;
-    final serial = _serial;
-    final shot = _shots[_index];
+  /// The whole window for [shot], of the camera [serial]: [pages], built
+  /// with [_immersed] and [_headerVisibility], under the header and over
+  /// or beside the shot's details. [context] has the window's insets. Its
+  /// first button is Back, or Exit full screen where [onExitFullScreen]
+  /// is given.
+  Widget _buildViewer(
+    BuildContext context, {
+    required LibraryContext library,
+    required String? serial,
+    required Shot shot,
+    required Widget pages,
+    VoidCallback? onExitFullScreen,
+  }) {
     final c = GrColors.of(context);
     final l10n = context.l10n;
     final bar = VerticalBar.of(context);
@@ -362,16 +411,7 @@ class _ShotViewerState extends State<ShotViewer>
               builder: (context, _) =>
                   SizedBox(height: headerHeight * (1 - _immersed.value)),
             ),
-            Expanded(
-              child: serial == null
-                  ? const SizedBox.shrink()
-                  : _buildPages(
-                      serial: serial,
-                      immersed: _immersed,
-                      headerVisibility: _headerVisibility,
-                      onPhotoTap: _onPhotoTap,
-                    ),
-            ),
+            Expanded(child: pages),
           ],
         );
         final details = SafeArea(
@@ -384,13 +424,22 @@ class _ShotViewerState extends State<ShotViewer>
           buttons: [
             if (bar != null) ...[
               _inBar(
-                RoundIconButton(
-                  key: const Key('viewer-back'),
-                  icon: Icons.arrow_back_ios_new_rounded,
-                  iconSize: 16,
-                  label: MaterialLocalizations.of(context).backButtonTooltip,
-                  onTap: () => Navigator.of(context).maybePop(),
-                ),
+                onExitFullScreen == null
+                    ? RoundIconButton(
+                        key: const Key('viewer-back'),
+                        icon: Icons.arrow_back_ios_new_rounded,
+                        iconSize: 16,
+                        label: MaterialLocalizations.of(context)
+                            .backButtonTooltip,
+                        onTap: () => Navigator.of(context).maybePop(),
+                      )
+                    : RoundIconButton(
+                        key: const Key('viewer-exit-full-screen'),
+                        icon: Icons.fullscreen_exit_rounded,
+                        iconSize: 20,
+                        label: l10n.viewerExitFullScreen,
+                        onTap: onExitFullScreen,
+                      ),
               ),
               _inBar(
                 Semantics(
@@ -482,6 +531,7 @@ class _ShotViewerState extends State<ShotViewer>
                           buttonsInBar: bar != null,
                           infoShown: _infoShown,
                           onInfo: () => _setInfoShown(!_infoShown),
+                          onExitFullScreen: onExitFullScreen,
                           download: bar == null ? download : null,
                         ),
                       ),
@@ -556,12 +606,13 @@ mixin _ShotPages<W extends StatefulWidget> on State<W> {
   }
 
   /// [_shots], of the camera [serial], as pages to swipe through.
-  /// [immersed] and [headerVisibility] are those of [_PhotoPage].
+  /// [immersed], [headerVisibility] and [onPhotoTap] are those of
+  /// [_PhotoPage].
   Widget _buildPages({
     required String serial,
     required Animation<double> immersed,
     required Animation<double> headerVisibility,
-    required VoidCallback onPhotoTap,
+    required VoidCallback? onPhotoTap,
   }) => PageView.builder(
     controller: _pages,
     physics: _photoHeld
@@ -627,11 +678,14 @@ BookFold? pagesAtFold(BuildContext context) {
 /// What the Library's [ShotPane] shows: one of the grid's shots. The
 /// Library opens it on a shot ([show]), keeps it to the grid ([follow])
 /// and closes it; the pane moves it as its shots are swiped through
-/// ([moveTo]).
+/// ([moveTo]). Full screen gives the shot the whole window
+/// ([enterFullScreen]) until Exit full screen or Back takes it back to the
+/// pane ([exitFullScreen]).
 final class ShotPaneController extends ChangeNotifier {
   List<Shot> _shots = const [];
   int _index = 0;
   bool _open = false;
+  bool _fullScreen = false;
 
   /// The grid's shots, in its order, as they were when the pane last
   /// followed them.
@@ -641,6 +695,9 @@ final class ShotPaneController extends ChangeNotifier {
   int get index => _index;
 
   bool get isOpen => _open;
+
+  /// The shot shown has the whole window, or is on its way there.
+  bool get isFullScreen => _fullScreen;
 
   /// The shot the pane shows; null while it is closed.
   Shot? get shown => _open ? _shots[_index] : null;
@@ -677,6 +734,7 @@ final class ShotPaneController extends ChangeNotifier {
     final place = nearestFirst.map((s) => places[s.key]).nonNulls.firstOrNull;
     if (place == null) {
       _open = false;
+      _fullScreen = false;
     } else {
       _shots = shots;
       _index = place;
@@ -684,9 +742,24 @@ final class ShotPaneController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Gives the shot shown the whole window.
+  void enterFullScreen() {
+    if (!_open || _fullScreen) return;
+    _fullScreen = true;
+    notifyListeners();
+  }
+
+  /// Takes the shot back from the whole window to the pane.
+  void exitFullScreen() {
+    if (!_fullScreen) return;
+    _fullScreen = false;
+    notifyListeners();
+  }
+
   void close() {
     if (!_open) return;
     _open = false;
+    _fullScreen = false;
     notifyListeners();
   }
 }
@@ -699,30 +772,71 @@ const double _paneShotShape = 3 / 2;
 /// A shot of the Library beside its grid, on the second of the two pages
 /// of a window with a fold standing upright in it ([pagesAtFold], mock
 /// `duo-inner-split`): the shot at the top of the page, fitted to its
-/// width, then its name with Download, its details and the map of where
-/// it was taken, which scroll when the page is too short for them. A
-/// swipe on the shot moves through the grid's shots, a tap on a photo
-/// opens it in the full-screen viewer ([onOpen]), and a movie plays in
-/// place.
+/// width, then its name with Download and Full screen, its details and the
+/// map of where it was taken, which scroll when the page is too short for
+/// them. A swipe on the shot moves through the grid's shots and a movie
+/// plays in place; a tap on a photo there does nothing, as a tap on a
+/// movie is for playback \[design\].
+///
+/// Full screen grows the shot from its place to the whole window, over the
+/// Library and its tab bar, where it is laid out as the viewer has it
+/// ([ShotViewer]), with Exit full screen in the place of Back; Exit full
+/// screen, or the system's Back, shrinks it back into its place
+/// \[design\]. Its pages are the same ones all along, so a zoomed photo
+/// stays zoomed and a movie goes on playing. Where the window stops being
+/// two pages while the shot has it ([besideGrid] unset), the shot keeps
+/// the whole window, and leaving it closes the pane: there is no page
+/// beside the grid to go back to.
 class ShotPane extends StatefulWidget {
-  const new({required this.controller, required this.onOpen, super.key});
+  const new({required this.controller, required this.besideGrid, super.key});
 
   /// Says which shot shows, and is told the one swiped to. The same one
   /// for as long as the pane is there.
   final ShotPaneController controller;
 
-  /// The photo shown was tapped.
-  final VoidCallback onOpen;
+  /// The pane is the second of two pages, beside the grid; unset, it is
+  /// there only for a shot with the whole window.
+  final bool besideGrid;
 
   @override
   State<ShotPane> createState() => _ShotPaneState();
 }
 
-class _ShotPaneState extends State<ShotPane> with _ShotPages<ShotPane> {
+class _ShotPaneState extends State<ShotPane>
+    with
+        TickerProviderStateMixin,
+        _ShotPages<ShotPane>,
+        _ViewerChrome<ShotPane> {
   late final LibraryContext _library = LibraryScope.of(context);
 
   /// The shot at [_index] when the controller last said which shows.
   late Shot? _shown = widget.controller.shown;
+
+  /// What the controller last said of [ShotPaneController.isFullScreen].
+  bool _fullScreen = false;
+
+  /// The shot's pages, which keep their state (zoom, playback) as they
+  /// move from their place in the pane to the whole window and back.
+  final GlobalKey _pagesKey = GlobalKey();
+
+  /// The pages' place in the pane, which keeps its size while they are
+  /// away, and its box: the one laid out before they left, while the
+  /// shot sets off.
+  final GlobalKey _placeKey = GlobalKey();
+
+  /// Shows the shot over the Library while it is away from its place.
+  final _wholeWindow = OverlayPortalController();
+
+  /// How far the shot is on its way to the whole window: 0 in its place in
+  /// the pane, 1 with the whole window. The pane is rebuilt when the shot
+  /// sets off and when it arrives, which is when its pages change parents.
+  late final AnimationController _expansion;
+  late final CurvedAnimation _expanded;
+
+  /// Where the shot leaves the whole window from, in the overlay: beside
+  /// its details, when they showed. Null while it grows: it grows to the
+  /// whole window beside the vertical bar.
+  Rect? _leavingFrom;
 
   @override
   List<Shot> get _shots => widget.controller.shots;
@@ -733,12 +847,24 @@ class _ShotPaneState extends State<ShotPane> with _ShotPages<ShotPane> {
   @override
   void initState() {
     super.initState();
+    _expansion = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    )..addStatusListener(_onExpansion);
+    _expanded = CurvedAnimation(
+      parent: _expansion,
+      curve: Curves.easeInOutCubic,
+    );
     widget.controller.addListener(_onController);
   }
 
   @override
   void dispose() {
     widget.controller.removeListener(_onController);
+    // Closed while the shot had the whole window.
+    if (_fullScreen) _giveBackSystemUi();
+    _expanded.dispose();
+    _expansion.dispose();
     super.dispose();
   }
 
@@ -746,10 +872,18 @@ class _ShotPaneState extends State<ShotPane> with _ShotPages<ShotPane> {
   /// cell of the grid was tapped, or shots before it came or went) has
   /// its page jumped to, which ends a swipe under way.
   void _onController() {
-    final shown = widget.controller.shown;
+    final controller = widget.controller;
+    final shown = controller.shown;
     // Closed: the Library takes the pane away.
     if (shown == null) return;
-    final index = widget.controller.index;
+    if (controller.isFullScreen != _fullScreen) {
+      if (controller.isFullScreen) {
+        _enterFullScreen();
+      } else {
+        _exitFullScreen();
+      }
+    }
+    final index = controller.index;
     final moved = index != _index;
     setState(() {
       _index = index;
@@ -760,8 +894,52 @@ class _ShotPaneState extends State<ShotPane> with _ShotPages<ShotPane> {
     if (moved && _pages.hasClients) _pages.jumpToPage(index);
   }
 
+  /// Grows the shot to the whole window, where it shows as the viewer
+  /// opens on a shot: without its details, the header over it. The header
+  /// comes once the shot has arrived.
+  void _enterFullScreen() {
+    _fullScreen = true;
+    _leavingFrom = null;
+    _infoShown = false;
+    _immersion.value = 1;
+    _headerShown = true;
+    _headerVisibility.value = 0;
+    _wholeWindow.show();
+    _animate(_expansion, forward: true);
+  }
+
+  /// Shrinks the shot back into its place in the pane, and gives the
+  /// system's bars back as the Library has them.
+  void _exitFullScreen() {
+    _fullScreen = false;
+    if (_expansion.isCompleted) _leavingFrom = _inOverlay(_pagesKey);
+    _giveBackSystemUi();
+    _headerShown = true;
+    _animate(_expansion, forward: false);
+  }
+
+  void _onExpansion(AnimationStatus status) {
+    if (status.isCompleted) _animate(_headerVisibility, forward: true);
+    if (status.isDismissed) _wholeWindow.hide();
+    setState(() {});
+  }
+
+  /// Where the box of [key] is in the overlay the shot is shown in over
+  /// the Library; null while it is not laid out.
+  Rect? _inOverlay(GlobalKey key) {
+    final box = key.currentContext?.findRenderObject();
+    final overlay = Overlay.of(context).context.findRenderObject();
+    if (box is! RenderBox || overlay is! RenderBox || !box.hasSize) {
+      return null;
+    }
+    return box.localToGlobal(Offset.zero, ancestor: overlay) & box.size;
+  }
+
   @override
-  void _onShown(Shot shot) => widget.controller.moveTo(_index);
+  void _onShown(Shot shot) {
+    widget.controller.moveTo(_index);
+    if (shot.isVideo) _setHeaderShown(true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -770,6 +948,127 @@ class _ShotPaneState extends State<ShotPane> with _ShotPages<ShotPane> {
     final shot = widget.controller.shown;
     // Closed, or its camera gone: the Library is taking the pane away.
     if (shot == null || serial == null) return const SizedBox.shrink();
+    final inPlace = _expansion.isDismissed;
+    final arrived = _expansion.isCompleted;
+    // The same under either parent, so that they keep their state when
+    // they move between them.
+    final pages = KeyedSubtree(
+      key: _pagesKey,
+      child: _buildPages(
+        serial: serial,
+        // In its place the details are always in place, and there is no
+        // header.
+        immersed: inPlace
+            ? kAlwaysDismissedAnimation
+            : arrived
+            ? _immersed
+            : _expanded,
+        headerVisibility: inPlace
+            ? kAlwaysCompleteAnimation
+            : _headerVisibility,
+        onPhotoTap: arrived ? _onPhotoTap : null,
+      ),
+    );
+    return OverlayPortal(
+      controller: _wholeWindow,
+      overlayChildBuilder: (context) => MediaQuery(
+        // The window's, as the viewer has them: not the pane's, nor the
+        // Library's, which keeps room for its tab bar.
+        data: MediaQuery.of(Overlay.of(context).context),
+        child: Builder(
+          builder: (context) => arrived
+              ? _buildViewer(
+                  context,
+                  library: library,
+                  serial: serial,
+                  shot: shot,
+                  pages: pages,
+                  onExitFullScreen: widget.controller.exitFullScreen,
+                )
+              : _buildFlight(context, pages),
+        ),
+      ),
+      // A screen reader keeps to the shot while it is away from its place,
+      // as it would to a route over the Library. The block is on this
+      // side: the shot's own semantics hang off this portal, so a block in
+      // them would hide them with the Library.
+      child: BlockSemantics(
+        blocking: !inPlace,
+        child: widget.besideGrid
+            // Out of sight under a shot that has the whole window, the
+            // pane keeps its state: where it was scrolled to, above all.
+            ? Offstage(
+                offstage: arrived,
+                child: _buildPane(
+                  library: library,
+                  serial: serial,
+                  shot: shot,
+                  inPlace: inPlace ? pages : null,
+                ),
+              )
+            : const SizedBox.shrink(),
+      ),
+    );
+  }
+
+  /// [pages] over the Library, between their [_placeKey] in the pane and
+  /// the whole window, on the viewer's ground, which covers the Library as
+  /// the shot grows \[design\].
+  Widget _buildFlight(BuildContext context, Widget pages) {
+    final insets = MediaQuery.paddingOf(context);
+    final barSide = VerticalBar.of(context)?.side;
+    final ground = Color.alphaBlend(
+      Colors.black.withValues(alpha: _immersed.value),
+      Theme.of(context).scaffoldBackgroundColor,
+    );
+    return AbsorbPointer(
+      child: AnimatedBuilder(
+        animation: _expanded,
+        // Laid out after the pane, so the place is where this frame has
+        // it.
+        builder: (context, _) => LayoutBuilder(
+          builder: (context, box) {
+            final grown = _expanded.value;
+            // Beside the vertical bar, as the viewer has it.
+            final whole =
+                _leavingFrom ??
+                Rect.fromLTRB(
+                  barSide == BarSide.left ? insets.left : 0,
+                  0,
+                  box.maxWidth - (barSide == BarSide.right ? insets.right : 0),
+                  box.maxHeight,
+                );
+            return ColoredBox(
+              color: ground.withValues(alpha: grown),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Positioned.fromRect(
+                    rect: Rect.lerp(
+                      _inOverlay(_placeKey) ?? whole,
+                      whole,
+                      grown,
+                    )!,
+                    child: pages,
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// The pane: the shot's place at the top, with the pages [inPlace]
+  /// while they are there, then its name with Download and Full screen,
+  /// its details and the map of where it was taken.
+  Widget _buildPane({
+    required LibraryContext library,
+    required String serial,
+    required Shot shot,
+    required Widget? inPlace,
+  }) {
     final c = GrColors.of(context);
     final leftFirst = Directionality.of(context) == TextDirection.ltr;
     // The window's inset on the side of the fold is the other page's.
@@ -792,23 +1091,12 @@ class _ShotPaneState extends State<ShotPane> with _ShotPages<ShotPane> {
               child: Column(
                 children: [
                   AspectRatio(
+                    key: _placeKey,
                     aspectRatio: _paneShotShape,
-                    // The details are always in place, and there is no
-                    // header.
-                    child: _buildPages(
-                      serial: serial,
-                      immersed: kAlwaysDismissedAnimation,
-                      headerVisibility: kAlwaysCompleteAnimation,
-                      onPhotoTap: widget.onOpen,
-                    ),
+                    child: inPlace,
                   ),
                   Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(
-                      20,
-                      12,
-                      16,
-                      0,
-                    ),
+                    padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 8, 0),
                     child: Row(
                       children: [
                         Expanded(
@@ -827,6 +1115,12 @@ class _ShotPaneState extends State<ShotPane> with _ShotPages<ShotPane> {
                           shot: shot,
                           engine: library.engine,
                           look: _DownloadLook.labelled,
+                        ),
+                        IconButton(
+                          key: const Key('pane-full-screen'),
+                          tooltip: context.l10n.viewerFullScreen,
+                          onPressed: widget.controller.enterFullScreen,
+                          icon: const Icon(Icons.fullscreen_rounded),
                         ),
                       ],
                     ),
@@ -912,7 +1206,7 @@ class _ShotBesideDetails extends StatelessWidget {
 /// and back with [visibility]; above a shot with its details ([immersed]
 /// at 0) it is the app's bar. With its buttons in the window's vertical
 /// bar ([buttonsInBar]) it is the shot's name alone, from the start of
-/// the window.
+/// the window. Back is Exit full screen where [onExitFullScreen] is given.
 class _Header extends StatelessWidget {
   const new({
     required this.shown,
@@ -923,6 +1217,7 @@ class _Header extends StatelessWidget {
     required this.buttonsInBar,
     required this.infoShown,
     required this.onInfo,
+    required this.onExitFullScreen,
     required this.download,
   });
 
@@ -943,6 +1238,7 @@ class _Header extends StatelessWidget {
   final bool buttonsInBar;
   final bool infoShown;
   final VoidCallback onInfo;
+  final VoidCallback? onExitFullScreen;
   final Widget? download;
 
   @override
@@ -960,7 +1256,16 @@ class _Header extends StatelessWidget {
               opacity: visibility.value,
               child: AppBar(
                 automaticallyImplyLeading: !buttonsInBar,
-                leading: buttonsInBar ? null : const BackButton(),
+                leading: buttonsInBar
+                    ? null
+                    : onExitFullScreen == null
+                    ? const BackButton()
+                    : IconButton(
+                        key: const Key('viewer-exit-full-screen'),
+                        tooltip: context.l10n.viewerExitFullScreen,
+                        onPressed: onExitFullScreen,
+                        icon: const Icon(Icons.fullscreen_exit_rounded),
+                      ),
                 centerTitle: buttonsInBar ? false : null,
                 titleSpacing: buttonsInBar ? 20 : null,
                 foregroundColor: foreground,
@@ -1227,8 +1532,9 @@ class _PhotoPage extends StatefulWidget {
   /// drag moves it, or two fingers are on it for a pinch.
   final ValueChanged<bool> onHold;
 
-  /// The photo was tapped, not pinched or dragged.
-  final VoidCallback onTap;
+  /// The photo was tapped, not pinched or dragged; null where a tap does
+  /// nothing.
+  final VoidCallback? onTap;
 
   @override
   State<_PhotoPage> createState() => _PhotoPageState();
@@ -1283,7 +1589,7 @@ class _PhotoPageState extends State<_PhotoPage> {
     final down = _tapping;
     _onFingerGone(event);
     if (down != null && event.timeStamp - down.timeStamp < kLongPressTimeout) {
-      widget.onTap();
+      widget.onTap?.call();
     }
   }
 

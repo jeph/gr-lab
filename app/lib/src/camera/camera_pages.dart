@@ -38,6 +38,10 @@ class _CameraPagesState extends State<CameraPages> {
   /// ([ConnectionController.tab] is then null).
   CameraTab _tab = CameraTab.library;
 
+  /// Whether the Library's shot beside the grid has the whole window: it
+  /// covers the tab bar, which a screen reader then does not reach.
+  bool _libraryShotWholeWindow = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -74,10 +78,13 @@ class _CameraPagesState extends State<CameraPages> {
           !(_tab == CameraTab.shoot && _shoot.mode == ShootMode.liveView);
       return DockLayout(
         dock: bar
-            ? CameraTabBar(
-                tabs: _app.connection.tabs,
-                tab: _tab,
-                onSelect: _app.connection.selectTab,
+            ? ExcludeSemantics(
+                excluding: _libraryShotWholeWindow,
+                child: CameraTabBar(
+                  tabs: _app.connection.tabs,
+                  tab: _tab,
+                  onSelect: _app.connection.selectTab,
+                ),
               )
             : null,
         child: IndexedStack(
@@ -89,7 +96,11 @@ class _CameraPagesState extends State<CameraPages> {
                 child: !_built.contains(tab)
                     ? const SizedBox.shrink()
                     : switch (tab) {
-                        CameraTab.library => const LibraryScreen(),
+                        CameraTab.library => LibraryScreen(
+                          onShotWholeWindow: (wholeWindow) => setState(
+                            () => _libraryShotWholeWindow = wholeWindow,
+                          ),
+                        ),
                         CameraTab.shoot => ShootScreen(model: _shoot),
                         CameraTab.looks => LooksScreen(model: _looks),
                       },

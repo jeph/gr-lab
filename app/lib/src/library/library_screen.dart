@@ -33,19 +33,27 @@ import 'package:grphoto/src/widgets/window_layout.dart';
 /// page, laid out as on a phone, and the second shows the shot last
 /// tapped in the grid ([ShotPane]), or asks for one ([_NoShotShown]).
 /// Tapping a shot never moves the grid \[design\]: the pages stay as they
-/// are whichever shot shows.
+/// are whichever shot shows. Full screen there gives the shot the whole
+/// window instead of opening the viewer, and Back takes it back to the
+/// second page before it leaves the Library.
 class LibraryScreen extends StatelessWidget {
-  const new({super.key});
+  const new({super.key, this.onShotWholeWindow});
+
+  /// Told, when it changes, whether the shot beside the grid has the
+  /// whole window, over the camera's tab bar.
+  final ValueChanged<bool>? onShotWholeWindow;
 
   @override
   Widget build(BuildContext context) => LibraryScope(
     library: AppScope.of(context).library,
-    child: const _LibraryView(),
+    child: _LibraryView(onShotWholeWindow: onShotWholeWindow),
   );
 }
 
 class _LibraryView extends StatefulWidget {
-  const new();
+  const new({required this.onShotWholeWindow});
+
+  final ValueChanged<bool>? onShotWholeWindow;
 
   @override
   State<_LibraryView> createState() => _LibraryViewState();
@@ -65,6 +73,9 @@ class _LibraryViewState extends State<_LibraryView> {
 
   /// The camera of the shot [_pane] shows.
   String? _paneSerial;
+
+  /// What [_LibraryView.onShotWholeWindow] was last told.
+  bool _shotWholeWindow = false;
 
   /// The key of the shot [_pane] showed when the grid last brought its
   /// line into view; null with nothing shown.
@@ -89,13 +100,16 @@ class _LibraryViewState extends State<_LibraryView> {
       _library.engine.addListener(_onEngine);
       _library.engine.addListener(_followGrid);
       _library.model.addListener(_followGrid);
-      _pane.addListener(_onPaneShot);
+      _pane
+        ..addListener(_onPaneShot)
+        ..addListener(_onPaneFullScreen);
       // The engine is the app's: the photo library may have refused it
       // while the camera pages were closed.
       _onEngine();
     }
-    // A window that is one page has no room for a shot beside the grid.
-    if (pagesAtFold(context) == null) _pane.close();
+    // A window that is one page has no room for a shot beside the grid;
+    // one with the whole window keeps it until it leaves it.
+    if (pagesAtFold(context) == null && !_pane.isFullScreen) _pane.close();
   }
 
   @override
@@ -144,28 +158,15 @@ class _LibraryViewState extends State<_LibraryView> {
     _followGrid();
   }
 
-  /// Opens the viewer on the shot of [shots] at [index]. A shot beside
-  /// the grid gives way to the one the viewer ended on.
-  Future<void> _open(List<Shot> shots, int index) async {
-    var last = shots[index];
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => LibraryScope(
-          library: _library,
-          child: ShotViewer(
-            shots: shots,
-            initialIndex: index,
-            onShown: (shot) => last = shot,
-          ),
-        ),
+  /// Opens the viewer on the shot of [shots] at [index].
+  Future<void> _open(List<Shot> shots, int index) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => LibraryScope(
+        library: _library,
+        child: ShotViewer(shots: shots, initialIndex: index),
       ),
-    );
-    if (!mounted || !_pane.isOpen) return;
-    final now = _library.grid.filtered(_filter)?.shots;
-    if (now == null) return;
-    final place = now.indexWhere((s) => s.key == last.key);
-    if (place >= 0) _showBeside(now, place);
-  }
+    ),
+  );
 
   /// Shows the shot of [shots], the grid's, at [index] beside the grid.
   void _showBeside(List<Shot> shots, int index) {
@@ -173,8 +174,18 @@ class _LibraryViewState extends State<_LibraryView> {
     _pane.show(shots, index);
   }
 
-  /// Opens the viewer on the shot beside the grid.
-  void _openShown() => unawaited(_open(_pane.shots, _pane.index));
+  /// Tells the camera's pages when the shot beside the grid takes or
+  /// leaves the whole window. One that left it in a window that is one
+  /// page is closed: there is no page beside the grid for it to go back
+  /// to.
+  void _onPaneFullScreen() {
+    final wholeWindow = _pane.isFullScreen;
+    if (wholeWindow != _shotWholeWindow) {
+      _shotWholeWindow = wholeWindow;
+      widget.onShotWholeWindow?.call(wholeWindow);
+    }
+    if (!wholeWindow && pagesAtFold(context) == null) _pane.close();
+  }
 
   /// Keeps the shot beside the grid to the grid's shots: those of its
   /// camera that the filter leaves.
@@ -434,10 +445,16 @@ class _LibraryViewState extends State<_LibraryView> {
     );
 
     return PopScope(
-      canPop: !_selecting,
-      // Back ends choosing shots.
+      canPop: !_selecting && !_pane.isFullScreen,
+      // Back takes a shot with the whole window back beside the grid, then
+      // ends choosing shots.
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _endSelecting();
+        if (didPop) return;
+        if (_pane.isFullScreen) {
+          _pane.exitFullScreen();
+        } else {
+          _endSelecting();
+        }
       },
       child: CameraBarColumn(
         child: Scaffold(
@@ -460,17 +477,22 @@ class _LibraryViewState extends State<_LibraryView> {
                   width: book?.first,
                   child: _FirstPage(besideSecond: book != null, child: page),
                 ),
-                if (book != null)
+                // Kept, with no room, while the shot beside the grid has
+                // the whole window of a window that is one page.
+                if (book != null || _pane.isFullScreen)
                   PositionedDirectional(
                     top: 0,
                     bottom: 0,
-                    start: book.first + book.gap,
                     end: 0,
+                    width: book?.second ?? 0,
                     child: DecoratedBox(
                       position: DecorationPosition.foreground,
                       decoration: BoxDecoration(border: pageEdge),
                       child: _pane.isOpen
-                          ? ShotPane(controller: _pane, onOpen: _openShown)
+                          ? ShotPane(
+                              controller: _pane,
+                              besideGrid: book != null,
+                            )
                           : _NoShotShown(asks: showsGrid),
                     ),
                   ),

@@ -3212,9 +3212,17 @@
   "@viewerDownloading": {
     "description": "Viewer action while the file is being downloaded."
   },
+  "viewerExitFullScreen": "Exit full screen",
+  "@viewerExitFullScreen": {
+    "description": "Button in place of Back while a shot shown beside the Library's grid on a foldable has the whole screen; it takes the shot back beside the grid."
+  },
   "viewerFormat": "Format",
   "@viewerFormat": {
     "description": "Label of the shot's format in the viewer details."
+  },
+  "viewerFullScreen": "Full screen",
+  "@viewerFullScreen": {
+    "description": "Tooltip of the button beside the name of a shot shown beside the Library's grid on a foldable; it gives the shot the whole screen, laid out as the viewer has it."
   },
   "viewerImageControl": "Image Control",
   "@viewerImageControl": {
