@@ -252,6 +252,34 @@ void main() {
     await app.dispose();
   });
 
+  testWidgets('on an iPhone, a queue iOS keeps running off screen goes on '
+      "past the 20 s from one download to the next, and the camera's Wi-Fi "
+      'is left once it is done', (tester) async {
+    final (app, gate) = await _inLibrary(tester, outlivesApp: true);
+    await _download(tester, both: true);
+    await pumpUntil(tester, () => app.media.held == 1, reason: 'save held');
+    app.background.continuedTask.value = true;
+    bool? wlanAtEnd;
+    app.background.onEnd = () => wlanAtEnd ??= app.camera.wlanOn;
+
+    goOffScreen(tester);
+    await tester.pump(const Duration(seconds: 30));
+    expect(app.models.connection.status, ConnectionStatus.connected);
+
+    _release(app, gate);
+    await pumpUntil(
+      tester,
+      () => app.background.hides.isNotEmpty,
+      reason: 'download hidden',
+    );
+    expect(app.background.hides, [true]);
+    expect(app.models.downloads.remaining, 0);
+    expect(wlanAtEnd, isFalse);
+    expect(app.models.connection.status, ConnectionStatus.bluetooth);
+
+    await app.dispose();
+  });
+
   testWidgets('on an iPhone, when iOS ends the continued processing task off '
       "screen, the queue pauses and its display goes once the camera's Wi-Fi "
       'was left', (tester) async {

@@ -30,9 +30,10 @@ import 'package:grphoto/src/services.dart';
 /// the join completes), is left after [backgroundGrace], whatever the
 /// setting, in background time asked of iOS for it, and sooner when iOS
 /// gives less than [backgroundGrace] and [backgroundMargin] together.
-/// Work ([hold]) keeps it only while iOS keeps the app running for the
-/// download queue ([BackgroundDownloads.continued]); once that ends, the
-/// Wi-Fi is left at once. \[design\]
+/// It is kept while iOS keeps the app running for the download queue
+/// ([BackgroundDownloads.continued]), also between two downloads; a queue
+/// that ends off screen leaves it at once ([leaveOffScreen]), and when iOS
+/// ends the task the [backgroundGrace] that has passed counts. \[design\]
 /// (research/protocol/connection-lifecycle.md §9, "What GR Photo does")
 final class IdleDisconnect {
   new({required this.connection, required this.settings})
@@ -80,11 +81,20 @@ final class IdleDisconnect {
   Future<void> _leaving = Future.value();
   bool _leavingOffScreen = false;
 
-  /// Completes once a leave of the camera's Wi-Fi started because the app
-  /// is off screen is done; at once when none runs. Ending iOS's continued
-  /// processing task lets iOS suspend the app, so the download queue waits
-  /// for this first (`DownloadBackground`).
-  Future<void> get leftOffScreen => _leaving;
+  /// Leaves the camera's Wi-Fi at once if the app is off screen where the
+  /// camera network outlives the app, and completes once that is done; at
+  /// once when there is nothing to leave. The download queue calls this
+  /// before it ends iOS's continued processing task, which lets iOS
+  /// suspend the app (`DownloadBackground`).
+  Future<void> leaveOffScreen() {
+    if (_offScreenUntil == null || _leavingOffScreen || !_onWifi) {
+      return _leaving;
+    }
+    _timer?.cancel();
+    _timer = null;
+    _leaveOffScreen();
+    return _leaving;
+  }
 
   /// Records use now.
   void touch() => _last = clock.now();
@@ -158,14 +168,19 @@ final class IdleDisconnect {
   void _scheduleOffScreen() {
     if (_leavingOffScreen) return;
     if (!_onWifi) return _endTime();
-    // iOS keeps the app running for the queue, until the task ends.
-    if (_holds > 0 && _continued.value) return _endTime();
+    // iOS keeps the app running for the download queue until the task
+    // ends, also between two downloads, when nothing holds the Wi-Fi.
+    if (_continued.value) return _endTime();
     _askTime();
     final left = _offScreenUntil!.difference(clock.now());
     if (left > Duration.zero) {
       _timer = Timer(left, _schedule);
       return;
     }
+    _leaveOffScreen();
+  }
+
+  void _leaveOffScreen() {
     // The session traces why (`wifi.stop`, reason `background`).
     _leavingOffScreen = true;
     _leaving = connection

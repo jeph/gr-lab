@@ -189,6 +189,12 @@ void main() {
     // The continued processing task keeps the app running meanwhile.
     expect(app.phone.held, 0);
 
+    // Between two downloads nothing holds the Wi-Fi, but the task runs on.
+    release();
+    await tester.pump(const Duration(seconds: 1));
+    expect(app.models.connection.status, ConnectionStatus.connected);
+    addTearDown(app.models.idle.hold());
+
     app.background.continuedTask.value = false;
     await tester.pump();
     await _expectLeft(tester, app);

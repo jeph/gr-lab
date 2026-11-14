@@ -24,9 +24,8 @@ const _progressInterval = Duration(seconds: 1);
 /// in front, so nothing could go on until the user is back. \[design\]
 ///
 /// On iOS, ending the platform's background work lets iOS suspend the app,
-/// which could then not leave the camera's network
-/// (`IdleDisconnect.leftOffScreen`): off screen, the end waits until the
-/// Wi-Fi is left.
+/// which could then not leave the camera's network: off screen, the end
+/// leaves the Wi-Fi first (`IdleDisconnect.leaveOffScreen`).
 class DownloadBackground extends StatefulWidget {
   const new({required this.child, super.key});
 
@@ -106,10 +105,9 @@ class _DownloadBackgroundState extends State<DownloadBackground> {
     _shown = status;
     final finished = _engine.remaining == 0 && _engine.failedCount == 0;
     final ends = status == null || status.paused;
-    final offScreen = !_models.connection.foreground;
     final idle = _models.idle;
     _sent = _sent.then((_) async {
-      if (ends && offScreen) await idle.leftOffScreen;
+      if (ends) await idle.leaveOffScreen();
       if (status != null) {
         await _background.show(status);
       } else {
