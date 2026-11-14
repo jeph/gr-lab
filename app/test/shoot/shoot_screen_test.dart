@@ -636,9 +636,8 @@ void main() {
 
     testWidgets('the picture is as large as the window allows and in the '
         'middle of its width on phones, foldables and tablets, the camera '
-        'level or upright, with the shutter, the readouts and × in reach', (
-      tester,
-    ) async {
+        'level or upright, with the shutter, the readouts and Back or × in '
+        'reach', (tester) async {
       final app = await inLiveView(tester);
       const windows = [
         // A phone.
@@ -682,17 +681,22 @@ void main() {
             closeTo(window.width / 2, .5),
             reason: reason,
           );
-          for (final key in [
-            'shoot-shutter',
-            'live-readout-av',
-            'live-close',
-          ]) {
+          for (final key in ['shoot-shutter', 'live-readout-av']) {
             expect(
               find.byKey(Key(key)).hitTestable(),
               findsOne,
               reason: '$key in $reason',
             );
           }
+          // Back, or × in the rails of a window on its side.
+          expect(
+            [
+              for (final key in ['live-back', 'live-close'])
+                ...find.byKey(Key(key)).hitTestable().evaluate(),
+            ],
+            hasLength(1),
+            reason: 'Back or × in $reason',
+          );
         }
       }
       await app.dispose();
@@ -927,7 +931,7 @@ void main() {
       await app.dispose();
     });
 
-    testWidgets('on a closed iPhone Duo, × and the exposure mode stand in '
+    testWidgets('on a closed iPhone Duo, Back and the exposure mode stand in '
         'the bar down its side, under the status; the picture takes the '
         'width the bar leaves, with the other controls above and below it '
         'as on a phone', (tester) async {
@@ -941,7 +945,7 @@ void main() {
       // the window above the system's inset.
       const strip = Rect.fromLTRB(382, 174, 466, 678);
       const bottom = 678 - 34.0;
-      for (final key in ['live-close', 'live-exposure']) {
+      for (final key in ['live-back', 'live-exposure']) {
         expect(find.byKey(Key(key)).hitTestable(), findsOne, reason: key);
         expect(strip.expandToInclude(rect(key)), strip, reason: key);
       }
@@ -977,7 +981,7 @@ void main() {
     testWidgets('on an open iPhone Duo held wide, the picture is as large '
         'as fits between a row of controls above it and one below it, with '
         'nothing over it, and the shutter and the last shot stand in the '
-        'bar under × and the exposure mode; half-open like a book, only '
+        'bar under Back and the exposure mode; half-open like a book, only '
         'the picture crosses the fold', (tester) async {
       final app = await inLiveView(tester);
       setDuoWindow(tester, app.windowPose, DuoWindow.open);
@@ -1002,7 +1006,7 @@ void main() {
         'live-readout-xv',
       ];
       const inBar = [
-        'live-close',
+        'live-back',
         'live-exposure',
         'shoot-shutter',
         'live-last-shot',
@@ -1112,7 +1116,7 @@ void main() {
     testWidgets('on an iPhone Duo half-open on a table, the picture fills '
         'the half that stands up, under the camera beside the status, and '
         'every control is in the half that lies flat, the open dial too; '
-        'flat again, the controls are above and below the picture, × and '
+        'flat again, the controls are above and below the picture, Back and '
         'the camera in the band beside the status', (tester) async {
       final app = await inLiveView(tester);
       setDuoWindow(tester, app.windowPose, DuoWindow.tabletop);
@@ -1134,7 +1138,7 @@ void main() {
       const bottom = 951 - 34.0;
       const controls = [
         'shoot-mode',
-        'live-close',
+        'live-back',
         'live-exposure',
         'live-chip-drive',
         'live-readout-av',
@@ -1158,7 +1162,7 @@ void main() {
         expect(control.top, greaterThanOrEqualTo(foldBottom), reason: key);
         expect(control.bottom, lessThanOrEqualTo(bottom), reason: key);
       }
-      for (final key in ['live-close', 'live-readout-av', 'shoot-shutter']) {
+      for (final key in ['live-back', 'live-readout-av', 'shoot-shutter']) {
         expect(find.byKey(Key(key)).hitTestable(), findsOne, reason: key);
       }
 
@@ -1179,9 +1183,9 @@ void main() {
       expect(tester.takeException(), isNull);
       final flat = rect('live-turned-0');
       expect(flat.width, closeTo(669, .5));
-      expect(band.expandToInclude(rect('live-close')), band);
+      expect(band.expandToInclude(rect('live-back')), band);
       expect(band.expandToInclude(rect('camera-pill')), band);
-      expect(rect('live-close').bottom, lessThanOrEqualTo(flat.top));
+      expect(rect('live-back').bottom, lessThanOrEqualTo(flat.top));
       expect(rect('shoot-shutter').top, greaterThanOrEqualTo(flat.bottom));
       await app.dispose();
     });
@@ -1311,7 +1315,7 @@ void main() {
       Rect rect(String key) => tester.getRect(find.byKey(Key(key)));
       const controls = [
         'shoot-mode',
-        'live-close',
+        'live-back',
         'live-exposure',
         'live-chip-drive',
         'live-readout-av',
@@ -1655,9 +1659,27 @@ void main() {
       await app.dispose();
     });
 
-    testWidgets('× goes back to Remote and keeps the Wi-Fi up, with the '
-        'camera still on', (tester) async {
+    testWidgets('Back goes to Cameras, as on Remote', (tester) async {
       final app = await inLiveView(tester);
+      expect(find.byKey(const Key('live-close')), findsNothing);
+      await tester.tap(find.byKey(const Key('live-back')));
+      await pumpUntil(
+        tester,
+        () => find.byKey(const Key('shoot-live')).evaluate().isEmpty,
+        reason: 'live view closed',
+      );
+      await pumpUntilFound(tester, find.byKey(const Key('camera-card-shoot')));
+      await app.dispose();
+    });
+
+    testWidgets('on a phone on its side, × goes back to Remote and keeps the '
+        'Wi-Fi up, with the camera still on', (tester) async {
+      final app = await inLiveView(tester);
+      tester.view
+        ..physicalSize = const Size(956, 440)
+        ..devicePixelRatio = 1;
+      await pumpRounds(tester, 3);
+      expect(find.byKey(const Key('live-back')), findsNothing);
       await tester.tap(find.byKey(const Key('live-close')));
       await pumpUntilFound(tester, find.byKey(const Key('shoot-remote')));
       await pumpRounds(tester, 30);
@@ -1769,7 +1791,7 @@ void main() {
 
     testWidgets('a tap on the last shot opens the pictures taken since live '
         'view was opened, the newest first, and live view stops under the '
-        'viewer; × forgets them', (tester) async {
+        'viewer; going back to Remote forgets them', (tester) async {
       final app = await inLiveView(tester);
       final camera = app.camera;
       final listing = app.models.library.model;
@@ -1852,7 +1874,7 @@ void main() {
         reason: 'viewer closed',
       );
 
-      await tester.tap(find.byKey(const Key('live-close')));
+      await tester.tap(find.byKey(const Key('shoot-mode-remote')));
       await pumpUntilFound(tester, find.byKey(const Key('shoot-remote')));
       await tester.tap(find.byKey(const Key('shoot-mode-liveView')));
       await pumpUntilFound(tester, find.byKey(const Key('live-picture')));

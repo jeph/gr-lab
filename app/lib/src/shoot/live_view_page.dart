@@ -33,15 +33,17 @@ import 'package:grphoto/src/widgets/window_layout.dart';
 /// room it leaves, above and below it or in a rail on each side of it;
 /// where that room is too little they lie over the picture's edges, on a
 /// shade that keeps them legible, and the picture can be tapped to focus
-/// anywhere between them. The exposure readouts edit on a dial; × goes
-/// back to Remote. The last shot is the newest picture taken since live
-/// view was opened, and a tap on it opens the viewer on all of them.
+/// anywhere between them. The exposure readouts edit on a dial; Back goes
+/// to Cameras, as Remote's does, except in the rails of a phone on its
+/// side, which have no room for Remote / Live view: there × goes back to
+/// Remote. The last shot is the newest picture taken since live view was
+/// opened, and a tap on it opens the viewer on all of them.
 ///
 /// In a window with a [VerticalBar] (a foldable iPhone, closed or open and
-/// held wide) × and the exposure mode stand in the bar, and in a wide one
-/// the shutter and the last shot too: the bar is the rail at its end. On a
-/// foldable that is half-open on a table the picture is in the half that
-/// stands up and every control in the half that lies flat.
+/// held wide) Back and the exposure mode stand in the bar, and in a wide
+/// one the shutter and the last shot too: the bar is the rail at its end.
+/// On a foldable that is half-open on a table the picture is in the half
+/// that stands up and every control in the half that lies flat.
 class LiveViewPage extends StatelessWidget {
   const new({required this.model, super.key});
 
@@ -257,8 +259,8 @@ class _LiveLayoutState extends State<_LiveLayout> {
       ? math.min(_maxReadoutsWidth, size.width - 2 * (24 + _shutterSize + 12))
       : size.width - 32;
 
-  /// Whether × and the exposure mode stand in the window's [VerticalBar]
-  /// ([BarColumn]), and so nowhere among the other controls.
+  /// Whether Back and the exposure mode stand in the window's
+  /// [VerticalBar] ([BarColumn]), and so nowhere among the other controls.
   bool get _buttonsInBar => VerticalBar.of(context) != null;
 
   bool get _streaming => _live.phase == LiveViewPhase.streaming;
@@ -333,7 +335,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
     // The bar where it is the rail at the end of the controls.
     final railBar = wide && tableFold == null ? bar : null;
     return BarColumn(
-      buttons: [_close(), ?_exposureMode()],
+      buttons: [_back(), ?_exposureMode()],
       child: Scaffold(
         key: const Key('shoot-live'),
         backgroundColor: Colors.black,
@@ -520,7 +522,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
   );
 
   /// The shutter and the last shot in [bar], the rail at the end of
-  /// [_barsBesideBar], under × and the exposure mode: the shutter halfway
+  /// [_barsBesideBar], under Back and the exposure mode: the shutter halfway
   /// down a window of [window] in size, where the thumb of the hand that
   /// holds the phone rests, and the last shot at the bar's foot, clear of
   /// the system's [bottomInset].
@@ -634,7 +636,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
     );
   }
 
-  /// Remote / Live view, with × and the exposure mode where the window
+  /// Remote / Live view, with Back and the exposure mode where the window
   /// has no [VerticalBar] for them, over the chips: what the flat half of
   /// [_table] starts with.
   Widget _tableChoices() => Column(
@@ -652,7 +654,7 @@ class _LiveLayoutState extends State<_LiveLayout> {
                 child: _modeSwitch(),
               ),
             ),
-            if (!_buttonsInBar) ...[_close(), ?_exposureMode()],
+            if (!_buttonsInBar) ...[_back(), ?_exposureMode()],
           ],
         ),
       ),
@@ -666,8 +668,8 @@ class _LiveLayoutState extends State<_LiveLayout> {
   /// start, the readouts, the shutter and the last shot at the end. The
   /// [picture] is centred between the rails, and lies under them where
   /// the window is too narrow. A rail is too narrow for Remote / Live
-  /// view (× goes back to Remote too) and for the hint \[design\]. The
-  /// dial opens along the bottom of the picture.
+  /// view, so × goes back to Remote in place of Back, and for the hint
+  /// \[design\]. The dial opens along the bottom of the picture.
   Widget _rails(Size size, Size picture, String? dialKey) {
     final railWidth = math.min(
       size.width / 2,
@@ -769,6 +771,17 @@ class _LiveLayoutState extends State<_LiveLayout> {
     ),
   );
 
+  /// Goes back to Cameras, as Remote's [CameraBackButton] does.
+  Widget _back() => _RoundButton(
+    key: const Key('live-back'),
+    icon: Icons.arrow_back_ios_new_rounded,
+    iconSize: 16,
+    label: context.l10n.cameraBarCameras,
+    onTap: () => Navigator.of(context).maybePop(),
+  );
+
+  /// Goes back to Remote from the rails ([_rails]), which have no room for
+  /// Remote / Live view.
   Widget _close() => _RoundButton(
     key: const Key('live-close'),
     icon: Icons.close_rounded,
@@ -816,18 +829,18 @@ class _LiveLayoutState extends State<_LiveLayout> {
     child: Row(spacing: 8, children: _chips()),
   );
 
-  /// The camera, Remote / Live view and the chips, with × and the
+  /// The camera, Remote / Live view and the chips, with Back and the
   /// exposure mode where the window has no [VerticalBar] for them:
   /// stacked in three rows, or with Remote / Live view in the top bar
   /// ([switchInBar]) in two. The top bar is Remote's ([CameraTopBar]),
-  /// with × and the exposure mode for Back and Settings.
+  /// with the exposure mode in place of Settings.
   Widget _top({required bool switchInBar}) => Column(
     mainAxisSize: MainAxisSize.min,
     children: [
       StatusBandBar(
         barHeight: CameraTopBar.height,
         child: CameraTopBar(
-          leading: _close(),
+          leading: _back(),
           trailing: _exposureMode(),
           middle: switchInBar ? _modeSwitch() : null,
         ),
@@ -1578,11 +1591,13 @@ class _RoundButton extends StatelessWidget {
     required this.label,
     required this.onTap,
     super.key,
+    this.iconSize = 18,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
@@ -1597,7 +1612,12 @@ class _RoundButton extends StatelessWidget {
           onTap: onTap,
           child: SizedBox.square(
             dimension: 36,
-            child: Icon(icon, size: 18, color: c.t1, semanticLabel: label),
+            child: Icon(
+              icon,
+              size: iconSize,
+              color: c.t1,
+              semanticLabel: label,
+            ),
           ),
         ),
       ),

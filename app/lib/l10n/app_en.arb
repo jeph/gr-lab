@@ -1397,7 +1397,7 @@
   },
   "liveViewBackToRemote": "Back to Remote",
   "@liveViewBackToRemote": {
-    "description": "Live view: tooltip and accessibility label of the × button that returns to Remote."
+    "description": "Live view: tooltip and accessibility label of the × button that returns to Remote, in the rails of a phone on its side."
   },
   "liveViewEv": "EV",
   "@liveViewEv": {

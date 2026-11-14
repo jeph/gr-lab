@@ -455,7 +455,7 @@ Future<void> _walk(WidgetTester tester) async {
   await _snap(tester, 'live-view', settle: 6);
   // Out of live view, so the simulator is not busy with its frames when
   // the host locks it.
-  await _tapKey(tester, 'live-close');
+  await _tapKey(tester, 'shoot-mode-remote');
   await _pumpFor(tester, 3);
 
   await _snap(tester, 'cmd-lock', settle: 0);

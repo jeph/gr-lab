@@ -34,8 +34,8 @@ class CameraTopBar extends StatelessWidget {
   final BookFold? pages;
 
   /// At the bar's ends, where the window has no [VerticalBar] for them:
-  /// Back and Settings on most pages; live view has × and the exposure
-  /// mode there.
+  /// Back and Settings on most pages; live view has Back and the
+  /// exposure mode there.
   final Widget? leading;
   final Widget? trailing;
 
