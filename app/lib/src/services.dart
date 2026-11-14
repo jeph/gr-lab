@@ -226,6 +226,7 @@ final class AppServices {
     required this.background,
     required this.cameraWifi,
     required this.clientName,
+    required this.appVersion,
     required this.dataDir,
     required this.cacheDir,
     required this.debugLogDir,
@@ -259,6 +260,11 @@ final class AppServices {
 
   /// Written to the camera's Paired Devices list during pairing.
   final String clientName;
+
+  /// GR Photo's version as the App Store and the releases list it
+  /// (`0.0.N`, from `flutter build --build-name`), shown at the bottom of
+  /// Settings.
+  final String appVersion;
 
   /// Persistent app data (paired cameras, settings, download records).
   final Directory dataDir;

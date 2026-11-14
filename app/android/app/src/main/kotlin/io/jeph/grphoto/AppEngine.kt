@@ -84,19 +84,20 @@ object AppEngine {
     }
 
     /**
-     * `io.jeph.grphoto/device`: the name the camera shows under Paired
-     * Devices, which is the user-set device name where there is one,
-     * otherwise the model.
+     * `io.jeph.grphoto/device`: `name`, the name the camera shows under
+     * Paired Devices, which is the user-set device name where there is one,
+     * otherwise the model; `version`, the version name `flutter build
+     * --build-name` sets, which Settings shows.
      */
     private fun registerDeviceChannel(context: Context, engine: FlutterEngine) {
         val channel = MethodChannel(engine.dartExecutor.binaryMessenger, "io.jeph.grphoto/device")
         channel.setMethodCallHandler { call, result ->
-            if (call.method == "name") {
-                result.success(
+            when (call.method) {
+                "name" -> result.success(
                     Settings.Global.getString(context.contentResolver, Settings.Global.DEVICE_NAME) ?: Build.MODEL,
                 )
-            } else {
-                result.notImplemented()
+                "version" -> result.success(BuildConfig.VERSION_NAME)
+                else -> result.notImplemented()
             }
         }
         device = channel

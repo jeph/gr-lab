@@ -49,13 +49,18 @@ import gr_camera
       WindowPosePlugin.register(with: registrar)
     }
     if let registrar = registry.registrar(forPlugin: "GrPhotoDevicePlugin") {
-      // The name the camera shows under Paired Devices. Since iOS 16 this
-      // is the model ("iPhone") unless the app holds a special entitlement.
+      // `name`: the name the camera shows under Paired Devices. Since iOS 16
+      // this is the model ("iPhone") unless the app holds a special
+      // entitlement. `version`: the version name `flutter build
+      // --build-name` sets, which Settings shows.
       FlutterMethodChannel(name: "io.jeph.grphoto/device", binaryMessenger: registrar.messenger())
         .setMethodCallHandler { call, result in
-          if call.method == "name" {
+          switch call.method {
+          case "name":
             result(UIDevice.current.name)
-          } else {
+          case "version":
+            result(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString"))
+          default:
             result(FlutterMethodNotImplemented)
           }
         }

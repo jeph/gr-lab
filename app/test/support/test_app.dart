@@ -279,6 +279,7 @@ Future<TestApp> createTestApp({
     background: background,
     cameraWifi: cameraWifi,
     clientName: 'GR Photo',
+    appVersion: '1.2.3',
     dataDir: data,
     cacheDir: cache,
     debugLogDir: debugLogDir,

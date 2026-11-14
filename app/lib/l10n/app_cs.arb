@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{Světlý} dark{Tmavý} darkroom{Temná komora} paper{Papír} cyanotype{Kyanotypie} other{Automaticky}}",
   "settingsThemeSemantics": "{theme, select, light{Světlý motiv} dark{Tmavý motiv} darkroom{Motiv Temná komora} paper{Motiv Papír} cyanotype{Motiv Kyanotypie} other{Automatický motiv}}",
   "settingsTitle": "Nastavení",
+  "settingsVersion": "Verze {version}",
   "shootCameraOff": "Fotoaparát {camera} je vypnutý",
   "shootCameraOffUnnamed": "Fotoaparát je vypnutý",
   "shootCancelTimerSemantics": "{seconds, plural, one{Zrušit samospoušť, zbývá {seconds} sekunda} few{Zrušit samospoušť, zbývají {seconds} sekundy} other{Zrušit samospoušť, zbývá {seconds} sekund}}",

@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{Vaalea} dark{Tumma} darkroom{Pimiö} paper{Paperi} cyanotype{Sinikopio} other{Automaattinen}}",
   "settingsThemeSemantics": "{theme, select, light{Vaalea teema} dark{Tumma teema} darkroom{Pimiöteema} paper{Paperiteema} cyanotype{Sinikopioteema} other{Automaattinen teema}}",
   "settingsTitle": "Asetukset",
+  "settingsVersion": "Versio {version}",
   "shootCameraOff": "Kamera {camera} on sammutettu",
   "shootCameraOffUnnamed": "Kamera on sammutettu",
   "shootCancelTimerSemantics": "{seconds, plural, one{Peruuta ajastin, {seconds} sekunti jäljellä} other{Peruuta ajastin, {seconds} sekuntia jäljellä}}",

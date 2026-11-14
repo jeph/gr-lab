@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{ライト} dark{ダーク} darkroom{暗室} paper{印画紙} cyanotype{サイアノタイプ} other{自動}}",
   "settingsThemeSemantics": "{theme, select, light{ライトテーマ} dark{ダークテーマ} darkroom{暗室テーマ} paper{印画紙テーマ} cyanotype{サイアノタイプテーマ} other{自動テーマ}}",
   "settingsTitle": "設定",
+  "settingsVersion": "バージョン {version}",
   "shootCameraOff": "{camera}の電源がオフです",
   "shootCameraOffUnnamed": "カメラの電源がオフです",
   "shootCancelTimerSemantics": "{seconds, plural, other{セルフタイマーをキャンセル、残り{seconds}秒}}",

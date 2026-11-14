@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{Clair} dark{Sombre} darkroom{Chambre noire} paper{Papier} cyanotype{Cyanotype} other{Auto}}",
   "settingsThemeSemantics": "{theme, select, light{Thème clair} dark{Thème sombre} darkroom{Thème Chambre noire} paper{Thème Papier} cyanotype{Thème Cyanotype} other{Thème automatique}}",
   "settingsTitle": "Réglages",
+  "settingsVersion": "Version {version}",
   "shootCameraOff": "{camera} est éteint",
   "shootCameraOffUnnamed": "L'appareil photo est éteint",
   "shootCancelTimerSemantics": "{seconds, plural, one{Annuler le retardateur, {seconds} seconde restante} other{Annuler le retardateur, {seconds} secondes restantes}}",

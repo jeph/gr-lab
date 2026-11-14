@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{Lyst} dark{Mørkt} darkroom{Mørkekammer} paper{Papir} cyanotype{Cyanotypi} other{Auto}}",
   "settingsThemeSemantics": "{theme, select, light{Lyst tema} dark{Mørkt tema} darkroom{Temaet Mørkekammer} paper{Temaet Papir} cyanotype{Temaet Cyanotypi} other{Automatisk tema}}",
   "settingsTitle": "Indstillinger",
+  "settingsVersion": "Version {version}",
   "shootCameraOff": "{camera} er slukket",
   "shootCameraOffUnnamed": "Kameraet er slukket",
   "shootCancelTimerSemantics": "{seconds, plural, =1{Annuller selvudløseren, 1 sekund tilbage} other{Annuller selvudløseren, {seconds} sekunder tilbage}}",

@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{Világos} dark{Sötét} darkroom{Sötétkamra} paper{Papír} cyanotype{Cianotípia} other{Automatikus}}",
   "settingsThemeSemantics": "{theme, select, light{Világos téma} dark{Sötét téma} darkroom{Sötétkamra téma} paper{Papír téma} cyanotype{Cianotípia téma} other{Automatikus téma}}",
   "settingsTitle": "Beállítások",
+  "settingsVersion": "Verzió: {version}",
   "shootCameraOff": "{camera} ki van kapcsolva",
   "shootCameraOffUnnamed": "A kamera ki van kapcsolva",
   "shootCancelTimerSemantics": "{seconds, plural, other{Önkioldó leállítása, {seconds} másodperc van hátra}}",

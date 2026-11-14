@@ -22,6 +22,7 @@ Future<AppServices> buildDeviceServices() async {
     background: PlatformBackgroundDownloads(),
     cameraWifi: PlatformCameraWifiService(),
     clientName: await deviceClientName(),
+    appVersion: await appVersion(),
     dataDir: dirs.data,
     cacheDir: dirs.cache,
     debugLogDir: await DebugLog.platformDirectory(),
@@ -50,3 +51,9 @@ Future<String> deviceClientName({
   final clean = pairedDeviceName(name);
   return clean == 'Unknown' ? fallback : clean;
 }
+
+/// GR Photo's version name: `CFBundleShortVersionString` on iOS,
+/// `versionName` on Android, both set from `flutter build --build-name`.
+Future<String> appVersion({
+  MethodChannel channel = const MethodChannel('io.jeph.grphoto/device'),
+}) async => (await channel.invokeMethod<String>('version'))!;

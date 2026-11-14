@@ -15,8 +15,8 @@ import 'package:grphoto/src/widgets/pressable.dart';
 /// App settings (subset of mock `b-settings`): appearance and language,
 /// connecting to the camera when the app opens, leaving its Wi-Fi when the
 /// app is not used, the location history of background geotagging, the
-/// debug log, licenses, the privacy policy and the note that GR Photo is
-/// not Ricoh's.
+/// debug log, licenses, the privacy policy, the note that GR Photo is not
+/// Ricoh's and the app's version.
 class SettingsScreen extends StatelessWidget {
   const new({super.key});
 
@@ -115,6 +115,17 @@ class SettingsScreen extends StatelessWidget {
               child: Text(
                 l10n.privacyNotAffiliated,
                 key: const Key('setting-not-affiliated'),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: GrColors.of(context).t2,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
+              child: Text(
+                l10n.settingsVersion(models.services.appVersion),
+                key: const Key('setting-version'),
                 style: TextStyle(
                   fontSize: 12.5,
                   color: GrColors.of(context).t2,

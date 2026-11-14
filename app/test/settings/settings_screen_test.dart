@@ -51,6 +51,11 @@ void main() {
         contains('not affiliated with or endorsed by Ricoh'),
       );
 
+      // The version the platform reports (`AppServices.appVersion`).
+      final version = find.byKey(const Key('setting-version'));
+      await tester.scrollUntilVisible(version, 200);
+      expect(tester.widget<Text>(version).data, 'Version 1.2.3');
+
       // The writes started in fake time, so they finish by pumping, not
       // inside runAsync.
       var flushed = false;

@@ -33,7 +33,9 @@ configure<ApplicationExtension> {
 
     // `dev` installs beside `prod` (own application ID and name) and logs
     // camera traffic by default; `prod` is the release users get.
+    // BuildConfig carries the version name that Settings shows.
     buildFeatures {
+        buildConfig = true
         resValues = true
     }
     flavorDimensions += "variant"

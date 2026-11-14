@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{浅色} dark{深色} darkroom{暗房} paper{相纸} cyanotype{蓝晒} other{自动}}",
   "settingsThemeSemantics": "{theme, select, light{浅色主题} dark{深色主题} darkroom{暗房主题} paper{相纸主题} cyanotype{蓝晒主题} other{自动主题}}",
   "settingsTitle": "设置",
+  "settingsVersion": "版本 {version}",
   "shootCameraOff": "{camera} 已关机",
   "shootCameraOffUnnamed": "相机已关机",
   "shootCancelTimerSemantics": "{seconds, plural, other{取消自拍，还剩 {seconds} 秒}}",

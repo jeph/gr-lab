@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{Светлая} dark{Темная} darkroom{Проявочная} paper{Бумага} cyanotype{Цианотипия} other{Авто}}",
   "settingsThemeSemantics": "{theme, select, light{Светлая тема} dark{Темная тема} darkroom{Тема «Проявочная»} paper{Тема «Бумага»} cyanotype{Тема «Цианотипия»} other{Автоматическая тема}}",
   "settingsTitle": "Настройки",
+  "settingsVersion": "Версия {version}",
   "shootCameraOff": "Камера «{camera}» выключена",
   "shootCameraOffUnnamed": "Камера выключена",
   "shootCancelTimerSemantics": "{seconds, plural, one{Отменить автоспуск, осталась {seconds} секунда} few{Отменить автоспуск, осталось {seconds} секунды} many{Отменить автоспуск, осталось {seconds} секунд} other{Отменить автоспуск, осталось {seconds} секунды}}",

@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{Claro} dark{Oscuro} darkroom{Cuarto oscuro} paper{Papel} cyanotype{Cianotipia} other{Auto}}",
   "settingsThemeSemantics": "{theme, select, light{Tema claro} dark{Tema oscuro} darkroom{Tema Cuarto oscuro} paper{Tema Papel} cyanotype{Tema Cianotipia} other{Tema automático}}",
   "settingsTitle": "Ajustes",
+  "settingsVersion": "Versión {version}",
   "shootCameraOff": "La cámara {camera} está apagada",
   "shootCameraOffUnnamed": "La cámara está apagada",
   "shootCancelTimerSemantics": "{seconds, plural, =1{Cancelar autodisparador, queda 1 segundo} other{Cancelar autodisparador, quedan {seconds} segundos}}",

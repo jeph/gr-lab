@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{Φωτεινό} dark{Σκούρο} darkroom{Σκοτεινός θάλαμος} paper{Χαρτί} cyanotype{Κυανοτυπία} other{Αυτόματο}}",
   "settingsThemeSemantics": "{theme, select, light{Φωτεινό θέμα} dark{Σκούρο θέμα} darkroom{Θέμα «Σκοτεινός θάλαμος»} paper{Θέμα «Χαρτί»} cyanotype{Θέμα «Κυανοτυπία»} other{Αυτόματο θέμα}}",
   "settingsTitle": "Ρυθμίσεις",
+  "settingsVersion": "Έκδοση {version}",
   "shootCameraOff": "Η κάμερα {camera} είναι απενεργοποιημένη",
   "shootCameraOffUnnamed": "Η κάμερα είναι απενεργοποιημένη",
   "shootCancelTimerSemantics": "{seconds, plural, one{Ακύρωση αυτοχρονομέτρησης, απομένει {seconds} δευτερόλεπτο} other{Ακύρωση αυτοχρονομέτρησης, απομένουν {seconds} δευτερόλεπτα}}",

@@ -8,6 +8,7 @@ import 'package:grphoto/src/data/cameras.dart';
 import 'package:grphoto/src/platform/app_dirs.dart';
 import 'package:grphoto/src/platform/background_downloads.dart';
 import 'package:grphoto/src/platform/camera_wifi_service.dart';
+import 'package:grphoto/src/platform/device_services.dart';
 import 'package:grphoto/src/platform/media_saver.dart';
 import 'package:grphoto/src/platform/window_pose.dart';
 import 'package:grphoto/src/services.dart';
@@ -74,6 +75,7 @@ Future<AppServices> buildDemoServices() async {
     background: PlatformBackgroundDownloads(),
     cameraWifi: PlatformCameraWifiService(),
     clientName: 'GR Photo',
+    appVersion: await appVersion(),
     dataDir: data,
     cacheDir: cache,
     debugLogDir: Directory('${data.path}/debug-log'),

@@ -2896,6 +2896,16 @@
   "@settingsTitle": {
     "description": "Title of the Settings screen."
   },
+  "settingsVersion": "Version {version}",
+  "@settingsVersion": {
+    "description": "Settings: the last line of the screen, under the note that GR Photo is independent of Ricoh, giving the version of GR Photo that is installed.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "description": "The app's version number as the App Store and the releases list it, for example 0.0.13."
+      }
+    }
+  },
   "shootCameraOff": "{camera} is off",
   "@shootCameraOff": {
     "description": "Shoot: the camera was switched off.",

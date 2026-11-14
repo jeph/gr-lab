@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{Licht} dark{Donker} darkroom{Doka} paper{Papier} cyanotype{Cyanotypie} other{Automatisch}}",
   "settingsThemeSemantics": "{theme, select, light{Thema Licht} dark{Thema Donker} darkroom{Thema Doka} paper{Thema Papier} cyanotype{Thema Cyanotypie} other{Thema Automatisch}}",
   "settingsTitle": "Instellingen",
+  "settingsVersion": "Versie {version}",
   "shootCameraOff": "{camera} staat uit",
   "shootCameraOffUnnamed": "De camera staat uit",
   "shootCancelTimerSemantics": "{seconds, plural, =1{Zelfontspanner annuleren, nog 1 seconde} other{Zelfontspanner annuleren, nog {seconds} seconden}}",

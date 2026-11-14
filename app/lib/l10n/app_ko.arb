@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{라이트} dark{다크} darkroom{암실} paper{인화지} cyanotype{사이아노타입} other{자동}}",
   "settingsThemeSemantics": "{theme, select, light{라이트 테마} dark{다크 테마} darkroom{암실 테마} paper{인화지 테마} cyanotype{사이아노타입 테마} other{자동 테마}}",
   "settingsTitle": "설정",
+  "settingsVersion": "버전 {version}",
   "shootCameraOff": "{camera}의 전원이 꺼져 있습니다",
   "shootCameraOffUnnamed": "카메라의 전원이 꺼져 있습니다",
   "shootCancelTimerSemantics": "{seconds, plural, other{셀프타이머 취소, {seconds}초 남음}}",

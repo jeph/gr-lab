@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{Hell} dark{Dunkel} darkroom{Dunkelkammer} paper{Papier} cyanotype{Cyanotypie} other{Automatisch}}",
   "settingsThemeSemantics": "{theme, select, light{Helles Design} dark{Dunkles Design} darkroom{Design „Dunkelkammer“} paper{Design „Papier“} cyanotype{Design „Cyanotypie“} other{Automatisches Design}}",
   "settingsTitle": "Einstellungen",
+  "settingsVersion": "Version {version}",
   "shootCameraOff": "{camera} ist aus",
   "shootCameraOffUnnamed": "Die Kamera ist aus",
   "shootCancelTimerSemantics": "{seconds, plural, =1{Selbstauslöser abbrechen, noch 1 Sekunde} other{Selbstauslöser abbrechen, noch {seconds} Sekunden}}",

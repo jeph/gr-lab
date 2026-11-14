@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{Claro} dark{Escuro} darkroom{Câmara escura} paper{Papel} cyanotype{Cianotipia} other{Automático}}",
   "settingsThemeSemantics": "{theme, select, light{Tema claro} dark{Tema escuro} darkroom{Tema Câmara escura} paper{Tema Papel} cyanotype{Tema Cianotipia} other{Tema automático}}",
   "settingsTitle": "Definições",
+  "settingsVersion": "Versão {version}",
   "shootCameraOff": "A câmara {camera} está desligada",
   "shootCameraOffUnnamed": "A câmara está desligada",
   "shootCancelTimerSemantics": "{seconds, plural, =0{Cancelar o temporizador automático, faltam 0 segundos} =1{Cancelar o temporizador automático, falta 1 segundo} other{Cancelar o temporizador automático, faltam {seconds} segundos}}",

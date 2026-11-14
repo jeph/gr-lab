@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{สว่าง} dark{มืด} darkroom{ห้องมืด} paper{กระดาษ} cyanotype{ไซยาโนไทป์} other{อัตโนมัติ}}",
   "settingsThemeSemantics": "{theme, select, light{ธีมสว่าง} dark{ธีมมืด} darkroom{ธีมห้องมืด} paper{ธีมกระดาษ} cyanotype{ธีมไซยาโนไทป์} other{ธีมอัตโนมัติ}}",
   "settingsTitle": "การตั้งค่า",
+  "settingsVersion": "เวอร์ชัน {version}",
   "shootCameraOff": "{camera} ปิดอยู่",
   "shootCameraOffUnnamed": "กล้องปิดอยู่",
   "shootCancelTimerSemantics": "{seconds, plural, other{ยกเลิกตั้งเวลาถ่ายภาพ เหลือ {seconds} วินาที}}",

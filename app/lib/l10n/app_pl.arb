@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{Jasny} dark{Ciemny} darkroom{Ciemnia} paper{Papier} cyanotype{Cyjanotypia} other{Auto}}",
   "settingsThemeSemantics": "{theme, select, light{Motyw jasny} dark{Motyw ciemny} darkroom{Motyw Ciemnia} paper{Motyw Papier} cyanotype{Motyw Cyjanotypia} other{Motyw automatyczny}}",
   "settingsTitle": "Ustawienia",
+  "settingsVersion": "Wersja {version}",
   "shootCameraOff": "Aparat {camera} jest wyłączony",
   "shootCameraOffUnnamed": "Aparat jest wyłączony",
   "shootCancelTimerSemantics": "{seconds, plural, one{Anuluj samowyzwalacz, pozostała {seconds} sekunda} few{Anuluj samowyzwalacz, pozostały {seconds} sekundy} many{Anuluj samowyzwalacz, pozostało {seconds} sekund} other{Anuluj samowyzwalacz, pozostało {seconds} sekundy}}",

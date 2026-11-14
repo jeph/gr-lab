@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{Ljust} dark{Mörkt} darkroom{Mörkrum} paper{Papper} cyanotype{Cyanotypi} other{Auto}}",
   "settingsThemeSemantics": "{theme, select, light{Ljust tema} dark{Mörkt tema} darkroom{Temat Mörkrum} paper{Temat Papper} cyanotype{Temat Cyanotypi} other{Automatiskt tema}}",
   "settingsTitle": "Inställningar",
+  "settingsVersion": "Version {version}",
   "shootCameraOff": "{camera} är av",
   "shootCameraOffUnnamed": "Kameran är av",
   "shootCancelTimerSemantics": "{seconds, plural, one{Avbryt självutlösaren, {seconds} sekund kvar} other{Avbryt självutlösaren, {seconds} sekunder kvar}}",

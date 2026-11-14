@@ -545,6 +545,7 @@
   "settingsThemeName": "{theme, select, light{Açık} dark{Koyu} darkroom{Karanlık oda} paper{Kâğıt} cyanotype{Siyanotip} other{Otomatik}}",
   "settingsThemeSemantics": "{theme, select, light{Açık tema} dark{Koyu tema} darkroom{Karanlık oda teması} paper{Kâğıt teması} cyanotype{Siyanotip teması} other{Otomatik tema}}",
   "settingsTitle": "Ayarlar",
+  "settingsVersion": "Sürüm {version}",
   "shootCameraOff": "{camera} kapalı",
   "shootCameraOffUnnamed": "Kamera kapalı",
   "shootCancelTimerSemantics": "{seconds, plural, other{Zamanlayıcıyı iptal et, {seconds} saniye kaldı}}",
