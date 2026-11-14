@@ -75,6 +75,71 @@ abstract interface class BackgroundDownloads {
   ValueListenable<bool> get continued;
 }
 
+/// Keeps GR Photo running while the phone is on a camera's Wi-Fi, where
+/// the platform would otherwise freeze an app that is not in front and with
+/// it the auto-disconnect timer (`IdleDisconnect`): Android runs a
+/// foreground service, whose notification shows the Wi-Fi with a
+/// Disconnect button while there are no downloads ([BackgroundDownloads]
+/// shares it). iOS, where the camera network outlives the app, has its own
+/// rule (`GrCameraEnvironment.wifiOutlivesApp`) and nothing here.
+/// `research/protocol/connection-lifecycle.md` §9.
+abstract interface class CameraWifiService {
+  /// Holds the service, showing [notice]; again to change what it shows.
+  /// Android starts it only for an app in front.
+  Future<void> hold(CameraWifiNotice notice);
+
+  /// Keeps the phone awake for [duration] from now, so the auto-disconnect
+  /// runs with the screen off; [Duration.zero] for not at all.
+  Future<void> keepAwake(Duration duration);
+
+  /// Lets the service go: the phone left the camera's Wi-Fi.
+  Future<void> release();
+
+  /// The user pressed Disconnect outside the app.
+  Stream<void> get disconnects;
+}
+
+/// The camera's Wi-Fi as the platform shows it while GR Photo holds
+/// [CameraWifiService]. The texts are in the app's language.
+@immutable
+final class CameraWifiNotice {
+  const new({
+    required this.title,
+    required this.text,
+    required this.cameraName,
+    required this.disconnectLabel,
+    required this.channelName,
+  });
+
+  /// `Connected to the camera's Wi-Fi`.
+  final String title;
+
+  /// When auto-disconnect leaves the Wi-Fi; empty when it never does.
+  final String text;
+
+  /// The camera, as the user named it.
+  final String cameraName;
+
+  /// The button that leaves the Wi-Fi.
+  final String disconnectLabel;
+
+  /// What Android's notification settings call these notifications.
+  final String channelName;
+
+  @override
+  bool operator ==(Object other) =>
+      other is CameraWifiNotice &&
+      other.title == title &&
+      other.text == text &&
+      other.cameraName == cameraName &&
+      other.disconnectLabel == disconnectLabel &&
+      other.channelName == channelName;
+
+  @override
+  int get hashCode =>
+      Object.hash(title, text, cameraName, disconnectLabel, channelName);
+}
+
 /// A button of the platform's download display.
 enum BackgroundDownloadAction { pause, resume, cancel }
 
@@ -159,6 +224,7 @@ final class AppServices {
     required this.trace,
     required this.media,
     required this.background,
+    required this.cameraWifi,
     required this.clientName,
     required this.dataDir,
     required this.cacheDir,
@@ -187,6 +253,9 @@ final class AppServices {
 
   /// Downloads while GR Photo is not in front (`DownloadBackground`).
   final BackgroundDownloads background;
+
+  /// Keeps the app running on a camera's Wi-Fi (`IdleDisconnect`).
+  final CameraWifiService cameraWifi;
 
   /// Written to the camera's Paired Devices list during pairing.
   final String clientName;

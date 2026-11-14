@@ -50,11 +50,12 @@
             </intent-filter>
         </activity>
         <!-- Stops with the task: its notification and buttons work through
-             the activity (DownloadChannel), which a swiped-away task takes
-             with it. The app's Flutter engine, where the downloads run,
-             goes too unless live geotagging holds it (AppEngine). -->
+             the activity (DownloadChannel, CameraWifiChannel), which a
+             swiped-away task takes with it. The app's Flutter engine, where
+             the downloads and the auto-disconnect run, goes too unless live
+             geotagging holds it (AppEngine). -->
         <service
-            android:name=".DownloadService"
+            android:name=".CameraWifiService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice"
             android:stopWithTask="true" />

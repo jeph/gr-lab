@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:gr_camera/gr_camera.dart';
+import 'package:grphoto/l10n/l10n.dart';
 import 'package:grphoto/src/connection/connection_controller.dart';
 import 'package:grphoto/src/data/settings.dart';
 import 'package:grphoto/src/services.dart';
@@ -34,6 +35,15 @@ import 'package:grphoto/src/services.dart';
 /// ([BackgroundDownloads.continued]), also between two downloads; a queue
 /// that ends off screen leaves it at once ([leaveOffScreen]), and when iOS
 /// ends the task the [backgroundGrace] that has passed counts. \[design\]
+///
+/// Everywhere else (Android) the phone stays on the camera's network only
+/// while the app runs, but the app can be frozen off screen, and its timer
+/// with it. So from the start of a join until the Wi-Fi is left the app
+/// holds [AppServices.cameraWifi], a foreground service that keeps it
+/// running and shows the Wi-Fi with a Disconnect button, and off screen
+/// it keeps the phone awake until the Wi-Fi is due to be left and
+/// [awakeMargin] after. A leave that comes late anyway, because the phone
+/// slept regardless, says how long the app was really unused.
 /// (research/protocol/connection-lifecycle.md §9, "What GR Photo does")
 final class IdleDisconnect {
   new({required this.connection, required this.settings})
@@ -42,6 +52,11 @@ final class IdleDisconnect {
     connection.addListener(_update);
     settings.addListener(_schedule);
     _continued.addListener(_schedule);
+    if (!_outlivesApp) {
+      _disconnects = _service.disconnects.listen(
+        (_) => unawaited(connection.disconnectWifi()),
+      );
+    }
     _update();
   }
 
@@ -53,6 +68,10 @@ final class IdleDisconnect {
   /// the network removal, then the Bluetooth write that turns the camera's
   /// Wi-Fi (or the camera) off.
   static const backgroundMargin = Duration(seconds: 8);
+
+  /// Kept awake past the moment the Wi-Fi is due to be left, for leaving:
+  /// the Bluetooth write that turns the camera's Wi-Fi (or the camera) off.
+  static const awakeMargin = Duration(seconds: 30);
 
   final ConnectionController connection;
   final SettingsController settings;
@@ -80,6 +99,15 @@ final class IdleDisconnect {
   Future<BackgroundTime>? _time;
   Future<void> _leaving = Future.value();
   bool _leavingOffScreen = false;
+
+  CameraWifiService get _service => connection.services.cameraWifi;
+  StreamSubscription<void>? _disconnects;
+
+  /// What [_service] shows while it is held; null when it is not.
+  CameraWifiNotice? _held;
+
+  /// Until when [_service] keeps the phone awake; null for not at all.
+  DateTime? _awakeUntil;
 
   /// Leaves the camera's Wi-Fi at once if the app is off screen where the
   /// camera network outlives the app, and completes once that is done; at
@@ -138,10 +166,15 @@ final class IdleDisconnect {
       _offScreenUntil = null;
       if (!_leavingOffScreen) _endTime();
     }
-    if (changed) _schedule();
+    if (changed) {
+      _schedule();
+    } else {
+      _syncService();
+    }
   }
 
   void _schedule() {
+    _syncService();
     _timer?.cancel();
     _timer = null;
     if (_offScreenUntil != null) return _scheduleOffScreen();
@@ -157,11 +190,75 @@ final class IdleDisconnect {
     if (_offScreenUntil != null || !_connected || after == null || _holds > 0) {
       return;
     }
-    if (clock.now().difference(_last) < after) {
+    final unused = clock.now().difference(_last);
+    if (unused < after) {
       _schedule();
       return;
     }
-    unawaited(connection.leaveUnusedWifi(UnusedFor(after)));
+    unawaited(connection.leaveUnusedWifi(UnusedFor(unused)));
+  }
+
+  /// Where the app can be frozen off screen: holds [_service] while on the
+  /// camera's Wi-Fi, and off screen has it keep the phone awake until the
+  /// Wi-Fi is due to be left.
+  void _syncService() {
+    if (_outlivesApp) return;
+    if (!_onWifi) return _releaseService();
+    final notice = _notice();
+    if (notice != _held) {
+      _held = notice;
+      _trace('wifi.service.hold', {'text': notice.text});
+      unawaited(_service.hold(notice));
+    }
+    final after = settings.autoDisconnect.after;
+    final awakeUntil =
+        !connection.foreground && _connected && after != null && _holds == 0
+        ? _last.add(after + awakeMargin)
+        : null;
+    if (awakeUntil == _awakeUntil) return;
+    _awakeUntil = awakeUntil;
+    final awake = awakeUntil?.difference(clock.now()) ?? Duration.zero;
+    final duration = awake.isNegative ? Duration.zero : awake;
+    _trace('wifi.service.keepAwake', {'ms': duration.inMilliseconds});
+    unawaited(_service.keepAwake(duration));
+  }
+
+  void _releaseService() {
+    if (_held == null) return;
+    _held = null;
+    _awakeUntil = null;
+    _trace('wifi.service.release');
+    unawaited(_service.release());
+  }
+
+  void _trace(String kind, [Map<String, Object?> fields = const {}]) =>
+      connection.services.trace(
+        TraceEvent(
+          channel: TraceChannel.session,
+          direction: TraceDirection.internal,
+          kind: kind,
+          fields: fields,
+        ),
+      );
+
+  /// What the phone shows of the camera's Wi-Fi, in the app's language:
+  /// what `MaterialApp` resolves, without a widget to ask.
+  CameraWifiNotice _notice() {
+    final l10n = lookupAppLocalizations(
+      settings.language ??
+          resolveAppLocale(
+            PlatformDispatcher.instance.locales,
+            AppLocalizations.supportedLocales,
+          ),
+    );
+    final after = settings.autoDisconnect.after;
+    return CameraWifiNotice(
+      title: l10n.cameraWifiNoticeTitle,
+      text: after == null ? '' : l10n.cameraWifiNoticeText(after.inMinutes),
+      cameraName: connection.camera?.name ?? '',
+      disconnectLabel: l10n.connectionSheetDisconnect,
+      channelName: l10n.cameraWifiNoticeChannel,
+    );
   }
 
   /// Off screen where the camera network outlives the app.
@@ -226,6 +323,8 @@ final class IdleDisconnect {
     _timer?.cancel();
     _timer = null;
     _endTime();
+    unawaited(_disconnects?.cancel());
+    _releaseService();
     connection.removeListener(_update);
     settings.removeListener(_schedule);
     _continued.removeListener(_schedule);

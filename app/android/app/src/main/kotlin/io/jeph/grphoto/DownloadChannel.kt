@@ -10,7 +10,7 @@ import io.flutter.plugin.common.MethodChannel
 
 /**
  * `io.jeph.grphoto/downloads`: `show` puts the download queue up as
- * [DownloadService]'s notification and `hide` takes it down; the
+ * [CameraWifiService]'s notification and `hide` takes it down; the
  * notification's buttons come back as `action` with `pause`, `resume` or
  * `cancel`.
  *
@@ -30,21 +30,21 @@ class DownloadChannel(private val activity: Activity, messenger: BinaryMessenger
 
     init {
         channel.setMethodCallHandler(this)
-        DownloadService.onAction = { channel.invokeMethod("action", it) }
+        CameraWifiService.onDownloadAction = { channel.invokeMethod("action", it) }
     }
 
     /** The Dart side is gone, and the downloads with it. */
     fun dispose() {
         channel.setMethodCallHandler(null)
-        DownloadService.onAction = null
-        DownloadService.hide()
+        CameraWifiService.onDownloadAction = null
+        CameraWifiService.hideDownloads()
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "show" -> show(call, result)
             "hide" -> {
-                DownloadService.hide()
+                CameraWifiService.hideDownloads()
                 result.success(null)
             }
             else -> result.notImplemented()
@@ -59,7 +59,7 @@ class DownloadChannel(private val activity: Activity, messenger: BinaryMessenger
         }
         askToNotify()
         try {
-            DownloadService.show(activity, status)
+            CameraWifiService.showDownloads(activity, status)
             result.success(null)
         } catch (e: IllegalStateException) {
             // The app went to the background before its downloads started;
@@ -68,8 +68,8 @@ class DownloadChannel(private val activity: Activity, messenger: BinaryMessenger
         }
     }
 
-    private fun status(call: MethodCall): DownloadService.Status? {
-        return DownloadService.Status(
+    private fun status(call: MethodCall): CameraWifiService.Downloads? {
+        return CameraWifiService.Downloads(
             paused = call.argument<Boolean>("paused") ?: return null,
             title = call.argument<String>("title") ?: return null,
             detail = call.argument<String>("detail") ?: return null,

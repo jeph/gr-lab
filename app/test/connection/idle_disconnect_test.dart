@@ -162,9 +162,8 @@ void main() {
     await app.dispose();
   });
 
-  testWidgets('Never keeps the Wi-Fi; a shorter choice applies at once', (
-    tester,
-  ) async {
+  testWidgets('Never keeps the Wi-Fi; a shorter choice applies at once, and '
+      'the card says how long the app was really unused', (tester) async {
     final app = await _inLibrary(tester);
     final settings = app.models.settings..autoDisconnect = AutoDisconnect.never;
     await tester.pump(const Duration(minutes: 30));
@@ -173,7 +172,7 @@ void main() {
     // 30 minutes without use already passed.
     settings.autoDisconnect = AutoDisconnect.oneMinute;
     await tester.pump();
-    await _expectLeft(tester, app, minutes: 1);
+    await _expectLeft(tester, app, minutes: 30);
 
     await app.dispose();
   });

@@ -44,6 +44,7 @@ final class TestApp {
     required this.ble,
     required this.media,
     required this.background,
+    required this.cameraWifi,
     required this.location,
     required this.windowPose,
     required this.phone,
@@ -60,6 +61,9 @@ final class TestApp {
 
   /// What the app asked the platform to show of its downloads.
   final RecordingBackgroundDownloads background;
+
+  /// What the app asked of the platform's camera Wi-Fi service.
+  final RecordingCameraWifiService cameraWifi;
 
   /// The phone's location service as the app sees it: its access, fixes,
   /// run notice and recorded history are scripted here.
@@ -250,6 +254,7 @@ Future<TestApp> createTestApp({
   );
   final saver = RecordingMediaSaver();
   final background = RecordingBackgroundDownloads();
+  final cameraWifi = RecordingCameraWifiService();
   final phone = location ?? FakePhoneLocation();
   final trace = TraceRelay();
   final windowPose = ValueNotifier(WindowPose.none);
@@ -272,6 +277,7 @@ Future<TestApp> createTestApp({
     trace: trace,
     media: saver,
     background: background,
+    cameraWifi: cameraWifi,
     clientName: 'GR Photo',
     dataDir: data,
     cacheDir: cache,
@@ -285,6 +291,7 @@ Future<TestApp> createTestApp({
     ble: ble,
     media: saver,
     background: background,
+    cameraWifi: cameraWifi,
     location: phone,
     windowPose: windowPose,
     phone: os,
@@ -523,6 +530,35 @@ final class RecordingMediaSaver implements MediaSaver {
       album: album,
     ));
   }
+}
+
+/// Records what the app asks of the platform's camera Wi-Fi service instead
+/// of asking it; [pressDisconnect] stands for the notification's button.
+final class RecordingCameraWifiService implements CameraWifiService {
+  final _disconnects = StreamController<void>.broadcast(sync: true);
+
+  /// What the service shows while held; null when it is not.
+  CameraWifiNotice? held;
+
+  /// How long the phone is kept awake, as last asked.
+  Duration awake = Duration.zero;
+
+  @override
+  Stream<void> get disconnects => _disconnects.stream;
+
+  @override
+  Future<void> hold(CameraWifiNotice notice) async => held = notice;
+
+  @override
+  Future<void> keepAwake(Duration duration) async => awake = duration;
+
+  @override
+  Future<void> release() async {
+    held = null;
+    awake = Duration.zero;
+  }
+
+  void pressDisconnect() => _disconnects.add(null);
 }
 
 /// Records what the app shows of its downloads outside itself instead of

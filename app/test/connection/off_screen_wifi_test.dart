@@ -7,7 +7,9 @@ import 'package:gr_fake_camera/gr_fake_camera.dart';
 import 'package:gr_protocol/gr_protocol.dart'
     show WifiNetworkControl, WifiSecurity;
 import 'package:grphoto/src/connection/connection_controller.dart';
+import 'package:grphoto/src/data/settings.dart';
 import 'package:grphoto/src/library/library_screen.dart';
+import 'package:grphoto/src/services.dart';
 
 import '../support/test_app.dart';
 
@@ -125,6 +127,8 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     await _expectLeft(tester, app);
     expect(app.phone.granted, 1);
+    // iOS has its own rule; there is no service to hold.
+    expect(app.cameraWifi.held, isNull);
 
     comeBackOnScreen(tester);
     await pumpUntil(
@@ -228,6 +232,67 @@ void main() {
     expect(app.models.connection.status, ConnectionStatus.connected);
     expect(app.camera.wlanOn, isTrue);
     expect(app.phone.granted, 0);
+
+    await app.dispose();
+  });
+
+  testWidgets('on Android the Wi-Fi holds the foreground service, which '
+      'off screen keeps the phone awake until auto-disconnect is due', (
+    tester,
+  ) async {
+    final app = await _inLibrary(tester, outlivesApp: false);
+    expect(
+      app.cameraWifi.held,
+      const CameraWifiNotice(
+        title: "Connected to the camera's Wi-Fi",
+        text: 'Disconnects after 5 min without use',
+        cameraName: 'GR IV',
+        disconnectLabel: 'Disconnect',
+        channelName: 'Camera Wi-Fi',
+      ),
+    );
+    expect(app.cameraWifi.awake, Duration.zero);
+
+    goOffScreen(tester);
+    await tester.pump();
+    // The 5 minutes and the margin for leaving, less what the listing took.
+    expect(app.cameraWifi.awake, greaterThan(const Duration(minutes: 5)));
+    expect(
+      app.cameraWifi.awake,
+      lessThanOrEqualTo(const Duration(minutes: 5, seconds: 30)),
+    );
+
+    comeBackOnScreen(tester);
+    await tester.pump();
+    expect(app.cameraWifi.awake, Duration.zero);
+
+    app.models.settings.autoDisconnect = AutoDisconnect.never;
+    await tester.pump();
+    expect(app.cameraWifi.held?.text, isEmpty);
+    goOffScreen(tester);
+    await tester.pump();
+    expect(app.cameraWifi.awake, Duration.zero);
+
+    app.models.settings.autoDisconnect = AutoDisconnect.oneMinute;
+    await tester.pump(const Duration(minutes: 1, seconds: 1));
+    await pumpUntil(tester, () => !app.camera.wlanOn, reason: 'WLAN off');
+    expect(app.models.connection.status, ConnectionStatus.bluetooth);
+    expect(app.cameraWifi.held, isNull);
+    expect(app.cameraWifi.awake, Duration.zero);
+
+    await app.dispose();
+  });
+
+  testWidgets("Disconnect in the Android notification leaves the camera's "
+      'Wi-Fi', (tester) async {
+    final app = await _inLibrary(tester, outlivesApp: false);
+    goOffScreen(tester);
+    await tester.pump();
+
+    app.cameraWifi.pressDisconnect();
+    await pumpUntil(tester, () => !app.camera.wlanOn, reason: 'WLAN off');
+    expect(app.models.connection.status, ConnectionStatus.bluetooth);
+    expect(app.cameraWifi.held, isNull);
 
     await app.dispose();
   });

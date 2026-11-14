@@ -13,6 +13,7 @@ import 'package:grphoto/src/app_scope.dart';
 import 'package:grphoto/src/library/shot_cell.dart';
 import 'package:grphoto/src/platform/app_dirs.dart';
 import 'package:grphoto/src/platform/background_downloads.dart';
+import 'package:grphoto/src/platform/camera_wifi_service.dart';
 import 'package:grphoto/src/platform/media_saver.dart';
 import 'package:grphoto/src/platform/window_pose.dart';
 import 'package:grphoto/src/services.dart';
@@ -260,6 +261,7 @@ Future<AppServices> _services(
     trace: trace,
     media: PlatformMediaSaver(),
     background: PlatformBackgroundDownloads(),
+    cameraWifi: PlatformCameraWifiService(),
     clientName: 'GR Photo',
     dataDir: data,
     cacheDir: cache,

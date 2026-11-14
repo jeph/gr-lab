@@ -24,6 +24,25 @@
   "@cameraBarShoot": {
     "description": "Tab of the camera's pages for remote shooting and live view."
   },
+  "cameraWifiNoticeChannel": "Camera Wi-Fi",
+  "@cameraWifiNoticeChannel": {
+    "description": "Android: name of the camera Wi-Fi notifications in the phone's notification settings."
+  },
+  "cameraWifiNoticeText": "Disconnects after {minutes} min without use",
+  "@cameraWifiNoticeText": {
+    "description": "Android: line under the title of the camera Wi-Fi notification, saying when auto-disconnect leaves the Wi-Fi. \"min\" is the abbreviation for minutes.",
+    "placeholders": {
+      "minutes": {
+        "type": "int",
+        "format": "decimalPattern",
+        "description": "The auto-disconnect time in minutes (1, 5, 10 or 15)."
+      }
+    }
+  },
+  "cameraWifiNoticeTitle": "Connected to the camera's Wi-Fi",
+  "@cameraWifiNoticeTitle": {
+    "description": "Android: title of the notification shown while the phone is on the camera's Wi-Fi with GR Photo running; the camera's name is shown next to it."
+  },
   "camerasAddCamera": "Add a camera",
   "@camerasAddCamera": {
     "description": "Button on the Cameras screen (welcome page and the list of cameras) that starts pairing a new camera."
@@ -47,7 +66,7 @@
       "minutes": {
         "type": "int",
         "format": "decimalPattern",
-        "description": "Minutes without use (1, 5, 10 or 15)."
+        "description": "Minutes without use: the auto-disconnect time (1, 5, 10 or 15), or longer when the phone was asleep and the Wi-Fi was left late."
       }
     }
   },
@@ -2735,7 +2754,7 @@
       "minutes": {
         "type": "int",
         "format": "decimalPattern",
-        "description": "Minutes without use (1, 5, 10 or 15)."
+        "description": "Minutes without use: the auto-disconnect time (1, 5, 10 or 15), or longer when the phone was asleep and the Wi-Fi was left late."
       }
     }
   },

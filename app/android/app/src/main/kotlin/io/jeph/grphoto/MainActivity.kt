@@ -13,6 +13,7 @@ import io.flutter.embedding.engine.FlutterEngine
 class MainActivity : FlutterActivity() {
     private var media: MediaChannel? = null
     private var downloads: DownloadChannel? = null
+    private var cameraWifi: CameraWifiChannel? = null
 
     override fun provideFlutterEngine(context: Context): FlutterEngine =
         AppEngine.obtain(context, flutterShellArgs.toArray())
@@ -23,6 +24,7 @@ class MainActivity : FlutterActivity() {
         val messenger = flutterEngine.dartExecutor.binaryMessenger
         media = MediaChannel(applicationContext, messenger)
         downloads = DownloadChannel(this, messenger)
+        cameraWifi = CameraWifiChannel(applicationContext, messenger)
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
@@ -30,6 +32,8 @@ class MainActivity : FlutterActivity() {
         media = null
         downloads?.dispose()
         downloads = null
+        cameraWifi?.dispose()
+        cameraWifi = null
         AppEngine.detached(this)
         super.cleanUpFlutterEngine(flutterEngine)
     }

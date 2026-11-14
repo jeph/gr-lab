@@ -1,6 +1,6 @@
 # GR Photo privacy policy
 
-Last updated: 12 November 2026
+Last updated: 14 November 2026
 
 GR Photo is an app for Ricoh GR cameras. It pairs with your camera over Bluetooth, connects to the camera's own Wi-Fi network, and lets you browse and download your photos and videos and shoot remotely. If you turn geotagging on, it also uses your phone's location to add the place to your photos (see Your location below). GR Photo has no accounts, no analytics, no advertising and no crash reporting. It sends nothing to the developer. The one thing it fetches from the internet is the map of where a photo was taken, from OpenFreeMap (see The map below).
 
@@ -71,7 +71,7 @@ On Android, GR Photo asks for or uses:
 - Wi-Fi and network access, to join the camera's Wi-Fi network, which Android asks you to approve, to check that the phone is on it, to send the camera's traffic over it and to send the requests for the map over your internet connection instead.
 - Internet, which Android requires for any network connection. GR Photo uses it to talk to the camera and to fetch the map.
 - Location, only when you turn Live geotagging or Background geotagging on. Live geotagging needs precise location; with approximate location alone it sends nothing, because that can be kilometres off. Allowing location all the time is needed for background geotagging only; live geotagging works with location allowed while the app is in use.
-- Notifications, to show a running download with its progress and buttons to pause or cancel it while you use another app, and to show that live geotagging is running, with a Stop button. Android asks you to allow them the first time you download or turn Live geotagging on. GR Photo sends no other notifications, and downloads and geotagging run whether or not you allow them.
+- Notifications, to show a running download with its progress and buttons to pause or cancel it while you use another app, to show that live geotagging is running, with a Stop button, and to show that your phone is on a camera's Wi-Fi, with a Disconnect button. Android asks you to allow them the first time you download or turn Live geotagging on. GR Photo sends no other notifications, and downloads and geotagging run whether or not you allow them.
 - Running in the background and keeping the phone awake, only while downloads run or live geotagging is sending locations to a camera that is on, so that they carry on when you leave GR Photo or lock the phone.
 - Being left out of battery optimisation, which Android asks you about when you turn Live geotagging on. Some phones pause apps while the screen is off; with this allowed, GR Photo still notices the camera being switched on then. Live geotagging works either way once the screen is on.
 - Starting when the phone restarts, only while background geotagging is on for a camera, to set up the recording of the location history again. Nothing is shown and nothing is sent then.
@@ -88,7 +88,7 @@ On iOS, GR Photo asks for:
 
 On iOS, GR Photo shows two things on the Lock Screen and in the Dynamic Island while you use another app: that live geotagging is running, with the camera's name and a Stop button (iOS 17 and later), and a running download (iOS 26 and later). Neither needs a permission. You can turn Live Activities off for GR Photo in the Settings app; downloads and geotagging run either way.
 
-GR Photo does not use your phone's camera, microphone or contacts, and it uses your location only for geotagging and for the map of where a photo was taken, as described under Your location and The map. It shows notifications only on Android, and only for running downloads and for live geotagging.
+GR Photo does not use your phone's camera, microphone or contacts, and it uses your location only for geotagging and for the map of where a photo was taken, as described under Your location and The map. It shows notifications only on Android, and only for running downloads, for live geotagging and while it is on a camera's Wi-Fi.
 
 ## Deleting your data
 
