@@ -7,6 +7,7 @@
   "cameraBarSettings": "Настройки",
   "cameraBarShoot": "Съемка",
   "cameraWifiNoticeChannel": "Wi-Fi камеры",
+  "cameraWifiNoticeJoiningTitle": "Подключение к Wi-Fi камеры…",
   "cameraWifiNoticeText": "Отключится через {minutes} мин бездействия",
   "cameraWifiNoticeTitle": "Подключено к Wi-Fi камеры",
   "camerasAddCamera": "Добавить камеру",

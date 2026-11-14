@@ -7,6 +7,7 @@
   "cameraBarSettings": "Einstellungen",
   "cameraBarShoot": "Aufnehmen",
   "cameraWifiNoticeChannel": "WLAN der Kamera",
+  "cameraWifiNoticeJoiningTitle": "Mit dem WLAN der Kamera verbinden …",
   "cameraWifiNoticeText": "Trennt nach {minutes} Min. ohne Nutzung",
   "cameraWifiNoticeTitle": "Mit dem WLAN der Kamera verbunden",
   "camerasAddCamera": "Kamera hinzufügen",

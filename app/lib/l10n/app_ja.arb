@@ -7,6 +7,7 @@
   "cameraBarSettings": "設定",
   "cameraBarShoot": "撮影",
   "cameraWifiNoticeChannel": "カメラのWi-Fi",
+  "cameraWifiNoticeJoiningTitle": "カメラのWi-Fiに接続しています…",
   "cameraWifiNoticeText": "{minutes}分間使わないと切断します",
   "cameraWifiNoticeTitle": "カメラのWi-Fiに接続中",
   "camerasAddCamera": "カメラを追加",

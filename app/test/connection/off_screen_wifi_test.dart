@@ -69,14 +69,15 @@ Future<void> _expectLeft(WidgetTester tester, TestApp app) async {
   );
 }
 
-/// The camera's Wi-Fi control, with joins that never complete until the
-/// network is left: as on iOS when the configuration is installed but the
-/// phone has not associated yet.
+/// The camera's Wi-Fi control, with joins that never complete until
+/// [finish] or the network is left: as on iOS when the configuration is
+/// installed but the phone has not associated yet.
 final class _StalledJoins implements WifiNetworkControl {
   new(this._inner);
 
   final WifiNetworkControl _inner;
   Completer<void>? _join;
+  late Future<void> Function() _joinInner;
   bool joining = false;
   int leaves = 0;
 
@@ -92,7 +93,21 @@ final class _StalledJoins implements WifiNetworkControl {
     bool approved = false,
   }) {
     joining = true;
+    _joinInner = () => _inner.join(
+      ssid: ssid,
+      passphrase: passphrase,
+      security: security,
+      timeout: timeout,
+      approved: approved,
+    );
     return (_join = Completer<void>()).future;
+  }
+
+  /// Completes the join under way by joining the camera's network.
+  Future<void> finish() async {
+    await _joinInner();
+    joining = false;
+    _join!.complete();
   }
 
   @override
@@ -293,6 +308,47 @@ void main() {
     await pumpUntil(tester, () => !app.camera.wlanOn, reason: 'WLAN off');
     expect(app.models.connection.status, ConnectionStatus.bluetooth);
     expect(app.cameraWifi.held, isNull);
+
+    await app.dispose();
+  });
+
+  testWidgets('on Android a join shows as joining, without the '
+      'auto-disconnect time, until the Wi-Fi is up', (tester) async {
+    tester.view
+      ..physicalSize = const Size(1170, 2532)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    late _StalledJoins wifi;
+    final app = (await tester.runAsync(
+      () => createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+        sessionOptions: _quietLiveness,
+        wifi: (camera) => wifi = _StalledJoins(camera),
+      ),
+    ))!;
+    await app.pumpApp(tester);
+    await tapWhenReady(tester, find.byKey(const Key('camera-card-library')));
+    await pumpUntil(tester, () => wifi.joining, reason: 'join under way');
+    expect(
+      app.cameraWifi.held,
+      const CameraWifiNotice(
+        title: "Connecting to the camera's Wi-Fi…",
+        text: '',
+        cameraName: 'GR IV',
+        disconnectLabel: 'Disconnect',
+        channelName: 'Camera Wi-Fi',
+      ),
+    );
+
+    unawaited(wifi.finish());
+    await pumpUntil(
+      tester,
+      () => app.models.connection.status == ConnectionStatus.connected,
+      reason: 'Wi-Fi joined',
+    );
+    expect(app.cameraWifi.held?.title, "Connected to the camera's Wi-Fi");
+    expect(app.cameraWifi.held?.text, 'Disconnects after 5 min without use');
 
     await app.dispose();
   });

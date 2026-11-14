@@ -7,6 +7,7 @@
   "cameraBarSettings": "Indstillinger",
   "cameraBarShoot": "Optag",
   "cameraWifiNoticeChannel": "Kameraets Wi-Fi",
+  "cameraWifiNoticeJoiningTitle": "Forbinder til kameraets Wi-Fi…",
   "cameraWifiNoticeText": "Afbrydes efter {minutes} min. uden brug",
   "cameraWifiNoticeTitle": "Forbundet til kameraets Wi-Fi",
   "camerasAddCamera": "Tilføj et kamera",

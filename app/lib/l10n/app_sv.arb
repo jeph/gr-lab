@@ -7,6 +7,7 @@
   "cameraBarSettings": "Inställningar",
   "cameraBarShoot": "Fota",
   "cameraWifiNoticeChannel": "Kamerans Wi-Fi",
+  "cameraWifiNoticeJoiningTitle": "Ansluter till kamerans Wi-Fi…",
   "cameraWifiNoticeText": "Kopplar från efter {minutes} min utan användning",
   "cameraWifiNoticeTitle": "Ansluten till kamerans Wi-Fi",
   "camerasAddCamera": "Lägg till en kamera",

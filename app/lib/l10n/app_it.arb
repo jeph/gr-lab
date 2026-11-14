@@ -7,6 +7,7 @@
   "cameraBarSettings": "Impostazioni",
   "cameraBarShoot": "Scatta",
   "cameraWifiNoticeChannel": "Wi-Fi della fotocamera",
+  "cameraWifiNoticeJoiningTitle": "Connessione al Wi-Fi della fotocamera…",
   "cameraWifiNoticeText": "Si disconnette dopo {minutes} min di inattività",
   "cameraWifiNoticeTitle": "Connesso al Wi-Fi della fotocamera",
   "camerasAddCamera": "Aggiungi fotocamera",

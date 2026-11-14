@@ -7,6 +7,7 @@
   "cameraBarSettings": "Definições",
   "cameraBarShoot": "Disparar",
   "cameraWifiNoticeChannel": "Wi-Fi da câmara",
+  "cameraWifiNoticeJoiningTitle": "A ligar ao Wi-Fi da câmara…",
   "cameraWifiNoticeText": "Desliga-se após {minutes} min sem utilização",
   "cameraWifiNoticeTitle": "Ligado ao Wi-Fi da câmara",
   "camerasAddCamera": "Adicionar câmara",

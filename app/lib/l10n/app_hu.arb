@@ -7,6 +7,7 @@
   "cameraBarSettings": "Beállítások",
   "cameraBarShoot": "Fotózás",
   "cameraWifiNoticeChannel": "A kamera Wi-Fi-hálózata",
+  "cameraWifiNoticeJoiningTitle": "Csatlakozás a kamera Wi-Fi-hálózatához…",
   "cameraWifiNoticeText": "Leválaszt {minutes} perc tétlenség után",
   "cameraWifiNoticeTitle": "Csatlakozva a kamera Wi-Fi-hálózatához",
   "camerasAddCamera": "Kamera hozzáadása",

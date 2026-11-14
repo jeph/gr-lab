@@ -7,6 +7,7 @@
   "cameraBarSettings": "Asetukset",
   "cameraBarShoot": "Kuvaus",
   "cameraWifiNoticeChannel": "Kameran Wi-Fi",
+  "cameraWifiNoticeJoiningTitle": "Yhdistetään kameran Wi-Fi-verkkoon…",
   "cameraWifiNoticeText": "Yhteys katkeaa, kun sovellusta ei ole käytetty {minutes} min",
   "cameraWifiNoticeTitle": "Yhdistetty kameran Wi-Fi-verkkoon",
   "camerasAddCamera": "Lisää kamera",

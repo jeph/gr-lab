@@ -28,6 +28,10 @@
   "@cameraWifiNoticeChannel": {
     "description": "Android: name of the camera Wi-Fi notifications in the phone's notification settings."
   },
+  "cameraWifiNoticeJoiningTitle": "Connecting to the camera's Wi-Fi…",
+  "@cameraWifiNoticeJoiningTitle": {
+    "description": "Android: title of the camera Wi-Fi notification while GR Photo is still joining the camera's Wi-Fi, before it is connected; the camera's name is shown next to it."
+  },
   "cameraWifiNoticeText": "Disconnects after {minutes} min without use",
   "@cameraWifiNoticeText": {
     "description": "Android: line under the title of the camera Wi-Fi notification, saying when auto-disconnect leaves the Wi-Fi. \"min\" is the abbreviation for minutes.",

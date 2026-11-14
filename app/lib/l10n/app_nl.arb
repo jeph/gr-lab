@@ -7,6 +7,7 @@
   "cameraBarSettings": "Instellingen",
   "cameraBarShoot": "Opname",
   "cameraWifiNoticeChannel": "Wi-Fi van de camera",
+  "cameraWifiNoticeJoiningTitle": "Verbinden met de Wi-Fi van de camera…",
   "cameraWifiNoticeText": "Verbreekt na {minutes} min zonder gebruik",
   "cameraWifiNoticeTitle": "Verbonden met de Wi-Fi van de camera",
   "camerasAddCamera": "Camera toevoegen",

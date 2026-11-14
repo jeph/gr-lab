@@ -7,6 +7,7 @@
   "cameraBarSettings": "Ρυθμίσεις",
   "cameraBarShoot": "Φωτογράφιση",
   "cameraWifiNoticeChannel": "Wi-Fi κάμερας",
+  "cameraWifiNoticeJoiningTitle": "Σύνδεση στο Wi-Fi της κάμερας…",
   "cameraWifiNoticeText": "Αποσυνδέεται μετά από {minutes} λεπ. χωρίς χρήση",
   "cameraWifiNoticeTitle": "Συνδέθηκε στο Wi-Fi της κάμερας",
   "camerasAddCamera": "Προσθήκη κάμερας",

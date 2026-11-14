@@ -40,7 +40,8 @@ import 'package:grphoto/src/services.dart';
 /// while the app runs, but the app can be frozen off screen, and its timer
 /// with it. So from the start of a join until the Wi-Fi is left the app
 /// holds [AppServices.cameraWifi], a foreground service that keeps it
-/// running and shows the Wi-Fi with a Disconnect button, and off screen
+/// running and shows the Wi-Fi, first as joining and then as connected
+/// with when it is left, with a Disconnect button, and off screen
 /// it keeps the phone awake until the Wi-Fi is due to be left and
 /// [awakeMargin] after. A leave that comes late anyway, because the phone
 /// slept regardless, says how long the app was really unused.
@@ -242,7 +243,8 @@ final class IdleDisconnect {
       );
 
   /// What the phone shows of the camera's Wi-Fi, in the app's language:
-  /// what `MaterialApp` resolves, without a widget to ask.
+  /// what `MaterialApp` resolves, without a widget to ask. Auto-disconnect
+  /// counts from the moment the Wi-Fi is up, so a join shows no countdown.
   CameraWifiNotice _notice() {
     final l10n = lookupAppLocalizations(
       settings.language ??
@@ -251,10 +253,14 @@ final class IdleDisconnect {
             AppLocalizations.supportedLocales,
           ),
     );
-    final after = settings.autoDisconnect.after;
+    final countdown = _connected ? settings.autoDisconnect.after : null;
     return CameraWifiNotice(
-      title: l10n.cameraWifiNoticeTitle,
-      text: after == null ? '' : l10n.cameraWifiNoticeText(after.inMinutes),
+      title: _connected
+          ? l10n.cameraWifiNoticeTitle
+          : l10n.cameraWifiNoticeJoiningTitle,
+      text: countdown == null
+          ? ''
+          : l10n.cameraWifiNoticeText(countdown.inMinutes),
       cameraName: connection.camera?.name ?? '',
       disconnectLabel: l10n.connectionSheetDisconnect,
       channelName: l10n.cameraWifiNoticeChannel,

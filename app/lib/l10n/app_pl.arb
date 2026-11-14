@@ -7,6 +7,7 @@
   "cameraBarSettings": "Ustawienia",
   "cameraBarShoot": "Fotografuj",
   "cameraWifiNoticeChannel": "Wi-Fi aparatu",
+  "cameraWifiNoticeJoiningTitle": "Łączenie z Wi-Fi aparatu…",
   "cameraWifiNoticeText": "Rozłącza się po {minutes} min bezczynności",
   "cameraWifiNoticeTitle": "Połączono z Wi-Fi aparatu",
   "camerasAddCamera": "Dodaj aparat",

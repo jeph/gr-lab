@@ -7,6 +7,7 @@
   "cameraBarSettings": "Nastavení",
   "cameraBarShoot": "Snímání",
   "cameraWifiNoticeChannel": "Wi-Fi fotoaparátu",
+  "cameraWifiNoticeJoiningTitle": "Připojování k Wi-Fi fotoaparátu…",
   "cameraWifiNoticeText": "Odpojí se po {minutes} min nečinnosti",
   "cameraWifiNoticeTitle": "Připojeno k Wi-Fi fotoaparátu",
   "camerasAddCamera": "Přidat fotoaparát",

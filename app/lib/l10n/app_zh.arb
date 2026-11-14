@@ -7,6 +7,7 @@
   "cameraBarSettings": "设置",
   "cameraBarShoot": "拍摄",
   "cameraWifiNoticeChannel": "相机 Wi-Fi",
+  "cameraWifiNoticeJoiningTitle": "正在连接到相机的 Wi-Fi…",
   "cameraWifiNoticeText": "{minutes} 分钟未使用后断开",
   "cameraWifiNoticeTitle": "已连接到相机的 Wi-Fi",
   "camerasAddCamera": "添加相机",

@@ -7,6 +7,7 @@
   "cameraBarSettings": "การตั้งค่า",
   "cameraBarShoot": "ถ่ายภาพ",
   "cameraWifiNoticeChannel": "Wi-Fi ของกล้อง",
+  "cameraWifiNoticeJoiningTitle": "กำลังเชื่อมต่อกับ Wi-Fi ของกล้อง…",
   "cameraWifiNoticeText": "ตัดการเชื่อมต่อเมื่อไม่ได้ใช้ {minutes} นาที",
   "cameraWifiNoticeTitle": "เชื่อมต่อกับ Wi-Fi ของกล้องอยู่",
   "camerasAddCamera": "เพิ่มกล้อง",

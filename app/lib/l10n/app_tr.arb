@@ -7,6 +7,7 @@
   "cameraBarSettings": "Ayarlar",
   "cameraBarShoot": "Çekim",
   "cameraWifiNoticeChannel": "Kamera Wi-Fi ağı",
+  "cameraWifiNoticeJoiningTitle": "Kameranın Wi-Fi ağına bağlanıyor…",
   "cameraWifiNoticeText": "{minutes} dk kullanılmazsa bağlantıyı keser",
   "cameraWifiNoticeTitle": "Kameranın Wi-Fi ağına bağlı",
   "camerasAddCamera": "Kamera ekle",
