@@ -271,6 +271,18 @@ def submit_beta(api, app_id, build, texts):
     if group is None:
         sys.exit(f'The app has no external TestFlight group "{BETA_GROUP}"')
     members = api.get(f"/v1/betaGroups/{group['id']}/builds?limit=200")["data"]
+    # The group holds release builds only, numbered N for release 0.0.N; a
+    # rerun of an older release's job leaves a newer one in place.
+    later = [
+        b["attributes"]["version"]
+        for b in members
+        if int(b["attributes"]["version"]) > int(build["attributes"]["version"])
+    ]
+    if later:
+        log(
+            f'"{BETA_GROUP}" already has the later build {max(later, key=int)}; leaving TestFlight as it is'
+        )
+        return
     if all(b["id"] != build["id"] for b in members):
         api.request(
             "POST",
@@ -332,13 +344,30 @@ def withdraw(api, app_id):
         )
 
 
+def _version_key(version):
+    """[version] as numbers, so that 0.0.10 comes after 0.0.9."""
+    return tuple(int(part) for part in version.split("."))
+
+
 def open_version(api, app_id, version, build):
     """The App Store version that is to hold [build], or None when [version]
-    is already submitted with it or has gone past review."""
+    is already submitted with it, has gone past review, or a later release
+    has an App Store version: a rerun of an older release's job must not take
+    a newer one out of review."""
     deadline = time.monotonic() + 30 * 60
     withdrawn = False
     while True:
         versions, builds = _versions(api, app_id)
+        newer = [
+            v["attributes"]["versionString"]
+            for v in versions
+            if _version_key(v["attributes"]["versionString"]) > _version_key(version)
+        ]
+        if newer:
+            log(
+                f"Version {max(newer, key=_version_key)} is newer than {version}; leaving the App Store versions as they are"
+            )
+            return None
         mine = [v for v in versions if v["attributes"]["versionString"] == version]
         if any(
             v["attributes"]["appVersionState"] not in EDITABLE | UNDER_REVIEW

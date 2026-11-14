@@ -57,6 +57,7 @@ if [[ "$static_only" == false ]]; then
       step "test $p" bash -c "cd '$p' && flutter test --no-pub"
     fi
   done
+  step "test tool/app_store" python3 -m unittest discover -s tool/app_store -p '*_test.py'
 fi
 
 if ((${#failed[@]})); then
