@@ -656,10 +656,10 @@ void main() {
       expect(app.camera.poweredOn, isTrue);
       expect(connection.status, ConnectionStatus.connected);
 
-      await connection.leaveUnusedWifi(const Duration(minutes: 5));
+      await connection.leaveUnusedWifi(const UnusedFor(Duration(minutes: 5)));
       await _until(() => !app.camera.poweredOn);
       expect(connection.status, ConnectionStatus.bluetooth);
-      expect(connection.idleClosedAfter, const Duration(minutes: 5));
+      expect(connection.unusedWifiLeft, const UnusedFor(Duration(minutes: 5)));
       expect(await app.camera.wifi.currentSsid(), isNull);
     });
 
@@ -669,10 +669,10 @@ void main() {
         const FakeCameraConfig(bonded: true, poweredOn: false),
       );
       final connection = app.models.connection..selectTab(CameraTab.shoot);
-      await connection.leaveUnusedWifi(const Duration(minutes: 5));
+      await connection.leaveUnusedWifi(const UnusedFor(Duration(minutes: 5)));
       expect(connection.tab, CameraTab.shoot);
       expect(connection.status, ConnectionStatus.bluetooth);
-      expect(connection.idleClosedAfter, isNull);
+      expect(connection.unusedWifiLeft, isNull);
       expect(app.camera.wlanOn, isFalse);
       await Future<void>.delayed(const Duration(milliseconds: 200));
       expect(app.camera.poweredOn, isTrue);
@@ -681,10 +681,10 @@ void main() {
       connection.liveViewWanted = true;
       await connection.joinWifi();
       expect(connection.status, ConnectionStatus.connected);
-      await connection.leaveUnusedWifi(const Duration(minutes: 1));
+      await connection.leaveUnusedWifi(const UnusedFor(Duration(minutes: 1)));
       expect(connection.tab, isNull);
       expect(connection.status, ConnectionStatus.bluetooth);
-      expect(connection.idleClosedAfter, const Duration(minutes: 1));
+      expect(connection.unusedWifiLeft, const UnusedFor(Duration(minutes: 1)));
       await _until(() => !app.camera.poweredOn);
     });
 

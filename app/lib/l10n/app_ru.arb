@@ -9,6 +9,7 @@
   "camerasAddCamera": "Добавить камеру",
   "camerasBack": "Назад",
   "camerasCancel": "Отменить",
+  "camerasChipBackground": "Wi-Fi отключен в фоновом режиме",
   "camerasChipIdle": "Wi-Fi отключен через {minutes} мин",
   "camerasConnect": "Подключить",
   "camerasDetailsForget": "Забыть камеру",

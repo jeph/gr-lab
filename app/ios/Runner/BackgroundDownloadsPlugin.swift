@@ -18,6 +18,12 @@ import UIKit
 /// that leaves the screen (`beginBackgroundTask`, about half a minute):
 /// enough for a photo on its way, after which iOS suspends the app.
 ///
+/// Dart is told whether the task runs (`continued`), since only then may
+/// the camera's Wi-Fi stay joined off screen: an app iOS suspends could not
+/// leave it. Dart leaves it before it ends the task (`hide`, or `show`
+/// paused), and when the task expires in the background this keeps the app
+/// running a little longer (`beginBackgroundTask` again) until it has.
+///
 /// The task does no work itself: the Dart side runs the downloads and says
 /// what to show. Everything here runs on the main thread.
 final class BackgroundDownloadsPlugin: NSObject, FlutterPlugin {
@@ -173,6 +179,7 @@ final class BackgroundDownloadsPlugin: NSObject, FlutterPlugin {
       return
     }
     task = continued
+    channel.invokeMethod("continued", arguments: true)
     continued.progress.totalUnitCount = Self.progressSteps
     continued.expirationHandler = { [weak self] in
       DispatchQueue.main.async { self?.expired(continued) }
@@ -194,6 +201,10 @@ final class BackgroundDownloadsPlugin: NSObject, FlutterPlugin {
     guard task === ended else { return }
     task = nil
     status = nil
+    // Time for Dart to leave the camera's Wi-Fi, ended by its `show`
+    // (paused) or `hide`.
+    if UIApplication.shared.applicationState == .background { beginGrace() }
+    channel.invokeMethod("continued", arguments: false)
     channel.invokeMethod("action", arguments: "pause")
     ended.setTaskCompleted(success: false)
   }
@@ -205,6 +216,7 @@ final class BackgroundDownloadsPlugin: NSObject, FlutterPlugin {
     endGrace()
     if let running = task {
       task = nil
+      channel.invokeMethod("continued", arguments: false)
       running.setTaskCompleted(success: finished)
     } else if registered {
       BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: taskIdentifier)
@@ -212,7 +224,12 @@ final class BackgroundDownloadsPlugin: NSObject, FlutterPlugin {
   }
 
   @objc private func didEnterBackground() {
-    guard status != nil, task == nil, grace == .invalid else { return }
+    guard status != nil, task == nil else { return }
+    beginGrace()
+  }
+
+  private func beginGrace() {
+    guard grace == .invalid else { return }
     grace = UIApplication.shared.beginBackgroundTask(withName: "GR Photo downloads") { [weak self] in
       self?.endGrace()
     }

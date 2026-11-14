@@ -9,6 +9,7 @@
   "camerasAddCamera": "카메라 추가",
   "camerasBack": "뒤로",
   "camerasCancel": "취소",
+  "camerasChipBackground": "백그라운드에서 Wi-Fi 연결 해제됨",
   "camerasChipIdle": "{minutes}분 후 Wi-Fi 연결 해제됨",
   "camerasConnect": "연결",
   "camerasDetailsForget": "카메라 지우기",

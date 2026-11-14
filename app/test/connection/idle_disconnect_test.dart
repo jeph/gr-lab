@@ -76,7 +76,7 @@ void main() {
     // The note goes once the Library is opened again.
     await tapWhenReady(tester, find.byKey(const Key('camera-card-library')));
     await pumpUntilFound(tester, find.byType(LibraryScreen));
-    expect(app.models.connection.idleClosedAfter, isNull);
+    expect(app.models.connection.unusedWifiLeft, isNull);
 
     await app.dispose();
   });
@@ -156,7 +156,7 @@ void main() {
     await tester.pump(const Duration(minutes: 1, seconds: 1));
     await pumpUntil(tester, () => !app.camera.wlanOn, reason: 'WLAN off');
     expect(app.models.connection.status, ConnectionStatus.bluetooth);
-    expect(app.models.connection.idleClosedAfter, isNull);
+    expect(app.models.connection.unusedWifiLeft, isNull);
     expect(find.byKey(const Key('shoot-remote')).hitTestable(), findsOneWidget);
 
     await app.dispose();

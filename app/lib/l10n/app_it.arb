@@ -9,6 +9,7 @@
   "camerasAddCamera": "Aggiungi fotocamera",
   "camerasBack": "Indietro",
   "camerasCancel": "Annulla",
+  "camerasChipBackground": "Wi-Fi disconnesso in background",
   "camerasChipIdle": "Wi-Fi disconnesso dopo {minutes} min",
   "camerasConnect": "Connetti",
   "camerasDetailsForget": "Dimentica fotocamera",

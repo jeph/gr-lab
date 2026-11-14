@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gr_camera/gr_camera.dart' show GrSessionOptions;
 import 'package:gr_fake_camera/gr_fake_camera.dart';
+import 'package:grphoto/src/connection/connection_controller.dart';
 import 'package:grphoto/src/library/library_screen.dart';
 import 'package:grphoto/src/services.dart';
 
@@ -14,7 +16,13 @@ const _raw = 'sd1|101RICOH/R0000269';
 /// The whole app with the fake GR IV paired, its Library open and
 /// photo-library saves held back, so a download stays running until the
 /// returned gate completes.
-Future<(TestApp, Completer<void>)> _inLibrary(WidgetTester tester) async {
+///
+/// With [outlivesApp] the phone is an iPhone: the camera network outlives
+/// the app, so it is left once the app is off screen.
+Future<(TestApp, Completer<void>)> _inLibrary(
+  WidgetTester tester, {
+  bool outlivesApp = false,
+}) async {
   tester.view
     ..physicalSize = const Size(1170, 2532)
     ..devicePixelRatio = 3;
@@ -23,6 +31,13 @@ Future<(TestApp, Completer<void>)> _inLibrary(WidgetTester tester) async {
     () => createTestApp(
       config: const FakeCameraConfig(bonded: true),
       saveCamera: true,
+      wifiOutlivesApp: outlivesApp,
+      // Probes every 5 s of the time these tests skip would meet a camera
+      // answering in real time.
+      sessionOptions: const GrSessionOptions(
+        livenessInterval: Duration(hours: 1),
+        livenessLossAfter: Duration(hours: 2),
+      ),
     ),
   ))!;
   final gate = app.media.gate = Completer<void>();
@@ -207,6 +222,82 @@ void main() {
     expect(app.models.downloads.remaining, greaterThan(0));
 
     _release(app, gate);
+    await app.dispose();
+  });
+
+  testWidgets('on an iPhone, a queue iOS keeps running off screen keeps the '
+      "camera's Wi-Fi, which is left before the task ends when the queue "
+      'is done', (tester) async {
+    final (app, gate) = await _inLibrary(tester, outlivesApp: true);
+    await _download(tester);
+    await pumpUntil(tester, () => app.media.held == 1, reason: 'save held');
+    app.background.continuedTask.value = true;
+    bool? wlanAtEnd;
+    app.background.onEnd = () => wlanAtEnd ??= app.camera.wlanOn;
+
+    goOffScreen(tester);
+    await tester.pump(const Duration(seconds: 30));
+    expect(app.models.connection.status, ConnectionStatus.connected);
+
+    _release(app, gate);
+    await pumpUntil(
+      tester,
+      () => app.background.hides.isNotEmpty,
+      reason: 'download hidden',
+    );
+    expect(app.background.hides, [true]);
+    expect(wlanAtEnd, isFalse);
+    expect(app.models.connection.status, ConnectionStatus.bluetooth);
+
+    await app.dispose();
+  });
+
+  testWidgets('on an iPhone, when iOS ends the continued processing task off '
+      "screen, the queue pauses and its display goes once the camera's Wi-Fi "
+      'was left', (tester) async {
+    final (app, gate) = await _inLibrary(tester, outlivesApp: true);
+    await _download(tester, both: true);
+    await pumpUntil(tester, () => app.media.held == 1, reason: 'save held');
+    app.background.continuedTask.value = true;
+    bool? wlanAtEnd;
+    app.background.onEnd = () => wlanAtEnd ??= app.camera.wlanOn;
+    goOffScreen(tester);
+    await tester.pump(const Duration(seconds: 30));
+
+    // What the native side sends when the task expires.
+    app.background.continuedTask.value = false;
+    app.background.press(BackgroundDownloadAction.pause);
+    await pumpUntil(tester, () => wlanAtEnd != null, reason: 'display ended');
+    expect(wlanAtEnd, isFalse);
+    expect(app.models.downloads.paused, isTrue);
+    _release(app, gate);
+
+    await app.dispose();
+  });
+
+  testWidgets('on an iPhone without the continued processing task, a queue '
+      "off screen is cut off when the camera's Wi-Fi is left, and waits for "
+      'the camera', (tester) async {
+    final (app, gate) = await _inLibrary(tester, outlivesApp: true);
+    await _download(tester, both: true);
+    await pumpUntil(tester, () => app.media.held == 1, reason: 'save held');
+    bool? wlanAtEnd;
+    app.background.onEnd = () => wlanAtEnd ??= app.camera.wlanOn;
+
+    goOffScreen(tester);
+    await tester.pump(const Duration(seconds: 21));
+    await pumpUntil(
+      tester,
+      () => app.background.hides.isNotEmpty,
+      reason: 'download hidden',
+    );
+    expect(wlanAtEnd, isFalse);
+    expect(app.background.hides, [false]);
+    _release(app, gate);
+    await pumpRounds(tester, 20);
+    expect(app.models.downloads.failedCount, 0);
+    expect(app.models.downloads.remaining, 1);
+
     await app.dispose();
   });
 }

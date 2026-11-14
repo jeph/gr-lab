@@ -9,6 +9,7 @@
   "camerasAddCamera": "カメラを追加",
   "camerasBack": "戻る",
   "camerasCancel": "キャンセル",
+  "camerasChipBackground": "バックグラウンドでWi-Fiを切断しました",
   "camerasChipIdle": "{minutes}分後にWi-Fiを切断しました",
   "camerasConnect": "接続",
   "camerasDetailsForget": "カメラの登録を解除",

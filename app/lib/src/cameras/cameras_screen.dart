@@ -590,11 +590,14 @@ class _CameraCard extends StatelessWidget {
         onTap: openSheet,
       );
     }
-    final idleFor = connection.idleClosedAfter;
-    if (link == _Link.bluetooth && idleFor != null) {
+    final unused = connection.unusedWifiLeft;
+    if (link == _Link.bluetooth && unused != null) {
       return _LinkChip(
         link: _Link.idle,
-        label: l10n.camerasChipIdle(idleFor.inMinutes),
+        label: switch (unused) {
+          UnusedFor(:final after) => l10n.camerasChipIdle(after.inMinutes),
+          UnusedInBackground() => l10n.camerasChipBackground,
+        },
         onTap: openSheet,
       );
     }
@@ -743,7 +746,7 @@ enum _Link {
   failed,
 
   /// Linked over Bluetooth after the Wi-Fi was left for lack of use
-  /// ([ConnectionController.idleClosedAfter]).
+  /// ([ConnectionController.unusedWifiLeft]).
   idle,
 
   /// Not linked, and the scan does not see the camera (or cannot look).

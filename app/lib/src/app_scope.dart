@@ -51,6 +51,8 @@ final class AppModels {
       nativeLogging = debugLog.enabled;
       unawaited(services.camera.setNativeLogging(enabled: nativeLogging));
     });
+    // A run that iOS ended while on a camera's Wi-Fi left the phone on it.
+    await services.camera.forgetLeftoverWifi();
     final connection = ConnectionController(
       services: services,
       cameras: cameras,

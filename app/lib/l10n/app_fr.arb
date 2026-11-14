@@ -9,6 +9,7 @@
   "camerasAddCamera": "Ajouter un appareil photo",
   "camerasBack": "Retour",
   "camerasCancel": "Annuler",
+  "camerasChipBackground": "Wi-Fi déconnecté en arrière-plan",
   "camerasChipIdle": "Wi-Fi déconnecté après {minutes} min",
   "camerasConnect": "Connecter",
   "camerasDetailsForget": "Oublier l'appareil photo",

@@ -182,4 +182,69 @@ void main() {
       });
     },
   );
+
+  test('background time carries what iOS said is left, and ending it sends '
+      'its id back once', () async {
+    final wifi = PlatformWifiControl(trace: trace.add);
+    reply = (call) async => call.method == 'beginBackgroundTime'
+        ? {'id': 7, 'remainingMs': 29500}
+        : null;
+    final time = await wifi.beginBackgroundTime();
+    expect(time.remaining, const Duration(milliseconds: 29500));
+
+    await time.end();
+    await time.end();
+    expect(
+      [for (final c in calls) (c.method, c.arguments)],
+      [('beginBackgroundTime', null), ('endBackgroundTime', 7)],
+    );
+  });
+
+  test('background time without a limit has none; a refused one has none '
+      'left and nothing to end', () async {
+    final wifi = PlatformWifiControl(trace: trace.add);
+    reply = (_) async => {'id': 3, 'remainingMs': null};
+    expect((await wifi.beginBackgroundTime()).remaining, isNull);
+
+    reply = (_) async => {'id': null, 'remainingMs': 0};
+    final refused = await wifi.beginBackgroundTime();
+    expect(refused.remaining, Duration.zero);
+    calls.clear();
+    await refused.end();
+    expect(calls, isEmpty);
+  });
+
+  test('without the native methods (Android), background time is unlimited '
+      'and no leftover network is removed', () async {
+    final wifi = PlatformWifiControl(trace: trace.add);
+    messenger.setMockMethodCallHandler(channel, null);
+    expect((await wifi.beginBackgroundTime()).remaining, isNull);
+    expect(await wifi.forgetLeftovers(), isEmpty);
+  });
+
+  test('forgetLeftovers passes the removed SSIDs through and traces a native '
+      'failure', () async {
+    final wifi = PlatformWifiControl(trace: trace.add);
+    reply = (_) async => ['GR_000001'];
+    expect(await wifi.forgetLeftovers(), ['GR_000001']);
+
+    reply = (_) async => throw PlatformException(code: 'failed');
+    expect(await wifi.forgetLeftovers(), isEmpty);
+    expect(trace.single.kind, 'native.forgetLeftovers.error');
+  });
+
+  test('background time iOS takes back is traced', () async {
+    PlatformWifiControl(trace: trace.add);
+    await messenger.handlePlatformMessage(
+      channel.name,
+      channel.codec.encodeMethodCall(
+        const MethodCall('backgroundTimeExpired', 7),
+      ),
+      (_) {},
+    );
+    final event = trace.single;
+    expect(event.direction, TraceDirection.inbound);
+    expect(event.kind, 'backgroundTime.expired');
+    expect(event.fields, {'id': 7});
+  });
 }

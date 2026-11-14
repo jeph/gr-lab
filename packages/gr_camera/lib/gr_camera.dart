@@ -127,6 +127,7 @@ export 'src/looks/render/look_renderer.dart'
         lookRendererFor;
 export 'src/nearby.dart' show NearbyCamera, NearbyScanner;
 export 'src/pairing.dart' show PairingRun, pairedDeviceName;
+export 'src/platform/background_time.dart' show BackgroundTime;
 export 'src/presence.dart' show CameraSighting, PresenceScanner;
 export 'src/session.dart' show CameraSession, WifiConsent, WifiStopReason;
 export 'src/shoot/live_view.dart' show CameraLiveView, FocusMark, FocusState;

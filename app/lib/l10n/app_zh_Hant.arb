@@ -9,6 +9,7 @@
   "camerasAddCamera": "新增相機",
   "camerasBack": "返回",
   "camerasCancel": "取消",
+  "camerasChipBackground": "已在背景中斷 Wi-Fi",
   "camerasChipIdle": "{minutes} 分鐘後已中斷 Wi-Fi",
   "camerasConnect": "連線",
   "camerasDetailsForget": "忘記相機",

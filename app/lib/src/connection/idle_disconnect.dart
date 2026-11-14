@@ -1,10 +1,13 @@
 import 'dart:async';
 
 import 'package:clock/clock.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:gr_camera/gr_camera.dart';
 import 'package:grphoto/src/connection/connection_controller.dart';
 import 'package:grphoto/src/data/settings.dart';
+import 'package:grphoto/src/services.dart';
 
 /// Leaves the camera's Wi-Fi ([ConnectionController.leaveUnusedWifi])
 /// after [SettingsController.autoDisconnect] without use, keeping
@@ -17,24 +20,67 @@ import 'package:grphoto/src/data/settings.dart';
 /// playback or live view ([hold]), whose end counts as use too. Counting
 /// starts when the Wi-Fi comes up and measures wall-clock time ([clock]),
 /// so time in the background counts.
+///
+/// Where the camera network outlives the app (iOS,
+/// `GrCameraEnvironment.wifiOutlivesApp`), a timer cannot be relied on off
+/// screen: iOS suspends the app within seconds, and a suspended or ended
+/// app keeps the phone on the camera's network, and the camera on, for as
+/// long as it lies there. So once the app is off screen the Wi-Fi is left
+/// after [backgroundGrace], whatever the setting, in background time asked
+/// of iOS for it, and sooner when iOS gives less than [backgroundGrace]
+/// and [backgroundMargin] together. Work ([hold]) keeps it only while iOS
+/// keeps the app running for the download queue
+/// ([BackgroundDownloads.continued]); once that ends, the Wi-Fi is left at
+/// once. \[design\] (research/protocol/connection-lifecycle.md §9, "What
+/// GR Photo does")
 final class IdleDisconnect {
   new({required this.connection, required this.settings})
-    : _last = clock.now() {
+    : _last = clock.now(),
+      _outlivesApp = connection.services.camera.wifiOutlivesApp {
     connection.addListener(_update);
     settings.addListener(_schedule);
+    _continued.addListener(_schedule);
     _update();
   }
 
+  /// Off screen where the camera network outlives the app, how long the
+  /// Wi-Fi stays: long enough to answer a message and come back.
+  static const backgroundGrace = Duration(seconds: 20);
+
+  /// Kept free at the end of the background time iOS gives, for leaving:
+  /// the network removal, then the Bluetooth write that turns the camera's
+  /// Wi-Fi (or the camera) off.
+  static const backgroundMargin = Duration(seconds: 8);
+
   final ConnectionController connection;
   final SettingsController settings;
+  final bool _outlivesApp;
 
   /// Counts every route change as use. Add to `navigatorObservers`.
   late final NavigatorObserver observer = _NavigationUse(this);
+
+  ValueListenable<bool> get _continued =>
+      connection.services.background.continued;
 
   DateTime _last;
   Timer? _timer;
   int _holds = 0;
   bool _connected = false;
+
+  /// Off screen where the camera network outlives the app: when the Wi-Fi
+  /// is left. Null in front, and everywhere else.
+  DateTime? _offScreenUntil;
+
+  /// The background time asked of iOS, while it is held or being asked for.
+  Future<BackgroundTime>? _time;
+  Future<void> _leaving = Future.value();
+  bool _leavingOffScreen = false;
+
+  /// Completes once a leave of the camera's Wi-Fi started because the app
+  /// is off screen is done; at once when none runs. Ending iOS's continued
+  /// processing task lets iOS suspend the app, so the download queue waits
+  /// for this first (`DownloadBackground`).
+  Future<void> get leftOffScreen => _leaving;
 
   /// Records use now.
   void touch() => _last = clock.now();
@@ -58,16 +104,25 @@ final class IdleDisconnect {
   }
 
   void _update() {
+    final offScreen = _outlivesApp && !connection.foreground;
     final connected = connection.status == ConnectionStatus.connected;
     if (connected && !_connected) touch();
-    final changed = connected != _connected;
+    final changed =
+        connected != _connected || offScreen != (_offScreenUntil != null);
     _connected = connected;
+    if (offScreen && _offScreenUntil == null) {
+      _offScreenUntil = clock.now().add(backgroundGrace);
+    } else if (!offScreen && _offScreenUntil != null) {
+      _offScreenUntil = null;
+      if (!_leavingOffScreen) _endTime();
+    }
     if (changed) _schedule();
   }
 
   void _schedule() {
     _timer?.cancel();
     _timer = null;
+    if (_offScreenUntil != null) return _scheduleOffScreen();
     final after = settings.autoDisconnect.after;
     if (!_connected || after == null || _holds > 0) return;
     final left = _last.add(after).difference(clock.now());
@@ -77,19 +132,76 @@ final class IdleDisconnect {
   void _expired() {
     _timer = null;
     final after = settings.autoDisconnect.after;
-    if (!_connected || after == null || _holds > 0) return;
+    if (_offScreenUntil != null || !_connected || after == null || _holds > 0) {
+      return;
+    }
     if (clock.now().difference(_last) < after) {
       _schedule();
       return;
     }
-    unawaited(connection.leaveUnusedWifi(after));
+    unawaited(connection.leaveUnusedWifi(UnusedFor(after)));
+  }
+
+  /// Off screen where the camera network outlives the app.
+  void _scheduleOffScreen() {
+    if (_leavingOffScreen) return;
+    if (!_connected) return _endTime();
+    // iOS keeps the app running for the queue, until the task ends.
+    if (_holds > 0 && _continued.value) return _endTime();
+    _askTime();
+    final left = _offScreenUntil!.difference(clock.now());
+    if (left > Duration.zero) {
+      _timer = Timer(left, _schedule);
+      return;
+    }
+    // The session traces why (`wifi.stop`, reason `background`).
+    _leavingOffScreen = true;
+    _leaving = connection
+        .leaveUnusedWifi(const UnusedInBackground())
+        .whenComplete(() {
+          _leavingOffScreen = false;
+          _endTime();
+        });
+  }
+
+  /// Asks iOS for background time, once per stay off screen; time it gives
+  /// that ends before [_offScreenUntil] and [backgroundMargin] brings the
+  /// leave forward.
+  void _askTime() {
+    if (_time != null) return;
+    final asked = clock.now();
+    final time = _time = connection.services.camera.backgroundTime(
+      'leave camera Wi-Fi',
+    );
+    unawaited(_granted(time, asked));
+  }
+
+  Future<void> _granted(Future<BackgroundTime> time, DateTime asked) async {
+    final granted = await time;
+    // Given back meanwhile ([_endTime] ends it).
+    if (!identical(_time, time)) return;
+    final remaining = granted.remaining;
+    final until = _offScreenUntil;
+    if (remaining == null || until == null) return;
+    final latest = asked.add(remaining - backgroundMargin);
+    if (!latest.isBefore(until)) return;
+    _offScreenUntil = latest;
+    _schedule();
+  }
+
+  void _endTime() {
+    final time = _time;
+    _time = null;
+    if (time != null) unawaited(time.then((granted) => granted.end()));
   }
 
   void dispose() {
     _timer?.cancel();
     _timer = null;
+    _endTime();
     connection.removeListener(_update);
     settings.removeListener(_schedule);
+    _continued.removeListener(_schedule);
   }
 }
 

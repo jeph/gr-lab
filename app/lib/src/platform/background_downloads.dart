@@ -11,7 +11,8 @@ import 'package:grphoto/src/services.dart';
 /// channel}` and `hide` `{finished}`; the platform calls `action` back with
 /// `pause`, `resume` or `cancel`. Android (`DownloadService.kt`) answers
 /// with a foreground service and its notification, iOS
-/// (`BackgroundDownloadsPlugin.swift`) with a continued processing task.
+/// (`BackgroundDownloadsPlugin.swift`) with a continued processing task,
+/// whose start and end it reports with `continued` (true or false).
 /// A platform that cannot start its background work says why in the
 /// call's error, which goes to the debug log: the download itself carries
 /// on for as long as the system lets the app run.
@@ -22,10 +23,14 @@ final class PlatformBackgroundDownloads implements BackgroundDownloads {
 
   final MethodChannel _channel;
   final _actions = StreamController<BackgroundDownloadAction>.broadcast();
+  final ValueNotifier<bool> _continued = ValueNotifier(false);
   String? _lastFailure;
 
   @override
   Stream<BackgroundDownloadAction> get actions => _actions.stream;
+
+  @override
+  ValueListenable<bool> get continued => _continued;
 
   @override
   Future<void> show(BackgroundDownloadStatus status) => _invoke('show', {
@@ -59,8 +64,22 @@ final class PlatformBackgroundDownloads implements BackgroundDownloads {
   }
 
   Future<void> _onCall(MethodCall call) async {
-    if (call.method != 'action') throw MissingPluginException();
-    final action = BackgroundDownloadAction.values.asNameMap()[call.arguments];
-    if (action != null) _actions.add(action);
+    switch (call.method) {
+      case 'action':
+        final action = BackgroundDownloadAction.values
+            .asNameMap()[call.arguments];
+        if (action != null) _actions.add(action);
+      case 'continued':
+        final running = call.arguments == true;
+        if (running != _continued.value) {
+          debugPrint(
+            'Background downloads: continued processing task '
+            '${running ? 'running' : 'ended'}',
+          );
+        }
+        _continued.value = running;
+      default:
+        throw MissingPluginException();
+    }
   }
 }

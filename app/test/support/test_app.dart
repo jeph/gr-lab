@@ -46,6 +46,7 @@ final class TestApp {
     required this.background,
     required this.location,
     required this.windowPose,
+    required this.phone,
     required this._permission,
     required this._root,
   });
@@ -68,6 +69,10 @@ final class TestApp {
   /// its fold. [WindowPose.none], as on any other phone, until a test sets
   /// it (`setDuoWindow` sets it with the window's size and insets).
   final ValueNotifier<WindowPose> windowPose;
+
+  /// The background time the camera layer asked of the OS, and the
+  /// leftover camera networks it removed.
+  final FakePhoneOs phone;
   final _Permission _permission;
   final Directory _root;
   WidgetTester? _tester;
@@ -182,6 +187,11 @@ final class TestApp {
 /// log cannot open. [saveModel] false saves the camera without its model,
 /// as when pairing could not read it.
 ///
+/// [wifiOutlivesApp] makes the phone behave as an iPhone does: the camera
+/// network outlives the app, which asks for background time ([FakePhoneOs],
+/// giving [backgroundTime]; null for no limit) and removes leftover
+/// networks at start-up.
+///
 /// [location] stands for the phone's location service (by default location
 /// is allowed while the app is in use). The saved camera has live and
 /// background geotagging as [liveGeotagging] and [backgroundGeotagging]
@@ -201,6 +211,8 @@ Future<TestApp> createTestApp({
   FakePhoneLocation? location,
   bool liveGeotagging = false,
   bool backgroundGeotagging = false,
+  bool wifiOutlivesApp = false,
+  Duration? backgroundTime = const Duration(seconds: 30),
 }) async {
   // flutter_test answers every dart:io HttpClient request with 400; the
   // fake camera serves real HTTP on loopback.
@@ -241,6 +253,7 @@ Future<TestApp> createTestApp({
   final phone = location ?? FakePhoneLocation();
   final trace = TraceRelay();
   final windowPose = ValueNotifier(WindowPose.none);
+  final os = FakePhoneOs(backgroundTime: backgroundTime);
   final services = AppServices(
     windowPose: windowPose,
     camera: GrCameraEnvironment(
@@ -252,6 +265,9 @@ Future<TestApp> createTestApp({
       wifiApprovalShown: wifiApprovalShown,
       ensureBluetoothPermission: () async => permission.granted,
       location: phone,
+      wifiOutlivesApp: wifiOutlivesApp,
+      beginBackgroundTime: os.beginBackgroundTime,
+      forgetLeftoverWifi: os.forgetLeftovers,
     ),
     trace: trace,
     media: saver,
@@ -271,9 +287,40 @@ Future<TestApp> createTestApp({
     background: background,
     location: phone,
     windowPose: windowPose,
+    phone: os,
     permission: permission,
     root: root,
   );
+}
+
+/// What the camera layer asks of the phone's OS outside Bluetooth and
+/// Wi-Fi: background time ([BackgroundTime]) and the removal of camera
+/// networks an earlier run left joined.
+final class FakePhoneOs {
+  new({this.backgroundTime});
+
+  /// What each grant says is left; null for no limit.
+  final Duration? backgroundTime;
+
+  /// Grants not yet ended.
+  int held = 0;
+
+  /// Grants asked for, ended or not.
+  int granted = 0;
+
+  /// Times the leftover networks were removed.
+  int leftoverRemovals = 0;
+
+  Future<BackgroundTime> beginBackgroundTime() async {
+    granted++;
+    held++;
+    return BackgroundTime(remaining: backgroundTime, end: () async => held--);
+  }
+
+  Future<List<String>> forgetLeftovers() async {
+    leftoverRemovals++;
+    return const [];
+  }
 }
 
 /// MapLibre with no native side, which a test does not have: a map is an
@@ -356,6 +403,27 @@ bool tapReaches(WidgetTester tester, Offset point, Finder finder) {
     }
     return false;
   });
+}
+
+/// The app leaves the screen (another app in front, or the phone
+/// locked), until [comeBackOnScreen] or the end of the test.
+void goOffScreen(WidgetTester tester) {
+  [
+    AppLifecycleState.inactive,
+    AppLifecycleState.hidden,
+    AppLifecycleState.paused,
+  ].forEach(tester.binding.handleAppLifecycleStateChanged);
+  addTearDown(() => comeBackOnScreen(tester));
+}
+
+/// The app is in front again after [goOffScreen].
+void comeBackOnScreen(WidgetTester tester) {
+  if (tester.binding.lifecycleState == AppLifecycleState.resumed) return;
+  [
+    AppLifecycleState.hidden,
+    AppLifecycleState.inactive,
+    AppLifecycleState.resumed,
+  ].forEach(tester.binding.handleAppLifecycleStateChanged);
 }
 
 /// Pumps [rounds] of [pumpUntil]'s real/fake time steps.
@@ -470,23 +538,35 @@ final class RecordingBackgroundDownloads implements BackgroundDownloads {
   /// What the platform shows now; null when nothing.
   BackgroundDownloadStatus? current;
 
+  /// Runs when the background work ends ([hide], or [show] paused), before
+  /// it is recorded.
+  VoidCallback? onEnd;
+
   /// The `finished` of every [hide], oldest first.
   final List<bool> hides = [];
 
+  /// Whether iOS's continued processing task runs, as a test sets it.
+  final ValueNotifier<bool> continuedTask = ValueNotifier(false);
+
   @override
   Stream<BackgroundDownloadAction> get actions => _actions.stream;
+
+  @override
+  ValueListenable<bool> get continued => continuedTask;
 
   /// The user presses [action] on the platform's display.
   void press(BackgroundDownloadAction action) => _actions.add(action);
 
   @override
   Future<void> show(BackgroundDownloadStatus status) async {
+    if (status.paused) onEnd?.call();
     shown.add(status);
     current = status;
   }
 
   @override
   Future<void> hide({required bool finished}) async {
+    onEnd?.call();
     hides.add(finished);
     current = null;
   }

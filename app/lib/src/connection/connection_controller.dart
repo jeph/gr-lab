@@ -123,6 +123,40 @@ final class ConnectFailure {
       'loss: ${loss?.name}): $cause';
 }
 
+/// Why the app left the camera's Wi-Fi by itself
+/// ([ConnectionController.leaveUnusedWifi], from `IdleDisconnect`).
+@immutable
+sealed class UnusedWifi {
+  const new();
+}
+
+/// The app was not used for [after].
+@immutable
+final class UnusedFor extends UnusedWifi {
+  const new(this.after);
+
+  final Duration after;
+
+  @override
+  bool operator ==(Object other) => other is UnusedFor && other.after == after;
+
+  @override
+  int get hashCode => after.hashCode;
+}
+
+/// The app went off screen on a phone where the camera network outlives
+/// the app (`GrCameraEnvironment.wifiOutlivesApp`, iOS).
+@immutable
+final class UnusedInBackground extends UnusedWifi {
+  const new();
+
+  @override
+  bool operator ==(Object other) => other is UnusedInBackground;
+
+  @override
+  int get hashCode => (UnusedInBackground).hashCode;
+}
+
 /// A join waiting for the user to agree to the camera network; answered
 /// with [ConnectionController.answerWifiConsent].
 @immutable
@@ -144,8 +178,9 @@ final class WifiConsentRequest {
 /// or live view ([wifiNeeded]), or asks for it on the camera sheet.
 /// Joining it is slow, so once it is up it stays up when the user moves on
 /// to a page that does not need it, or back to the Cameras screen: it is
-/// left when the app was not used for the auto-disconnect time
-/// ([leaveUnusedWifi]) or the user disconnects it ([disconnectWifi]), or
+/// left when the app was not used for the auto-disconnect time, or went
+/// off screen on iOS ([leaveUnusedWifi]), or the user disconnects it
+/// ([disconnectWifi]), or
 /// the camera with it ([disconnect]). [openCamera] opens the camera's
 /// pages ([tab]) over the Cameras screen, and [closeCamera] leaves them
 /// while Bluetooth stays.
@@ -281,13 +316,12 @@ final class ConnectionController extends ChangeNotifier {
   /// Wi-Fi failed.
   ConnectFailure? get failure => _failure;
 
-  /// Set when [leaveUnusedWifi] left the camera's Wi-Fi because the app
-  /// was not used for this long (see `IdleDisconnect`), with the app on
-  /// the Cameras screen or returning to it; cleared by the next Wi-Fi start
-  /// or [disconnect]. The Cameras screen notes it while Bluetooth stays
-  /// linked.
-  Duration? get idleClosedAfter => _idleClosedAfter;
-  Duration? _idleClosedAfter;
+  /// Set when [leaveUnusedWifi] left the camera's Wi-Fi (see
+  /// `IdleDisconnect`), with the app on the Cameras screen or returning to
+  /// it; cleared by the next Wi-Fi start or [disconnect]. The Cameras
+  /// screen notes it while Bluetooth stays linked.
+  UnusedWifi? get unusedWifiLeft => _unusedWifiLeft;
+  UnusedWifi? _unusedWifiLeft;
 
   /// Wi-Fi is up, or being got back after a loss ([reconnecting]): the
   /// Library and live view can use it.
@@ -579,20 +613,23 @@ final class ConnectionController extends ChangeNotifier {
       ? Future.value()
       : _leaveWifi(reason: WifiStopReason.user, powerOff: false);
 
-  /// The app was not used for [idleFor] (`IdleDisconnect`): leaves the
+  /// The app was not used ([why], from `IdleDisconnect`): leaves the
   /// camera's Wi-Fi, keeping Bluetooth. A page that needs the Wi-Fi
   /// ([wifiNeeded]) closes with it; one that does not stays open, with the
   /// camera on. On the Cameras screen, also when a page closed to it, a
-  /// camera the app turned on is turned back off and [idleClosedAfter] is
+  /// camera the app turned on is turned back off and [unusedWifiLeft] is
   /// set.
-  Future<void> leaveUnusedWifi(Duration idleFor) {
+  Future<void> leaveUnusedWifi(UnusedWifi why) {
     final hadTab = _tab != null;
     if (wifiNeeded) _tab = null;
     final onCameras = _tab == null;
     return _leaveWifi(
-      reason: WifiStopReason.idle,
+      reason: switch (why) {
+        UnusedFor() => WifiStopReason.idle,
+        UnusedInBackground() => WifiStopReason.background,
+      },
       powerOff: onCameras,
-      idleFor: onCameras ? idleFor : null,
+      unused: onCameras ? why : null,
       changed: hadTab && onCameras,
     );
   }
@@ -600,7 +637,7 @@ final class ConnectionController extends ChangeNotifier {
   Future<void> _leaveWifi({
     required WifiStopReason reason,
     required bool powerOff,
-    Duration? idleFor,
+    UnusedWifi? unused,
     bool changed = false,
   }) async {
     _wifiWanted = false;
@@ -627,7 +664,7 @@ final class ConnectionController extends ChangeNotifier {
     _step = null;
     _quietRejoin = false;
     _failure = null;
-    _idleClosedAfter = idleFor;
+    _unusedWifiLeft = unused;
     notifyListeners();
     final stopping = _stoppingWifi = session.stopWifi(
       reason: reason,
@@ -719,7 +756,7 @@ final class ConnectionController extends ChangeNotifier {
     final run = ++_wifiRun;
     bool stale() => generation != _generation || run != _wifiRun;
     _failure = null;
-    _idleClosedAfter = null;
+    _unusedWifiLeft = null;
     _quietRejoin = quiet;
     _status = ConnectionStatus.connecting;
     _step = ConnectStep.wifi;
@@ -760,7 +797,7 @@ final class ConnectionController extends ChangeNotifier {
     _step = null;
     _quietRejoin = false;
     _failure = null;
-    _idleClosedAfter = null;
+    _unusedWifiLeft = null;
     _declineConsent();
     final closing = _endSession();
     notifyListeners();

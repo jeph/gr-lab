@@ -9,6 +9,7 @@
   "camerasAddCamera": "Camera toevoegen",
   "camerasBack": "Terug",
   "camerasCancel": "Annuleren",
+  "camerasChipBackground": "Wi-Fi verbroken op de achtergrond",
   "camerasChipIdle": "Wi-Fi verbroken na {minutes} min",
   "camerasConnect": "Verbinden",
   "camerasDetailsForget": "Camera vergeten",

@@ -9,6 +9,7 @@
   "camerasAddCamera": "Lisää kamera",
   "camerasBack": "Takaisin",
   "camerasCancel": "Peruuta",
+  "camerasChipBackground": "Wi-Fi katkaistu taustalla",
   "camerasChipIdle": "Wi-Fi katkaistu {minutes} min jälkeen",
   "camerasConnect": "Yhdistä",
   "camerasDetailsForget": "Unohda kamera",

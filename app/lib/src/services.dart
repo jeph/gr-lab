@@ -67,6 +67,12 @@ abstract interface class BackgroundDownloads {
   /// [BackgroundDownloadAction.pause], also when the system itself stops
   /// the task.
   Stream<BackgroundDownloadAction> get actions;
+
+  /// True while iOS keeps the app running for the queue (its continued
+  /// processing task, iOS 26 and later). Without it an app off screen is
+  /// suspended within half a minute (`IdleDisconnect`). Android, which runs
+  /// a foreground service instead, never sets it.
+  ValueListenable<bool> get continued;
 }
 
 /// A button of the platform's download display.

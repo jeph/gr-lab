@@ -9,6 +9,7 @@
   "camerasAddCamera": "Tilføj et kamera",
   "camerasBack": "Tilbage",
   "camerasCancel": "Annuller",
+  "camerasChipBackground": "Wi-Fi afbrudt i baggrunden",
   "camerasChipIdle": "Wi-Fi afbrudt efter {minutes} min.",
   "camerasConnect": "Forbind",
   "camerasDetailsForget": "Glem kamera",

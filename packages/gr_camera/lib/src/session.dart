@@ -60,6 +60,10 @@ enum WifiStopReason {
   /// The app was not used for the auto-disconnect time.
   idle,
 
+  /// The app went off screen on a phone where the camera network outlives
+  /// it (`GrCameraEnvironment.wifiOutlivesApp`).
+  background,
+
   /// The Wi-Fi was lost while nothing shown needed it, so it is not got
   /// back.
   lostUnneeded,

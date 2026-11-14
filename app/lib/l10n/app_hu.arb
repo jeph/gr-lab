@@ -9,6 +9,7 @@
   "camerasAddCamera": "Kamera hozzáadása",
   "camerasBack": "Vissza",
   "camerasCancel": "Mégse",
+  "camerasChipBackground": "Wi-Fi leválasztva a háttérben",
   "camerasChipIdle": "Wi-Fi leválasztva {minutes} perc után",
   "camerasConnect": "Csatlakozás",
   "camerasDetailsForget": "Kamera elfelejtése",

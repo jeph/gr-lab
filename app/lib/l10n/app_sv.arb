@@ -9,6 +9,7 @@
   "camerasAddCamera": "Lägg till en kamera",
   "camerasBack": "Tillbaka",
   "camerasCancel": "Avbryt",
+  "camerasChipBackground": "Wi-Fi frånkopplat i bakgrunden",
   "camerasChipIdle": "Wi-Fi frånkopplat efter {minutes} min",
   "camerasConnect": "Anslut",
   "camerasDetailsForget": "Glöm kameran",

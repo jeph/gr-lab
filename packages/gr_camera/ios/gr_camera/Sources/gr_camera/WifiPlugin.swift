@@ -5,6 +5,10 @@ import os
 /// `io.jeph.grphoto/wifi`: joins the camera access point with a persistent
 /// `NEHotspotConfiguration`. `joinOnce = false` keeps the association while
 /// the app is in the background; `leave` removes the configuration again.
+/// The configuration also outlives the app: a suspended app cannot leave,
+/// so Dart leaves the camera network once the app is off screen, in a
+/// background task begun here (`beginBackgroundTime`), and a new run
+/// removes what an ended one left installed (`forgetLeftovers`).
 /// iOS chooses WPA2 or WPA3 itself, so the requested security is unused.
 ///
 /// Every log line also goes to Dart (`log`), which records it in the debug
@@ -31,6 +35,9 @@ final class WifiPlugin: NSObject, FlutterPlugin {
   private var configuredSsid: String?
   /// The join whose `apply` installed `configuredSsid`'s configuration.
   private var configurationOwner: Attempt?
+  /// The background tasks begun for Dart, by the id it was given.
+  private var backgroundTasks: [Int: UIBackgroundTaskIdentifier] = [:]
+  private var lastBackgroundId = 0
 
   private init(channel: FlutterMethodChannel) {
     self.channel = channel
@@ -75,8 +82,70 @@ final class WifiPlugin: NSObject, FlutterPlugin {
       configuredSsid = nil
       configurationOwner = nil
       result(nil)
+    case "beginBackgroundTime":
+      beginBackgroundTime(result: result)
+    case "endBackgroundTime":
+      if let id = (call.arguments as? NSNumber)?.intValue { endBackgroundTime(id) }
+      result(nil)
+    case "forgetLeftovers":
+      forgetLeftovers(result: result)
     default:
       result(FlutterMethodNotImplemented)
+    }
+  }
+
+  /// Begins a background task and answers `{id, remainingMs}`: the id
+  /// `endBackgroundTime` takes, and the time iOS says is left, null when it
+  /// sets no limit (the app is in front, or runs on for location). A
+  /// refused task answers a null id and no time.
+  private func beginBackgroundTime(result: @escaping FlutterResult) {
+    lastBackgroundId += 1
+    let id = lastBackgroundId
+    let task = UIApplication.shared.beginBackgroundTask(withName: "GR Photo camera Wi-Fi") {
+      [weak self] in
+      // iOS ends an app whose task outlives this handler.
+      guard let self else { return }
+      self.log("background time \(id) expired")
+      self.endBackgroundTime(id)
+      self.channel.invokeMethod("backgroundTimeExpired", arguments: id)
+    }
+    guard task != .invalid else {
+      log("iOS gave no background time")
+      result(["id": NSNull(), "remainingMs": 0])
+      return
+    }
+    backgroundTasks[id] = task
+    let remaining = UIApplication.shared.backgroundTimeRemaining
+    let limited = remaining.isFinite && remaining < 24 * 60 * 60
+    log("background time \(id) begun, \(limited ? "\(Int(remaining)) s left" : "no limit")")
+    let remainingMs: Any = limited ? Int(remaining * 1000) : NSNull()
+    result(["id": id, "remainingMs": remainingMs])
+  }
+
+  private func endBackgroundTime(_ id: Int) {
+    guard let task = backgroundTasks.removeValue(forKey: id) else { return }
+    log("background time \(id) ended")
+    UIApplication.shared.endBackgroundTask(task)
+  }
+
+  /// Removes every configuration this app installed that no join of this
+  /// run uses, and answers their SSIDs. An app iOS ended while it was on a
+  /// camera's network leaves its configuration behind, and the phone stays
+  /// on that network.
+  private func forgetLeftovers(result: @escaping FlutterResult) {
+    NEHotspotConfigurationManager.shared.getConfiguredSSIDs { [weak self] ssids in
+      DispatchQueue.main.async {
+        guard let self else {
+          result([String]())
+          return
+        }
+        let leftovers = ssids.filter { $0 != self.configuredSsid && $0 != self.pending?.ssid }
+        for ssid in leftovers {
+          self.log("removing the configuration of \"\(ssid)\" left by an earlier run")
+          NEHotspotConfigurationManager.shared.removeConfiguration(forSSID: ssid)
+        }
+        result(leftovers)
+      }
     }
   }
 

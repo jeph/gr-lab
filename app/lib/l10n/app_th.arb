@@ -9,6 +9,7 @@
   "camerasAddCamera": "เพิ่มกล้อง",
   "camerasBack": "กลับ",
   "camerasCancel": "ยกเลิก",
+  "camerasChipBackground": "ตัดการเชื่อมต่อ Wi-Fi ในเบื้องหลัง",
   "camerasChipIdle": "ตัดการเชื่อมต่อ Wi-Fi หลังจาก {minutes} นาที",
   "camerasConnect": "เชื่อมต่อ",
   "camerasDetailsForget": "เลิกจำกล้อง",

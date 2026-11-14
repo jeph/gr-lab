@@ -9,6 +9,7 @@
   "camerasAddCamera": "Kamera ekle",
   "camerasBack": "Geri",
   "camerasCancel": "İptal",
+  "camerasChipBackground": "Wi-Fi arka planda kesildi",
   "camerasChipIdle": "Wi-Fi {minutes} dk sonra kesildi",
   "camerasConnect": "Bağlan",
   "camerasDetailsForget": "Kamerayı unut",

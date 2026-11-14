@@ -9,6 +9,7 @@
   "camerasAddCamera": "Kamera hinzufügen",
   "camerasBack": "Zurück",
   "camerasCancel": "Abbrechen",
+  "camerasChipBackground": "WLAN im Hintergrund getrennt",
   "camerasChipIdle": "WLAN nach {minutes} Min. getrennt",
   "camerasConnect": "Verbinden",
   "camerasDetailsForget": "Kamera entfernen",

@@ -36,6 +36,10 @@
   "@camerasCancel": {
     "description": "Stops connecting to the camera: tooltip and accessibility label of the ✕ button on the camera card, and button of the Bluetooth and Wi-Fi rows on the camera sheet."
   },
+  "camerasChipBackground": "Left Wi-Fi in the background",
+  "@camerasChipBackground": {
+    "description": "On the camera card's chip after GR Photo left the camera's Wi-Fi because the app went to the background on an iPhone, which would otherwise keep the phone on the camera's network once it suspends the app; Bluetooth stays connected. Keep it short: the chip is one line."
+  },
   "camerasChipIdle": "Left Wi-Fi after {minutes} min",
   "@camerasChipIdle": {
     "description": "On the camera card's chip after GR Photo left the camera's Wi-Fi because the app was not used; Bluetooth stays connected. Keep it short: the chip is one line. \"min\" is the abbreviation for minutes.",

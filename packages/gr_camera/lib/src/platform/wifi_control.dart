@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:gr_camera/src/platform/background_time.dart';
 import 'package:gr_protocol/gr_protocol.dart';
 
 /// A camera Wi-Fi join the OS refused or could not complete.
@@ -33,7 +34,11 @@ final class WifiJoinException implements Exception {
 /// ends the Wi-Fi link at once instead of waiting for its liveness probe.
 ///
 /// iOS applies a persistent `NEHotspotConfiguration`; the OS picks WPA2 or
-/// WPA3 itself, so [WifiSecurity] only matters on Android.
+/// WPA3 itself, so [WifiSecurity] only matters on Android. The
+/// configuration outlives the app when iOS suspends or ends it, so iOS also
+/// gives the app time to leave the network once it is off screen
+/// ([beginBackgroundTime]) and removes what an ended app left installed
+/// ([forgetLeftovers]).
 ///
 /// Native events (`approvalShown`), every line the native code logs and the
 /// native errors this class turns into a null or a no-op go to
@@ -59,6 +64,10 @@ final class PlatformWifiControl implements WifiNetworkControl {
           _approvalShown.add(null);
         case 'log':
           _emit(TraceDirection.internal, 'native', {'message': call.arguments});
+        case 'backgroundTimeExpired':
+          _emit(TraceDirection.inbound, 'backgroundTime.expired', {
+            'id': call.arguments,
+          });
       }
     });
   }
@@ -135,6 +144,51 @@ final class PlatformWifiControl implements WifiNetworkControl {
       await _channel.invokeMethod<void>('setLogging', enabled);
     } on MissingPluginException {
       // No native code, so nothing to log.
+    }
+  }
+
+  /// iOS: asks for time to finish work after the app left the screen (a
+  /// background task), ended with [BackgroundTime.end]. When iOS takes it
+  /// back first, the native side ends it and reports
+  /// `backgroundTime.expired`. Without the native method (Android, which
+  /// does not suspend an app this way) the time is unlimited.
+  Future<BackgroundTime> beginBackgroundTime() async {
+    final Map<String, Object?>? granted;
+    try {
+      granted = await _channel.invokeMapMethod<String, Object?>(
+        'beginBackgroundTime',
+      );
+    } on MissingPluginException {
+      return BackgroundTime.unlimited();
+    }
+    final id = granted?['id'];
+    final ms = granted?['remainingMs'];
+    return BackgroundTime(
+      remaining: ms is int ? Duration(milliseconds: ms) : null,
+      end: id is int
+          ? () => _channel.invokeMethod<void>('endBackgroundTime', id)
+          : null,
+    );
+  }
+
+  /// iOS: removes every camera network configuration this app installed
+  /// that no join of this run uses, and returns their SSIDs. An app that
+  /// iOS ended while it was on a camera's Wi-Fi leaves its configuration
+  /// behind, which keeps the phone on the camera network. Without the
+  /// native method (Android, whose join ends with the app's process)
+  /// nothing is removed.
+  Future<List<String>> forgetLeftovers() async {
+    try {
+      return await _channel.invokeListMethod<String>('forgetLeftovers') ??
+          const [];
+    } on PlatformException catch (e) {
+      _emit(TraceDirection.inbound, 'native.forgetLeftovers.error', {
+        'code': e.code,
+        'message': e.message,
+      });
+      return const [];
+    } on MissingPluginException {
+      return const [];
     }
   }
 

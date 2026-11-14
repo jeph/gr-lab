@@ -22,6 +22,11 @@ const _progressInterval = Duration(seconds: 1);
 /// goes when the queue is done, failed or cancelled, and when the camera's
 /// Wi-Fi is gone: both platforms only join a camera's network for the app
 /// in front, so nothing could go on until the user is back. \[design\]
+///
+/// On iOS, ending the platform's background work lets iOS suspend the app,
+/// which could then not leave the camera's network
+/// (`IdleDisconnect.leftOffScreen`): off screen, the end waits until the
+/// Wi-Fi is left.
 class DownloadBackground extends StatefulWidget {
   const new({required this.child, super.key});
 
@@ -45,6 +50,10 @@ class _DownloadBackgroundState extends State<DownloadBackground> {
   /// Set by transfer progress.
   Timer? _later;
   BackgroundDownloadStatus? _shown;
+
+  /// What was last sent to the platform; the next call goes after it, so
+  /// one that waits for the Wi-Fi does not overtake an earlier one.
+  Future<void> _sent = Future.value();
 
   @override
   void initState() {
@@ -95,12 +104,19 @@ class _DownloadBackgroundState extends State<DownloadBackground> {
     final status = _status();
     if (status == _shown) return;
     _shown = status;
-    if (status != null) {
-      unawaited(_background.show(status));
-      return;
-    }
     final finished = _engine.remaining == 0 && _engine.failedCount == 0;
-    unawaited(_background.hide(finished: finished));
+    final ends = status == null || status.paused;
+    final offScreen = !_models.connection.foreground;
+    final idle = _models.idle;
+    _sent = _sent.then((_) async {
+      if (ends && offScreen) await idle.leftOffScreen;
+      if (status != null) {
+        await _background.show(status);
+      } else {
+        await _background.hide(finished: finished);
+      }
+    });
+    unawaited(_sent);
   }
 
   /// What to show now; null when the connected camera has no download to

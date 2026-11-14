@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:gr_camera/src/platform/background_time.dart';
 import 'package:gr_camera/src/platform/ble_transport.dart';
 import 'package:gr_camera/src/platform/inert.dart';
 import 'package:gr_camera/src/platform/permissions.dart';
@@ -28,6 +30,11 @@ final class GrCameraEnvironment {
   /// approval list). [ensureBluetoothPermission] asks for the Bluetooth
   /// permission where the OS requires one; without it permission is
   /// assumed. [setNativeLogging] turns logging in the native code on or off.
+  /// `beginBackgroundTime` asks the OS for time to finish work off screen
+  /// ([backgroundTime]) and `forgetLeftoverWifi` removes camera networks an
+  /// earlier run left joined ([forgetLeftoverWifi]), where
+  /// [wifiOutlivesApp]; without them the time is unlimited and nothing is
+  /// removed.
   new({
     required BleTransport ble,
     required WifiNetworkControl wifi,
@@ -39,6 +46,9 @@ final class GrCameraEnvironment {
     this.wifiApprovalShown = const Stream.empty(),
     this._ensureBluetoothPermission,
     this._setNativeLogging,
+    this.wifiOutlivesApp = false,
+    this._beginBackgroundTime,
+    this._forgetLeftoverWifi,
   }) : _ble = TracingBleTransport(ble, trace),
        _wifi = TracingWifiControl(wifi, trace),
        location = TracingPhoneLocation(
@@ -59,6 +69,9 @@ final class GrCameraEnvironment {
       wifiApprovalShown: wifi.approvalShown,
       ensureBluetoothPermission: ensureBluetoothPermission,
       setNativeLogging: wifi.setLogging,
+      wifiOutlivesApp: Platform.isIOS,
+      beginBackgroundTime: wifi.beginBackgroundTime,
+      forgetLeftoverWifi: wifi.forgetLeftovers,
     );
   }
 
@@ -83,6 +96,17 @@ final class GrCameraEnvironment {
   /// only if the user agrees (see `WifiConsent.askAgain`).
   final Stream<void> wifiApprovalShown;
 
+  /// A camera network joined for the app stays joined when the OS suspends
+  /// or ends the app, and a suspended app runs no code to leave it: iOS,
+  /// whose `NEHotspotConfiguration` belongs to the system. The app then
+  /// leaves the camera's Wi-Fi when it goes off screen, in time it asks for
+  /// with [backgroundTime], and calls [forgetLeftoverWifi] when it starts.
+  /// Android's join is a request of the app's process, which ends with it,
+  /// and Android does not suspend an app that leaves the screen within
+  /// seconds, so there the Wi-Fi is left for lack of use only.
+  /// (research/protocol/connection-lifecycle.md §9, "What GR Photo does")
+  final bool wifiOutlivesApp;
+
   final BleTransport _ble;
   final WifiNetworkControl _wifi;
 
@@ -92,6 +116,42 @@ final class GrCameraEnvironment {
   final GrHttpClient Function(String host, TraceSink? trace)? _httpFactory;
   final Future<bool> Function()? _ensureBluetoothPermission;
   final Future<void> Function({required bool enabled})? _setNativeLogging;
+  final Future<BackgroundTime> Function()? _beginBackgroundTime;
+  final Future<List<String>> Function()? _forgetLeftoverWifi;
+
+  /// Asks the OS for time to finish leaving a camera after the app went
+  /// off screen; [why] goes to the trace. Unlimited where the platform has
+  /// no such limit.
+  Future<BackgroundTime> backgroundTime(String why) async {
+    final begin = _beginBackgroundTime;
+    if (begin == null) return BackgroundTime.unlimited();
+    _wifiEvent(TraceDirection.outbound, 'backgroundTime', {'why': why});
+    final granted = await begin();
+    _wifiEvent(TraceDirection.inbound, 'backgroundTime.done', {
+      'why': why,
+      'remainingMs': granted.remaining?.inMilliseconds,
+    });
+    return BackgroundTime(
+      remaining: granted.remaining,
+      end: () async {
+        _wifiEvent(TraceDirection.outbound, 'backgroundTime.end', {'why': why});
+        await granted.end();
+      },
+    );
+  }
+
+  /// Where a camera network outlives the app ([wifiOutlivesApp]), removes
+  /// the ones an earlier run of the app left joined: iOS ended it before
+  /// it could leave. Call once at start-up, before any session joins.
+  Future<void> forgetLeftoverWifi() async {
+    final forget = _forgetLeftoverWifi;
+    if (!wifiOutlivesApp || forget == null) return;
+    _wifiEvent(TraceDirection.outbound, 'forgetLeftovers');
+    final ssids = await forget();
+    _wifiEvent(TraceDirection.inbound, 'forgetLeftovers.done', {
+      'ssids': ssids,
+    });
+  }
 
   /// Turns logging in the phone-side native code (the Wi-Fi joining code
   /// and the location code) on or off, following the
@@ -136,6 +196,19 @@ final class GrCameraEnvironment {
     }
     return state;
   }
+
+  void _wifiEvent(
+    TraceDirection direction,
+    String kind, [
+    Map<String, Object?> fields = const {},
+  ]) => trace(
+    TraceEvent(
+      channel: TraceChannel.wifi,
+      direction: direction,
+      kind: kind,
+      fields: fields,
+    ),
+  );
 
   void _event(String kind, Map<String, Object?> fields) => trace(
     TraceEvent(
