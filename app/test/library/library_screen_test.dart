@@ -1327,6 +1327,21 @@ void main() {
     expect(details.left, greaterThanOrEqualTo(fold));
     expect(details.right, lessThanOrEqualTo(strip));
 
+    // A shot low on the page, where the bar over the grid's foot would
+    // reach, shows without the grid scrolling either.
+    final low = _cellNearest(tester, const Offset(fold / 2, 669 - 34 - 40));
+    expect(tester.getRect(low).top, lessThan(669 - 34 - 16));
+    expect(tester.getRect(low).bottom, greaterThan(669 - 34 - 96));
+    await tester.tapAt(tester.getRect(low).topCenter + const Offset(0, 8));
+    await pumpUntilFound(
+      tester,
+      find.descendant(of: low, matching: _shownMark),
+    );
+    await tester.pump(const Duration(seconds: 1));
+    await pumpRounds(tester, 15);
+    expect(_cellRects(tester), cellsBefore);
+    expect(page.position.pixels, scrolledBefore);
+
     await tester.tap(_cell(_shotOf(38)));
     await pumpUntilFound(tester, inPane(find.text(_nameOf(38))));
     await pumpRounds(tester, 15);

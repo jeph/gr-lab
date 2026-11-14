@@ -191,7 +191,8 @@ class _LibraryViewState extends State<_LibraryView> {
   }
 
   /// Another shot shows beside the grid, or none does any more: once the
-  /// grid is laid out for that, the shot's line is brought into view.
+  /// grid is laid out for that, the shot's line is brought into view. A
+  /// shot tapped in the grid is already in view and is not.
   void _onPaneShot() {
     final key = _pane.shown?.key;
     if (key == _revealedShotKey) return;
@@ -505,6 +506,8 @@ class _LibraryViewState extends State<_LibraryView> {
       if (_selecting) {
         _toggle(shot);
       } else if (tapShowsBeside) {
+        // The shot is where it was tapped: the grid stays where it is.
+        _revealedShotKey = shot.key;
         _showBeside(shots, index);
       } else {
         unawaited(_open(shots, index));
