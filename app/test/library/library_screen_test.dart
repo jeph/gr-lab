@@ -1405,12 +1405,15 @@ void main() {
     for (final key in ['camera-back', 'camera-settings', 'viewer-back']) {
       expect(find.byKey(Key(key)).hitTestable(), findsNothing, reason: key);
     }
-    // Nor does a screen reader reach the grid or the tab bar under it.
+    // Nor does a screen reader reach the grid, the bar or the tab bar
+    // under it.
     final semantics = tester.ensureSemantics();
     await tester.pump();
     expect(find.semantics.byLabel(RegExp(_nameOf(39))), findsNothing);
     expect(find.semantics.byLabel('Exit full screen'), findsOne);
-    expect(find.semantics.byLabel('Shoot'), findsNothing);
+    for (final label in ['Shoot', 'Cameras', 'Settings']) {
+      expect(find.semantics.byLabel(label), findsNothing, reason: label);
+    }
 
     await tester.fling(pages, const Offset(-600, 0), 1000);
     await pumpUntilFound(tester, named(36));
@@ -1425,7 +1428,9 @@ void main() {
     expect(markOf(36), findsOne);
     expect(find.byKey(const Key('camera-back')).hitTestable(), findsOne);
     expect(find.semantics.byLabel(RegExp(_nameOf(39))), findsOne);
-    expect(find.semantics.byLabel('Shoot'), findsOne);
+    for (final label in ['Shoot', 'Cameras', 'Settings']) {
+      expect(find.semantics.byLabel(label), findsOne, reason: label);
+    }
     semantics.dispose();
 
     // The system's Back takes it back too, and leaves the Library only

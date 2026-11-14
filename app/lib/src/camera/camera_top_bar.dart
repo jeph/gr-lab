@@ -149,15 +149,24 @@ class CameraTopBar extends StatelessWidget {
 /// window's [VerticalBar] where it has one ([BarColumn]). [CameraTopBar]
 /// leaves them out there.
 class CameraBarColumn extends StatelessWidget {
-  const new({required this.child, super.key, this.more = const []});
+  const new({
+    required this.child,
+    super.key,
+    this.more = const [],
+    this.buttonsCovered = false,
+  });
 
   /// The page's own buttons, under Settings.
   final List<Widget> more;
   final Widget child;
 
+  /// [BarColumn.buttonsCovered].
+  final bool buttonsCovered;
+
   @override
   Widget build(BuildContext context) => BarColumn(
     buttons: [const CameraBackButton(), const SettingsButton(), ...more],
+    buttonsCovered: buttonsCovered,
     child: child,
   );
 }

@@ -249,13 +249,23 @@ class StatusBandBar extends StatelessWidget {
 /// [child] keeps its place in the tree either way, so a page keeps its
 /// state when the bar comes and goes (the open phone turned upright).
 class BarColumn extends StatelessWidget {
-  const new({required this.buttons, required this.child, super.key});
+  const new({
+    required this.buttons,
+    required this.child,
+    super.key,
+    this.buttonsCovered = false,
+  });
 
   /// Between two buttons \[design\].
   static const gap = 10.0;
 
   final List<Widget> buttons;
   final Widget child;
+
+  /// Whether something over the page covers the [buttons], so that a
+  /// screen reader does not reach them either: they are painted after
+  /// [child], where a block in it leaves them.
+  final bool buttonsCovered;
 
   @override
   Widget build(BuildContext context) {
@@ -270,10 +280,13 @@ class BarColumn extends StatelessWidget {
             left: bar.side == BarSide.left ? 0 : null,
             right: bar.side == BarSide.right ? 0 : null,
             width: bar.width,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              spacing: gap,
-              children: buttons,
+            child: ExcludeSemantics(
+              excluding: buttonsCovered,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                spacing: gap,
+                children: buttons,
+              ),
             ),
           ),
       ],

@@ -457,6 +457,8 @@ class _LibraryViewState extends State<_LibraryView> {
         }
       },
       child: CameraBarColumn(
+        // Under a shot that has the whole window.
+        buttonsCovered: _pane.isFullScreen,
         child: Scaffold(
           // Beside the window's vertical bar, not under it.
           body: SafeArea(
