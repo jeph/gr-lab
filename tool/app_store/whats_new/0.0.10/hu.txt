@@ -1,0 +1,4 @@
+• iPhone-on a GR Photo mostantól nagyjából 20 másodperccel azután kilép a kamera Wi-Fi-hálózatából, hogy egy másik appra váltasz, így a telefon visszatér a szokásos hálózatára. A még futó letöltések a befejezésükig megtartják a kapcsolatot.
+• Az Élőkép nézetben is van Vissza gomb a Kamerák nézethez, ahogy a Távkioldóban.
+• A Távkioldó / Élőkép kapcsoló már nem mozdul el, amikor módot váltasz.
+• Kinyitott iPhone Duón a Könyvtár rácsa a helyén marad a megérintett fotó mellett, a Teljes képernyő pedig az egész képernyőn mutatja a fotót.

@@ -1,0 +1,4 @@
+• Auf dem iPhone verlässt GR Photo jetzt das WLAN der Kamera etwa 20 Sekunden nachdem du zu einer anderen App wechselst, damit dein Telefon wieder in sein gewohntes Netzwerk geht. Downloads, die noch laufen, halten die Verbindung, bis sie fertig sind.
+• Live-View hat eine Zurück-Taste zu Kameras, wie Fernauslöser.
+• Der Umschalter Fernauslöser / Live-View verschiebt sich nicht mehr, wenn du den Modus wechselst.
+• Auf einem aufgeklappten iPhone Duo bleibt das Raster der Mediathek neben dem angetippten Foto an seinem Platz, und Vollbild zeigt das Foto auf dem ganzen Bildschirm.

@@ -143,8 +143,9 @@ On Android, download `gr-photo-v<version>.apk` from the
 Android asks once for permission to install apps from your browser. Every release is signed with the
 same key, so a newer one installs over the one you have and keeps your cameras and settings.
 
-On iOS, every release goes to TestFlight, for now only to the project's own testers. There is no
-public TestFlight link yet, so on an iPhone GR Photo is installed by building it from source.
+On iOS, install GR Photo from the [App Store](https://apps.apple.com/app/id6833800832). A release
+reaches the App Store once Apple has reviewed it, so it can arrive there a day or two after the
+Android one.
 
 Building from source needs [Flutter](https://flutter.dev) 3.47 or newer with the Android SDK or
 Xcode set up.
@@ -290,8 +291,17 @@ more than the last, runs `tool/check.sh`, and builds the `prod` flavor of both a
 The Android APK is signed with GR Photo's release key and published on the
 [releases page](https://github.com/jeph/gr-photo/releases) with its SHA-256 checksum, a build
 provenance attestation and the R8 mapping that reads its Kotlin stack traces. The iOS app is signed
-for the App Store and uploaded to TestFlight. The keys are kept in GitHub environments that only
-`main` can use, and the jobs that build the apps hold none of them.
+for the App Store and uploaded to App Store Connect. Once Apple has processed the build, the
+workflow puts it in a new App Store version with the release's What's New and submits it for review,
+and the version goes live as soon as Apple approves it. A version still waiting for review is taken
+out of review and replaced by the new one. The build also goes to the public TestFlight group, which
+needs Apple's beta review. The keys are kept in GitHub environments that only `main` can use, and
+the jobs that build the apps hold none of them.
+
+Every release needs its What's New in all 21 languages, one file per language in
+`tool/app_store/whats_new/0.0.N/<locale>.txt`, named like the ARB files. The workflow stops before it
+builds anything when one is missing or empty, so the notes are written in the same change as the work
+they describe.
 
 `gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo` checks that an APK was built by
 that workflow from this repository.

@@ -144,8 +144,8 @@ Android에서는 휴대전화에서 [최신 릴리스](https://github.com/jeph/g
 요청합니다. 모든 릴리스는 같은 키로 서명되므로, 새 릴리스는 이미 설치된 앱 위에 그대로 설치되고
 카메라와 설정도 유지됩니다.
 
-iOS에서는 모든 릴리스가 TestFlight로 올라가지만, 지금은 프로젝트 자체 테스터에게만 제공됩니다. 공개
-TestFlight 링크는 아직 없으므로 iPhone에서는 GR Photo를 소스에서 직접 빌드해 설치합니다.
+iOS에서는 [App Store](https://apps.apple.com/app/id6833800832)에서 GR Photo를 설치합니다. 릴리스는 Apple의 심사를 거친 뒤
+App Store에 올라오므로, Android 릴리스보다 하루나 이틀 늦게 도착할 수 있습니다.
 
 소스에서 빌드하려면 [Flutter](https://flutter.dev) 3.47 이상과 Android SDK 또는 Xcode가 설정되어
 있어야 합니다.
@@ -291,9 +291,15 @@ GR Photo는 설정 > 디버그 로그 사용이 켜져 있는 동안 디버그 �
 릴리스에 직전보다 하나 큰 0.0.N 번호를 붙이고, `tool/check.sh`를 실행한 뒤, 두 앱의 `prod` flavor를
 릴리스 모드로 빌드합니다. Android APK는 GR Photo의 릴리스 키로 서명되어 SHA-256 체크섬, 빌드 출처
 증명(attestation), Kotlin 스택 트레이스를 해독하는 R8 매핑과 함께
-[릴리스 페이지](https://github.com/jeph/gr-photo/releases)에 게시됩니다. iOS 앱은 App Store용으로
-서명되어 TestFlight에 업로드됩니다. 키는 `main`만 사용할 수 있는 GitHub 환경(environment)에
-보관되며, 앱을 빌드하는 작업(job)은 어떤 키도 갖지 않습니다.
+[릴리스 페이지](https://github.com/jeph/gr-photo/releases)에 게시됩니다. iOS 앱은 App Store용으로 서명되어 App Store
+Connect에 업로드됩니다. Apple이 빌드 처리를 마치면 워크플로가 릴리스의 새로운 기능(What's New)과 함께 빌드를 새 App Store 버전에 넣어 심사에
+제출하고, 버전은 Apple이 승인하는 즉시 출시됩니다. 아직 심사를 기다리는 버전은 심사에서 철회되고 새 버전으로 대체됩니다. 빌드는 공개 TestFlight 그룹에도 올라가며,
+이를 위해서는 Apple의 베타 심사가 필요합니다. 키는 `main`만 사용할 수 있는 GitHub 환경(environment)에 보관되며, 앱을 빌드하는 작업(job)은 어떤
+키도 갖지 않습니다.
+
+모든 릴리스에는 21개 언어 전부의 새로운 기능(What's New)이 필요하며, 언어마다 하나씩 ARB 파일과 같은 이름으로
+`tool/app_store/whats_new/0.0.N/<locale>.txt`에 둡니다. 하나라도 없거나 비어 있으면 워크플로는 아무것도 빌드하기 전에 멈추므로, 노트는 그
+노트가 설명하는 작업과 같은 변경에서 작성됩니다.
 
 `gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo`은 APK가 이 저장소에서 해당
 워크플로로 빌드되었는지 확인합니다.

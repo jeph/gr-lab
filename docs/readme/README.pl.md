@@ -152,8 +152,8 @@ raz poprosi o zgodę na instalowanie aplikacji z przeglądarki. Każde wydanie j
 samym kluczem, więc nowsze instaluje się na tym, które już masz, i zachowuje twoje aparaty oraz
 ustawienia.
 
-Na iOS każde wydanie trafia do TestFlight, na razie tylko do testerów samego projektu. Publicznego
-linku do TestFlight jeszcze nie ma, więc na iPhonie GR Photo instaluje się, budując je ze źródeł.
+Na iOS zainstaluj GR Photo z [App Store](https://apps.apple.com/app/id6833800832). Wydanie trafia do
+App Store, gdy Apple je sprawdzi, więc może się tam pojawić dzień lub dwa po wydaniu na Androida.
 
 Do zbudowania ze źródeł potrzebny jest [Flutter](https://flutter.dev) 3.47 lub nowszy ze
 skonfigurowanym Android SDK albo Xcode.
@@ -307,9 +307,18 @@ numer 0.0.N, o jeden większy od poprzedniego, uruchamia `tool/check.sh` i buduj
 aplikacji w trybie release. APK na Androida jest podpisywany kluczem wydań GR Photo i publikowany na
 [stronie wydań](https://github.com/jeph/gr-photo/releases) wraz z sumą kontrolną SHA-256, atestacją
 pochodzenia kompilacji oraz mapowaniem R8, które pozwala odczytać jego ślady stosu Kotlina.
-Aplikacja na iOS jest podpisywana dla App Store i wysyłana do TestFlight. Klucze są przechowywane
-w środowiskach GitHub, z których może korzystać tylko `main`, a zadania budujące aplikacje nie mają
-żadnego z nich.
+Aplikacja na iOS jest podpisywana dla App Store i wysyłana do App Store Connect. Gdy Apple
+przetworzy kompilację, przepływ pracy umieszcza ją w nowej wersji w App Store z opisem nowości
+(What's New) wydania i przesyła ją do weryfikacji, a wersja jest publikowana, gdy tylko Apple ją
+zatwierdzi. Wersja, która wciąż czeka na weryfikację, jest z niej wycofywana i zastępowana nową.
+Kompilacja trafia też do publicznej grupy TestFlight, co wymaga weryfikacji beta przez Apple. Klucze
+są przechowywane w środowiskach GitHub, z których może korzystać tylko `main`, a zadania budujące
+aplikacje nie mają żadnego z nich.
+
+Każde wydanie potrzebuje opisu nowości (What's New) we wszystkich 21 językach, po jednym pliku na
+język w `tool/app_store/whats_new/0.0.N/<locale>.txt`, nazwanym jak pliki ARB. Przepływ pracy
+zatrzymuje się, zanim cokolwiek zbuduje, gdy któregoś brakuje lub jest pusty, więc opisy pisze się w
+tej samej zmianie co pracę, którą opisują.
 
 `gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo` sprawdza, czy APK został
 zbudowany przez ten workflow z tego repozytorium.

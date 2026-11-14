@@ -1,0 +1,4 @@
+• On iPhone, GR Photo now leaves the camera's Wi-Fi within about 20 seconds of you switching to another app, so your phone goes back to its usual network. Downloads that are still running keep the connection until they finish.
+• Live view has a Back button to Cameras, as Remote does.
+• The Remote / Live view switch no longer moves when you change mode.
+• On an open iPhone Duo, the Library grid stays in place beside the photo you tap, and Full screen shows the photo on the whole screen.

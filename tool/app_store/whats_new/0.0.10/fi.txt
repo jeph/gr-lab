@@ -1,0 +1,4 @@
+• iPhonessa GR Photo poistuu nyt kameran Wi-Fi-verkosta noin 20 sekunnin kuluttua siitä, kun siirryt toiseen appiin, jotta puhelin palaa tavalliseen verkkoonsa. Vielä käynnissä olevat lataukset pitävät yhteyden, kunnes ne valmistuvat.
+• Live-kuvassa on Takaisin-painike Kamerat-näkymään, kuten Kaukolaukaisimessa.
+• Kaukolaukaisin / Live-kuva -valitsin ei enää liiku, kun vaihdat tilaa.
+• Avatussa iPhone Duossa Kirjaston ruudukko pysyy paikallaan napauttamasi kuvan vieressä, ja Koko näyttö näyttää kuvan koko näytöllä.

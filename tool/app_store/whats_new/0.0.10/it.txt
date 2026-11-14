@@ -1,0 +1,4 @@
+• Su iPhone, GR Photo ora lascia il Wi-Fi della fotocamera circa 20 secondi dopo che passi a un'altra app, così il telefono torna alla sua rete abituale. I download ancora in corso mantengono la connessione finché non finiscono.
+• Live view ha un pulsante Indietro verso Fotocamere, come Telecomando.
+• Il selettore Telecomando / Live view non si sposta più quando cambi modalità.
+• Su un iPhone Duo aperto, la griglia della Libreria resta al suo posto accanto alla foto che tocchi, e Schermo intero mostra la foto su tutto lo schermo.

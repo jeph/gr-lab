@@ -1,0 +1,4 @@
+• På iPhone lämnar GR Photo nu kamerans Wi-Fi ungefär 20 sekunder efter att du byter till en annan app, så att telefonen går tillbaka till sitt vanliga nätverk. Hämtningar som fortfarande pågår behåller anslutningen tills de är klara.
+• Livevisning har en Tillbaka-knapp till Kameror, precis som Fjärrstyrning.
+• Reglaget Fjärrstyrning / Livevisning flyttar sig inte längre när du byter läge.
+• På en uppfälld iPhone Duo stannar rutnätet i Bibliotek kvar bredvid bilden du trycker på, och Helskärm visar bilden på hela skärmen.

@@ -1,0 +1,4 @@
+• Sur iPhone, GR Photo quitte désormais le Wi-Fi de l'appareil photo environ 20 secondes après que vous êtes passé à une autre app, pour que votre téléphone revienne à son réseau habituel. Les téléchargements encore en cours gardent la connexion jusqu'à ce qu'ils se terminent.
+• Visée directe a un bouton Retour vers Appareils photo, comme Télécommande.
+• Le sélecteur Télécommande / Visée directe ne bouge plus quand vous changez de mode.
+• Sur un iPhone Duo ouvert, la grille de la Bibliothèque reste en place à côté de la photo que vous touchez, et Plein écran affiche la photo sur tout l'écran.

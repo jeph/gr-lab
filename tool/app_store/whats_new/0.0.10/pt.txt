@@ -1,0 +1,4 @@
+• No iPhone, o GR Photo sai agora da rede Wi-Fi da câmara cerca de 20 segundos depois de mudar para outra app, para que o telemóvel volte à sua rede habitual. As transferências ainda em curso mantêm a ligação até terminarem.
+• Vista ao vivo tem um botão Voltar para Câmaras, tal como Remoto.
+• O seletor Remoto / Vista ao vivo já não se move quando muda de modo.
+• Num iPhone Duo aberto, a grelha da Biblioteca fica no lugar ao lado da fotografia em que toca, e Ecrã inteiro mostra a fotografia em todo o ecrã.

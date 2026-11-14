@@ -156,9 +156,9 @@ egyszer engedélyt kér ahhoz, hogy a böngészőjéből alkalmazásokat telepí
 ugyanazzal a kulccsal van aláírva, így az újabb a meglévőre települ, és megőrzi a kameráit és a
 beállításait.
 
-iOS-en minden kiadás a TestFlightra kerül, egyelőre csak a projekt saját tesztelőihez. Nyilvános
-TestFlight-hivatkozás még nincs, ezért iPhone-on a GR Photo úgy telepíthető, hogy a forráskódból
-lefordítja.
+iOS-en a GR Photo az [App Store-ból](https://apps.apple.com/app/id6833800832) telepíthető. Egy
+kiadás azután kerül az App Store-ba, hogy az Apple átnézte, így egy-két nappal az androidos után
+érkezhet meg oda.
 
 A forráskódból történő fordításhoz [Flutter](https://flutter.dev) 3.47 vagy újabb szükséges,
 beállított Android SDK-val vagy Xcode-dal.
@@ -318,9 +318,18 @@ kiadásnak a 0.0.N számot adja, eggyel nagyobbat az előzőnél, lefuttatja a `
 kiadási kulcsa írja alá, és a [kiadások oldalán](https://github.com/jeph/gr-photo/releases) jelenik
 meg, az SHA-256 ellenőrzőösszegével, a build eredetét igazoló tanúsítással és azzal az
 R8-leképezéssel együtt, amellyel a Kotlin-veremkiírásai olvashatók. Az iOS-alkalmazás az App Store
-számára van aláírva, és a TestFlightra kerül feltöltésre. A kulcsok olyan GitHub-környezetekben
-vannak, amelyeket csak a `main` használhat, és az alkalmazásokat fordító feladatok egyiket sem
-kapják meg.
+számára van aláírva, és az App Store Connectbe kerül feltöltésre. Miután az Apple feldolgozta a
+buildet, a munkafolyamat egy új App Store-verzióba teszi a kiadás újdonságaival (What's New) együtt,
+és beküldi felülvizsgálatra; a verzió azonnal megjelenik, amint az Apple jóváhagyja. A még
+felülvizsgálatra váró verziót a munkafolyamat visszavonja a felülvizsgálatból, és az újjal váltja
+fel. A build a nyilvános TestFlight-csoportba is bekerül, amihez az Apple béta-felülvizsgálata
+szükséges. A kulcsok olyan GitHub-környezetekben vannak, amelyeket csak a `main` használhat, és az
+alkalmazásokat fordító feladatok egyiket sem kapják meg.
+
+Minden kiadásnak mind a 21 nyelven szüksége van az újdonságaira (What's New), nyelvenként egy
+fájlban a `tool/app_store/whats_new/0.0.N/<locale>.txt` helyen, az ARB-fájlokhoz hasonlóan
+elnevezve. A munkafolyamat még a fordítás előtt leáll, ha valamelyik hiányzik vagy üres, így a
+jegyzetek ugyanabban a változtatásban készülnek, mint a munka, amelyet leírnak.
 
 A `gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo` azt ellenőrzi, hogy egy APK-t
 ez a munkafolyamat fordított-e le ebből a tárolóból.

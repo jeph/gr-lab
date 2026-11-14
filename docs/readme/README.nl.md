@@ -157,9 +157,9 @@ bestand. Android vraagt één keer om toestemming om apps vanuit je browser te i
 release is met dezelfde sleutel ondertekend, dus een nieuwere wordt over de bestaande heen
 geïnstalleerd en behoudt je camera's en instellingen.
 
-Op iOS gaat elke release naar TestFlight, voorlopig alleen naar de eigen testers van het project. Er
-is nog geen openbare TestFlight-link, dus op een iPhone installeer je GR Photo door de app vanuit de
-broncode te bouwen.
+Op iOS installeer je GR Photo vanuit de [App Store](https://apps.apple.com/app/id6833800832). Een
+release komt in de App Store zodra Apple hem heeft beoordeeld, dus hij kan daar een dag of twee na
+de Android-release verschijnen.
 
 Voor het bouwen vanuit de broncode is [Flutter](https://flutter.dev) 3.47 of nieuwer nodig, met de
 Android SDK of Xcode geïnstalleerd en ingesteld.
@@ -313,9 +313,19 @@ release 0.0.N, één hoger dan de vorige, voert `tool/check.sh` uit en bouwt de 
 beide apps in releasemodus. De Android-APK wordt ondertekend met de releasesleutel van GR Photo en
 gepubliceerd op de [releasepagina](https://github.com/jeph/gr-photo/releases) met de
 SHA-256-checksum, een attestatie van de herkomst van de build en de R8-mapping waarmee je de
-Kotlin-stacktraces ervan leest. De iOS-app wordt ondertekend voor de App Store en geüpload naar
-TestFlight. De sleutels staan in GitHub-omgevingen die alleen `main` kan gebruiken, en de jobs die
-de apps bouwen hebben er geen enkele van.
+Kotlin-stacktraces ervan leest. De iOS-app wordt ondertekend voor de App Store en geüpload naar App
+Store Connect. Zodra Apple de build heeft verwerkt, zet de workflow hem in een nieuwe App
+Store-versie met de nieuwe functies (What's New) van de release en dient die in ter beoordeling; de
+versie gaat live zodra Apple hem goedkeurt. Een versie die nog op beoordeling wacht, wordt uit de
+beoordeling gehaald en door de nieuwe vervangen. De build gaat ook naar de openbare
+TestFlight-groep, waarvoor de bètabeoordeling van Apple nodig is. De sleutels staan in
+GitHub-omgevingen die alleen `main` kan gebruiken, en de jobs die de apps bouwen hebben er geen
+enkele van.
+
+Elke release heeft zijn What's New nodig in alle 21 talen, één bestand per taal in
+`tool/app_store/whats_new/0.0.N/<locale>.txt`, met dezelfde namen als de ARB-bestanden. De workflow
+stopt voordat hij iets bouwt als er een ontbreekt of leeg is, dus de notities worden geschreven in
+dezelfde wijziging als het werk dat ze beschrijven.
 
 `gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo` controleert of een APK door die
 workflow vanuit deze repository is gebouwd.

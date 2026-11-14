@@ -1,0 +1,4 @@
+• Na iPhonie GR Photo opuszcza teraz sieć Wi-Fi aparatu około 20 sekund po przejściu do innej aplikacji, aby telefon wrócił do swojej zwykłej sieci. Pobieranie, które wciąż trwa, utrzymuje połączenie do końca.
+• Podgląd na żywo ma przycisk Wstecz do ekranu Aparaty, tak jak Pilot.
+• Przełącznik Pilot / Podgląd na żywo nie przesuwa się już przy zmianie trybu.
+• Na otwartym iPhonie Duo siatka Biblioteki zostaje na miejscu obok stukniętego zdjęcia, a Pełny ekran pokazuje zdjęcie na całym ekranie.

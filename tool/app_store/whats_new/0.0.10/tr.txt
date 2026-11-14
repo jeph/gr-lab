@@ -1,0 +1,4 @@
+• iPhone’da GR Photo artık başka bir uygulamaya geçtikten yaklaşık 20 saniye sonra kameranın Wi-Fi ağından ayrılır; böylece telefonunuz her zamanki ağına döner. Hâlâ süren indirmeler bitene kadar bağlantıyı korur.
+• Canlı görüntü’de de Kumanda’daki gibi Kameralar’a dönen bir Geri düğmesi var.
+• Kumanda / Canlı görüntü anahtarı mod değiştirdiğinizde artık kaymıyor.
+• Açık bir iPhone Duo’da Arşiv ızgarası dokunduğunuz fotoğrafın yanında yerinde kalır ve Tam ekran fotoğrafı ekranın tamamında gösterir.

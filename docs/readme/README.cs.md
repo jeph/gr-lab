@@ -152,8 +152,9 @@ jednou zeptá na oprávnění instalovat aplikace z vašeho prohlížeče. Každ
 stejným klíčem, takže se novější nainstaluje přes to, které už máte, a zachová vaše fotoaparáty
 i nastavení.
 
-V iOS jde každé vydání do TestFlight, zatím jen vlastním testerům projektu. Veřejný odkaz na
-TestFlight zatím neexistuje, takže se GR Photo na iPhonu instaluje sestavením ze zdrojového kódu.
+V iOS si GR Photo nainstalujte z [App Storu](https://apps.apple.com/app/id6833800832). Vydání se do
+App Storu dostane, jakmile ho Apple zkontroluje, takže tam může dorazit o den či dva později než
+verze pro Android.
 
 K sestavení ze zdrojového kódu je potřeba [Flutter](https://flutter.dev) 3.47 nebo novější
 a nastavené Android SDK nebo Xcode.
@@ -302,9 +303,18 @@ Každý push do `main` je vydání, které vytváří
 0.0.N, o jedna více než to poslední, spustí `tool/check.sh` a sestaví variantu `prod` obou aplikací
 v režimu release. APK pro Android je podepsáno klíčem GR Photo pro vydání a zveřejněno na
 [stránce vydání](https://github.com/jeph/gr-photo/releases) s kontrolním součtem SHA-256, atestací
-původu sestavení a mapováním R8, podle kterého se čtou jeho výpisy zásobníku z Kotlinu. Aplikace
-pro iOS je podepsána pro App Store a nahrána do TestFlight. Klíče jsou uloženy v prostředích
-GitHubu, která smí používat jen `main`, a úlohy, které aplikace sestavují, nemají žádný z nich.
+původu sestavení a mapováním R8, podle kterého se čtou jeho výpisy zásobníku z Kotlinu. Aplikace pro
+iOS je podepsána pro App Store a nahrána do App Store Connect. Jakmile Apple sestavení zpracuje,
+workflow ho vloží do nové verze v App Storu s novinkami (What's New) daného vydání a odešle ji ke
+kontrole; verze se zveřejní, jakmile ji Apple schválí. Verze, která na kontrolu ještě čeká, se z
+kontroly stáhne a nahradí novou. Sestavení jde také do veřejné skupiny TestFlight, která vyžaduje
+beta kontrolu od Applu. Klíče jsou uloženy v prostředích GitHubu, která smí používat jen `main`, a
+úlohy, které aplikace sestavují, nemají žádný z nich.
+
+Každé vydání potřebuje své novinky (What's New) ve všech 21 jazycích, jeden soubor pro každý jazyk v
+`tool/app_store/whats_new/0.0.N/<locale>.txt`, pojmenovaný stejně jako soubory ARB. Když některý
+chybí nebo je prázdný, workflow se zastaví dřív, než cokoli sestaví, takže se poznámky píší ve
+stejné změně jako práce, kterou popisují.
 
 `gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo` ověří, že APK sestavil tento
 workflow z tohoto repozitáře.

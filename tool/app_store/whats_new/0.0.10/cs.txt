@@ -1,0 +1,4 @@
+• Na iPhonu teď GR Photo opustí Wi-Fi fotoaparátu asi 20 sekund poté, co přepnete do jiné aplikace, aby se telefon vrátil do své obvyklé sítě. Stahování, která ještě probíhají, si připojení podrží, dokud neskončí.
+• Živý náhled má tlačítko Zpět na Fotoaparáty, stejně jako Ovladač.
+• Přepínač Ovladač / Živý náhled se už při změně režimu neposouvá.
+• Na rozevřeném iPhonu Duo zůstává mřížka Knihovny na místě vedle fotky, na kterou klepnete, a Celá obrazovka zobrazí fotku přes celou obrazovku.

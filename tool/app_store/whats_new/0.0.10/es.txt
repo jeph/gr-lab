@@ -1,0 +1,4 @@
+• En el iPhone, GR Photo ahora sale de la red Wi-Fi de la cámara unos 20 segundos después de que cambies a otra app, para que el teléfono vuelva a su red habitual. Las descargas que siguen en curso mantienen la conexión hasta que terminan.
+• Vista en directo tiene un botón Atrás a Cámaras, como Remoto.
+• El selector Remoto / Vista en directo ya no se mueve al cambiar de modo.
+• En un iPhone Duo abierto, la cuadrícula de Biblioteca se queda en su sitio junto a la foto que tocas, y Pantalla completa muestra la foto en toda la pantalla.

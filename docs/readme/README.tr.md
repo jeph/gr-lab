@@ -154,9 +154,9 @@ Android’de `gr-photo-v<version>.apk` dosyasını telefonunuzda
 tarayıcınızdan uygulama kurma izni için bir kez sorar. Her sürüm aynı anahtarla imzalanır; bu
 yüzden yeni sürüm elinizdekinin üzerine kurulur ve kameralarınızı ve ayarlarınızı korur.
 
-iOS’te her sürüm TestFlight’a gider; şimdilik yalnızca projenin kendi test kullanıcılarına. Henüz
-herkese açık bir TestFlight bağlantısı yoktur; bu yüzden GR Photo bir iPhone’a kaynak koddan
-derlenerek kurulur.
+iOS’te GR Photo’yu [App Store](https://apps.apple.com/app/id6833800832)’dan yükleyin. Bir sürüm,
+Apple onu inceledikten sonra App Store’a ulaşır; bu yüzden oraya Android sürümünden bir iki gün
+sonra gelebilir.
 
 Kaynak koddan derleme için Android SDK’sı veya Xcode kurulu olan [Flutter](https://flutter.dev)
 3.47 veya sonrası gerekir.
@@ -312,8 +312,17 @@ betiğini çalıştırır ve her iki uygulamanın `prod` çeşidini yayın modun
 GR Photo’nun yayın anahtarıyla imzalanır ve SHA-256 sağlama toplamı, bir derleme kaynağı doğrulaması
 ve Kotlin yığın izlerini okunur kılan R8 eşlemesiyle birlikte
 [sürümler sayfasında](https://github.com/jeph/gr-photo/releases) yayımlanır. iOS uygulaması App
-Store için imzalanır ve TestFlight’a yüklenir. Anahtarlar yalnızca `main`’in kullanabildiği GitHub
-ortamlarında tutulur ve uygulamaları derleyen işlerin hiçbirinde bu anahtarlar bulunmaz.
+Store için imzalanır ve App Store Connect’e yüklenir. Apple derlemeyi işledikten sonra iş akışı onu
+sürümün Yenilikler (What's New) metniyle yeni bir App Store sürümüne koyar ve incelemeye gönderir;
+sürüm, Apple onaylar onaylamaz yayına girer. Hâlâ incelemeyi bekleyen bir sürüm incelemeden çekilir
+ve yerini yenisi alır. Derleme ayrıca herkese açık TestFlight grubuna da gider; bu, Apple’ın beta
+incelemesini gerektirir. Anahtarlar yalnızca `main`’in kullanabildiği GitHub ortamlarında tutulur ve
+uygulamaları derleyen işlerin hiçbirinde bu anahtarlar bulunmaz.
+
+Her sürümün 21 dilin hepsinde Yenilikler (What's New) metnine ihtiyacı vardır; her dil için ARB
+dosyaları gibi adlandırılmış bir dosya, `tool/app_store/whats_new/0.0.N/<locale>.txt` içinde. Biri
+eksik ya da boşsa iş akışı hiçbir şey derlemeden durur; bu yüzden notlar, anlattıkları çalışmayla
+aynı değişiklikte yazılır.
 
 `gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo`, bir APK’nın bu depodan o iş
 akışı tarafından derlendiğini doğrular.

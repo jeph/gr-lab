@@ -152,9 +152,9 @@ Android ber en gång om tillåtelse att installera appar från din webbläsare. 
 med samma nyckel, så en nyare installeras över den du har och behåller dina kameror och
 inställningar.
 
-På iOS går varje utgåva till TestFlight, än så länge bara till projektets egna testare. Det finns
-ingen offentlig TestFlight-länk än, så på en iPhone installeras GR Photo genom att byggas från
-källkoden.
+På iOS installerar du GR Photo från [App Store](https://apps.apple.com/app/id6833800832). En utgåva
+når App Store när Apple har granskat den, så den kan komma dit en dag eller två efter
+Android-utgåvan.
 
 För att bygga från källkoden behövs [Flutter](https://flutter.dev) 3.47 eller senare med Android SDK
 eller Xcode installerat.
@@ -304,8 +304,17 @@ numret 0.0.N, ett högre än den förra, kör `tool/check.sh` och bygger flavor 
 release-läge. Android-APK:n signeras med releasenyckeln för GR Photo och publiceras på
 [sidan med utgåvor](https://github.com/jeph/gr-photo/releases) med sin SHA-256-kontrollsumma, ett
 intyg om byggets ursprung och den R8-mappning som gör dess stackspår i Kotlin läsbara. iOS-appen
-signeras för App Store och laddas upp till TestFlight. Nycklarna förvaras i GitHub-miljöer som bara
-`main` kan använda, och jobben som bygger apparna har ingen av dem.
+signeras för App Store och laddas upp till App Store Connect. När Apple har bearbetat bygget lägger
+arbetsflödet det i en ny App Store-version med utgåvans nyheter (What's New) och skickar den på
+granskning, och versionen publiceras så snart Apple godkänner den. En version som fortfarande väntar
+på granskning dras tillbaka och ersätts av den nya. Bygget går också till den offentliga
+TestFlight-gruppen, vilket kräver Apples betagranskning. Nycklarna förvaras i GitHub-miljöer som
+bara `main` kan använda, och jobben som bygger apparna har ingen av dem.
+
+Varje utgåva behöver sina nyheter (What's New) på alla 21 språk, en fil per språk i
+`tool/app_store/whats_new/0.0.N/<locale>.txt`, namngiven som ARB-filerna. Arbetsflödet stoppar innan
+det bygger något om en saknas eller är tom, så anteckningarna skrivs i samma ändring som arbetet de
+beskriver.
 
 `gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo` kontrollerar att en APK har
 byggts av det arbetsflödet från det här repot.

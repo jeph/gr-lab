@@ -1,0 +1,4 @@
+• På iPhone forlader GR Photo nu kameraets Wi-Fi ca. 20 sekunder efter, at du skifter til en anden app, så telefonen vender tilbage til sit sædvanlige netværk. Downloads, der stadig kører, beholder forbindelsen, til de er færdige.
+• Live view har en Tilbage-knap til Kameraer, ligesom Fjernbetjening.
+• Skifteren Fjernbetjening / Live view flytter sig ikke længere, når du skifter tilstand.
+• På en åben iPhone Duo bliver gitteret i Bibliotek på plads ved siden af det foto, du trykker på, og Fuld skærm viser fotoet på hele skærmen.

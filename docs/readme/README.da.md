@@ -151,9 +151,9 @@ Android beder én gang om tilladelse til at installere apps fra din browser. All
 signeret med den samme nøgle, så en nyere installeres oven på den, du har, og beholder dine kameraer
 og indstillinger.
 
-På iOS sendes alle udgivelser til TestFlight, indtil videre kun til projektets egne testere. Der
-findes endnu intet offentligt TestFlight-link, så på en iPhone installeres GR Photo ved at bygge
-appen fra kildekoden.
+På iOS installerer du GR Photo fra [App Store](https://apps.apple.com/app/id6833800832). En
+udgivelse når App Store, når Apple har gennemgået den, så den kan komme dertil en dag eller to efter
+Android-udgivelsen.
 
 At bygge fra kildekoden kræver [Flutter](https://flutter.dev) 3.47 eller nyere med Android SDK eller
 Xcode sat op.
@@ -302,8 +302,17 @@ nummeret 0.0.N, én højere end den forrige, kører `tool/check.sh` og bygger fl
 apps i release-tilstand. Android-APK'en signeres med udgivelsesnøglen til GR Photo og offentliggøres
 på [udgivelsessiden](https://github.com/jeph/gr-photo/releases) med sin SHA-256-kontrolsum, en
 attestering af buildets oprindelse og den R8-mapping, der gør dens Kotlin-stack traces læselige.
-iOS-appen signeres til App Store og uploades til TestFlight. Nøglerne ligger i GitHub-miljøer, som
-kun `main` kan bruge, og de job, der bygger de to apps, har ingen af dem.
+iOS-appen signeres til App Store og uploades til App Store Connect. Når Apple har behandlet buildet,
+lægger workflowet det i en ny App Store-version med udgivelsens nyheder (What's New) og sender den
+til gennemgang, og versionen udkommer, så snart Apple godkender den. En version, der stadig venter
+på gennemgang, trækkes tilbage og erstattes af den nye. Buildet går også til den offentlige
+TestFlight-gruppe, som kræver Apples betagennemgang. Nøglerne ligger i GitHub-miljøer, som kun
+`main` kan bruge, og de job, der bygger de to apps, har ingen af dem.
+
+Hver udgivelse skal have sine nyheder (What's New) på alle 21 sprog, én fil pr. sprog i
+`tool/app_store/whats_new/0.0.N/<locale>.txt`, navngivet som ARB-filerne. Workflowet stopper, før
+det bygger noget, hvis en af dem mangler eller er tom, så noterne skrives i samme ændring som det
+arbejde, de beskriver.
 
 `gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo` kontrollerer, at en APK er
 bygget af dette workflow fra dette repository.

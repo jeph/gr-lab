@@ -1,10 +1,11 @@
 name: Release
 
 # Every push to main releases GR Photo 0.0.N: the Android app as a signed APK on GitHub release v0.0.N, and the iOS app
-# on TestFlight. N, also the APK's versionCode and the iOS build number, is one more than the latest release's. A
+# on TestFlight and, once Apple approves it, on the App Store. N, also the APK's versionCode and the iOS build number, is one more than the latest release's. A
 # rerun for a commit that already has a release reuses its version. The jobs split the work so that each credential
 # is held by as little as possible:
-#   version        numbers the release from the tags
+#   version        numbers the release from the tags and checks that tool/app_store/whats_new/0.0.N holds its What's
+#                  New in every language, before anything is built
 #   android-build  runs tool/check.sh and builds the APK, with read-only repository access and no secrets, so nothing
 #                  the build runs, such as Gradle plugins or pub packages, can reach a key
 #   android-sign   signs the APK with the release key from the `release` environment, which only main can deploy to
@@ -16,6 +17,10 @@ name: Release
 #   testflight     uploads the signed iOS app to App Store Connect with the API key from the `testflight` environment.
 #                  It waits for the GitHub release, whose tag takes the version: App Store Connect keeping a build
 #                  number the tag never took would make it refuse the next commit's upload
+#   app-store      waits for App Store Connect to process the build, submits it for TestFlight's beta review in the
+#                  public group, and submits it for App Review in an App Store version released as soon as Apple
+#                  approves it, taking a version still in review out of review first (tool/app_store/submit.py). It
+#                  holds the same API key as testflight and runs on Linux, as it only calls App Store Connect's API
 #
 # App Store Connect takes each build number once, so rerunning testflight for a build it already has fails.
 #
@@ -27,6 +32,7 @@ name: Release
 #   secrets    IOS_DISTRIBUTION_CERTIFICATE_P12_BASE64, IOS_DISTRIBUTION_CERTIFICATE_PASSWORD,
 #              IOS_PROVISIONING_PROFILE_BASE64, IOS_LIVE_ACTIVITY_PROVISIONING_PROFILE_BASE64,
 #              APP_STORE_CONNECT_API_KEY_P8, APP_STORE_CONNECT_API_KEY_ID, APP_STORE_CONNECT_API_ISSUER_ID
+# The API key needs the App Manager or Admin role: app-store submits for review, which the Developer role cannot.
 # The two provisioning profiles are the app's (io.jeph.grphoto) and that of its LiveActivity extension
 # (io.jeph.grphoto.LiveActivity), which draws the app's Live Activities and has an App ID of its own. The certificate
 # and the profiles expire a year after they are made; a profile names the certificate, so a new certificate needs
@@ -90,6 +96,12 @@ jobs:
           echo "Version 0.0.$code"
           echo "name=0.0.$code" >> "$GITHUB_OUTPUT"
           echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      # app-store submits the release with this text, so a release without it stops before anything is built.
+      - name: Check What's New
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: tool/app_store/submit.py check "$VERSION_NAME"
 
   android-build:
     name: Check and build for Android
@@ -415,3 +427,29 @@ jobs:
           APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
           APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
         run: tool/upload_testflight.sh "dist/gr-photo-v$VERSION_NAME.ipa"
+
+  app-store:
+    name: Submit for review
+    needs: [version, testflight]
+    runs-on: ubuntu-24.04
+    # Apple takes from a few minutes to over an hour to process an upload; submit.py waits up to 100 minutes for it.
+    timeout-minutes: 150
+    environment: testflight
+    permissions:
+      contents: read
+    env:
+      VERSION_NAME: ${{ needs.version.outputs.name }}
+      VERSION_CODE: ${{ needs.version.outputs.code }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: tool/app_store/
+          sparse-checkout-cone-mode: false
+
+      - name: Submit
+        env:
+          APP_STORE_CONNECT_API_KEY_P8: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8 }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+        run: tool/app_store/submit.py submit "$VERSION_NAME" "$VERSION_CODE"

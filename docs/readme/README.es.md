@@ -155,9 +155,9 @@ pide una vez permiso para instalar apps desde tu navegador. Todas las versiones 
 misma clave, así que una más reciente se instala sobre la que tienes y conserva tus cámaras y
 ajustes.
 
-En iOS, cada versión va a TestFlight, por ahora solo para los testers del propio proyecto. Todavía
-no hay un enlace público de TestFlight, así que en un iPhone GR Photo se instala compilándola desde
-el código fuente.
+En iOS, instala GR Photo desde el [App Store](https://apps.apple.com/app/id6833800832). Una versión
+llega al App Store cuando Apple la ha revisado, así que puede aparecer allí uno o dos días después
+de la de Android.
 
 Compilar desde el código fuente necesita [Flutter](https://flutter.dev) 3.47 o posterior con el SDK
 de Android o Xcode configurados.
@@ -312,9 +312,18 @@ una más que la anterior, ejecuta `tool/check.sh` y compila el flavor `prod` de 
 release. El APK de Android se firma con la clave de publicación de GR Photo y se publica en la
 [página de versiones](https://github.com/jeph/gr-photo/releases) con su suma de comprobación
 SHA-256, una atestación de procedencia de la compilación y el mapeo de R8 que permite leer sus
-trazas de pila de Kotlin. La app para iOS se firma para el App Store y se sube a TestFlight. Las
-claves se guardan en entornos de GitHub que solo `main` puede usar, y los jobs que compilan las apps
-no tienen ninguna.
+trazas de pila de Kotlin. La app para iOS se firma para el App Store y se sube a App Store Connect.
+Cuando Apple ha procesado la compilación, el flujo de trabajo la pone en una nueva versión del App
+Store con las novedades (What's New) de la versión y la envía a revisión, y la versión se publica en
+cuanto Apple la aprueba. Una versión que aún espera revisión se retira de la revisión y se sustituye
+por la nueva. La compilación también va al grupo público de TestFlight, que necesita la revisión
+beta de Apple. Las claves se guardan en entornos de GitHub que solo `main` puede usar, y los jobs
+que compilan las apps no tienen ninguna.
+
+Cada versión necesita sus novedades (What's New) en los 21 idiomas, un archivo por idioma en
+`tool/app_store/whats_new/0.0.N/<locale>.txt`, con el nombre de los archivos ARB. El flujo de
+trabajo se detiene antes de compilar nada si falta alguno o está vacío, así que las notas se
+escriben en el mismo cambio que el trabajo que describen.
 
 `gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo` comprueba que un APK fue
 compilado por ese workflow a partir de este repositorio.

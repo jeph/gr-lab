@@ -1,0 +1,4 @@
+• Op de iPhone verlaat GR Photo nu het wifi-netwerk van de camera ongeveer 20 seconden nadat je naar een andere app gaat, zodat je telefoon teruggaat naar zijn gewone netwerk. Downloads die nog bezig zijn, houden de verbinding tot ze klaar zijn.
+• Live view heeft een knop Terug naar Camera's, net als Op afstand.
+• De schakelaar Op afstand / Live view verschuift niet meer als je van modus wisselt.
+• Op een opengeklapte iPhone Duo blijft het raster van Bibliotheek op zijn plaats naast de foto waarop je tikt, en Volledig scherm toont de foto op het hele scherm.

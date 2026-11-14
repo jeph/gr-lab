@@ -152,9 +152,9 @@ Androidissa lataa `gr-photo-v<version>.apk` puhelimeesi
 kerran lupaa asentaa sovelluksia selaimestasi. Jokainen julkaisu on allekirjoitettu samalla
 avaimella, joten uudempi asentuu nykyisen päälle ja säilyttää kamerasi ja asetuksesi.
 
-iOS:ssä jokainen julkaisu menee TestFlightiin, toistaiseksi vain projektin omille testaajille.
-Julkista TestFlight-linkkiä ei vielä ole, joten iPhoneen GR Photo asennetaan kääntämällä se
-lähdekoodista.
+iOS:ssä GR Photo asennetaan [App Storesta](https://apps.apple.com/app/id6833800832). Julkaisu tulee
+App Storeen, kun Apple on tarkastanut sen, joten se voi ilmestyä sinne päivän tai kaksi
+Android-julkaisun jälkeen.
 
 Lähdekoodista kääntämiseen tarvitaan [Flutter](https://flutter.dev) 3.47 tai uudempi sekä
 käyttövalmis Android SDK tai Xcode.
@@ -310,9 +310,18 @@ Jokainen push `main`-haaraan on julkaisu, jonka tekee
 sovelluksen `prod`-flavorin release-tilassa. Androidin APK allekirjoitetaan GR Photon
 julkaisuavaimella ja julkaistaan [julkaisusivulla](https://github.com/jeph/gr-photo/releases)
 SHA-256-tarkistussummansa, käännöksen alkuperätodistuksen ja sen R8-mappingin kanssa, jolla APK:n
-Kotlin-kutsupinot voi lukea. iOS-sovellus allekirjoitetaan App Storea varten ja lähetetään
-TestFlightiin. Avaimet säilytetään GitHub-ympäristöissä, joita vain `main` voi käyttää, eikä
+Kotlin-kutsupinot voi lukea. iOS-sovellus allekirjoitetaan App Storea varten ja lähetetään App Store
+Connectiin. Kun Apple on käsitellyt käännöksen, työnkulku lisää sen uuteen App Store -versioon
+julkaisun Uutta-tekstin (What's New) kanssa ja lähettää sen tarkastettavaksi, ja versio julkaistaan
+heti, kun Apple hyväksyy sen. Tarkastusta vielä odottava versio vedetään pois tarkastuksesta ja
+korvataan uudella. Käännös menee myös julkiseen TestFlight-ryhmään, mikä vaatii Applen
+beetatarkastuksen. Avaimet säilytetään GitHub-ympäristöissä, joita vain `main` voi käyttää, eikä
 sovellukset kääntävillä töillä ole niistä yhtäkään.
+
+Jokainen julkaisu tarvitsee Uutta-tekstinsä (What's New) kaikilla 21 kielellä, yksi tiedosto kieltä
+kohden polussa `tool/app_store/whats_new/0.0.N/<locale>.txt`, nimettynä kuten ARB-tiedostot.
+Työnkulku pysähtyy ennen kuin se kääntää mitään, jos jokin niistä puuttuu tai on tyhjä, joten
+muistiinpanot kirjoitetaan samassa muutoksessa kuin työ, jota ne kuvaavat.
 
 `gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo` tarkistaa, että APK on
 käännetty kyseisellä työnkululla tästä repositoriosta.

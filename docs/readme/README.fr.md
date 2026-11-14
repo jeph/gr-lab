@@ -163,9 +163,9 @@ ouvrez-le. Android demande une fois l'autorisation d'installer des applications 
 navigateur. Toutes les versions sont signées avec la même clé : une version plus récente s'installe
 donc par-dessus celle que vous avez et conserve vos appareils photo et vos réglages.
 
-Sur iOS, chaque version est envoyée à TestFlight, pour l'instant uniquement aux testeurs du projet.
-Il n'existe pas encore de lien TestFlight public : sur un iPhone, GR Photo s'installe donc en le
-compilant à partir des sources.
+Sur iOS, installez GR Photo depuis l'[App Store](https://apps.apple.com/app/id6833800832). Une
+version arrive sur l'App Store une fois qu'Apple l'a examinée : elle peut donc y paraître un jour ou
+deux après la version Android.
 
 La compilation à partir des sources nécessite [Flutter](https://flutter.dev) 3.47 ou ultérieur,
 avec le SDK Android ou Xcode configuré.
@@ -324,9 +324,18 @@ version 0.0.N, soit un de plus que la précédente, exécute `tool/check.sh` et 
 `prod` des deux applications en mode release. L'APK Android est signé avec la clé de publication de
 GR Photo et publié sur la [page des versions](https://github.com/jeph/gr-photo/releases) avec sa
 somme de contrôle SHA-256, une attestation de provenance du build et le mapping R8 qui permet de
-lire ses traces de pile Kotlin. L'application iOS est signée pour l'App Store et envoyée à
-TestFlight. Les clés sont conservées dans des environnements GitHub que seule `main` peut utiliser,
-et les jobs qui compilent les applications n'en détiennent aucune.
+lire ses traces de pile Kotlin. L'application iOS est signée pour l'App Store et envoyée à App Store
+Connect. Une fois le build traité par Apple, le workflow le place dans une nouvelle version App
+Store avec les nouveautés (What's New) de la version et la soumet à l'examen ; la version est
+publiée dès qu'Apple l'approuve. Une version encore en attente d'examen est retirée de l'examen et
+remplacée par la nouvelle. Le build va aussi dans le groupe TestFlight public, ce qui nécessite
+l'examen bêta d'Apple. Les clés sont conservées dans des environnements GitHub que seule `main` peut
+utiliser, et les jobs qui compilent les applications n'en détiennent aucune.
+
+Chaque version a besoin de ses nouveautés (What's New) dans les 21 langues, un fichier par langue
+dans `tool/app_store/whats_new/0.0.N/<locale>.txt`, nommé comme les fichiers ARB. Le workflow
+s'arrête avant de compiler quoi que ce soit si l'un d'eux manque ou est vide : les notes s'écrivent
+donc dans la même modification que le travail qu'elles décrivent.
 
 `gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo` vérifie qu'un APK a été compilé
 par ce workflow à partir de ce dépôt.

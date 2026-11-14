@@ -158,9 +158,9 @@ die Datei. Android fragt einmalig nach der Erlaubnis, Apps aus deinem Browser zu
 Release ist mit demselben Schlüssel signiert, ein neueres wird also über das vorhandene installiert
 und behält deine Kameras und Einstellungen.
 
-Unter iOS geht jedes Release an TestFlight, vorerst nur an die eigenen Tester des Projekts. Einen
-öffentlichen TestFlight-Link gibt es noch nicht, auf einem iPhone wird GR Photo also installiert,
-indem man es aus dem Quellcode baut.
+Unter iOS installierst du GR Photo aus dem [App Store](https://apps.apple.com/app/id6833800832). Ein
+Release erscheint im App Store, sobald Apple es geprüft hat, und kann dort daher ein oder zwei Tage
+nach dem Android-Release ankommen.
 
 Für den Build aus dem Quellcode wird [Flutter](https://flutter.dev) 3.47 oder neuer mit
 eingerichtetem Android SDK oder Xcode benötigt.
@@ -317,9 +317,18 @@ Release mit 0.0.N, eins höher als das letzte, führt `tool/check.sh` aus und ba
 beider Apps im Release-Modus. Das Android-APK wird mit dem Release-Schlüssel von GR Photo signiert
 und auf der [Release-Seite](https://github.com/jeph/gr-photo/releases) veröffentlicht, zusammen mit
 seiner SHA-256-Prüfsumme, einer Attestierung der Build-Herkunft und dem R8-Mapping, mit dem sich
-seine Kotlin-Stacktraces lesen lassen. Die iOS-App wird für den App Store signiert und zu TestFlight
-hochgeladen. Die Schlüssel liegen in GitHub-Umgebungen, die nur `main` verwenden kann, und die Jobs,
-die die Apps bauen, haben auf keinen davon Zugriff.
+seine Kotlin-Stacktraces lesen lassen. Die iOS-App wird für den App Store signiert und zu App Store
+Connect hochgeladen. Sobald Apple den Build verarbeitet hat, legt der Workflow ihn in einer neuen
+App-Store-Version mit den Neuerungen (What's New) des Releases ab und reicht sie zur Prüfung ein;
+die Version erscheint, sobald Apple sie freigibt. Eine Version, die noch auf die Prüfung wartet,
+wird aus der Prüfung genommen und durch die neue ersetzt. Der Build geht außerdem an die öffentliche
+TestFlight-Gruppe, wofür Apples Beta-Prüfung nötig ist. Die Schlüssel liegen in GitHub-Umgebungen,
+die nur `main` verwenden kann, und die Jobs, die die Apps bauen, haben auf keinen davon Zugriff.
+
+Jedes Release braucht seine Neuerungen (What's New) in allen 21 Sprachen, eine Datei pro Sprache in
+`tool/app_store/whats_new/0.0.N/<locale>.txt`, benannt wie die ARB-Dateien. Der Workflow bricht ab,
+bevor er irgendetwas baut, wenn eine davon fehlt oder leer ist; die Notizen entstehen also in
+derselben Änderung wie die Arbeit, die sie beschreiben.
 
 `gh attestation verify gr-photo-v<version>.apk --repo jeph/gr-photo` prüft, ob ein APK von diesem
 Workflow aus diesem Repository gebaut wurde.
