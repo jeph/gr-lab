@@ -1256,6 +1256,10 @@
   "@libraryOk": {
     "description": "Button that closes the photo access dialog."
   },
+  "libraryPaneEmpty": "Tap a photo or video to see it here.",
+  "@libraryPaneEmpty": {
+    "description": "Shown on the second page of an open foldable, beside the Library's grid, while no photo or video has been tapped to show there."
+  },
   "libraryPhotoAccessAndroid": "GR Photo needs permission to save photos and videos. Open Settings › Apps › GR Photo › Permissions, allow Photos and videos, then retry the downloads.",
   "@libraryPhotoAccessAndroid": {
     "description": "Body of the photo access dialog on Android. Name the Settings path as Android shows it in the language."

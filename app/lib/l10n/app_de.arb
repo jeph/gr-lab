@@ -233,6 +233,7 @@
   "libraryListFailedBody": "Die Kamera hat ihre Fotoliste nicht gesendet.",
   "libraryListFailedTitle": "Fotos konnten nicht gelesen werden",
   "libraryOk": "OK",
+  "libraryPaneEmpty": "Foto oder Video antippen, um es hier zu sehen.",
   "libraryPhotoAccessAndroid": "GR Photo benötigt die Berechtigung, Fotos und Videos zu speichern. „Einstellungen › Apps › GR Photo › Berechtigungen“ öffnen, „Fotos und Videos“ zulassen und die Downloads dann wiederholen.",
   "libraryPhotoAccessIos": "GR Photo benötigt die Berechtigung, Fotos hinzuzufügen. „Einstellungen › GR Photo › Fotos“ öffnen, den Zugriff erlauben und die Downloads dann wiederholen.",
   "libraryPhotoAccessTitle": "Zugriff auf Fotos erlauben",

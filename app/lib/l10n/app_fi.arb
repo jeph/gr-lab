@@ -233,6 +233,7 @@
   "libraryListFailedBody": "Kamera ei lähettänyt kuvaluetteloaan.",
   "libraryListFailedTitle": "Kuvia ei voitu lukea",
   "libraryOk": "OK",
+  "libraryPaneEmpty": "Näytä kuva tai video tässä napauttamalla sitä.",
   "libraryPhotoAccessAndroid": "GR Photo tarvitsee luvan tallentaa kuvia ja videoita. Avaa Asetukset › Sovellukset › GR Photo › Luvat, salli Kuvat ja videot ja yritä latauksia sitten uudelleen.",
   "libraryPhotoAccessIos": "GR Photo tarvitsee luvan lisätä kuvia. Avaa Asetukset › GR Photo › Kuvat, salli käyttö ja yritä latauksia sitten uudelleen.",
   "libraryPhotoAccessTitle": "Salli pääsy kuviin",

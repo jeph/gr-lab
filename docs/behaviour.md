@@ -82,7 +82,7 @@ On an iPhone Duo the camera's pages follow the phone's pose. Closed, and open an
 
 Where the screen folds down its middle with room for a page on either side, on an open iPhone Duo held wide or an Android foldable held the same way, the pages use the two sides:
 
-- The Library has six columns. Tapping a photo shows it on the second page with its details, Download and the map, while the grid keeps the first; tapping that photo opens the full-screen viewer, and Back puts the second page away before it leaves the Library.
+- The Library keeps the first page, laid out as on a phone, and the second page asks for a photo until one is tapped. Tapping a photo shows it on the second page with its details, Download and the map, and the grid stays exactly where it was; swiping there moves through the grid's photos, tapping the photo opens the full-screen viewer, and Back leaves the Library.
 - Looks has the camera's Custom slots on the first page and the looks on the phone on the second. Holding a look and dragging it onto a slot loads it there, after the same confirmation as Load into from its menu.
 - The look editor has the picture and the photos to preview on the first page and the controls on the second.
 - In live view, open and held wide on an iPhone Duo, the picture has nothing over it: the camera and Remote / Live view go above it, the readouts and the chips below it, and the shutter and the last shot stand in the strip.

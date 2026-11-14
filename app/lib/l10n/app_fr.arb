@@ -233,6 +233,7 @@
   "libraryListFailedBody": "L'appareil photo n'a pas envoyé sa liste de photos.",
   "libraryListFailedTitle": "Impossible de lire les photos",
   "libraryOk": "OK",
+  "libraryPaneEmpty": "Touchez une photo ou une vidéo pour l'afficher ici.",
   "libraryPhotoAccessAndroid": "GR Photo a besoin de l'autorisation d'enregistrer des photos et des vidéos. Ouvrez Paramètres › Applications › GR Photo › Autorisations, autorisez Photos et vidéos, puis relancez les téléchargements.",
   "libraryPhotoAccessIos": "GR Photo a besoin de l'autorisation d'ajouter des photos. Ouvrez Réglages › GR Photo › Photos, autorisez l'accès, puis relancez les téléchargements.",
   "libraryPhotoAccessTitle": "Autoriser l'accès à Photos",

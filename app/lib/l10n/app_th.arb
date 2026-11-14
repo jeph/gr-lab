@@ -233,6 +233,7 @@
   "libraryListFailedBody": "กล้องไม่ได้ส่งรายการภาพมา",
   "libraryListFailedTitle": "อ่านภาพไม่ได้",
   "libraryOk": "ตกลง",
+  "libraryPaneEmpty": "แตะภาพหรือวิดีโอเพื่อดูที่นี่",
   "libraryPhotoAccessAndroid": "GR Photo ต้องได้รับสิทธิ์เพื่อบันทึกรูปภาพและวิดีโอ เปิด การตั้งค่า › แอป › GR Photo › สิทธิ์ อนุญาต “รูปภาพและวิดีโอ” แล้วลองดาวน์โหลดใหม่",
   "libraryPhotoAccessIos": "GR Photo ต้องได้รับสิทธิ์เพื่อเพิ่มรูปภาพ เปิด การตั้งค่า › GR Photo › รูปภาพ อนุญาตการเข้าถึง แล้วลองดาวน์โหลดใหม่",
   "libraryPhotoAccessTitle": "อนุญาตการเข้าถึงรูปภาพ",

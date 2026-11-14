@@ -233,6 +233,7 @@
   "libraryListFailedBody": "Aparat nie przesłał listy zdjęć.",
   "libraryListFailedTitle": "Nie udało się odczytać zdjęć",
   "libraryOk": "OK",
+  "libraryPaneEmpty": "Dotknij zdjęcia lub filmu, aby wyświetlić go tutaj.",
   "libraryPhotoAccessAndroid": "GR Photo potrzebuje uprawnienia do zapisywania zdjęć i filmów. Otwórz Ustawienia › Aplikacje › GR Photo › Uprawnienia, zezwól na Zdjęcia i filmy, a potem ponów pobieranie.",
   "libraryPhotoAccessIos": "GR Photo potrzebuje uprawnienia do dodawania zdjęć. Otwórz Ustawienia › GR Photo › Zdjęcia, zezwól na dostęp, a potem ponów pobieranie.",
   "libraryPhotoAccessTitle": "Zezwól na dostęp do Zdjęć",

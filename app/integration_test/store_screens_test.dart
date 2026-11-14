@@ -301,16 +301,10 @@ Future<void> _walk(WidgetTester tester) async {
   await _pumpFor(tester, 2);
   final fold = pose.value.fold;
   final twoPages = fold != null && fold.height > fold.width;
-  // The grid has three columns on a phone, five on a tablet and six across
-  // two pages.
+  // The grid has three columns on a phone and on the first of two pages,
+  // and five on a tablet.
   final wide = tester.view.physicalSize.width / tester.view.devicePixelRatio;
-  final scenes = _readScenes(
-    perDay: twoPages
-        ? 12
-        : wide < 600
-        ? 9
-        : 10,
-  );
+  final scenes = _readScenes(perDay: twoPages || wide < 600 ? 9 : 10);
   final models = await AppModels.load(await _services(scenes, pose));
   runApp(GrPhotoApp(models: models));
 

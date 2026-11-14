@@ -233,6 +233,7 @@
   "libraryListFailedBody": "カメラから写真の一覧が送られてきませんでした。",
   "libraryListFailedTitle": "写真を読み込めませんでした",
   "libraryOk": "OK",
+  "libraryPaneEmpty": "写真や動画をタップするとここに表示されます。",
   "libraryPhotoAccessAndroid": "GR Photoが写真と動画を保存するには権限が必要です。「設定 › アプリ › GR Photo › 権限」を開いて「写真と動画」を許可してから、ダウンロードを再試行してください。",
   "libraryPhotoAccessIos": "GR Photoが写真を追加するには許可が必要です。「設定 › GR Photo › 写真」を開いてアクセスを許可してから、ダウンロードを再試行してください。",
   "libraryPhotoAccessTitle": "写真へのアクセスを許可",

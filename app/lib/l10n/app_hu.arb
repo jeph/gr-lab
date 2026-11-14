@@ -233,6 +233,7 @@
   "libraryListFailedBody": "A kamera nem küldte el a fotók listáját.",
   "libraryListFailedTitle": "Nem sikerült beolvasni a fotókat",
   "libraryOk": "OK",
+  "libraryPaneEmpty": "Koppintson egy fotóra vagy videóra, hogy itt megjelenjen.",
   "libraryPhotoAccessAndroid": "A GR Photo alkalmazásnak engedélyre van szüksége a fotók és videók mentéséhez. Nyissa meg a Beállítások › Alkalmazások › GR Photo › Engedélyek menüt, engedélyezze a Fotók és videók lehetőséget, majd próbálja újra a letöltéseket.",
   "libraryPhotoAccessIos": "A GR Photo alkalmazásnak engedélyre van szüksége a fotók hozzáadásához. Nyissa meg a Beállítások › GR Photo › Fotók menüt, engedélyezze a hozzáférést, majd próbálja újra a letöltéseket.",
   "libraryPhotoAccessTitle": "Engedélyezze a hozzáférést a fotókhoz",

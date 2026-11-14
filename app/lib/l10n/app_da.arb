@@ -233,6 +233,7 @@
   "libraryListFailedBody": "Kameraet sendte ikke sin billedliste.",
   "libraryListFailedTitle": "Kunne ikke læse billederne",
   "libraryOk": "OK",
+  "libraryPaneEmpty": "Tryk på et billede eller en video for at se det her.",
   "libraryPhotoAccessAndroid": "GR Photo skal have tilladelse til at gemme billeder og videoer. Åbn Indstillinger › Apps › GR Photo › Tilladelser, tillad Billeder og videoer, og prøv derefter at downloade igen.",
   "libraryPhotoAccessIos": "GR Photo skal have tilladelse til at tilføje billeder. Åbn Indstillinger › GR Photo › Fotos, giv adgang, og prøv derefter at downloade igen.",
   "libraryPhotoAccessTitle": "Giv adgang til Fotos",

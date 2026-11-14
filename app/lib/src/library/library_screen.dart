@@ -29,12 +29,11 @@ import 'package:grphoto/src/widgets/window_layout.dart';
 /// selection with a download bar, and the download mini bar.
 ///
 /// In a window of two pages at a fold ([pagesAtFold]: a foldable held
-/// open like a book, mocks `duo-inner-library` and `duo-inner-split`) the
-/// grid lies across both pages, six shots wide, with the filters beside
-/// the title, until a shot is tapped. That shot shows on the second page
-/// ([ShotPane]) and the Library keeps the first, laid out as on a phone;
-/// Back puts the shot away again. Half-open, the grid's two halves and
-/// what floats over it keep to their sides of the fold.
+/// open like a book, mock `duo-inner-split`) the Library keeps the first
+/// page, laid out as on a phone, and the second shows the shot last
+/// tapped in the grid ([ShotPane]), or asks for one ([_NoShotShown]).
+/// Tapping a shot never moves the grid \[design\]: the pages stay as they
+/// are whichever shot shows.
 class LibraryScreen extends StatelessWidget {
   const new({super.key});
 
@@ -61,14 +60,14 @@ class _LibraryViewState extends State<_LibraryView> {
   bool _permissionDialogOpen = false;
   bool _listening = false;
 
-  /// The shot beside the grid, in a window of two pages at a fold.
+  /// The shot on the second page, in a window of two pages at a fold.
   final _pane = ShotPaneController();
 
   /// The camera of the shot [_pane] shows.
   String? _paneSerial;
 
   /// The key of the shot [_pane] showed when the grid last brought its
-  /// line into view; null with the pane closed.
+  /// line into view; null with nothing shown.
   String? _revealedShotKey;
 
   /// The top bar, for how much of the grid it covers when it is back.
@@ -202,11 +201,11 @@ class _LibraryViewState extends State<_LibraryView> {
 
   /// Scrolls the grid, when it has to, so that the line of the shot
   /// [_pane] shows, or showed last, is in view, clear of the bars that
-  /// float over the grid's top and bottom. The grid has other columns once
-  /// the pane opens or closes, which moves its lines, and a swipe in the
-  /// pane goes on to shots further along. A line too far away to be built
-  /// is first jumped to where it is worked out to be ([afterJump] is set
-  /// from then on).
+  /// float over the grid's top and bottom: a swipe beside the grid goes on
+  /// to shots further along, and the grid has other columns once the
+  /// window is one page again. A line too far away to be built is first
+  /// jumped to where it is worked out to be ([afterJump] is set from then
+  /// on).
   void _revealPaneShot({bool afterJump = false}) {
     final grid = _gridKey.currentContext;
     final shots = _library.grid.filtered(_filter)?.shots;
@@ -337,21 +336,13 @@ class _LibraryViewState extends State<_LibraryView> {
         : l10n.libraryConnecting;
     final c = GrColors.of(context);
     final bar = VerticalBar.of(context);
+    // The two pages at a fold: the Library has the first, and the shot
+    // shown beside the grid the second.
     final book = pagesAtFold(context);
-    // The two pages while a shot shows on the second: the Library has the
-    // first.
-    final besideShot = _pane.isOpen ? book : null;
-    // Without one the grid lies across both, and keeps the fold between
-    // them clear while the window is half-open.
-    final acrossFold = book != null && besideShot == null;
-    final clearOfFold = book != null && besideShot == null && book.gap > 0
-        ? book
-        : null;
-    final pastFold = clearOfFold == null
-        ? 0.0
-        : clearOfFold.gap + clearOfFold.second;
+    final showsGrid =
+        !showsFailure && shots != null && shots.isNotEmpty && serial != null;
     // Pages that meet with no gap between them have a line there.
-    final pageEdge = besideShot == null || besideShot.gap > 0
+    final pageEdge = book == null || book.gap > 0
         ? null
         : BorderDirectional(start: BorderSide(color: c.line));
     final chips = showsFailure || filtered == null || all == null || all.isEmpty
@@ -360,25 +351,8 @@ class _LibraryViewState extends State<_LibraryView> {
             filter: _filter,
             counts: filtered.counts,
             onSelect: _setFilter,
-            besideTitle: acrossFold,
           );
-    final title = PageTitle(
-      l10n.libraryTitle,
-      // Where the grid lies across two pages the filters are beside the
-      // title, and what the Library waits for after them: the row they
-      // had goes to the photos.
-      status: chips == null || !acrossFold
-          ? _Progress(progress)
-          : Row(
-              children: [
-                Expanded(child: chips),
-                if (progress != null) ...[
-                  const SizedBox(width: 12),
-                  _Progress(progress),
-                ],
-              ],
-            ),
-    );
+    final title = PageTitle(l10n.libraryTitle, status: _Progress(progress));
     final page = Stack(
       children: [
         RefreshIndicator(
@@ -388,13 +362,10 @@ class _LibraryViewState extends State<_LibraryView> {
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
               SliverCameraTopBar(key: _topBarKey),
-              SliverPadding(
-                padding: EdgeInsetsDirectional.only(end: pastFold),
-                sliver: SliverSafeArea(
-                  top: false,
-                  bottom: false,
-                  sliver: SliverToBoxAdapter(child: title),
-                ),
+              SliverSafeArea(
+                top: false,
+                bottom: false,
+                sliver: SliverToBoxAdapter(child: title),
               ),
               if (showsFailure)
                 SliverToBoxAdapter(
@@ -412,18 +383,8 @@ class _LibraryViewState extends State<_LibraryView> {
                   SliverToBoxAdapter(
                     child: _UpdateFailedLine(onRetry: model.refresh),
                   ),
-                if (chips != null && !acrossFold)
-                  SliverToBoxAdapter(child: chips),
-                if (shots == null || shots.isEmpty || serial == null)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: _EmptyState(
-                      model: model,
-                      connection: _app.connection,
-                      filter: _filter,
-                    ),
-                  )
-                else
+                if (chips != null) SliverToBoxAdapter(child: chips),
+                if (showsGrid)
                   // The grid's own width says how many shots go across
                   // it: beside a shot, or a vertical bar, it is not the
                   // window's.
@@ -433,9 +394,16 @@ class _LibraryViewState extends State<_LibraryView> {
                       serial,
                       shots,
                       width: grid.crossAxisExtent,
-                      acrossFold: acrossFold,
-                      clearOfFold: clearOfFold,
                       tapShowsBeside: book != null,
+                    ),
+                  )
+                else
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _EmptyState(
+                      model: model,
+                      connection: _app.connection,
+                      filter: _filter,
                     ),
                   ),
               ],
@@ -447,7 +415,7 @@ class _LibraryViewState extends State<_LibraryView> {
         ),
         PositionedDirectional(
           start: 12,
-          end: 12 + pastFold,
+          end: 12,
           bottom: 12 + bottomInset,
           child: ToastFloor(
             child: _selecting && serial != null
@@ -465,16 +433,10 @@ class _LibraryViewState extends State<_LibraryView> {
     );
 
     return PopScope(
-      canPop: !_selecting && besideShot == null,
+      canPop: !_selecting,
+      // Back ends choosing shots.
       onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        // Back ends choosing shots, and after that puts the shot beside
-        // the grid away.
-        if (_selecting) {
-          _endSelecting();
-        } else {
-          _pane.close();
-        }
+        if (!didPop) _endSelecting();
       },
       child: CameraBarColumn(
         child: Scaffold(
@@ -486,29 +448,29 @@ class _LibraryViewState extends State<_LibraryView> {
             right: bar?.side == BarSide.right,
             child: Stack(
               children: [
-                // At the same place with a shot beside it and without, so
-                // the Library keeps its state.
+                // At the same place as one page and as the first of two,
+                // so the Library keeps its state when the phone opens or
+                // closes.
                 PositionedDirectional(
                   top: 0,
                   bottom: 0,
                   start: 0,
-                  end: besideShot == null ? 0 : null,
-                  width: besideShot?.first,
-                  child: _FirstPage(
-                    besideSecond: besideShot != null,
-                    child: page,
-                  ),
+                  end: book == null ? 0 : null,
+                  width: book?.first,
+                  child: _FirstPage(besideSecond: book != null, child: page),
                 ),
-                if (besideShot != null)
+                if (book != null)
                   PositionedDirectional(
                     top: 0,
                     bottom: 0,
-                    start: besideShot.first + besideShot.gap,
+                    start: book.first + book.gap,
                     end: 0,
                     child: DecoratedBox(
                       position: DecorationPosition.foreground,
                       decoration: BoxDecoration(border: pageEdge),
-                      child: ShotPane(controller: _pane, onOpen: _openShown),
+                      child: _pane.isOpen
+                          ? ShotPane(controller: _pane, onOpen: _openShown)
+                          : _NoShotShown(asks: showsGrid),
                     ),
                   ),
               ],
@@ -520,29 +482,20 @@ class _LibraryViewState extends State<_LibraryView> {
   }
 
   /// [shots] by day, a line at a time ([gridLines]), in a grid [width]
-  /// wide: five shots to a line from 600 wide and three in a narrower
-  /// one, or six where the grid lies across two pages at a fold
-  /// ([acrossFold]) \[design\]: an even count has cells end near the fold.
-  /// With [clearOfFold], those pages, three are on either page and none on
-  /// the fold. A tap on a shot opens it in the viewer, or beside the grid
-  /// when [tapShowsBeside].
+  /// wide: five shots to a line from 600 wide and three in a narrower one
+  /// \[design\]. A tap on a shot opens it in the viewer, or beside the
+  /// grid when [tapShowsBeside].
   Widget _grid(
     BuildContext context,
     String serial,
     List<Shot> shots, {
     required double width,
-    required bool acrossFold,
-    required BookFold? clearOfFold,
     required bool tapShowsBeside,
   }) {
     final model = _library.model;
     final engine = _library.engine;
-    final columns = acrossFold
-        ? 6
-        : width >= 600
-        ? 5
-        : 3;
-    final cellExtent = _cellExtentIn(width, columns, clearOfFold);
+    final columns = width >= 600 ? 5 : 3;
+    final cellExtent = (width - (columns - 1) * _cellGap) / columns;
     _columns = columns;
     _cellExtent = cellExtent;
     final shownKey = _pane.shown?.key;
@@ -568,13 +521,12 @@ class _LibraryViewState extends State<_LibraryView> {
       onTap: () => onTap(shot, index),
       onLongPress: () => _selecting ? _toggle(shot) : _startSelecting(shot),
     );
-    // The line of [row], which starts at [first] among the shots, in the
-    // columns [from] up to [to].
-    Widget cells(List<Shot> row, int first, int from, int to) => Row(
+    // The line of [row], which starts at [first] among the shots.
+    Widget cells(List<Shot> row, int first) => Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (var column = from; column < to; column++) ...[
-          if (column > from) const SizedBox(width: _cellGap),
+        for (var column = 0; column < columns; column++) ...[
+          if (column > 0) const SizedBox(width: _cellGap),
           Expanded(
             child: column < row.length
                 ? cell(row[column], first + column)
@@ -589,22 +541,7 @@ class _LibraryViewState extends State<_LibraryView> {
       GridDayLine() => const SizedBox(height: _undatedGap),
       GridShotsLine(:final first, shots: final row, :final endsDay) => Padding(
         padding: EdgeInsets.only(bottom: endsDay ? 0 : _cellGap),
-        child: SizedBox(
-          height: cellExtent,
-          child: clearOfFold == null
-              ? cells(row, first, 0, columns)
-              : Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(
-                      width: clearOfFold.first,
-                      child: cells(row, first, 0, columns ~/ 2),
-                    ),
-                    SizedBox(width: clearOfFold.gap),
-                    Expanded(child: cells(row, first, columns ~/ 2, columns)),
-                  ],
-                ),
-        ),
+        child: SizedBox(height: cellExtent, child: cells(row, first)),
       ),
     };
     return SliverList.builder(
@@ -648,15 +585,37 @@ const double _dayLabelExtentGuess = 44;
 /// Library.
 const double _bottomBarRoom = 96;
 
-/// How tall the cells of a grid [width] wide and [columns] shots across
-/// are: as tall as wide, or as the cells on the wider page are wide where
-/// the grid's halves keep to the pages either side of a fold
-/// ([clearOfFold]) \[design\].
-double _cellExtentIn(double width, int columns, BookFold? clearOfFold) {
-  final (room, cells) = clearOfFold == null
-      ? (width, columns)
-      : (max(clearOfFold.first, clearOfFold.second), columns ~/ 2);
-  return (room - (cells - 1) * _cellGap) / cells;
+/// The second page at a fold while no shot shows there: a line that asks
+/// for one when the grid has shots to tap ([asks]), and nothing while it
+/// has none.
+class _NoShotShown extends StatelessWidget {
+  const new({required this.asks});
+
+  final bool asks;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!asks) return const SizedBox.expand();
+    final c = GrColors.of(context);
+    return Center(
+      key: const Key('shot-pane-empty'),
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.photo_outlined, size: 40, color: c.t3),
+            const SizedBox(height: 14),
+            Text(
+              context.l10n.libraryPaneEmpty,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: c.t2),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// [child], the Library's page, as the first of two pages at a fold when
@@ -785,16 +744,11 @@ class _Chips extends StatelessWidget {
     required this.filter,
     required this.counts,
     required this.onSelect,
-    required this.besideTitle,
   });
 
   final LibraryFilter filter;
   final Map<LibraryFilter, int> counts;
   final ValueChanged<LibraryFilter> onSelect;
-
-  /// In the title's row, which has margins of its own, instead of in a
-  /// row under it.
-  final bool besideTitle;
 
   static String _label(AppLocalizations l10n, LibraryFilter f) => switch (f) {
     LibraryFilter.all => l10n.libraryFilterAll,
@@ -807,9 +761,7 @@ class _Chips extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
     scrollDirection: Axis.horizontal,
-    padding: besideTitle
-        ? EdgeInsets.zero
-        : const EdgeInsets.fromLTRB(20, 14, 20, 4),
+    padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
     child: Row(
       children: [
         for (final f in LibraryFilter.values) ...[

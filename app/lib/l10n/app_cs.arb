@@ -233,6 +233,7 @@
   "libraryListFailedBody": "Fotoaparát neodeslal seznam fotek.",
   "libraryListFailedTitle": "Fotky se nepodařilo načíst",
   "libraryOk": "OK",
+  "libraryPaneEmpty": "Klepnutím na fotku nebo video ho zobrazíte zde.",
   "libraryPhotoAccessAndroid": "GR Photo potřebuje oprávnění k ukládání fotek a videí. Otevřete Nastavení › Aplikace › GR Photo › Oprávnění, povolte Fotky a videa a zkuste stahování znovu.",
   "libraryPhotoAccessIos": "GR Photo potřebuje oprávnění k přidávání fotek. Otevřete Nastavení › GR Photo › Fotky, povolte přístup a zkuste stahování znovu.",
   "libraryPhotoAccessTitle": "Povolte přístup k Fotkám",

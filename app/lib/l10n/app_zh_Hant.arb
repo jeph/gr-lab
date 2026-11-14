@@ -233,6 +233,7 @@
   "libraryListFailedBody": "相機沒有傳來照片列表。",
   "libraryListFailedTitle": "無法讀取照片",
   "libraryOk": "好",
+  "libraryPaneEmpty": "點一下照片或影片即可在這裡查看。",
   "libraryPhotoAccessAndroid": "GR Photo 需要權限才能儲存相片和影片。請開啟「設定 › 應用程式 › GR Photo › 權限」，允許「相片和影片」，然後重試下載。",
   "libraryPhotoAccessIos": "GR Photo 需要權限才能加入照片。請開啟「設定 › GR Photo › 照片」，允許取用，然後重試下載。",
   "libraryPhotoAccessTitle": "允許存取照片",

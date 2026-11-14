@@ -233,6 +233,7 @@
   "libraryListFailedBody": "De camera heeft de fotolijst niet verstuurd.",
   "libraryListFailedTitle": "Kan de foto's niet lezen",
   "libraryOk": "OK",
+  "libraryPaneEmpty": "Tik op een foto of video om die hier te zien.",
   "libraryPhotoAccessAndroid": "GR Photo heeft toestemming nodig om foto's en video's op te slaan. Open Instellingen › Apps › GR Photo › Rechten, sta Foto's en video's toe en probeer de downloads opnieuw.",
   "libraryPhotoAccessIos": "GR Photo heeft toestemming nodig om foto's toe te voegen. Open Instellingen › GR Photo › Foto's, sta toegang toe en probeer de downloads opnieuw.",
   "libraryPhotoAccessTitle": "Toegang tot Foto's toestaan",

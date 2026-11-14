@@ -233,6 +233,7 @@
   "libraryListFailedBody": "Kamera fotoğraf listesini göndermedi.",
   "libraryListFailedTitle": "Fotoğraflar okunamadı",
   "libraryOk": "Tamam",
+  "libraryPaneEmpty": "Burada görmek için bir fotoğrafa veya videoya dokunun.",
   "libraryPhotoAccessAndroid": "GR Photo, fotoğraf ve video kaydetmek için izne ihtiyaç duyuyor. Ayarlar › Uygulamalar › GR Photo › İzinler bölümünü açın, Fotoğraflar ve videolar iznini verin, sonra indirmeleri yeniden deneyin.",
   "libraryPhotoAccessIos": "GR Photo, fotoğraf eklemek için izne ihtiyaç duyuyor. Ayarlar › GR Photo › Fotoğraflar bölümünü açın, erişime izin verin, sonra indirmeleri yeniden deneyin.",
   "libraryPhotoAccessTitle": "Fotoğraflar’a erişim izni verin",
