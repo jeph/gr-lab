@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gr_camera/gr_camera.dart';
 import 'package:gr_fake_camera/gr_fake_camera.dart';
+import 'package:gr_protocol/gr_protocol.dart'
+    show WifiNetworkControl, WifiSecurity;
 import 'package:grphoto/src/connection/connection_controller.dart';
 import 'package:grphoto/src/library/library_screen.dart';
 
@@ -61,6 +65,48 @@ Future<void> _expectLeft(WidgetTester tester, TestApp app) async {
     () => app.phone.held == 0,
     reason: 'background time given back',
   );
+}
+
+/// The camera's Wi-Fi control, with joins that never complete until the
+/// network is left: as on iOS when the configuration is installed but the
+/// phone has not associated yet.
+final class _StalledJoins implements WifiNetworkControl {
+  new(this._inner);
+
+  final WifiNetworkControl _inner;
+  Completer<void>? _join;
+  bool joining = false;
+  int leaves = 0;
+
+  @override
+  Stream<void> get lost => _inner.lost;
+
+  @override
+  Future<void> join({
+    required String ssid,
+    required String passphrase,
+    required WifiSecurity security,
+    required Duration timeout,
+    bool approved = false,
+  }) {
+    joining = true;
+    return (_join = Completer<void>()).future;
+  }
+
+  @override
+  Future<String?> currentSsid() => _inner.currentSsid();
+
+  @override
+  Future<void> leave() async {
+    leaves++;
+    joining = false;
+    final join = _join;
+    _join = null;
+    if (join != null && !join.isCompleted) {
+      join.completeError(TimeoutException('left during the join'));
+    }
+    await _inner.leave();
+  }
 }
 
 void main() {
@@ -189,5 +235,49 @@ void main() {
     final android = await createTestApp();
     expect(android.phone.leftoverRemovals, 0);
     await android.dispose();
+  });
+
+  testWidgets('a join still under way when the app goes off screen is '
+      'stopped 20 s later, in background time', (tester) async {
+    tester.view
+      ..physicalSize = const Size(1170, 2532)
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    late _StalledJoins wifi;
+    final app = (await tester.runAsync(
+      () => createTestApp(
+        config: const FakeCameraConfig(bonded: true),
+        saveCamera: true,
+        sessionOptions: _quietLiveness,
+        wifiOutlivesApp: true,
+        wifi: (camera) => wifi = _StalledJoins(camera),
+      ),
+    ))!;
+    await app.pumpApp(tester);
+    await tapWhenReady(tester, find.byKey(const Key('camera-card-library')));
+    await pumpUntil(tester, () => wifi.joining, reason: 'join under way');
+    final connection = app.models.connection;
+
+    goOffScreen(tester);
+    await tester.pump(const Duration(seconds: 19));
+    expect(connection.status, ConnectionStatus.connecting);
+    expect(connection.step, ConnectStep.wifi);
+    expect(app.phone.held, 1);
+    expect(wifi.leaves, 0);
+
+    await tester.pump(const Duration(seconds: 2));
+    await pumpUntil(
+      tester,
+      () => connection.status == ConnectionStatus.bluetooth,
+      reason: 'join stopped',
+    );
+    expect(wifi.leaves, greaterThan(0));
+    await pumpUntil(
+      tester,
+      () => app.phone.held == 0,
+      reason: 'background time given back',
+    );
+
+    await app.dispose();
   });
 }

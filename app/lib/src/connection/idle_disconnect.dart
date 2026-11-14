@@ -25,14 +25,15 @@ import 'package:grphoto/src/services.dart';
 /// `GrCameraEnvironment.wifiOutlivesApp`), a timer cannot be relied on off
 /// screen: iOS suspends the app within seconds, and a suspended or ended
 /// app keeps the phone on the camera's network, and the camera on, for as
-/// long as it lies there. So once the app is off screen the Wi-Fi is left
-/// after [backgroundGrace], whatever the setting, in background time asked
-/// of iOS for it, and sooner when iOS gives less than [backgroundGrace]
-/// and [backgroundMargin] together. Work ([hold]) keeps it only while iOS
-/// keeps the app running for the download queue
-/// ([BackgroundDownloads.continued]); once that ends, the Wi-Fi is left at
-/// once. \[design\] (research/protocol/connection-lifecycle.md §9, "What
-/// GR Photo does")
+/// long as it lies there. So once the app is off screen the Wi-Fi, or a
+/// join still under way (iOS installs the network's configuration before
+/// the join completes), is left after [backgroundGrace], whatever the
+/// setting, in background time asked of iOS for it, and sooner when iOS
+/// gives less than [backgroundGrace] and [backgroundMargin] together.
+/// Work ([hold]) keeps it only while iOS keeps the app running for the
+/// download queue ([BackgroundDownloads.continued]); once that ends, the
+/// Wi-Fi is left at once. \[design\]
+/// (research/protocol/connection-lifecycle.md §9, "What GR Photo does")
 final class IdleDisconnect {
   new({required this.connection, required this.settings})
     : _last = clock.now(),
@@ -66,6 +67,9 @@ final class IdleDisconnect {
   Timer? _timer;
   int _holds = 0;
   bool _connected = false;
+
+  /// Connected, or joining the camera's Wi-Fi.
+  bool _onWifi = false;
 
   /// Off screen where the camera network outlives the app: when the Wi-Fi
   /// is left. Null in front, and everywhere else.
@@ -105,11 +109,19 @@ final class IdleDisconnect {
 
   void _update() {
     final offScreen = _outlivesApp && !connection.foreground;
-    final connected = connection.status == ConnectionStatus.connected;
+    final status = connection.status;
+    final connected = status == ConnectionStatus.connected;
+    final onWifi =
+        connected ||
+        (status == ConnectionStatus.connecting &&
+            connection.step == ConnectStep.wifi);
     if (connected && !_connected) touch();
     final changed =
-        connected != _connected || offScreen != (_offScreenUntil != null);
+        connected != _connected ||
+        onWifi != _onWifi ||
+        offScreen != (_offScreenUntil != null);
     _connected = connected;
+    _onWifi = onWifi;
     if (offScreen && _offScreenUntil == null) {
       _offScreenUntil = clock.now().add(backgroundGrace);
     } else if (!offScreen && _offScreenUntil != null) {
@@ -145,7 +157,7 @@ final class IdleDisconnect {
   /// Off screen where the camera network outlives the app.
   void _scheduleOffScreen() {
     if (_leavingOffScreen) return;
-    if (!_connected) return _endTime();
+    if (!_onWifi) return _endTime();
     // iOS keeps the app running for the queue, until the task ends.
     if (_holds > 0 && _continued.value) return _endTime();
     _askTime();
